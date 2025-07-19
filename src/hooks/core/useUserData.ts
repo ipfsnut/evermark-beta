@@ -1,0 +1,115 @@
+// hooks/core/useUserData.ts - Core hook for user blockchain data
+
+import { useMemo } from 'react';
+import { useReadContract } from 'thirdweb/react';
+import { useActiveAccount } from 'thirdweb/react';
+import { useContracts } from './useContracts';
+
+export interface UserBalances {
+  emarkBalance: bigint;
+  wEmarkBalance: bigint;
+  totalStaked: bigint;
+  stakingAllowance: bigint;
+}
+
+export interface UserVoting {
+  availableVotingPower: bigint;
+  delegatedPower: bigint;
+  reservedPower: bigint;
+}
+
+export interface UserUnbonding {
+  unbondingAmount: bigint;
+  unbondingReleaseTime: bigint;
+  canClaimUnbonding: boolean;
+  timeUntilRelease: number;
+  isUnbonding: boolean;
+}
+
+export function useUserData(userAddress?: string) {
+  const account = useActiveAccount();
+  const { emarkToken, cardCatalog } = useContracts();
+  
+  const effectiveAddress = userAddress || account?.address;
+  const hasWallet = !!account;
+
+  // EMARK token balance
+  const { data: emarkBalance, refetch: refetchEmarkBalance } = useReadContract({
+    contract: emarkToken,
+    method: "function balanceOf(address) view returns (uint256)",
+    params: effectiveAddress ? [effectiveAddress] : undefined,
+  });
+
+  // EMARK allowance for staking contract
+  const { data: stakingAllowance, refetch: refetchAllowance } = useReadContract({
+    contract: emarkToken,
+    method: "function allowance(address owner, address spender) view returns (uint256)",
+    params: effectiveAddress ? [effectiveAddress, cardCatalog.address] : undefined,
+  });
+
+  // wEMARK balance (from CardCatalog)
+  const { data: wEmarkBalance, refetch: refetchWEmarkBalance } = useReadContract({
+    contract: cardCatalog,
+    method: "function balanceOf(address) view returns (uint256)",
+    params: effectiveAddress ? [effectiveAddress] : undefined,
+  });
+
+  // User staking summary
+  const { data: userSummary, refetch: refetchSummary } = useReadContract({
+    contract: cardCatalog,
+    method: "function getUserSummary(address) view returns (uint256 stakedBalance, uint256 availableVotingPower, uint256 delegatedPower, uint256 unbondingAmount_, uint256 unbondingReleaseTime_, bool canClaimUnbonding)",
+    params: effectiveAddress ? [effectiveAddress] : undefined,
+  });
+
+  // Memoized data structures
+  const balances: UserBalances = useMemo(() => ({
+    emarkBalance: emarkBalance || BigInt(0),
+    wEmarkBalance: wEmarkBalance || BigInt(0),
+    totalStaked: userSummary?.[0] || BigInt(0),
+    stakingAllowance: stakingAllowance || BigInt(0)
+  }), [emarkBalance, wEmarkBalance, userSummary, stakingAllowance]);
+
+  const voting: UserVoting = useMemo(() => ({
+    availableVotingPower: userSummary?.[1] || BigInt(0),
+    delegatedPower: userSummary?.[2] || BigInt(0),
+    reservedPower: BigInt(0) // Would be calculated from available - delegated
+  }), [userSummary]);
+
+  const unbonding: UserUnbonding = useMemo(() => {
+    const unbondingAmount = userSummary?.[3] || BigInt(0);
+    const unbondingReleaseTime = userSummary?.[4] || BigInt(0);
+    const canClaimUnbonding = userSummary?.[5] || false;
+    
+    const releaseTimeMs = Number(unbondingReleaseTime) * 1000;
+    const currentTimeMs = Date.now();
+    const timeUntilRelease = Math.max(0, Math.floor((releaseTimeMs - currentTimeMs) / 1000));
+    const isUnbonding = unbondingAmount > BigInt(0);
+
+    return {
+      unbondingAmount,
+      unbondingReleaseTime,
+      canClaimUnbonding,
+      timeUntilRelease,
+      isUnbonding
+    };
+  }, [userSummary]);
+
+  // Refetch all data
+  const refetch = async () => {
+    await Promise.all([
+      refetchEmarkBalance(),
+      refetchAllowance(),
+      refetchWEmarkBalance(),
+      refetchSummary()
+    ]);
+  };
+
+  return {
+    balances,
+    voting,
+    unbonding,
+    refetch,
+    hasWallet,
+    userAddress: effectiveAddress
+  };
+}

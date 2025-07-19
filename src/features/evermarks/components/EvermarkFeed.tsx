@@ -1,0 +1,355 @@
+// src/features/evermarks/components/EvermarkFeed.tsx
+// Main feed component for displaying evermarks
+
+import React, { useMemo } from 'react';
+import { 
+  Search, 
+  Filter, 
+  RefreshCw, 
+  ChevronLeft, 
+  ChevronRight,
+  Grid,
+  List,
+  X,
+  Plus
+} from 'lucide-react';
+
+import { type Evermark, type EvermarkFilters } from '../types';
+import { EvermarkCard } from './EvermarkCard';
+import { useEvermarksState } from '../hooks/useEvermarkState';
+
+interface EvermarkFeedProps {
+  className?: string;
+  showCreateButton?: boolean;
+  showFilters?: boolean;
+  onCreateClick?: () => void;
+  onEvermarkClick?: (evermark: Evermark) => void;
+  variant?: 'grid' | 'list';
+  emptyMessage?: string;
+}
+
+export function EvermarkFeed({
+  className = '',
+  showCreateButton = true,
+  showFilters = true,
+  onCreateClick,
+  onEvermarkClick,
+  variant = 'grid',
+  emptyMessage = 'No evermarks found'
+}: EvermarkFeedProps) {
+  const {
+    evermarks,
+    pagination,
+    filters,
+    totalCount,
+    totalPages,
+    isLoading,
+    error,
+    hasNextPage,
+    hasPreviousPage,
+    isEmpty,
+    isFiltered,
+    setFilters,
+    setPagination,
+    clearFilters,
+    refresh,
+    loadMore
+  } = useEvermarksState();
+
+  // Filter options for the UI
+  const contentTypeOptions = [
+    { value: '', label: 'All Types' },
+    { value: 'Cast', label: 'Farcaster Cast' },
+    { value: 'DOI', label: 'Academic Paper' },
+    { value: 'ISBN', label: 'Book' },
+    { value: 'URL', label: 'Web Content' },
+    { value: 'Custom', label: 'Custom Content' }
+  ];
+
+  const sortOptions = [
+    { value: 'created_at-desc', label: 'Newest First' },
+    { value: 'created_at-asc', label: 'Oldest First' },
+    { value: 'title-asc', label: 'Title A-Z' },
+    { value: 'title-desc', label: 'Title Z-A' },
+    { value: 'author-asc', label: 'Author A-Z' },
+    { value: 'votes-desc', label: 'Most Voted' }
+  ];
+
+  // Handle search
+  const handleSearch = (searchTerm: string) => {
+    setFilters({ search: searchTerm });
+  };
+
+  // Handle filter changes
+  const handleFilterChange = (filterUpdates: Partial<EvermarkFilters>) => {
+    setFilters(filterUpdates);
+  };
+
+  // Handle sorting
+  const handleSortChange = (sortValue: string) => {
+    const [sortBy, sortOrder] = sortValue.split('-') as [any, 'asc' | 'desc'];
+    setPagination({ sortBy, sortOrder, page: 1 });
+  };
+
+  // Handle pagination
+  const handlePageChange = (newPage: number) => {
+    setPagination({ page: newPage });
+  };
+
+  // Get current sort value for the select
+  const currentSortValue = `${pagination.sortBy}-${pagination.sortOrder}`;
+
+  // Memoized grid classes based on variant
+  const gridClasses = useMemo(() => {
+    if (variant === 'list') {
+      return 'space-y-4';
+    }
+    return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6';
+  }, [variant]);
+
+  return (
+    <div className={`evermark-feed ${className}`}>
+      {/* Header with search and controls */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3">
+          <h2 className="text-2xl font-bold text-white">
+            Evermarks
+            {totalCount > 0 && (
+              <span className="ml-2 text-sm text-gray-400 font-normal">
+                ({totalCount.toLocaleString()})
+              </span>
+            )}
+          </h2>
+          
+          {/* Refresh button */}
+          <button
+            onClick={refresh}
+            disabled={isLoading}
+            className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-600 transition-colors disabled:opacity-50"
+            title="Refresh"
+          >
+            <RefreshCw className={`h-4 w-4 text-gray-300 ${isLoading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+
+        {/* Create button */}
+        {showCreateButton && onCreateClick && (
+          <button
+            onClick={onCreateClick}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+          >
+            <Plus className="h-4 w-4" />
+            Create Evermark
+          </button>
+        )}
+      </div>
+
+      {/* Filters and search */}
+      {showFilters && (
+        <div className="mb-6 space-y-4">
+          {/* Search bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search evermarks..."
+              value={filters.search || ''}
+              onChange={(e) => handleSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 focus:ring-opacity-20"
+            />
+          </div>
+
+          {/* Filter controls */}
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Content type filter */}
+            <select
+              value={filters.contentType || ''}
+              onChange={(e) => handleFilterChange({ contentType: e.target.value as any || undefined })}
+              className="px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white text-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-500 focus:ring-opacity-20"
+            >
+              {contentTypeOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+
+            {/* Verified filter */}
+            <select
+              value={filters.verified === undefined ? '' : filters.verified.toString()}
+              onChange={(e) => {
+                const value = e.target.value;
+                handleFilterChange({ 
+                  verified: value === '' ? undefined : value === 'true' 
+                });
+              }}
+              className="px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white text-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-500 focus:ring-opacity-20"
+            >
+              <option value="">All Status</option>
+              <option value="true">Verified</option>
+              <option value="false">Unverified</option>
+            </select>
+
+            {/* Sort dropdown */}
+            <select
+              value={currentSortValue}
+              onChange={(e) => handleSortChange(e.target.value)}
+              className="px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white text-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-500 focus:ring-opacity-20"
+            >
+              {sortOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+
+            {/* View toggle */}
+            <div className="flex items-center bg-gray-800 rounded-lg border border-gray-600 p-1">
+              <button
+                onClick={() => {/* Handle variant change */}}
+                className={`p-1.5 rounded ${variant === 'grid' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                title="Grid view"
+              >
+                <Grid className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => {/* Handle variant change */}}
+                className={`p-1.5 rounded ${variant === 'list' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                title="List view"
+              >
+                <List className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Clear filters */}
+            {isFiltered && (
+              <button
+                onClick={clearFilters}
+                className="flex items-center gap-1 px-3 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+              >
+                <X className="h-3 w-3" />
+                Clear filters
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Loading state */}
+      {isLoading && (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+          <span className="ml-3 text-gray-300">Loading evermarks...</span>
+        </div>
+      )}
+
+      {/* Error state */}
+      {error && (
+        <div className="bg-red-900/30 border border-red-500/50 rounded-lg p-4 mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-red-300 font-medium">Error loading evermarks</h3>
+              <p className="text-red-400 text-sm mt-1">{error}</p>
+            </div>
+            <button
+              onClick={refresh}
+              className="px-3 py-1 bg-red-600/20 hover:bg-red-600/30 text-red-300 rounded text-sm transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {isEmpty && !isLoading && (
+        <div className="text-center py-12">
+          <div className="w-16 h-16 mx-auto mb-4 bg-gray-800 rounded-full flex items-center justify-center">
+            <Search className="h-6 w-6 text-gray-500" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-300 mb-2">
+            {isFiltered ? 'No results found' : emptyMessage}
+          </h3>
+          <p className="text-gray-500 mb-4">
+            {isFiltered 
+              ? 'Try adjusting your filters or search terms'
+              : 'Be the first to create an evermark!'
+            }
+          </p>
+          {isFiltered && (
+            <button
+              onClick={clearFilters}
+              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+            >
+              Clear filters
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Evermarks grid/list */}
+      {!isEmpty && !isLoading && (
+        <>
+          <div className={gridClasses}>
+            {evermarks.map((evermark) => (
+              <EvermarkCard
+                key={evermark.id}
+                evermark={evermark}
+                variant={variant === 'list' ? 'list' : 'standard'}
+                onClick={onEvermarkClick}
+                showVotes
+                showViews
+              />
+            ))}
+          </div>
+
+          {/* Load more button for grid view */}
+          {hasNextPage && (
+            <div className="mt-8 text-center">
+              <button
+                onClick={loadMore}
+                disabled={isLoading}
+                className="px-6 py-3 bg-gray-800 hover:bg-gray-700 border border-gray-600 text-white rounded-lg transition-colors disabled:opacity-50"
+              >
+                Load More
+              </button>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-8 flex items-center justify-between">
+              <div className="text-sm text-gray-400">
+                Showing {((pagination.page - 1) * pagination.pageSize) + 1} to{' '}
+                {Math.min(pagination.page * pagination.pageSize, totalCount)} of{' '}
+                {totalCount.toLocaleString()} evermarks
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handlePageChange(pagination.page - 1)}
+                  disabled={!hasPreviousPage}
+                  className="p-2 rounded-lg bg-gray-800 border border-gray-600 text-gray-300 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+
+                <span className="px-3 py-2 text-sm text-gray-300">
+                  Page {pagination.page} of {totalPages}
+                </span>
+
+                <button
+                  onClick={() => handlePageChange(pagination.page + 1)}
+                  disabled={!hasNextPage}
+                  className="p-2 rounded-lg bg-gray-800 border border-gray-600 text-gray-300 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
