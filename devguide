@@ -1,0 +1,236 @@
+# Evermark Beta - Development Guide
+
+## 🎯 Project Overview
+
+**Evermark** is a Web3 content curation platform where users can preserve content on-chain, stake tokens for voting power, and curate quality through delegation. This is a **complete rewrite** focusing on simplicity, maintainability, and clean architecture.
+
+## 🏗️ Core Architecture Principles
+
+### **Feature-First Organization**
+Each major feature is completely self-contained:
+```
+src/features/[feature-name]/
+├── components/          # UI components specific to this feature
+├── hooks/              # State management for this feature
+├── types/              # TypeScript interfaces for this feature
+├── services/           # Business logic & API calls
+└── index.ts            # Public API exports
+```
+
+### **Clean State Management**
+- **Global State**: User auth, wallet connection, UI state (React Context)
+- **Server State**: API data, blockchain data (React Query)
+- **Local State**: Form inputs, UI-only state (useState)
+- **Feature State**: Each feature manages its own state via custom hooks
+
+### **Separation of Concerns**
+- **`/core`**: Pure business logic, types, utilities
+- **`/features`**: Feature-specific logic + components
+- **`/components`**: Reusable UI components only
+- **`/providers`**: Global context providers
+- **`/lib`**: External service integrations
+
+## 🎨 Component Philosophy
+
+### **Three Component Types**
+
+1. **Pure UI Components** (`/components/ui/`)
+   - No business logic
+   - Accept props, render UI
+   - Reusable across features
+   ```typescript
+   // Good: Pure UI
+   function Button({ onClick, children, variant }) {
+     return <button onClick={onClick} className={...}>{children}</button>
+   }
+   ```
+
+2. **Feature Components** (`/features/*/components/`)
+   - Contains feature-specific logic
+   - Uses feature hooks for state
+   - Not reusable outside feature
+   ```typescript
+   // Good: Feature component
+   function StakingWidget() {
+     const { stake, balance, isLoading } = useStakingState()
+     return <Card>...</Card>
+   }
+   ```
+
+3. **Layout Components** (`/components/layout/`)
+   - Page structure, navigation
+   - No business logic
+   - Compose features together
+
+### **Hook Patterns**
+
+Each feature exports ONE main state hook:
+```typescript
+// features/staking/hooks/useStakingState.ts
+export function useStakingState() {
+  return {
+    // Data
+    balance: number,
+    stakingPower: number,
+    
+    // UI State  
+    isLoading: boolean,
+    error: Error | null,
+    
+    // Actions
+    stake: (amount: number) => Promise<void>,
+    unstake: (amount: number) => Promise<void>
+  }
+}
+```
+
+## 🔧 Technical Stack
+
+- **Frontend**: React 18 + TypeScript + Vite
+- **Styling**: Tailwind CSS (keep existing custom components)
+- **State**: React Query + React Context + useState
+- **Blockchain**: Thirdweb SDK + Wagmi
+- **Farcaster**: Farcaster Frame SDK
+- **Backend**: Netlify Functions + Supabase
+- **Deployment**: Netlify
+
+## 🚀 Core Features
+
+### **1. Evermarks** (`/features/evermarks/`)
+- **Purpose**: Create, view, and manage on-chain content preservation
+- **Components**: EvermarkFeed, EvermarkCard, CreateEvermarkForm
+- **State**: List of evermarks, creation status, metadata
+- **Services**: Mint to blockchain, sync with Supabase
+
+### **2. Staking** (`/features/staking/`)
+- **Purpose**: Lock $EMARK tokens to gain voting power
+- **Components**: StakingWidget, StakeForm, UnstakeForm
+- **State**: Current stake, available balance, transaction status
+- **Services**: Contract interactions for staking/unstaking
+
+### **3. Voting** (`/features/voting/`)
+- **Purpose**: Delegate voting power to quality evermarks
+- **Components**: VotingPanel, DelegateButton, VotingHistory
+- **State**: Current delegations, voting power, cycle info
+- **Services**: Submit votes, track delegations
+
+### **4. Leaderboard** (`/features/leaderboard/`)
+- **Purpose**: Display ranked evermarks by delegated voting power
+- **Components**: LeaderboardTable, RankingCard
+- **State**: Ranked list, filtering options, time periods
+- **Services**: Fetch and cache leaderboard data
+
+### **5. Tokens** (`/features/tokens/`)
+- **Purpose**: Display and manage $EMARK token balances
+- **Components**: TokenBalance, TransactionHistory
+- **State**: Balances, transaction history, allowances
+- **Services**: Token contract interactions
+
+## 📋 Development Guidelines
+
+### **When Creating New Features**
+
+1. **Start with Types**: Define clear TypeScript interfaces
+2. **Build Service Layer**: Pure functions for business logic
+3. **Create State Hook**: One hook that manages all feature state
+4. **Build Components**: UI components that use the state hook
+5. **Export Public API**: Clean index.ts with what other features need
+
+### **File Naming Conventions**
+
+- **Components**: PascalCase (`StakingWidget.tsx`)
+- **Hooks**: camelCase starting with 'use' (`useStakingState.ts`)
+- **Types**: PascalCase (`StakingInfo.ts`)
+- **Services**: PascalCase ending with 'Service' (`StakingService.ts`)
+- **Utils**: camelCase (`formatTokenAmount.ts`)
+
+### **Import Patterns**
+
+```typescript
+// External libraries first
+import React from 'react'
+import { useQuery } from '@tanstack/react-query'
+
+// Internal imports by scope
+import { Button } from '@/components/ui'
+import { useAppContext } from '@/providers/AppContext'
+import { useStakingState } from '@/features/staking'
+import { formatTokenAmount } from '@/utils/formatters'
+```
+
+### **Error Handling**
+
+- **UI Errors**: Show user-friendly messages, fallback states
+- **API Errors**: Retry logic in React Query, graceful degradation
+- **Blockchain Errors**: Parse contract errors, show clear actions
+- **Logging**: Console errors in development, structured logging in production
+
+### **Performance Guidelines**
+
+- **React Query**: Use appropriate stale times (30s for financial data, 5min for content)
+- **Re-renders**: Memoize expensive calculations, split state appropriately
+- **Bundle Size**: Lazy load heavy features, code splitting by route
+- **Caching**: Aggressive caching for immutable blockchain data
+
+## 🎯 Quality Standards
+
+### **Code Quality**
+- TypeScript strict mode enabled
+- ESLint + Prettier configured
+- No `any` types without explicit justification
+- Comprehensive error boundaries
+
+### **Testing Strategy**
+- Unit tests for business logic (services, utils)
+- Integration tests for state hooks
+- Component testing for critical user flows
+- E2E testing for core features
+
+### **Accessibility**
+- Semantic HTML elements
+- ARIA labels for complex interactions
+- Keyboard navigation support
+- Screen reader compatibility
+
+## 🔄 Development Workflow
+
+### **Adding a New Feature**
+
+1. **Plan the API**: What state and actions does this feature need?
+2. **Define Types**: Create clear interfaces for all data structures
+3. **Build Service**: Pure functions for all business logic
+4. **Create Hook**: State management that uses the service
+5. **Build Components**: UI that uses the hook
+6. **Integrate**: Add to routing, update navigation
+7. **Test**: Verify the feature works in isolation and with others
+
+### **Modifying Existing Features**
+
+1. **Update Types**: Modify interfaces if data structure changes
+2. **Update Service**: Change business logic functions
+3. **Update Hook**: Adjust state management as needed
+4. **Update Components**: Modify UI to match new functionality
+5. **Test**: Ensure changes don't break other features
+
+## 🚨 Common Pitfalls to Avoid
+
+- **Don't** put business logic in components
+- **Don't** import from other features' internal files
+- **Don't** use global state for feature-specific data
+- **Don't** create circular dependencies between features
+- **Don't** fetch the same data in multiple places
+- **Don't** create overly complex component hierarchies
+
+## 🎉 Success Metrics
+
+A well-built feature should:
+- **Export a clean API** that other features can easily use
+- **Manage its own state** without relying on global state
+- **Handle errors gracefully** with clear user feedback
+- **Be testable** in isolation from other features
+- **Follow naming conventions** and file organization
+- **Have minimal external dependencies** beyond core utilities
+
+---
+
+*This guide should be referenced when building any new feature or modifying existing ones. The goal is consistency, maintainability, and a great developer experience.*
