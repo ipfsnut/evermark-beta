@@ -1,4 +1,4 @@
-// features/staking/types/index.ts - Staking feature type definitions
+// features/staking/types/index.ts - Complete type definitions for staking feature
 
 export interface StakingInfo {
   // Token balances
@@ -195,3 +195,142 @@ export const STAKING_ERRORS = {
 } as const;
 
 export type StakingErrorCode = typeof STAKING_ERRORS[keyof typeof STAKING_ERRORS];
+
+// Component prop types
+export interface StakingWidgetProps {
+  stakingState: UseStakingStateReturn;
+  className?: string;
+}
+
+export interface StakeFormProps {
+  stakingState: UseStakingStateReturn;
+  onSuccess?: () => void;
+  className?: string;
+}
+
+export interface UnstakeFormProps {
+  stakingState: UseStakingStateReturn;
+  onSuccess?: () => void;
+  className?: string;
+}
+
+// Theme and styling types
+export interface StakingTheme {
+  colors: {
+    primary: string;
+    secondary: string;
+    success: string;
+    warning: string;
+    error: string;
+    background: string;
+    surface: string;
+    text: string;
+    textSecondary: string;
+  };
+  spacing: {
+    xs: string;
+    sm: string;
+    md: string;
+    lg: string;
+    xl: string;
+  };
+  borderRadius: {
+    sm: string;
+    md: string;
+    lg: string;
+  };
+}
+
+// Analytics and tracking types
+export interface StakingAnalytics {
+  userId?: string;
+  sessionId: string;
+  timestamp: number;
+  action: StakeAction['type'];
+  amount?: bigint;
+  success: boolean;
+  errorCode?: string;
+  transactionHash?: string;
+  gasUsed?: bigint;
+}
+
+// API response types
+export interface StakingAPIResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  timestamp: number;
+}
+
+export interface StakingHistoryItem {
+  id: string;
+  type: StakeAction['type'];
+  amount: bigint;
+  timestamp: number;
+  transactionHash: string;
+  status: 'completed' | 'failed';
+  gasUsed?: bigint;
+  gasCost?: bigint;
+}
+
+export interface StakingHistory {
+  items: StakingHistoryItem[];
+  totalCount: number;
+  hasMore: boolean;
+}
+
+// Notification types
+export interface StakingNotification {
+  id: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  title: string;
+  message: string;
+  timestamp: number;
+  autoClose?: boolean;
+  duration?: number;
+  actionLabel?: string;
+  onAction?: () => void;
+}
+
+// Feature flags and configuration
+export interface StakingFeatureFlags {
+  enableAdvancedMetrics: boolean;
+  enableNotifications: boolean;
+  enableTransactionHistory: boolean;
+  enableAPYCalculations: boolean;
+  enableAutoCompounding: boolean;
+  enableGasOptimization: boolean;
+  enableBatchTransactions: boolean;
+}
+
+// Performance and optimization types
+export interface StakingPerformanceMetrics {
+  loadTime: number;
+  transactionTime: number;
+  errorRate: number;
+  retryCount: number;
+  cacheHitRate: number;
+}
+
+// Future extension types
+export interface StakingRewards {
+  totalEarned: bigint;
+  currentAPR: number;
+  projectedAPR: number;
+  nextRewardTime: number;
+  claimableAmount: bigint;
+}
+
+export interface StakingDelegation {
+  delegatee: string;
+  amount: bigint;
+  timestamp: number;
+  transactionHash: string;
+}
+
+export interface StakingGovernance {
+  votingPower: bigint;
+  delegatedPower: bigint;
+  activeProposals: number;
+  participationRate: number;
+}
