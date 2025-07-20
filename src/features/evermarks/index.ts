@@ -1,7 +1,4 @@
-// src/features/evermarks/index.ts
-// Public API exports for the Evermarks feature following the development guide
 
-// Types - Export all public interfaces
 export type {
   Evermark,
   EvermarkMetadata,
@@ -293,9 +290,4 @@ export const evermarksUtils = {
 export default {
   config: evermarksConfig,
   utils: evermarksUtils,
-  EvermarkService,
-  useEvermarksState,
-  EvermarkFeed,
-  EvermarkCard,
-  CreateEvermarkForm
 };

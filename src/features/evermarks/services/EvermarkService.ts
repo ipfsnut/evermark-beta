@@ -1,6 +1,3 @@
-// src/features/evermarks/services/EvermarkService.ts
-// Complete business logic for Evermarks feature with full IPFS integration
-
 import { 
   type Evermark, 
   type EvermarkMetadata, 
@@ -487,14 +484,23 @@ export class EvermarkService {
           });
         });
       }
-
+// export interface FarcasterCastData {
+//  castHash?: string;
+//  author?: string;
+//  username?: string;
+//  content?: string;
+//  timestamp?: string;
+//  engagement?: {
+  //  likes: number;
+    //recasts: number;
+    //replies: number;
       // Step 4: Handle Farcaster cast data if applicable
       if (input.metadata.contentType === 'Cast' && input.metadata.castUrl) {
         console.log('💬 Fetching Farcaster cast metadata...');
         try {
-          const castData = await FarcasterService.fetchCastMetadata(input.metadata.castUrl);
-          if (castData) {
-            ipfsMetadata.evermark.castData = castData;
+          const FarcasterCastData = await FarcasterService.fetchCastMetadata(input.metadata.castUrl);
+          if (FarcasterCastData) {
+            ipfsMetadata.evermark.FarcasterCastData = FarcasterCastData;
             // Update title and description if they weren't provided
             if (!input.metadata.title) {
               ipfsMetadata.name = `Cast by ${castData.author}`;

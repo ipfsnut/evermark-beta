@@ -1,6 +1,3 @@
-// src/features/evermarks/components/CreateEvermarkForm.tsx
-// Complete evermark creation form component following the development guide
-
 import React, { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -261,20 +258,20 @@ export function CreateEvermarkForm({
     const canProceed = await requireAuth();
     if (!canProceed) return;
     
+
+
     try {
       const evermarkMetadata: EvermarkMetadata = {
         title: formData.title.trim(),
         description: formData.description.trim(),
-        content: formData.content.trim(),
         sourceUrl: formData.sourceUrl.trim(),
         author: getAuthor(),
         imageFile: selectedImage,
         tags,
-        category: formData.category || undefined,
         contentType: formData.contentType,
         customFields: []
       };
-      
+
       const createInput: CreateEvermarkInput = {
         metadata: evermarkMetadata,
         image: selectedImage || undefined

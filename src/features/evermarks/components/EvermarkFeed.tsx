@@ -1,5 +1,3 @@
-// src/features/evermarks/components/EvermarkFeed.tsx
-// Main feed component for displaying evermarks
 
 import React, { useMemo } from 'react';
 import { 
