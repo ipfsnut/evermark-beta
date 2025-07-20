@@ -12,257 +12,32 @@ import {
   XIcon,
   LoaderIcon,
   InfoIcon,
-  WalletIcon,
-  LinkIcon,
-  ZapIcon,
   EyeIcon,
-  HelpCircleIcon
+  HelpCircleIcon,
+  TagIcon,
+  FileTextIcon,
+  LinkIcon,
+  ZapIcon
 } from 'lucide-react';
 
 import { useEvermarksState } from '../hooks/useEvermarkState';
 import { type CreateEvermarkInput, type EvermarkMetadata } from '../types';
-import { EvermarkService } from '../services/EvermarkService';
 import { useAppAuth } from '@/providers/AppContext';
 import { cn, useIsMobile } from '@/utils/responsive';
 
-// MetadataForm component for enhanced metadata handling
-interface MetadataField {
-  key: string;
-  value: string;
-}
+// Content type configuration for the form
+const CONTENT_TYPES = [
+  { value: 'Custom', label: 'Custom Content', icon: '✨', description: 'Any type of content with flexible metadata' },
+  { value: 'Cast', label: 'Farcaster Cast', icon: '💬', description: 'Social media post from Farcaster' },
+  { value: 'DOI', label: 'Academic Paper', icon: '📄', description: 'Research paper with DOI' },
+  { value: 'ISBN', label: 'Book', icon: '📚', description: 'Published book with ISBN' },
+  { value: 'URL', label: 'Web Content', icon: '🌐', description: 'Content from any website' },
+] as const;
 
-interface EnhancedMetadata {
-  contentType: 'Cast' | 'DOI' | 'ISBN' | 'URL' | 'Custom';
-  tags: string[];
-  customFields: MetadataField[];
-  // Type-specific fields
-  doi?: string;
-  isbn?: string;
-  url?: string;
-  castUrl?: string;
-  publisher?: string;
-  publicationDate?: string;
-  journal?: string;
-  volume?: string;
-  issue?: string;
-  pages?: string;
-}
-
-// Simplified MetadataForm for this component
-const MetadataForm: React.FC<{
-  onMetadataChange: (metadata: EnhancedMetadata) => void;
-  initialMetadata?: Partial<EnhancedMetadata>;
-}> = ({ onMetadataChange, initialMetadata }) => {
-  const [contentType, setContentType] = useState<EnhancedMetadata['contentType']>(
-    initialMetadata?.contentType || 'URL'
-  );
-  const [tags, setTags] = useState<string[]>(initialMetadata?.tags || []);
-  const [customFields, setCustomFields] = useState<MetadataField[]>(
-    initialMetadata?.customFields || []
-  );
-  const [tagInput, setTagInput] = useState('');
-  const [typeSpecificData, setTypeSpecificData] = useState<Partial<EnhancedMetadata>>({
-    doi: initialMetadata?.doi || '',
-    isbn: initialMetadata?.isbn || '',
-    url: initialMetadata?.url || '',
-    castUrl: initialMetadata?.castUrl || '',
-    publisher: initialMetadata?.publisher || '',
-    publicationDate: initialMetadata?.publicationDate || '',
-    journal: initialMetadata?.journal || '',
-    volume: initialMetadata?.volume || '',
-    issue: initialMetadata?.issue || '',
-    pages: initialMetadata?.pages || '',
-  });
-
-  // Update parent whenever metadata changes
-  React.useEffect(() => {
-    const metadata: EnhancedMetadata = {
-      contentType,
-      tags,
-      customFields,
-      ...typeSpecificData
-    };
-    onMetadataChange(metadata);
-  }, [contentType, tags, customFields, typeSpecificData, onMetadataChange]);
-
-  const handleAddTag = () => {
-    if (tagInput.trim() && !tags.includes(tagInput.trim())) {
-      setTags([...tags, tagInput.trim()]);
-      setTagInput('');
-    }
-  };
-
-  const handleRemoveTag = (tagToRemove: string) => {
-    setTags(tags.filter(tag => tag !== tagToRemove));
-  };
-
-  const handleTypeSpecificChange = (field: string, value: string) => {
-    setTypeSpecificData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const contentTypeIcons = {
-    Cast: '💬',
-    DOI: '📄', 
-    ISBN: '📚',
-    URL: '🌐',
-    Custom: '✨'
-  };
-
-  return (
-    <div className="space-y-6">
-      {/* Content Type Selection */}
-      <div>
-        <label className="block text-sm font-medium text-gray-300 mb-3">
-          Content Type
-        </label>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-          {(['Cast', 'DOI', 'ISBN', 'URL', 'Custom'] as const).map((type) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => setContentType(type)}
-              className={cn(
-                "flex items-center justify-center px-3 py-3 rounded-lg border transition-all duration-200",
-                contentType === type
-                  ? 'border-cyan-400 bg-cyan-900/30 text-cyan-300 shadow-lg shadow-cyan-500/20'
-                  : 'border-gray-600 bg-gray-700/50 text-gray-300 hover:border-gray-500 hover:bg-gray-700'
-              )}
-            >
-              <span className="mr-2">{contentTypeIcons[type]}</span>
-              <span className="text-sm font-medium">{type}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Type-Specific Fields */}
-      <div className="bg-gray-700/30 border border-gray-600 rounded-lg p-4">
-        <h4 className="text-sm font-medium text-cyan-400 mb-4">
-          {contentType} Details
-        </h4>
-        
-        {contentType === 'URL' && (
-          <div>
-            <label className="block text-sm text-gray-300 mb-2">URL</label>
-            <input
-              type="url"
-              value={typeSpecificData.url || ''}
-              onChange={(e) => handleTypeSpecificChange('url', e.target.value)}
-              placeholder="https://example.com/article"
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-transparent text-white placeholder-gray-400"
-            />
-          </div>
-        )}
-
-        {contentType === 'Cast' && (
-          <div>
-            <label className="block text-sm text-gray-300 mb-2">Cast URL or Hash</label>
-            <input
-              type="text"
-              value={typeSpecificData.castUrl || ''}
-              onChange={(e) => handleTypeSpecificChange('castUrl', e.target.value)}
-              placeholder="https://warpcast.com/username/0x1234... or 0x1234..."
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-transparent text-white placeholder-gray-400"
-            />
-          </div>
-        )}
-
-        {contentType === 'DOI' && (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm text-gray-300 mb-2">DOI</label>
-              <input
-                type="text"
-                value={typeSpecificData.doi || ''}
-                onChange={(e) => handleTypeSpecificChange('doi', e.target.value)}
-                placeholder="10.1234/example"
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-transparent text-white placeholder-gray-400"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-gray-300 mb-2">Journal</label>
-              <input
-                type="text"
-                value={typeSpecificData.journal || ''}
-                onChange={(e) => handleTypeSpecificChange('journal', e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-transparent text-white placeholder-gray-400"
-              />
-            </div>
-          </div>
-        )}
-
-        {contentType === 'ISBN' && (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm text-gray-300 mb-2">ISBN</label>
-              <input
-                type="text"
-                value={typeSpecificData.isbn || ''}
-                onChange={(e) => handleTypeSpecificChange('isbn', e.target.value)}
-                placeholder="978-3-16-148410-0"
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-transparent text-white placeholder-gray-400"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-gray-300 mb-2">Publisher</label>
-              <input
-                type="text"
-                value={typeSpecificData.publisher || ''}
-                onChange={(e) => handleTypeSpecificChange('publisher', e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-transparent text-white placeholder-gray-400"
-              />
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Tags */}
-      <div>
-        <label className="block text-sm font-medium text-gray-300 mb-3">
-          Tags
-        </label>
-        
-        <div className="flex gap-2 mb-4">
-          <input
-            type="text"
-            value={tagInput}
-            onChange={(e) => setTagInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
-            placeholder="Add a tag..."
-            className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-transparent text-white placeholder-gray-400"
-          />
-          <button
-            type="button"
-            onClick={handleAddTag}
-            className="px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-700 text-white rounded-lg hover:from-purple-400 hover:to-purple-600 transition-colors"
-          >
-            <PlusIcon className="h-4 w-4" />
-          </button>
-        </div>
-
-        {tags.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {tags.map(tag => (
-              <span
-                key={tag}
-                className="inline-flex items-center px-3 py-1 bg-cyan-900/30 text-cyan-300 rounded-full text-sm border border-cyan-500/30"
-              >
-                {tag}
-                <button
-                  type="button"
-                  onClick={() => handleRemoveTag(tag)}
-                  className="ml-2 hover:text-cyan-100 transition-colors"
-                >
-                  <XIcon className="h-3 w-3" />
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
+const CATEGORY_OPTIONS = [
+  'Technology', 'Science', 'Art', 'Literature', 'News', 'Education', 
+  'Entertainment', 'Sports', 'Politics', 'Business', 'Health', 'Other'
+];
 
 // Help Modal Component
 const HelpModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
@@ -286,19 +61,35 @@ const HelpModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen,
           <div className="space-y-4">
             <h4 className="text-lg font-semibold text-green-400">📚 Content Types</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-              <div className="bg-gray-800/50 p-3 rounded border border-gray-700">
-                <strong className="text-purple-400">Cast:</strong> Preserve Farcaster posts permanently
-              </div>
-              <div className="bg-gray-800/50 p-3 rounded border border-gray-700">
-                <strong className="text-blue-400">URL:</strong> Reference any web content
-              </div>
-              <div className="bg-gray-800/50 p-3 rounded border border-gray-700">
-                <strong className="text-yellow-400">DOI:</strong> Academic papers and research
-              </div>
-              <div className="bg-gray-800/50 p-3 rounded border border-gray-700">
-                <strong className="text-green-400">ISBN:</strong> Books and publications
-              </div>
+              {CONTENT_TYPES.map(type => (
+                <div key={type.value} className="bg-gray-800/50 p-3 rounded border border-gray-700">
+                  <strong className="text-cyan-400">{type.icon} {type.label}:</strong>
+                  <p className="text-gray-300 mt-1">{type.description}</p>
+                </div>
+              ))}
             </div>
+          </div>
+          
+          <div className="space-y-4">
+            <h4 className="text-lg font-semibold text-green-400">⚡ Features</h4>
+            <ul className="space-y-2 text-sm text-gray-300">
+              <li className="flex items-start">
+                <span className="w-2 h-2 bg-cyan-400 rounded-full mr-2 mt-2"></span>
+                Permanent storage on IPFS and blockchain
+              </li>
+              <li className="flex items-start">
+                <span className="w-2 h-2 bg-cyan-400 rounded-full mr-2 mt-2"></span>
+                Add tags and custom metadata for better organization
+              </li>
+              <li className="flex items-start">
+                <span className="w-2 h-2 bg-cyan-400 rounded-full mr-2 mt-2"></span>
+                Optional cover images to make your content stand out
+              </li>
+              <li className="flex items-start">
+                <span className="w-2 h-2 bg-cyan-400 rounded-full mr-2 mt-2"></span>
+                Farcaster cast metadata is automatically detected
+              </li>
+            </ul>
           </div>
         </div>
       </div>
@@ -327,18 +118,25 @@ export function CreateEvermarkForm({
     createEvermark, 
     isCreating, 
     createError, 
+    createProgress,
+    createStep,
     clearCreateError 
   } = useEvermarksState();
   
   // Form state
   const [showHelpModal, setShowHelpModal] = useState(false);
-  const [enhancedMetadata, setEnhancedMetadata] = useState<EnhancedMetadata>({
-    contentType: 'URL',
-    tags: [],
-    customFields: []
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    content: '',
+    sourceUrl: '',
+    category: '',
+    contentType: 'Custom' as EvermarkMetadata['contentType']
   });
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  
+  // Tags state
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
   
   // Image upload state
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -348,23 +146,15 @@ export function CreateEvermarkForm({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Auto-populate author if we have user info
-  React.useEffect(() => {
-    if (user) {
-      const authorName = user.displayName || user.username || '';
-      if (authorName) {
-        setEnhancedMetadata(prev => {
-          const otherFields = prev.customFields.filter(f => f.key !== 'author');
-          return {
-            ...prev,
-            customFields: [
-              ...otherFields,
-              { key: 'author', value: authorName }
-            ]
-          };
-        });
-      }
-    }
+  const getAuthor = useCallback(() => {
+    return user?.displayName || user?.username || 'Unknown Author';
   }, [user]);
+
+  // Handle form field changes
+  const handleFieldChange = useCallback((field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    clearCreateError();
+  }, [clearCreateError]);
 
   // Handle image selection
   const handleImageSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -400,149 +190,93 @@ export function CreateEvermarkForm({
     setImageUploadError(null);
   }, []);
 
-  // Generate title based on content type and metadata
-  const generateTitle = useCallback((): string => {
-    if (title.trim()) return title.trim();
-    
-    const { contentType } = enhancedMetadata;
-    
-    switch (contentType) {
-      case 'Cast':
-        return 'Farcaster Cast';
-      case 'DOI':
-        return enhancedMetadata.journal ? 
-          `Research Paper from ${enhancedMetadata.journal}` : 
-          'Academic Research Paper';
-      case 'ISBN':
-        return enhancedMetadata.publisher ? 
-          `Book from ${enhancedMetadata.publisher}` : 
-          'Published Book';
-      case 'URL':
-        if (enhancedMetadata.url) {
-          try {
-            const domain = new URL(enhancedMetadata.url).hostname.replace('www.', '');
-            return `Content from ${domain}`;
-          } catch {
-            return 'Web Content';
-          }
-        }
-        return 'Web Content';
-      case 'Custom':
-        return 'Custom Evermark';
-      default:
-        return 'Untitled Evermark';
+  // Handle tag management
+  const handleAddTag = useCallback(() => {
+    const trimmedTag = tagInput.trim().toLowerCase();
+    if (trimmedTag && !tags.includes(trimmedTag) && tags.length < 10) {
+      setTags(prev => [...prev, trimmedTag]);
+      setTagInput('');
     }
-  }, [title, enhancedMetadata]);
+  }, [tagInput, tags]);
 
-  // Generate description from metadata
-  const generateDescription = useCallback((): string => {
-    if (description.trim()) return description.trim();
-    
-    const { contentType } = enhancedMetadata;
-    let autoDescription = '';
-    
-    switch (contentType) {
-      case 'DOI':
-        const parts = [];
-        if (enhancedMetadata.journal) parts.push(`Published in ${enhancedMetadata.journal}`);
-        autoDescription = parts.join(' • ');
-        break;
-      case 'ISBN':
-        const bookParts = [];
-        if (enhancedMetadata.publisher) bookParts.push(`Published by ${enhancedMetadata.publisher}`);
-        autoDescription = bookParts.join(' • ');
-        break;
-      case 'URL':
-        autoDescription = enhancedMetadata.url ? `Web content from ${enhancedMetadata.url}` : 'Web content reference';
-        break;
-      case 'Cast':
-        autoDescription = 'Content preserved from Farcaster social network';
-        break;
-      case 'Custom':
-        autoDescription = 'Custom content preserved on blockchain';
-        break;
-    }
-    
-    // Add tags to description if present
-    if (enhancedMetadata.tags.length > 0) {
-      autoDescription += ` | Tags: ${enhancedMetadata.tags.join(', ')}`;
-    }
-    
-    return autoDescription;
-  }, [description, enhancedMetadata]);
+  const handleRemoveTag = useCallback((tagToRemove: string) => {
+    setTags(prev => prev.filter(tag => tag !== tagToRemove));
+  }, []);
 
-  // Get source URL from metadata
-  const getSourceUrl = useCallback((): string => {
-    const { contentType } = enhancedMetadata;
-    
-    switch (contentType) {
-      case 'Cast':
-        return enhancedMetadata.castUrl || '';
-      case 'DOI':
-        return enhancedMetadata.doi ? `https://doi.org/${enhancedMetadata.doi}` : '';
-      case 'ISBN':
-        return enhancedMetadata.isbn ? `https://www.worldcat.org/isbn/${enhancedMetadata.isbn}` : '';
-      case 'URL':
-        return enhancedMetadata.url || '';
-      default:
-        return enhancedMetadata.customFields.find(f => f.key === 'sourceUrl')?.value || '';
+  const handleTagKeyPress = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddTag();
     }
-  }, [enhancedMetadata]);
+  }, [handleAddTag]);
 
-  // Get author from metadata
-  const getAuthor = useCallback((): string => {
-    const castAuthor = enhancedMetadata.customFields.find(f => f.key === 'author')?.value;
-    if (castAuthor && castAuthor !== 'Unknown Author') {
-      return castAuthor;
-    }
+  // Auto-detect content from URL
+  const handleAutoDetect = useCallback(async () => {
+    if (!formData.sourceUrl) return;
     
-    return user?.displayName || user?.username || 'Unknown Author';
-  }, [enhancedMetadata, user]);
+    try {
+      const url = new URL(formData.sourceUrl);
+      const domain = url.hostname.replace('www.', '');
+      
+      // Auto-fill based on domain
+      if (!formData.title) {
+        setFormData(prev => ({ 
+          ...prev, 
+          title: `Content from ${domain}` 
+        }));
+      }
+      
+      if (!formData.description) {
+        setFormData(prev => ({ 
+          ...prev, 
+          description: `Content automatically detected from ${formData.sourceUrl}` 
+        }));
+      }
+      
+      // Detect content type
+      if (domain.includes('farcaster') || domain.includes('warpcast')) {
+        setFormData(prev => ({ ...prev, contentType: 'Cast' }));
+      } else if (formData.sourceUrl.includes('doi.org')) {
+        setFormData(prev => ({ ...prev, contentType: 'DOI' }));
+      }
+      
+    } catch (error) {
+      console.warn('URL auto-detection failed:', error);
+    }
+  }, [formData.sourceUrl, formData.title, formData.description]);
+
+  // Validate form
+  const isFormValid = useCallback(() => {
+    return formData.title.trim().length > 0 && 
+           formData.description.trim().length > 0;
+  }, [formData.title, formData.description]);
 
   // Handle form submission
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (isCreating) return;
+    if (isCreating || !isFormValid()) return;
 
     // Check authentication
     const canProceed = await requireAuth();
     if (!canProceed) return;
     
     try {
-      const finalTitle = generateTitle();
-      if (!finalTitle.trim()) {
-        return;
-      }
-      
-      const evermarkData: EvermarkMetadata = {
-        title: finalTitle,
-        description: generateDescription(),
-        sourceUrl: getSourceUrl(),
+      const evermarkMetadata: EvermarkMetadata = {
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        content: formData.content.trim(),
+        sourceUrl: formData.sourceUrl.trim(),
         author: getAuthor(),
         imageFile: selectedImage,
-        customFields: enhancedMetadata.customFields,
-        tags: enhancedMetadata.tags,
-        contentType: enhancedMetadata.contentType,
-        // Include type-specific fields
-        ...(enhancedMetadata.contentType === 'DOI' && {
-          doi: enhancedMetadata.doi,
-          journal: enhancedMetadata.journal
-        }),
-        ...(enhancedMetadata.contentType === 'ISBN' && {
-          isbn: enhancedMetadata.isbn,
-          publisher: enhancedMetadata.publisher
-        }),
-        ...(enhancedMetadata.contentType === 'Cast' && {
-          castUrl: enhancedMetadata.castUrl
-        }),
-        ...(enhancedMetadata.contentType === 'URL' && {
-          url: enhancedMetadata.url
-        })
+        tags,
+        category: formData.category || undefined,
+        contentType: formData.contentType,
+        customFields: []
       };
       
       const createInput: CreateEvermarkInput = {
-        metadata: evermarkData,
+        metadata: evermarkMetadata,
         image: selectedImage || undefined
       };
       
@@ -557,50 +291,16 @@ export function CreateEvermarkForm({
     }
   }, [
     isCreating, 
+    isFormValid, 
     requireAuth, 
-    generateTitle, 
-    generateDescription, 
-    getSourceUrl, 
+    formData, 
     getAuthor, 
     selectedImage, 
-    enhancedMetadata, 
+    tags, 
     createEvermark, 
     onSuccess, 
     navigate
   ]);
-
-  // Preview data
-  const previewTitle = generateTitle();
-  const previewDescription = generateDescription();
-  const previewSourceUrl = getSourceUrl();
-  const previewAuthor = getAuthor();
-
-  // Content type info
-  const getContentTypeInfo = () => {
-    const { contentType } = enhancedMetadata;
-    const icons = {
-      Cast: '💬',
-      DOI: '📄',
-      ISBN: '📚', 
-      URL: '🌐',
-      Custom: '✨'
-    };
-    
-    const descriptions = {
-      Cast: 'Social media post from Farcaster',
-      DOI: 'Academic research paper with DOI',
-      ISBN: 'Published book with ISBN',
-      URL: 'Web content from a URL',
-      Custom: 'Custom content with flexible metadata'
-    };
-    
-    return {
-      icon: icons[contentType],
-      description: descriptions[contentType]
-    };
-  };
-
-  const contentTypeInfo = getContentTypeInfo();
 
   if (!isAuthenticated) {
     return (
@@ -663,6 +363,27 @@ export function CreateEvermarkForm({
           </div>
         )}
 
+        {/* Creation Progress */}
+        {isCreating && (
+          <div className="mb-6 p-4 bg-blue-900/30 border border-blue-500/50 rounded-lg">
+            <div className="flex items-start">
+              <LoaderIcon className="animate-spin h-5 w-5 text-blue-400 mr-3 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-blue-300 font-medium">Creating Evermark...</p>
+                <p className="text-blue-400 text-sm">{createStep}</p>
+                {createProgress > 0 && (
+                  <div className="mt-2 bg-gray-700 rounded-full h-2">
+                    <div 
+                      className="bg-gradient-to-r from-blue-400 to-cyan-400 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${createProgress}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className={cn(
           "grid gap-8",
           isMobile ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-2"
@@ -673,53 +394,179 @@ export function CreateEvermarkForm({
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-white">Create Evermark</h2>
                 <div className="flex items-center text-sm text-gray-400">
-                  <span className="mr-2">{contentTypeInfo.icon}</span>
-                  <span>{contentTypeInfo.description}</span>
+                  <FileTextIcon className="h-4 w-4 mr-2" />
+                  <span>Content Preservation</span>
                 </div>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Enhanced Metadata Form */}
-                <MetadataForm 
-                  onMetadataChange={setEnhancedMetadata}
-                  initialMetadata={enhancedMetadata}
-                />
+                {/* Content Type Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-3">
+                    Content Type
+                  </label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {CONTENT_TYPES.map((type) => (
+                      <button
+                        key={type.value}
+                        type="button"
+                        onClick={() => handleFieldChange('contentType', type.value)}
+                        className={cn(
+                          "flex items-center justify-center px-3 py-3 rounded-lg border transition-all duration-200",
+                          formData.contentType === type.value
+                            ? 'border-cyan-400 bg-cyan-900/30 text-cyan-300 shadow-lg shadow-cyan-500/20'
+                            : 'border-gray-600 bg-gray-700/50 text-gray-300 hover:border-gray-500 hover:bg-gray-700'
+                        )}
+                      >
+                        <span className="mr-2">{type.icon}</span>
+                        <span className="text-sm font-medium">{type.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
                 {/* Basic Fields */}
-                <div className="space-y-4 pt-6 border-t border-gray-700">
-                  <h3 className="font-medium text-cyan-400">Content Details</h3>
-                  
+                <div className="space-y-4">
                   <div>
                     <label htmlFor="title" className="block text-sm font-medium text-gray-300 mb-2">
-                      Title (Optional)
+                      Title *
                     </label>
                     <input
                       type="text"
                       id="title"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
+                      value={formData.title}
+                      onChange={(e) => handleFieldChange('title', e.target.value)}
                       className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-transparent text-white placeholder-gray-400"
-                      placeholder="Leave blank for auto-generated title"
+                      placeholder="Enter a descriptive title"
+                      required
                     />
                   </div>
 
                   <div>
                     <label htmlFor="description" className="block text-sm font-medium text-gray-300 mb-2">
-                      Description (Optional)
+                      Description *
                     </label>
                     <textarea
                       id="description"
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
+                      value={formData.description}
+                      onChange={(e) => handleFieldChange('description', e.target.value)}
                       rows={4}
                       className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-transparent text-white placeholder-gray-400"
-                      placeholder="Leave blank for auto-generated description"
+                      placeholder="Describe what this content is about"
+                      required
                     />
+                  </div>
+
+                  <div>
+                    <label htmlFor="sourceUrl" className="block text-sm font-medium text-gray-300 mb-2">
+                      Source URL
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="url"
+                        id="sourceUrl"
+                        value={formData.sourceUrl}
+                        onChange={(e) => handleFieldChange('sourceUrl', e.target.value)}
+                        className="flex-1 px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-transparent text-white placeholder-gray-400"
+                        placeholder="https://example.com/content"
+                      />
+                      {formData.sourceUrl && (
+                        <button
+                          type="button"
+                          onClick={handleAutoDetect}
+                          className="px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center"
+                          title="Auto-detect content"
+                        >
+                          <ZapIcon className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="category" className="block text-sm font-medium text-gray-300 mb-2">
+                        Category
+                      </label>
+                      <select
+                        id="category"
+                        value={formData.category}
+                        onChange={(e) => handleFieldChange('category', e.target.value)}
+                        className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-transparent text-white"
+                      >
+                        <option value="">Select category</option>
+                        {CATEGORY_OPTIONS.map(category => (
+                          <option key={category} value={category}>{category}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label htmlFor="content" className="block text-sm font-medium text-gray-300 mb-2">
+                        Additional Content
+                      </label>
+                      <input
+                        type="text"
+                        id="content"
+                        value={formData.content}
+                        onChange={(e) => handleFieldChange('content', e.target.value)}
+                        className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-transparent text-white placeholder-gray-400"
+                        placeholder="Additional notes or content"
+                      />
+                    </div>
                   </div>
                 </div>
 
+                {/* Tags */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-3">
+                    Tags (max 10)
+                  </label>
+                  
+                  <div className="flex gap-2 mb-4">
+                    <input
+                      type="text"
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      onKeyPress={handleTagKeyPress}
+                      placeholder="Add a tag..."
+                      className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-transparent text-white placeholder-gray-400"
+                      disabled={tags.length >= 10}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddTag}
+                      disabled={!tagInput.trim() || tags.length >= 10}
+                      className="px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-700 text-white rounded-lg hover:from-purple-400 hover:to-purple-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <PlusIcon className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  {tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {tags.map(tag => (
+                        <span
+                          key={tag}
+                          className="inline-flex items-center px-3 py-1 bg-cyan-900/30 text-cyan-300 rounded-full text-sm border border-cyan-500/30"
+                        >
+                          <TagIcon className="h-3 w-3 mr-1" />
+                          {tag}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveTag(tag)}
+                            className="ml-2 hover:text-cyan-100 transition-colors"
+                          >
+                            <XIcon className="h-3 w-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 {/* Image Upload */}
-                <div className="space-y-4 pt-6 border-t border-gray-700">
+                <div className="space-y-4">
                   <h3 className="font-medium text-cyan-400">Cover Image (Optional)</h3>
                   
                   {!selectedImage ? (
@@ -779,13 +626,13 @@ export function CreateEvermarkForm({
                     )}
                     <button
                       type="submit"
-                      disabled={isCreating}
+                      disabled={isCreating || !isFormValid()}
                       className="flex-1 flex items-center justify-center px-6 py-4 bg-gradient-to-r from-green-400 to-green-600 text-black font-bold rounded-lg hover:from-green-300 hover:to-green-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-green-500/30"
                     >
                       {isCreating ? (
                         <>
                           <LoaderIcon className="animate-spin h-5 w-5 mr-2" />
-                          Creating Evermark...
+                          Creating...
                         </>
                       ) : (
                         <>
@@ -824,39 +671,56 @@ export function CreateEvermarkForm({
                 <div className="space-y-4">
                   <div>
                     <h4 className="font-medium text-white text-xl mb-2">
-                      {previewTitle || "Untitled Evermark"}
+                      {formData.title || "Untitled Evermark"}
                     </h4>
-                    <p className="text-sm text-gray-400">by {previewAuthor}</p>
+                    <p className="text-sm text-gray-400">by {getAuthor()}</p>
                   </div>
 
-                  {previewDescription && (
+                  {formData.description && (
                     <div className="bg-gray-700/50 p-4 rounded-lg border border-gray-600">
                       <p className="text-gray-300 text-sm leading-relaxed">
-                        {previewDescription}
+                        {formData.description}
                       </p>
                     </div>
                   )}
 
-                  {previewSourceUrl && (
+                  {formData.content && (
+                    <div className="bg-blue-900/20 border border-blue-500/30 p-3 rounded-lg">
+                      <p className="text-blue-200 text-sm">{formData.content}</p>
+                    </div>
+                  )}
+
+                  {formData.sourceUrl && (
                     <div className="pt-3 border-t border-gray-700">
                       <p className="text-xs text-gray-500 mb-2">Source:</p>
                       <a
-                        href={previewSourceUrl}
+                        href={formData.sourceUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-cyan-400 hover:text-cyan-300 text-sm break-all transition-colors"
+                        className="text-cyan-400 hover:text-cyan-300 text-sm break-all transition-colors flex items-center"
                       >
-                        {previewSourceUrl}
+                        <LinkIcon className="h-3 w-3 mr-1 flex-shrink-0" />
+                        {formData.sourceUrl}
                       </a>
                     </div>
                   )}
 
+                  {/* Category Preview */}
+                  {formData.category && (
+                    <div className="pt-3">
+                      <p className="text-xs text-gray-500 mb-2">Category:</p>
+                      <span className="inline-block bg-green-900/30 text-green-300 text-xs px-3 py-1 rounded-full border border-green-500/30">
+                        {formData.category}
+                      </span>
+                    </div>
+                  )}
+
                   {/* Tags Preview */}
-                  {enhancedMetadata.tags.length > 0 && (
+                  {tags.length > 0 && (
                     <div className="pt-3">
                       <p className="text-xs text-gray-500 mb-3">Tags:</p>
                       <div className="flex flex-wrap gap-2">
-                        {enhancedMetadata.tags.map((tag, index) => (
+                        {tags.map((tag, index) => (
                           <span
                             key={index}
                             className="inline-block bg-purple-900/50 text-purple-300 text-xs px-3 py-1 rounded-full border border-purple-500/30"
@@ -875,11 +739,12 @@ export function CreateEvermarkForm({
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-500">Content Type:</span>
                   <span className="text-white font-medium">
-                    {contentTypeInfo.icon} {enhancedMetadata.contentType}
+                    {CONTENT_TYPES.find(type => type.value === formData.contentType)?.icon} {formData.contentType}
                   </span>
                 </div>
               </div>
 
+              {/* User Info */}
               <div className="mt-4 pt-4 border-t border-gray-700">
                 <div className="text-xs text-gray-500 space-y-1">
                   <div className="flex justify-between">
@@ -888,24 +753,128 @@ export function CreateEvermarkForm({
                       ✅ {user?.displayName || user?.username || 'Authenticated'}
                     </span>
                   </div>
+                  <div className="flex justify-between">
+                    <span>Storage:</span>
+                    <span className="text-cyan-400">IPFS + Blockchain</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Status:</span>
+                    <span className={isFormValid() ? "text-green-400" : "text-yellow-400"}>
+                      {isFormValid() ? "Ready to create" : "Fill required fields"}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Help Section */}
-            <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-6">
-              <div className="flex items-start">
-                <InfoIcon className="h-5 w-5 text-blue-400 mr-3 mt-0.5 flex-shrink-0" />
-                <div className="text-sm">
-                  <h4 className="font-medium text-blue-300 mb-3">Creating Evermarks</h4>
-                  <div className="text-blue-200 space-y-2">
-                    <p>• Choose your content type and fill in the relevant metadata</p>
-                    <p>• Title and description will be auto-generated if left blank</p>
-                    <p>• Add tags to help others discover your content</p>
-                    <p>• Upload an optional cover image to make your Evermark stand out</p>
+            {/* Information Panels */}
+            <div className="space-y-4">
+              {/* Creation Process Info */}
+              <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-6">
+                <div className="flex items-start">
+                  <InfoIcon className="h-5 w-5 text-blue-400 mr-3 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm">
+                    <h4 className="font-medium text-blue-300 mb-3">Creation Process</h4>
+                    <div className="text-blue-200 space-y-2">
+                      <div className="flex items-center">
+                        <span className="w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-2">1</span>
+                        <span>Upload image to IPFS (if provided)</span>
+                      </div>
+                      <div className="flex items-center">
+                        <span className="w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-2">2</span>
+                        <span>Create metadata and upload to IPFS</span>
+                      </div>
+                      <div className="flex items-center">
+                        <span className="w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-2">3</span>
+                        <span>Mint NFT on Base blockchain</span>
+                      </div>
+                      <div className="flex items-center">
+                        <span className="w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mr-2">4</span>
+                        <span>Your Evermark is live forever!</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
+
+              {/* Tips Panel */}
+              <div className="bg-green-900/30 border border-green-500/30 rounded-lg p-6">
+                <div className="flex items-start">
+                  <CheckCircleIcon className="h-5 w-5 text-green-400 mr-3 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm">
+                    <h4 className="font-medium text-green-300 mb-3">Tips for Best Results</h4>
+                    <div className="text-green-200 space-y-2">
+                      <p>• Use descriptive titles that clearly explain the content</p>
+                      <p>• Add relevant tags to help others discover your Evermark</p>
+                      <p>• Include source URLs for proper attribution</p>
+                      <p>• High-quality cover images increase engagement</p>
+                      <p>• Choose the appropriate content type for better categorization</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Special content type help */}
+              {formData.contentType === 'Cast' && (
+                <div className="bg-purple-900/30 border border-purple-500/30 rounded-lg p-6">
+                  <div className="flex items-start">
+                    <span className="text-2xl mr-3">💬</span>
+                    <div className="text-sm">
+                      <h4 className="font-medium text-purple-300 mb-2">Farcaster Cast Tips</h4>
+                      <p className="text-purple-200">
+                        For Farcaster casts, paste the Warpcast URL in the source field. 
+                        The system will automatically detect and preserve the cast content, 
+                        including author information and engagement metrics.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {formData.contentType === 'DOI' && (
+                <div className="bg-yellow-900/30 border border-yellow-500/30 rounded-lg p-6">
+                  <div className="flex items-start">
+                    <span className="text-2xl mr-3">📄</span>
+                    <div className="text-sm">
+                      <h4 className="font-medium text-yellow-300 mb-2">Academic Paper Tips</h4>
+                      <p className="text-yellow-200">
+                        For academic papers, include the DOI in the source URL (e.g., https://doi.org/10.1234/example). 
+                        This ensures proper citation and helps others access the original research.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {formData.contentType === 'ISBN' && (
+                <div className="bg-orange-900/30 border border-orange-500/30 rounded-lg p-6">
+                  <div className="flex items-start">
+                    <span className="text-2xl mr-3">📚</span>
+                    <div className="text-sm">
+                      <h4 className="font-medium text-orange-300 mb-2">Book Content Tips</h4>
+                      <p className="text-orange-200">
+                        For books, you can include the ISBN in the source URL or additional content field. 
+                        This helps with proper cataloging and makes it easier for others to find the original work.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {formData.contentType === 'URL' && (
+                <div className="bg-cyan-900/30 border border-cyan-500/30 rounded-lg p-6">
+                  <div className="flex items-start">
+                    <span className="text-2xl mr-3">🌐</span>
+                    <div className="text-sm">
+                      <h4 className="font-medium text-cyan-300 mb-2">Web Content Tips</h4>
+                      <p className="text-cyan-200">
+                        Make sure to include the full URL in the source field. 
+                        Use the auto-detect feature to automatically fill in title and description based on the webpage.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
