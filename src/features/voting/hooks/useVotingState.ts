@@ -8,7 +8,7 @@ import { prepareContractCall, sendTransaction } from 'thirdweb';
 import { getContract } from 'thirdweb';
 import { client } from '@/lib/thirdweb';
 import { CHAIN, CONTRACTS } from '@/lib/contracts';
-import { VOTING_ABI } from '@/lib/abis';
+import { EvermarkVotingABI } from '@/lib/abis';
 import { useStakingState } from '@/features/staking';
 import { VotingService } from '../services/VotingService';
 import {
@@ -57,8 +57,8 @@ export function useVotingState(): UseVotingStateReturn {
   const votingContract = useMemo(() => getContract({
     client,
     chain: CHAIN,
-    address: CONTRACTS.VOTING,
-    abi: VOTING_ABI
+    address: CONTRACTS.EvermarkVOTING,
+    abi: EvermarkVotingABI
   }), []);
   
   const userAddress = account?.address;

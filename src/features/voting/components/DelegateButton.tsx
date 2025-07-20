@@ -231,7 +231,7 @@ export function DelegateButton({
   }
 
   // Undelegate variant
-  if (variant === 'undelegate') {
+  if (variant = 'undelegate') {
     return (
       <button
         onClick={handleUndelegate}

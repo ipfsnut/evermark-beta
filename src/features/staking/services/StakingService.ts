@@ -1,6 +1,6 @@
 // features/staking/services/StakingService.ts - Business logic for staking operations
 
-import { toWei, fromWei } from 'thirdweb/utils';
+import { toWei, fromGwei } from 'thirdweb/utils';
 import type { 
   StakingInfo,
   StakingStats,
@@ -131,7 +131,7 @@ export class StakingService {
   static formatTokenAmount(amount: bigint, decimals: number = 2): string {
     if (amount === BigInt(0)) return '0';
     
-    const formatted = fromWei(amount);
+    const formatted = fromGwei(amount);
     const number = parseFloat(formatted);
     
     if (number < 0.0001) {
@@ -429,7 +429,7 @@ export class StakingService {
     time: number,
     compoundFrequency: number = 365
   ): bigint {
-    const principalNumber = Number(fromWei(principal));
+    const principalNumber = Number(fromGwei(principal));
     const amount = principalNumber * Math.pow(1 + rate / compoundFrequency, compoundFrequency * time);
     return toWei(amount.toString());
   }
