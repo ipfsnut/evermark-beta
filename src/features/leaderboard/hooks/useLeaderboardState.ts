@@ -205,7 +205,7 @@ export function useLeaderboardState(): UseLeaderboardStateReturn {
     
     // UI state
     isLoading: isLoading || isLoadingStats,
-    isRefreshing,
+    isRefreshing: isRefetching,
     error,
     lastUpdated,
     
