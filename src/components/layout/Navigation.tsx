@@ -1,4 +1,3 @@
-// src/components/layout/Navigation.tsx - Main navigation menu
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
@@ -6,7 +5,6 @@ import {
   CompassIcon,
   TrendingUpIcon,
   CoinsIcon,
-  UserIcon,
   PlusIcon,
   BookOpenIcon
 } from 'lucide-react';
@@ -22,7 +20,7 @@ interface NavItem {
   badge?: string | number;
 }
 
-// Define navigation structure based on 5 core features
+// Define navigation structure without profile
 const navigationItems: NavItem[] = [
   {
     to: '/',
@@ -43,11 +41,6 @@ const navigationItems: NavItem[] = [
     to: '/staking',
     label: 'Staking',
     icon: CoinsIcon,
-  },
-  {
-    to: '/profile',
-    label: 'Profile',
-    icon: UserIcon,
     requireAuth: true,
   },
 ];

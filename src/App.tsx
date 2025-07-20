@@ -1,4 +1,3 @@
-// src/App.tsx - Main application component with feature-first routing
 import React, { Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AppProviders } from '@/providers/AppProviders';
@@ -8,11 +7,10 @@ import { ErrorBoundary } from '@/components/ui';
 // Lazy load pages for better performance
 const HomePage = React.lazy(() => import('@/pages/HomePage'));
 const ExplorePage = React.lazy(() => import('@/pages/ExplorePage'));
-const ProfilePage = React.lazy(() => import('@/pages/ProfilePage'));
 const LeaderboardPage = React.lazy(() => import('@/pages/LeaderboardPage'));
 const StakingPage = React.lazy(() => import('@/pages/StakingPage'));
 const EvermarkDetailPage = React.lazy(() => import('@/pages/EvermarkDetailPage'));
-const CreateEvermarkPage = React.lazy(() => import('@/pages/CreateEvermarkPage'));
+const CreatePage = React.lazy(() => import('@/pages/CreatePage'));
 const NotFoundPage = React.lazy(() => import('@/pages/NotFoundPage'));
 
 // Loading fallback component
@@ -36,12 +34,11 @@ function AppContent() {
           {/* Core feature routes */}
           <Route path="/" element={<HomePage />} />
           <Route path="/explore" element={<ExplorePage />} />
-          <Route path="/profile" element={<ProfilePage />} />
           <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="/staking" element={<StakingPage />} />
           
           {/* Evermark-specific routes */}
-          <Route path="/create" element={<CreateEvermarkPage />} />
+          <Route path="/create" element={<CreatePage />} />
           <Route path="/evermark/:id" element={<EvermarkDetailPage />} />
           
           {/* Catch-all route */}

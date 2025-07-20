@@ -4,6 +4,7 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  darkMode: 'class',
   theme: {
     extend: {
       // Cyber theme colors from existing project
@@ -93,23 +94,6 @@ export default {
         }
       },
 
-      // Spacing enhancements
-      spacing: {
-        '18': '4.5rem',
-        '88': '22rem',
-        '128': '32rem',
-        'safe-top': 'env(safe-area-inset-top)',
-        'safe-bottom': 'env(safe-area-inset-bottom)',
-        'safe-left': 'env(safe-area-inset-left)',
-        'safe-right': 'env(safe-area-inset-right)',
-      },
-
-      // Responsive breakpoints
-      screens: {
-        'xs': '475px',
-        '3xl': '1600px',
-      },
-
       // Enhanced shadows for cyber effects
       boxShadow: {
         'cyber': '0 0 10px rgba(0, 255, 65, 0.3)',
@@ -118,16 +102,6 @@ export default {
         'neon': '0 0 5px currentColor, 0 0 10px currentColor, 0 0 15px currentColor',
         'neon-lg': '0 0 10px currentColor, 0 0 20px currentColor, 0 0 30px currentColor',
       },
-
-      // Backdrop blur utilities
-      backdropBlur: {
-        'xs': '2px',
-      },
-
-      // Border radius enhancements
-      borderRadius: {
-        '4xl': '2rem',
-      }
     },
   },
   plugins: [
@@ -153,16 +127,7 @@ export default {
             display: 'none'
           }
         },
-        '.touch-friendly': {
-          'touch-action': 'manipulation',
-          '-webkit-tap-highlight-color': 'transparent',
-          'min-height': '44px',
-          'min-width': '44px',
-        }
       })
     }
   ],
-  
-  // Dark mode configuration
-  darkMode: 'class',
-}
+};

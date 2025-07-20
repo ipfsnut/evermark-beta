@@ -1,4 +1,3 @@
-// src/components/layout/Header.tsx - App header with navigation
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { 
@@ -80,9 +79,12 @@ export function Header() {
           <div className="flex items-center space-x-3">
             {/* Search icon for mobile */}
             {isMobile && (
-              <button className="p-2 rounded-lg hover:bg-gray-800 transition-colors">
+              <Link 
+                to="/explore"
+                className="p-2 rounded-lg hover:bg-gray-800 transition-colors"
+              >
                 <SearchIcon className="h-5 w-5" />
-              </button>
+              </Link>
             )}
 
             {/* Notifications */}
@@ -95,12 +97,9 @@ export function Header() {
               )}
             </button>
 
-            {/* User avatar or wallet connect */}
+            {/* User info or wallet connect */}
             {isAuthenticated && user ? (
-              <Link 
-                to="/profile"
-                className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-800 transition-colors"
-              >
+              <div className="flex items-center space-x-2 p-2 rounded-lg">
                 {user.pfpUrl ? (
                   <img 
                     src={user.pfpUrl} 
@@ -117,7 +116,7 @@ export function Header() {
                     {user.displayName || user.username || 'User'}
                   </span>
                 )}
-              </Link>
+              </div>
             ) : (
               <WalletConnect />
             )}
