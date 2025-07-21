@@ -1,38 +1,16 @@
 import { formatDistanceToNow, format, parseISO } from 'date-fns';
-import type { Evermark } from '../types';
 
-export class EvermarkFormatter {
+export class Formatters {
   /**
    * Format view count for display
    */
-  static formatViewCount(count: number): string {
+  static formatCount(count: number): string {
     if (count >= 1000000) {
       return `${(count / 1000000).toFixed(1)}M`;
     } else if (count >= 1000) {
       return `${(count / 1000).toFixed(1)}K`;
     }
     return count.toString();
-  }
-
-  /**
-   * Format vote count for display
-   */
-  static formatVoteCount(count: number): string {
-    return this.formatViewCount(count);
-  }
-
-  /**
-   * Format content type for display
-   */
-  static formatContentType(contentType: Evermark['contentType']): string {
-    const mapping = {
-      'Cast': 'Farcaster Cast',
-      'DOI': 'Academic Paper',
-      'ISBN': 'Book',
-      'URL': 'Web Content',
-      'Custom': 'Custom Content'
-    };
-    return mapping[contentType] || contentType;
   }
 
   /**
@@ -62,18 +40,19 @@ export class EvermarkFormatter {
   }
 
   /**
-   * Format token ID for display
+   * Format token amount with proper decimals
    */
-  static formatTokenId(tokenId: number): string {
-    return `#${tokenId.toString().padStart(4, '0')}`;
-  }
-
-  /**
-   * Format IPFS hash for display
-   */
-  static formatIPFSHash(hash: string): string {
-    if (hash.length <= 20) return hash;
-    return `${hash.slice(0, 10)}...${hash.slice(-10)}`;
+  static formatTokenAmount(amount: string | number, decimals = 18): string {
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+    if (num >= 1000000) {
+      return `${(num / 1000000).toFixed(2)}M`;
+    } else if (num >= 1000) {
+      return `${(num / 1000).toFixed(2)}K`;
+    } else if (num >= 1) {
+      return num.toFixed(2);
+    } else {
+      return num.toFixed(4);
+    }
   }
 
   /**
@@ -115,21 +94,15 @@ export class EvermarkFormatter {
   }
 
   /**
-   * Format evermark title for sharing
+   * Format currency amount
    */
-  static formatShareTitle(title: string): string {
-    const maxLength = 60;
-    if (title.length <= maxLength) return title;
-    return title.slice(0, maxLength - 3) + '...';
-  }
-
-  /**
-   * Format evermark description for sharing
-   */
-  static formatShareDescription(description: string): string {
-    const maxLength = 160;
-    if (description.length <= maxLength) return description;
-    return description.slice(0, maxLength - 3) + '...';
+  static formatCurrency(amount: number, currency = 'USD'): string {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(amount);
   }
 
   /**
@@ -146,24 +119,4 @@ export class EvermarkFormatter {
     if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
     return `${seconds}s`;
   }
-
-  /**
-   * Format percentage
-   */
-  static formatPercentage(value: number, decimals = 1): string {
-    return `${value.toFixed(decimals)}%`;
-  }
-
-  /**
-   * Format currency amount
-   */
-  static formatCurrency(amount: number, currency = 'USD'): string {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount);
-  }
 }
-
