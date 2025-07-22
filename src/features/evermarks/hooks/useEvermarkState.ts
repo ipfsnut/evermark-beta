@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useActiveAccount } from 'thirdweb/react';
 
 import {
   type Evermark,
@@ -23,6 +24,9 @@ const QUERY_KEYS = {
  * Handles data fetching, creation, pagination, and filtering
  */
 export function useEvermarksState(): UseEvermarksResult {
+  // Get the active account for blockchain operations
+  const account = useActiveAccount();
+  
   // Local state for pagination and filtering
   const [pagination, setPaginationState] = useState<EvermarkPagination>(
     EvermarkService.getDefaultPagination()
@@ -61,11 +65,16 @@ export function useEvermarksState(): UseEvermarksResult {
   // Create evermark mutation
   const createMutation = useMutation({
     mutationFn: async (input: CreateEvermarkInput) => {
+      // Check if we have an account before starting creation
+      if (!account) {
+        throw new Error('No wallet connected. Please connect your wallet to create an Evermark.');
+      }
+
       setCreateProgress(0);
       setCreateStep('Validating metadata...');
       
-      // Simulate progress updates
-      const result = await EvermarkService.createEvermark(input);
+      // Pass the account to the service
+      const result = await EvermarkService.createEvermark(input, account);
       
       if (result.success) {
         setCreateProgress(100);

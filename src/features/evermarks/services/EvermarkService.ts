@@ -1,5 +1,5 @@
 // src/features/evermarks/services/EvermarkService.ts
-// Simple orchestrator that uses your existing broken-down services
+// Fixed orchestrator service for Evermark feature
 
 import type { 
   Evermark,
@@ -71,9 +71,17 @@ export class EvermarkService {
 
   // ===== CREATION WORKFLOW =====
   
-  static async createEvermark(input: CreateEvermarkInput): Promise<CreateEvermarkResult> {
+  static async createEvermark(input: CreateEvermarkInput, account: any): Promise<CreateEvermarkResult> {
     try {
       console.log('🚀 EvermarkService: Starting creation workflow');
+      
+      // Check if we have an account for blockchain operations
+      if (!account) {
+        return {
+          success: false,
+          error: 'No wallet account provided - blockchain minting requires an active account'
+        };
+      }
       
       // Step 1: Validate
       const validation = ValidationService.validateEvermarkMetadata(input.metadata);
@@ -113,12 +121,14 @@ export class EvermarkService {
         };
       }
 
-      // Step 5: Mint to blockchain
+      // Step 5: Mint to blockchain - FIX: Pass all required parameters
       console.log('⛓️ Minting to blockchain...');
       const mintResult = await EvermarkBlockchainService.mintEvermark(
-        metadataResult.metadataURI!,
-        input.metadata.title,
-        input.metadata.author
+        account,                          // account (required)
+        metadataResult.metadataURI!,     // metadataURI (required)
+        input.metadata.title,            // title (required)
+        input.metadata.author,           // creator (required) - this was missing!
+        undefined                        // referrer (optional)
       );
 
       if (!mintResult.success) {
