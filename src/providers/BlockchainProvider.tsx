@@ -1,8 +1,9 @@
+// src/providers/BlockchainProvider.tsx - Fixed imports
 import React, { createContext, useContext, useCallback } from 'react';
 import { useActiveAccount, useSendTransaction } from 'thirdweb/react';
 import { prepareContractCall, waitForReceipt } from 'thirdweb';
 import { getEvermarkNFTContract } from '@/lib/contracts';
-import { client, CHAIN } from '@/lib/thirdweb';
+import { client, CHAIN } from '@/lib/thirdweb'; // Fixed import
 
 export interface MintResult {
   success: boolean;
@@ -28,6 +29,26 @@ const BlockchainContext = createContext<BlockchainContextType | null>(null);
 
 interface BlockchainProviderProps {
   children: React.ReactNode;
+}
+
+// Helper function to extract token ID from receipt
+function extractTokenIdFromReceipt(receipt: any): bigint | null {
+  try {
+    // Look for Transfer event in logs to get token ID
+    for (const log of receipt.logs || []) {
+      // ERC721 Transfer event signature
+      if (log.topics?.[0] === '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef') {
+        // Token ID is in the 4th topic (index 3) for ERC721 Transfer events
+        if (log.topics?.[3]) {
+          return BigInt(log.topics[3]);
+        }
+      }
+    }
+    return null;
+  } catch (error) {
+    console.warn('Failed to extract token ID from receipt:', error);
+    return null;
+  }
 }
 
 export function BlockchainProvider({ children }: BlockchainProviderProps) {
@@ -170,4 +191,12 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
       {children}
     </BlockchainContext.Provider>
   );
+}
+
+export function useBlockchain(): BlockchainContextType {
+  const context = useContext(BlockchainContext);
+  if (!context) {
+    throw new Error('useBlockchain must be used within BlockchainProvider');
+  }
+  return context;
 }

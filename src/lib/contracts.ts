@@ -1,3 +1,4 @@
+// src/lib/contracts.ts - Fixed with proper imports
 import { defineChain, getContract } from 'thirdweb';
 import type { Abi } from 'abitype';
 import { client } from './thirdweb';
@@ -11,7 +12,7 @@ import EvermarkRewardsABI from '../features/tokens/abis/EvermarkRewards.json';
 import EMARKABI from '../features/tokens/abis/EMARK.json';
 import FeeCollectorABI from './abis/FeeCollector.json';
 
-// Define Base chain with proper v5 syntax
+// Define Base chain with proper v5 syntax and export it
 export const CHAIN = defineChain({
   id: 8453,
   name: 'Base',

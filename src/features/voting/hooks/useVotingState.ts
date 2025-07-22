@@ -1,3 +1,4 @@
+// src/features/voting/hooks/useVotingState.ts - Fixed error handling
 import { useState, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useReadContract, useSendTransaction } from 'thirdweb/react';
@@ -9,6 +10,19 @@ import { CHAIN, CONTRACTS } from '@/lib/contracts';
 import { EvermarkVotingABI } from '@/lib/abis';
 import { useStakingState } from '@/features/staking';
 import { VotingService } from '../services/VotingService';
+import type { 
+  VotingPower, 
+  VotingCycle, 
+  Delegation, 
+  VotingStats, 
+  VotingValidation, 
+  VotingError, 
+  VotingTransaction, 
+  Vote, 
+  UseVotingStateReturn,
+  VotingErrorCode
+} from '../types';
+import { VOTING_ERRORS } from '../types';
 
 const QUERY_KEYS = {
   votingPower: (address?: string) => ['voting', 'power', address],
@@ -213,11 +227,16 @@ export function useVotingState(): UseVotingStateReturn {
     }
   }, [userAddress, currentCycleNumber, votingContract]);
 
+  // Helper function to create and handle voting errors properly
+  const createVotingError = useCallback((code: VotingErrorCode, message: string, details?: Record<string, any>): VotingError => {
+    return VotingService.createError(code, message, details);
+  }, []);
+
   // Delegate votes mutation
   const delegateVotesMutation = useMutation({
     mutationFn: async ({ evermarkId, amount }: { evermarkId: string; amount: bigint }) => {
       if (!account) {
-        throw VotingService.createError(
+        throw createVotingError(
           VOTING_ERRORS.WALLET_NOT_CONNECTED,
           'Please connect your wallet first'
         );
@@ -274,7 +293,7 @@ export function useVotingState(): UseVotingStateReturn {
   const undelegateVotesMutation = useMutation({
     mutationFn: async ({ evermarkId, amount }: { evermarkId: string; amount: bigint }) => {
       if (!account) {
-        throw VotingService.createError(
+        throw createVotingError(
           VOTING_ERRORS.WALLET_NOT_CONNECTED,
           'Please connect your wallet first'
         );
@@ -330,7 +349,7 @@ export function useVotingState(): UseVotingStateReturn {
   const batchDelegateVotesMutation = useMutation({
     mutationFn: async (delegations: { evermarkId: string; amount: bigint }[]) => {
       if (!account) {
-        throw VotingService.createError(
+        throw createVotingError(
           VOTING_ERRORS.WALLET_NOT_CONNECTED,
           'Please connect your wallet first'
         );

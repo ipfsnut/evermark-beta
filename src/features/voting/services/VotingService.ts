@@ -1,7 +1,8 @@
+// src/features/voting/services/VotingService.ts - Fixed error handling
 import { formatUnits, parseUnits } from 'viem';
 import { readContract, getContractEvents, estimateGas, getGasPrice, prepareEvent } from 'thirdweb';
 import { client } from '@/lib/thirdweb';
-import { CHAIN } from '@/lib/contracts';
+import { CHAIN } from '@/lib/thirdweb'; // Fixed import
 import { 
   type Vote,
   type Delegation,
@@ -465,6 +466,7 @@ export class VotingService {
     return `${minutes}m remaining`;
   }
 
+  // Fixed createError method with proper type handling
   static createError(code: VotingErrorCode, message: string, details?: Record<string, any>): VotingError {
     return {
       code,
@@ -476,7 +478,7 @@ export class VotingService {
   }
 
   private static isRecoverableError(code: VotingErrorCode): boolean {
-    const recoverableErrors = new Set([
+    const recoverableErrors = new Set<VotingErrorCode>([
       VOTING_ERRORS.NETWORK_ERROR,
       VOTING_ERRORS.TRANSACTION_FAILED,
       VOTING_ERRORS.CONTRACT_ERROR
