@@ -2,13 +2,13 @@ import { defineChain, getContract } from 'thirdweb';
 import type { Abi } from 'abitype';
 import { client } from './thirdweb';
 
-// Import all ABIs with proper typing
-import CardCatalogABI from './abis/CardCatalog.json';
-import EvermarkNFTABI from './abis/EvermarkNFT.json';
-import EvermarkVotingABI from './abis/EvermarkVoting.json';
-import EvermarkLeaderboardABI from './abis/EvermarkLeaderboard.json';
-import EvermarkRewardsABI from './abis/EvermarkRewards.json';
-import EMARKABI from './abis/EMARK.json';
+// Import ABIs from their respective feature directories
+import CardCatalogABI from '../features/staking/abis/CardCatalog.json';
+import EvermarkNFTABI from '../features/evermarks/abis/EvermarkNFT.json';
+import EvermarkVotingABI from '../features/voting/abis/EvermarkVoting.json';
+import EvermarkLeaderboardABI from '../features/leaderboard/abis/EvermarkLeaderboard.json';
+import EvermarkRewardsABI from '../features/tokens/abis/EvermarkRewards.json';
+import EMARKABI from '../features/tokens/abis/EMARK.json';
 import FeeCollectorABI from './abis/FeeCollector.json';
 
 // Define Base chain with proper v5 syntax

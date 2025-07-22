@@ -1,4 +1,5 @@
 /// <reference types="vite/client" />
+/// <reference types="node" />
 
 interface ImportMetaEnv {
   // Blockchain
@@ -29,6 +30,12 @@ interface ImportMetaEnv {
   readonly VITE_WEMARK_TOKEN_ADDRESS: string;
   readonly VITE_STAKING_CONTRACT_ADDRESS: string;
   readonly VITE_VOTING_CONTRACT_ADDRESS: string;
+  readonly VITE_CARD_CATALOG_ADDRESS: string;
+  readonly VITE_EVERMARK_NFT_ADDRESS: string;
+  readonly VITE_EVERMARK_VOTING_ADDRESS: string;
+  readonly VITE_EVERMARK_LEADERBOARD_ADDRESS: string;
+  readonly VITE_EVERMARK_REWARDS_ADDRESS: string;
+  readonly VITE_FEE_COLLECTOR_ADDRESS: string;
 
   // IPFS
   readonly VITE_PINATA_JWT?: string;
@@ -48,12 +55,55 @@ interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
 
-// Global declarations
+// Global declarations for React 19 compatibility
 declare global {
   interface Window {
     __evermark_farcaster_detected?: boolean;
     FrameSDK?: any;
   }
+  
+  // React 19 types compatibility
+  namespace JSX {
+    interface IntrinsicElements {
+      [elemName: string]: any;
+    }
+  }
+}
+
+// Module declarations for external libraries
+declare module '*.json' {
+  const value: any;
+  export default value;
+}
+
+declare module '*.svg' {
+  const content: string;
+  export default content;
+}
+
+declare module '*.png' {
+  const content: string;
+  export default content;
+}
+
+declare module '*.jpg' {
+  const content: string;
+  export default content;
+}
+
+declare module '*.jpeg' {
+  const content: string;
+  export default content;
+}
+
+declare module '*.gif' {
+  const content: string;
+  export default content;
+}
+
+declare module '*.webp' {
+  const content: string;
+  export default content;
 }
 
 export {};

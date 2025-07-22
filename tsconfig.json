@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
+    "target": "ES2022",
     "useDefineForClassFields": true,
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
 
@@ -14,19 +14,23 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
-    /* Linting - Relaxed for getting started */
-    "strict": true,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "noFallthroughCasesInSwitch": true,
-    "noImplicitReturns": false,
-    "noImplicitOverride": true,
-    "noImplicitAny": false,
-    "noImplicitThis": true,
-    "exactOptionalPropertyTypes": false,
+    /* React 19 specific settings */
+    "types": ["node", "vite/client"],
+    "moduleDetection": "force",
 
-    /* Additional strict checks - relaxed */
-    "noUncheckedIndexedAccess": false,
+    /* Linting - Balanced approach */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "noImplicitOverride": true,
+    "noImplicitAny": true,
+    "noImplicitThis": true,
+    "exactOptionalPropertyTypes": true,
+
+    /* Additional strict checks */
+    "noUncheckedIndexedAccess": true,
     "allowUnusedLabels": false,
     "allowUnreachableCode": false,
 
@@ -51,20 +55,29 @@
     /* Interop constraints */
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    
+    /* Performance optimizations */
+    "assumeChangesOnlyAffectDirectDependencies": true
   },
   "include": [
-    "src",
-    "netlify/functions"
+    "src/**/*",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.js",
+    "src/**/*.jsx",
+    "netlify/functions/**/*",
+    "vite.config.ts",
+    "src/vite-env.d.ts"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    "build"
-  ],
-  "references": [
-    {
-      "path": "./tsconfig.node.json"
-    }
+    "build",
+    "coverage",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx"
   ]
 }
