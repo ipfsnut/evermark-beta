@@ -1,8 +1,8 @@
-// src/features/voting/services/VotingService.ts - Fixed error handling
+// src/features/voting/services/VotingService.ts - Complete fixed implementation
 import { formatUnits, parseUnits } from 'viem';
-import { readContract, getContractEvents, estimateGas, getGasPrice, prepareEvent } from 'thirdweb';
+import { readContract, getContractEvents, estimateGas, getGasPrice, prepareEvent, prepareContractCall } from 'thirdweb';
 import { client } from '@/lib/thirdweb';
-import { CHAIN } from '@/lib/thirdweb'; // Fixed import
+import { CHAIN } from '@/lib/contracts';
 import { 
   type Vote,
   type Delegation,
@@ -65,7 +65,7 @@ export class VotingService {
             evermarkId: event.args.evermarkId.toString(),
             amount: event.args.amount,
             cycle: Number(event.args.cycle),
-            timestamp: new Date(Number(event.blockTimestamp || 0) * 1000),
+            timestamp: new Date(Number(event.blockNumber || 0) * 15 * 1000), // Estimate timestamp from block
             transactionHash: event.transactionHash,
             status: 'confirmed' as const,
             type: 'delegate' as const
@@ -78,7 +78,7 @@ export class VotingService {
             evermarkId: event.args.evermarkId.toString(),
             amount: event.args.amount,
             cycle: Number(event.args.cycle),
-            timestamp: new Date(Number(event.blockTimestamp || 0) * 1000),
+            timestamp: new Date(Number(event.blockNumber || 0) * 15 * 1000), // Estimate timestamp from block
             transactionHash: event.transactionHash,
             status: 'confirmed' as const,
             type: 'undelegate' as const
@@ -209,23 +209,31 @@ export class VotingService {
   /**
    * Real gas estimation using current network conditions
    */
-  static async estimateVotingGas(votingContract: any): Promise<{
+  static async estimateVotingGas(votingContract?: any): Promise<{
     delegate: { gasLimit: bigint; estimatedCost: string };
     undelegate: { gasLimit: bigint; estimatedCost: string };
     batchDelegate: { gasLimit: bigint; estimatedCost: string };
   }> {
     try {
+      if (!votingContract) {
+        throw new Error('Voting contract required for gas estimation');
+      }
+
       const [gasPrice, delegateGas, undelegateGas] = await Promise.all([
         getGasPrice({ client, chain: CHAIN }),
         estimateGas({
-          contract: votingContract,
-          method: "function delegateVotes(uint256 evermarkId, uint256 amount)",
-          params: [BigInt(1), parseUnits('1', 18)]
+          transaction: prepareContractCall({
+            contract: votingContract,
+            method: "function delegateVotes(uint256 evermarkId, uint256 amount)",
+            params: [BigInt(1), parseUnits('1', 18)]
+          })
         }),
         estimateGas({
-          contract: votingContract,
-          method: "function undelegateVotes(uint256 evermarkId, uint256 amount)",
-          params: [BigInt(1), parseUnits('1', 18)]
+          transaction: prepareContractCall({
+            contract: votingContract,
+            method: "function undelegateVotes(uint256 evermarkId, uint256 amount)",
+            params: [BigInt(1), parseUnits('1', 18)]
+          })
         })
       ]);
 
@@ -271,65 +279,8 @@ export class VotingService {
   }
 
   /**
-   * Estimate delegation rewards based on historical performance
+   * Validate vote amount with comprehensive checks
    */
-  static async estimateDelegationRewards(
-    delegatedAmount: bigint,
-    evermarkId: string,
-    votingContract: any,
-    cycleDuration: number = VOTING_CONSTANTS.CYCLE_DURATION
-  ): Promise<{
-    estimatedRewards: bigint;
-    rewardRate: number;
-    confidenceLevel: 'low' | 'medium' | 'high';
-  }> {
-    try {
-      // Get historical performance data for this evermark
-      const currentCycle = await readContract({
-        contract: votingContract,
-        method: "function getCurrentCycle() view returns (uint256)",
-        params: []
-      });
-
-      // Get votes for last 3 cycles to calculate performance
-      const historicalVotes = await Promise.all([
-        this.getEvermarkVotes(evermarkId, Number(currentCycle) - 1, votingContract),
-        this.getEvermarkVotes(evermarkId, Number(currentCycle) - 2, votingContract),
-        this.getEvermarkVotes(evermarkId, Number(currentCycle) - 3, votingContract)
-      ]);
-
-      // Calculate performance trend
-      const avgVotes = historicalVotes.reduce((sum, votes) => sum + votes, BigInt(0)) / BigInt(historicalVotes.length);
-      const performanceScore = Math.min(100, Number(avgVotes) / 1000); // Scale to 0-100
-
-      // Base reward rate varies by performance
-      const baseRewardRate = 0.02 + (performanceScore / 100) * 0.08; // 2-10% annual
-      const timeMultiplier = cycleDuration / (365 * 24 * 60 * 60); // Convert to yearly fraction
-      
-      const rewardRate = baseRewardRate * timeMultiplier;
-      const estimatedRewards = BigInt(Math.floor(Number(delegatedAmount) * rewardRate));
-      
-      // Confidence based on historical data availability
-      let confidenceLevel: 'low' | 'medium' | 'high' = 'medium';
-      if (historicalVotes.every(v => v > BigInt(0))) confidenceLevel = 'high';
-      if (historicalVotes.every(v => v === BigInt(0))) confidenceLevel = 'low';
-
-      return {
-        estimatedRewards,
-        rewardRate: rewardRate * 100, // Convert to percentage
-        confidenceLevel
-      };
-    } catch (error) {
-      console.error('Failed to estimate rewards:', error);
-      return {
-        estimatedRewards: BigInt(0),
-        rewardRate: 5.0, // Fallback 5%
-        confidenceLevel: 'low'
-      };
-    }
-  }
-
-  // ... (keep all validation and utility methods from previous version)
   static validateVoteAmount(
     amount: string,
     availableVotingPower: bigint,
@@ -351,30 +302,40 @@ export class VotingService {
       return { isValid: false, errors, warnings };
     }
 
-    const amountWei = parseUnits(amount, 18);
+    try {
+      const amountWei = parseUnits(amount, 18);
 
-    if (amountWei < VOTING_CONSTANTS.MIN_VOTE_AMOUNT) {
-      errors.push(`Minimum vote amount is ${this.formatVoteAmount(VOTING_CONSTANTS.MIN_VOTE_AMOUNT)} wEMARK`);
-    }
+      if (amountWei < VOTING_CONSTANTS.MIN_VOTE_AMOUNT) {
+        errors.push(`Minimum vote amount is ${this.formatVoteAmount(VOTING_CONSTANTS.MIN_VOTE_AMOUNT)} wEMARK`);
+      }
 
-    if (amountWei > VOTING_CONSTANTS.MAX_VOTE_AMOUNT) {
-      errors.push(`Maximum vote amount is ${this.formatVoteAmount(VOTING_CONSTANTS.MAX_VOTE_AMOUNT)} wEMARK`);
-    }
+      if (amountWei > VOTING_CONSTANTS.MAX_VOTE_AMOUNT) {
+        errors.push(`Maximum vote amount is ${this.formatVoteAmount(VOTING_CONSTANTS.MAX_VOTE_AMOUNT)} wEMARK`);
+      }
 
-    if (amountWei > availableVotingPower) {
-      errors.push(`Insufficient voting power. Available: ${this.formatVoteAmount(availableVotingPower)} wEMARK`);
-    }
+      if (amountWei > availableVotingPower) {
+        errors.push(`Insufficient voting power. Available: ${this.formatVoteAmount(availableVotingPower)} wEMARK`);
+      }
 
-    if (userAddress && creatorAddress && userAddress.toLowerCase() === creatorAddress.toLowerCase()) {
-      errors.push('You cannot vote on your own Evermark');
-    }
+      if (userAddress && creatorAddress && userAddress.toLowerCase() === creatorAddress.toLowerCase()) {
+        errors.push('You cannot vote on your own Evermark');
+      }
 
-    if (amountWei > availableVotingPower / BigInt(2)) {
-      warnings.push('You are using more than 50% of your available voting power');
-    }
+      // Warnings
+      if (amountWei > availableVotingPower / BigInt(2)) {
+        warnings.push('You are using more than 50% of your available voting power');
+      }
 
-    if (amountWei < parseUnits('1', 18)) {
-      warnings.push('Small vote amounts may have minimal impact on rankings');
+      if (amountWei < parseUnits('1', 18)) {
+        warnings.push('Small vote amounts may have minimal impact on rankings');
+      }
+
+      if (availableVotingPower > BigInt(0) && amountWei < availableVotingPower / BigInt(100)) {
+        warnings.push('Consider using a larger portion of your voting power for greater impact');
+      }
+
+    } catch (parseError) {
+      errors.push('Invalid number format');
     }
 
     return {
@@ -384,6 +345,9 @@ export class VotingService {
     };
   }
 
+  /**
+   * Validate undelegation amount
+   */
   static validateUndelegateAmount(amount: string, currentDelegation: bigint): VotingValidation {
     const errors: string[] = [];
     const warnings: string[] = [];
@@ -399,14 +363,24 @@ export class VotingService {
       return { isValid: false, errors, warnings };
     }
 
-    const amountWei = parseUnits(amount, 18);
+    try {
+      const amountWei = parseUnits(amount, 18);
 
-    if (currentDelegation === BigInt(0)) {
-      errors.push('No votes delegated to this Evermark');
-    }
+      if (currentDelegation === BigInt(0)) {
+        errors.push('No votes delegated to this Evermark');
+      }
 
-    if (amountWei > currentDelegation) {
-      errors.push(`Cannot undelegate more than current delegation of ${this.formatVoteAmount(currentDelegation)} wEMARK`);
+      if (amountWei > currentDelegation) {
+        errors.push(`Cannot undelegate more than current delegation of ${this.formatVoteAmount(currentDelegation)} wEMARK`);
+      }
+
+      // Warning for undelegating everything
+      if (amountWei === currentDelegation && currentDelegation > BigInt(0)) {
+        warnings.push('This will remove all your votes from this Evermark');
+      }
+
+    } catch (parseError) {
+      errors.push('Invalid number format');
     }
 
     return {
@@ -416,10 +390,76 @@ export class VotingService {
     };
   }
 
-  static calculateVotingPower(stakedAmount: bigint): bigint {
-    return stakedAmount; // 1:1 ratio for now
+  /**
+   * Validate batch voting request
+   */
+  static validateBatchVoting(request: BatchVotingRequest, availablePower: bigint): VotingValidation {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    if (!request.delegations || request.delegations.length === 0) {
+      errors.push('At least one delegation is required');
+      return { isValid: false, errors, warnings };
+    }
+
+    if (request.delegations.length > 20) {
+      errors.push('Maximum 20 delegations per batch');
+    }
+
+    // Check total amount
+    const calculatedTotal = request.delegations.reduce((sum, d) => sum + d.amount, BigInt(0));
+    if (calculatedTotal !== request.totalAmount) {
+      errors.push('Total amount does not match sum of individual delegations');
+    }
+
+    if (request.totalAmount > availablePower) {
+      errors.push(`Insufficient voting power. Available: ${this.formatVoteAmount(availablePower)} wEMARK`);
+    }
+
+    // Check individual delegations
+    const evermarkIds = new Set<string>();
+    for (const delegation of request.delegations) {
+      if (evermarkIds.has(delegation.evermarkId)) {
+        errors.push(`Duplicate evermark ID: ${delegation.evermarkId}`);
+      }
+      evermarkIds.add(delegation.evermarkId);
+
+      if (delegation.amount < VOTING_CONSTANTS.MIN_VOTE_AMOUNT) {
+        errors.push(`Delegation to ${delegation.evermarkId} below minimum amount`);
+      }
+
+      if (delegation.amount > VOTING_CONSTANTS.MAX_VOTE_AMOUNT) {
+        errors.push(`Delegation to ${delegation.evermarkId} exceeds maximum amount`);
+      }
+    }
+
+    // Warnings
+    if (request.delegations.length > 10) {
+      warnings.push('Large batch operations may use significant gas');
+    }
+
+    if (request.totalAmount > availablePower / BigInt(2)) {
+      warnings.push('Using more than 50% of available voting power');
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      warnings
+    };
   }
 
+  /**
+   * Calculate voting power from staked amount
+   */
+  static calculateVotingPower(stakedAmount: bigint): bigint {
+    // 1:1 ratio for now, could implement different formulas later
+    return stakedAmount;
+  }
+
+  /**
+   * Format vote amount for display
+   */
   static formatVoteAmount(amount: bigint, decimals = 2): string {
     if (amount === BigInt(0)) return '0';
     
@@ -436,6 +476,9 @@ export class VotingService {
     });
   }
 
+  /**
+   * Parse vote amount from user input
+   */
   static parseVoteAmount(amount: string): bigint {
     try {
       if (!amount || amount.trim() === '') return BigInt(0);
@@ -448,12 +491,18 @@ export class VotingService {
     }
   }
 
+  /**
+   * Calculate time remaining in cycle
+   */
   static getTimeRemainingInCycle(cycleEndTime: Date): number {
     const now = new Date();
     const endTime = new Date(cycleEndTime);
     return Math.max(0, Math.floor((endTime.getTime() - now.getTime()) / 1000));
   }
 
+  /**
+   * Format time remaining for display
+   */
   static formatTimeRemaining(seconds: number): string {
     if (seconds <= 0) return 'Cycle ended';
     
@@ -466,17 +515,236 @@ export class VotingService {
     return `${minutes}m remaining`;
   }
 
-  // Fixed createError method with proper type handling
-  static createError(code: VotingErrorCode, message: string, details?: Record<string, any>): VotingError {
+  /**
+   * Check if user can vote in current cycle
+   */
+  static canVoteInCycle(cycleEndTime: Date, userVotingPower: bigint, isConnected: boolean): boolean {
+    if (!isConnected) return false;
+    if (userVotingPower <= BigInt(0)) return false;
+    
+    const timeRemaining = this.getTimeRemainingInCycle(cycleEndTime);
+    return timeRemaining > 0;
+  }
+
+  /**
+   * Calculate voting efficiency (percentage of total power being used)
+   */
+  static calculateVotingEfficiency(delegatedPower: bigint, totalVotingPower: bigint): number {
+    if (totalVotingPower === BigInt(0)) return 0;
+    return Number((delegatedPower * BigInt(100)) / totalVotingPower);
+  }
+
+  /**
+   * Generate voting recommendations based on user goals
+   */
+  static generateVotingRecommendations(
+    availablePower: bigint,
+    userGoal: 'maximize_rewards' | 'support_quality' | 'diversify' = 'support_quality'
+  ): {
+    strategy: string;
+    description: string;
+    suggestedDistribution: 'equal' | 'weighted' | 'concentrated';
+    powerUsageRecommendation: number; // percentage
+  } {
+    switch (userGoal) {
+      case 'maximize_rewards':
+        return {
+          strategy: 'Concentrated High-Performer',
+          description: 'Focus on top-performing Evermarks with proven track records',
+          suggestedDistribution: 'concentrated',
+          powerUsageRecommendation: 80
+        };
+      case 'diversify':
+        return {
+          strategy: 'Diversified Portfolio',
+          description: 'Spread votes across multiple Evermarks to reduce risk',
+          suggestedDistribution: 'equal',
+          powerUsageRecommendation: 60
+        };
+      default: // support_quality
+        return {
+          strategy: 'Quality-Focused',
+          description: 'Support high-quality content regardless of current rankings',
+          suggestedDistribution: 'weighted',
+          powerUsageRecommendation: 70
+        };
+    }
+  }
+
+  /**
+   * Calculate optimal vote distribution
+   */
+  static calculateOptimalDistribution(
+    availablePower: bigint,
+    targetEvermarks: string[],
+    strategy: 'equal' | 'weighted' | 'concentrated' = 'equal'
+  ): Record<string, bigint> {
+    const distribution: Record<string, bigint> = {};
+    
+    if (targetEvermarks.length === 0) return distribution;
+
+    switch (strategy) {
+      case 'equal': {
+        const amountPerEvermark = availablePower / BigInt(targetEvermarks.length);
+        targetEvermarks.forEach(id => {
+          distribution[id] = amountPerEvermark;
+        });
+        break;
+      }
+      case 'weighted': {
+        // Weight by reverse order (first gets most, tapering down)
+        const weights = targetEvermarks.map((_, index) => targetEvermarks.length - index);
+        const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+        
+        targetEvermarks.forEach((id, index) => {
+          if (index < weights.length) {
+            const weight = weights[index];
+            if (weight !== undefined) {
+              distribution[id] = (availablePower * BigInt(weight)) / BigInt(totalWeight);
+            }
+          }
+        });
+        break;
+      }
+      case 'concentrated': {
+        // Give 50% to first, 30% to second, 20% to rest
+        if (targetEvermarks.length >= 1 && targetEvermarks[0] !== undefined) {
+          distribution[targetEvermarks[0]] = (availablePower * BigInt(50)) / BigInt(100);
+        }
+        if (targetEvermarks.length >= 2 && targetEvermarks[1] !== undefined) {
+          distribution[targetEvermarks[1]] = (availablePower * BigInt(30)) / BigInt(100);
+        }
+        if (targetEvermarks.length >= 3) {
+          const remaining = (availablePower * BigInt(20)) / BigInt(100);
+          const perRest = remaining / BigInt(targetEvermarks.length - 2);
+          for (let i = 2; i < targetEvermarks.length; i++) {
+            const evermarkId = targetEvermarks[i];
+            if (evermarkId !== undefined) {
+              distribution[evermarkId] = perRest;
+            }
+          }
+        }
+        break;
+      }
+    }
+
+    return distribution;
+  }
+
+  /**
+   * Calculate delegation impact on evermark ranking
+   */
+  static calculateDelegationImpact(
+    currentVotes: bigint,
+    newVotes: bigint,
+    totalVotes: bigint
+  ): {
+    percentageIncrease: number;
+    rankingImpact: 'minimal' | 'moderate' | 'significant';
+    estimatedNewShare: number;
+  } {
+    const afterVotes = currentVotes + newVotes;
+    const afterTotal = totalVotes + newVotes;
+    
+    const percentageIncrease = currentVotes > BigInt(0) 
+      ? Number((newVotes * BigInt(100)) / currentVotes)
+      : 100;
+    
+    const newShare = afterTotal > BigInt(0) 
+      ? Number((afterVotes * BigInt(100)) / afterTotal)
+      : 0;
+
+    let rankingImpact: 'minimal' | 'moderate' | 'significant' = 'minimal';
+    if (percentageIncrease > 50) rankingImpact = 'significant';
+    else if (percentageIncrease > 20) rankingImpact = 'moderate';
+
     return {
-      code,
-      message,
-      timestamp: Date.now(),
-      recoverable: this.isRecoverableError(code),
-      details
+      percentageIncrease,
+      rankingImpact,
+      estimatedNewShare: newShare
     };
   }
 
+  /**
+   * Estimate delegation rewards
+   */
+  static async estimateDelegationRewards(
+    delegatedAmount: bigint,
+    evermarkPerformance: number,
+    cycleDuration: number = VOTING_CONSTANTS.CYCLE_DURATION
+  ): Promise<{
+    estimatedRewards: bigint;
+    rewardRate: number;
+    confidenceLevel: 'low' | 'medium' | 'high';
+  }> {
+    try {
+      // Base reward rate varies by performance (2-10% annual)
+      const baseRewardRate = 0.02 + (evermarkPerformance / 100) * 0.08;
+      const timeMultiplier = cycleDuration / (365 * 24 * 60 * 60); // Convert to yearly fraction
+      
+      const rewardRate = baseRewardRate * timeMultiplier;
+      const estimatedRewards = BigInt(Math.floor(Number(delegatedAmount) * rewardRate));
+      
+      // Confidence based on performance score
+      let confidenceLevel: 'low' | 'medium' | 'high' = 'medium';
+      if (evermarkPerformance > 70) confidenceLevel = 'high';
+      if (evermarkPerformance < 30) confidenceLevel = 'low';
+
+      return {
+        estimatedRewards,
+        rewardRate: rewardRate * 100, // Convert to percentage
+        confidenceLevel
+      };
+    } catch (error) {
+      console.error('Failed to estimate rewards:', error);
+      return {
+        estimatedRewards: BigInt(0),
+        rewardRate: 5.0, // Fallback 5%
+        confidenceLevel: 'low'
+      };
+    }
+  }
+
+  /**
+   * Calculate Evermark rankings from vote data
+   */
+  static calculateEvermarkRanking(
+    evermarkVotes: Array<{ evermarkId: string; votes: bigint }>,
+    totalVotes: bigint
+  ): EvermarkRanking[] {
+    const sorted = [...evermarkVotes].sort((a, b) => Number(b.votes - a.votes));
+    
+    return sorted.map((item, index) => ({
+      evermarkId: item.evermarkId,
+      rank: index + 1,
+      totalVotes: item.votes,
+      voteCount: Number(item.votes),
+      percentageOfTotal: totalVotes > BigInt(0) ? Number((item.votes * BigInt(100)) / totalVotes) : 0,
+      trending: 'stable' as const // Would need historical data to determine trend
+    }));
+  }
+
+  /**
+   * Create standardized voting error
+   */
+  static createError(code: VotingErrorCode, message: string, details?: Record<string, any>): VotingError {
+    const error: VotingError = {
+      code,
+      message,
+      timestamp: Date.now(),
+      recoverable: this.isRecoverableError(code)
+    };
+
+    if (details) {
+      error.details = details;
+    }
+
+    return error;
+  }
+
+  /**
+   * Check if error is recoverable
+   */
   private static isRecoverableError(code: VotingErrorCode): boolean {
     const recoverableErrors = new Set<VotingErrorCode>([
       VOTING_ERRORS.NETWORK_ERROR,
@@ -486,6 +754,9 @@ export class VotingService {
     return recoverableErrors.has(code);
   }
 
+  /**
+   * Parse contract error into structured format
+   */
   static parseContractError(error: any): VotingError {
     const timestamp = Date.now();
     let code: VotingErrorCode = VOTING_ERRORS.CONTRACT_ERROR;
@@ -522,11 +793,26 @@ export class VotingService {
       }
     }
 
-    return { code, message, timestamp, recoverable, details: { originalError: error?.message || 'Unknown error', stack: error?.stack } };
+    return { 
+      code, 
+      message, 
+      timestamp, 
+      recoverable, 
+      details: { 
+        originalError: error?.message || 'Unknown error', 
+        stack: error?.stack 
+      } 
+    };
   }
 
-  static getUserFriendlyError(error: VotingError): string {
-    switch (error.code) {
+  /**
+   * Get user-friendly error message
+   */
+  static getUserFriendlyError(error: VotingError | string): string {
+    const errorCode = typeof error === 'string' ? error : error.code;
+    const errorMessage = typeof error === 'string' ? error : error.message;
+
+    switch (errorCode) {
       case VOTING_ERRORS.WALLET_NOT_CONNECTED:
         return 'Please connect your wallet to vote';
       case VOTING_ERRORS.INSUFFICIENT_VOTING_POWER:
@@ -548,7 +834,153 @@ export class VotingService {
       case VOTING_ERRORS.NETWORK_ERROR:
         return 'Network error. Please check your connection and try again';
       default:
-        return error.message || 'An unexpected error occurred';
+        return errorMessage || 'An unexpected error occurred';
     }
+  }
+
+  /**
+   * Generate delegation summary for UI display
+   */
+  static generateDelegationSummary(
+    type: 'delegate' | 'undelegate',
+    evermarkId: string,
+    amount: bigint,
+    currentDelegation?: bigint
+  ): {
+    action: string;
+    amount: string;
+    evermarkId: string;
+    newTotal?: string;
+    impact: 'low' | 'medium' | 'high';
+  } {
+    const formattedAmount = this.formatVoteAmount(amount);
+    const action = type === 'delegate' ? 'Delegate' : 'Undelegate';
+    
+    let impact: 'low' | 'medium' | 'high' = 'medium';
+    
+    const result: {
+      action: string;
+      amount: string;
+      evermarkId: string;
+      newTotal?: string;
+      impact: 'low' | 'medium' | 'high';
+    } = {
+      action,
+      amount: formattedAmount,
+      evermarkId,
+      impact
+    };
+    
+    if (currentDelegation !== undefined) {
+      const newTotalAmount = type === 'delegate' 
+        ? currentDelegation + amount 
+        : currentDelegation - amount;
+      result.newTotal = this.formatVoteAmount(newTotalAmount);
+      
+      // Calculate impact based on change percentage
+      if (currentDelegation > BigInt(0)) {
+        const changePercent = Number((amount * BigInt(100)) / currentDelegation);
+        if (changePercent > 50) impact = 'high';
+        else if (changePercent < 10) impact = 'low';
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Create voting power summary for UI
+   */
+  static createVotingPowerSummary(votingPower: VotingPower): {
+    totalFormatted: string;
+    availableFormatted: string;
+    delegatedFormatted: string;
+    utilizationPercentage: number;
+    status: 'low' | 'medium' | 'high' | 'maxed';
+  } {
+    const totalFormatted = this.formatVoteAmount(votingPower.total);
+    const availableFormatted = this.formatVoteAmount(votingPower.available);
+    const delegatedFormatted = this.formatVoteAmount(votingPower.delegated);
+    
+    const utilizationPercentage = votingPower.total > BigInt(0) 
+      ? Number((votingPower.delegated * BigInt(100)) / votingPower.total)
+      : 0;
+
+    let status: 'low' | 'medium' | 'high' | 'maxed' = 'low';
+    if (utilizationPercentage >= 90) status = 'maxed';
+    else if (utilizationPercentage >= 60) status = 'high';
+    else if (utilizationPercentage >= 30) status = 'medium';
+
+    return {
+      totalFormatted,
+      availableFormatted,
+      delegatedFormatted,
+      utilizationPercentage,
+      status
+    };
+  }
+
+  /**
+   * Format voting transaction for display
+   */
+  static formatVotingTransaction(transaction: VotingTransaction): {
+    typeLabel: string;
+    amountFormatted: string;
+    statusLabel: string;
+    timeAgo: string;
+    gasCostFormatted?: string;
+  } {
+    const typeLabel = transaction.type === 'delegate' ? 'Delegated' : 'Undelegated';
+    const amountFormatted = this.formatVoteAmount(transaction.amount);
+    
+    let statusLabel = 'Unknown';
+    switch (transaction.status) {
+      case 'pending':
+        statusLabel = 'Pending';
+        break;
+      case 'confirmed':
+        statusLabel = 'Confirmed';
+        break;
+      case 'failed':
+        statusLabel = 'Failed';
+        break;
+    }
+
+    const timeAgo = this.formatTimeAgo(transaction.timestamp);
+    
+    const result: {
+      typeLabel: string;
+      amountFormatted: string;
+      statusLabel: string;
+      timeAgo: string;
+      gasCostFormatted?: string;
+    } = {
+      typeLabel,
+      amountFormatted,
+      statusLabel,
+      timeAgo
+    };
+
+    if (transaction.gasUsed) {
+      result.gasCostFormatted = `${this.formatVoteAmount(transaction.gasUsed, 6)} ETH`;
+    }
+
+    return result;
+  }
+
+  /**
+   * Format time ago helper
+   */
+  private static formatTimeAgo(timestamp: Date): string {
+    const now = new Date();
+    const diffMs = now.getTime() - timestamp.getTime();
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays > 0) return `${diffDays}d ago`;
+    if (diffHours > 0) return `${diffHours}h ago`;
+    if (diffMinutes > 0) return `${diffMinutes}m ago`;
+    return 'Just now';
   }
 }

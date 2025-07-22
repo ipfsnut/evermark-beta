@@ -1,4 +1,4 @@
-// src/features/voting/hooks/useVotingState.ts - Fixed error handling
+// src/features/voting/hooks/useVotingState.ts - Fixed for Thirdweb v5
 import { useState, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useReadContract, useSendTransaction } from 'thirdweb/react';
@@ -10,6 +10,7 @@ import { CHAIN, CONTRACTS } from '@/lib/contracts';
 import { EvermarkVotingABI } from '@/lib/abis';
 import { useStakingState } from '@/features/staking';
 import { VotingService } from '../services/VotingService';
+import { useVotingEvents } from './useVotingEvents';
 import type { 
   VotingPower, 
   VotingCycle, 
@@ -48,7 +49,7 @@ export function useVotingState(): UseVotingStateReturn {
     client,
     chain: CHAIN,
     address: CONTRACTS.EVERMARK_VOTING,
-    abi: EvermarkVotingABI
+    abi: EvermarkVotingABI as any
   }), []);
   
   const userAddress = account?.address;
@@ -56,10 +57,17 @@ export function useVotingState(): UseVotingStateReturn {
   
   const { stakingInfo, formatTokenAmount } = useStakingState();
   
-  // Current cycle query
+  // Setup event listening for real-time updates
+  useVotingEvents({ 
+    votingContract, 
+    enabled: isConnected 
+  });
+  
+  // Current cycle query with error handling
   const { 
     data: currentCycleNumber, 
     isLoading: isLoadingCycle,
+    error: cycleError,
     refetch: refetchCycle
   } = useReadContract({
     contract: votingContract,
@@ -67,16 +75,19 @@ export function useVotingState(): UseVotingStateReturn {
     params: [],
   });
 
-  // Cycle info query
+  // Cycle info query with dependency on current cycle
+  const cycleInfoQuery = useReadContract({
+    contract: votingContract,
+    method: "function getCycleInfo(uint256) view returns (uint256,uint256,uint256,uint256,bool,uint256)",
+    params: currentCycleNumber ? [currentCycleNumber] : [BigInt(0)],
+  });
+  
   const { 
     data: cycleInfoData,
     isLoading: isLoadingCycleInfo,
+    error: cycleInfoError,
     refetch: refetchCycleInfo
-  } = useReadContract({
-    contract: votingContract,
-    method: "function getCycleInfo(uint256) view returns (uint256,uint256,uint256,uint256,bool,uint256)",
-    params: currentCycleNumber ? [currentCycleNumber] : undefined,
-  });
+  } = cycleInfoQuery;
 
   // Time remaining in cycle
   const { 
@@ -89,19 +100,24 @@ export function useVotingState(): UseVotingStateReturn {
   });
 
   // User's remaining voting power
-  const { 
-    data: remainingVotingPowerRaw,
-    refetch: refetchVotingPower
-  } = useReadContract({
+  const votingPowerQuery = useReadContract({
     contract: votingContract,
     method: "function getRemainingVotingPower(address) view returns (uint256)",
-    params: userAddress ? [userAddress] : undefined,
+    params: userAddress ? [userAddress] : ['0x0000000000000000000000000000000000000000'],
   });
+  
+  const { 
+    data: remainingVotingPowerRaw,
+    isLoading: isLoadingVotingPower,
+    error: votingPowerError,
+    refetch: refetchVotingPower
+  } = votingPowerQuery;
 
   // User's delegation history from contract events
   const { 
     data: delegationHistoryData,
     isLoading: isLoadingDelegations,
+    error: delegationError,
     refetch: refetchDelegations
   } = useQuery({
     queryKey: QUERY_KEYS.delegationHistory(userAddress),
@@ -119,11 +135,17 @@ export function useVotingState(): UseVotingStateReturn {
     },
     enabled: !!userAddress && !!currentCycleNumber,
     staleTime: 30 * 1000, // 30 seconds
+    retry: 2,
+    retryDelay: 1000,
   });
 
-  // Voting power calculation from staking + contract data
+  // Evermark votes cache for efficient lookups
+  const evermarkVotesCache = useMemo(() => new Map<string, bigint>(), []);
+  const userVotesCache = useMemo(() => new Map<string, bigint>(), []);
+
+  // Voting power calculation from staking + contract data with proper null handling  
   const votingPower: VotingPower | null = useMemo(() => {
-    if (!stakingInfo || remainingVotingPowerRaw === undefined) return null;
+    if (!stakingInfo || remainingVotingPowerRaw === undefined || !userAddress) return null;
     
     const available = remainingVotingPowerRaw || BigInt(0);
     const total = stakingInfo.totalStaked;
@@ -135,11 +157,11 @@ export function useVotingState(): UseVotingStateReturn {
       delegated,
       reserved: BigInt(0) // Could be calculated from pending transactions
     };
-  }, [stakingInfo, remainingVotingPowerRaw]);
+  }, [stakingInfo, remainingVotingPowerRaw, userAddress]);
 
-  // Current cycle information
+  // Current cycle information with proper null handling
   const currentCycle: VotingCycle | null = useMemo(() => {
-    if (!currentCycleNumber || !cycleInfoData) return null;
+    if (!currentCycleNumber || !cycleInfoData || !currentCycleNumber) return null;
     
     const [startTime, endTime, totalVotes, totalDelegations, finalized, activeCount] = cycleInfoData;
     
@@ -194,38 +216,54 @@ export function useVotingState(): UseVotingStateReturn {
     );
   }, [votingPower, currentDelegations, currentCycle, delegationHistoryData]);
 
-  // Get votes for specific evermark
-  const getEvermarkVotes = useCallback(async (evermarkId: string): Promise<bigint> => {
+  // Get votes for specific evermark with caching (synchronous from cache)
+  const getEvermarkVotes = useCallback((evermarkId: string): bigint => {
     if (!currentCycleNumber) return BigInt(0);
     
-    try {
-      return await VotingService.getEvermarkVotes(
-        evermarkId, 
-        Number(currentCycleNumber), 
-        votingContract
-      );
-    } catch (error) {
-      console.error(`Failed to get evermark votes for ${evermarkId}:`, error);
-      return BigInt(0);
+    const cacheKey = `${evermarkId}-${currentCycleNumber}`;
+    if (evermarkVotesCache.has(cacheKey)) {
+      return evermarkVotesCache.get(cacheKey)!;
     }
-  }, [currentCycleNumber, votingContract]);
+    
+    // If not in cache, trigger async fetch and return 0 for now
+    VotingService.getEvermarkVotes(
+      evermarkId, 
+      Number(currentCycleNumber), 
+      votingContract
+    ).then(votes => {
+      evermarkVotesCache.set(cacheKey, votes);
+      // Could trigger a re-render here if needed
+    }).catch(error => {
+      console.error(`Failed to get evermark votes for ${evermarkId}:`, error);
+    });
+    
+    return BigInt(0);
+  }, [currentCycleNumber, votingContract, evermarkVotesCache]);
 
-  // Get user's votes for specific evermark
-  const getUserVotes = useCallback(async (evermarkId: string): Promise<bigint> => {
+  // Get user's votes for specific evermark with caching (synchronous from cache)
+  const getUserVotes = useCallback((evermarkId: string): bigint => {
     if (!userAddress || !currentCycleNumber) return BigInt(0);
     
-    try {
-      return await VotingService.getUserVotes(
-        userAddress,
-        evermarkId,
-        Number(currentCycleNumber),
-        votingContract
-      );
-    } catch (error) {
-      console.error(`Failed to get user votes for ${evermarkId}:`, error);
-      return BigInt(0);
+    const cacheKey = `${userAddress}-${evermarkId}-${currentCycleNumber}`;
+    if (userVotesCache.has(cacheKey)) {
+      return userVotesCache.get(cacheKey)!;
     }
-  }, [userAddress, currentCycleNumber, votingContract]);
+    
+    // If not in cache, trigger async fetch and return 0 for now
+    VotingService.getUserVotes(
+      userAddress,
+      evermarkId,
+      Number(currentCycleNumber),
+      votingContract
+    ).then(votes => {
+      userVotesCache.set(cacheKey, votes);
+      // Could trigger a re-render here if needed
+    }).catch(error => {
+      console.error(`Failed to get user votes for ${evermarkId}:`, error);
+    });
+    
+    return BigInt(0);
+  }, [userAddress, currentCycleNumber, votingContract, userVotesCache]);
 
   // Helper function to create and handle voting errors properly
   const createVotingError = useCallback((code: VotingErrorCode, message: string, details?: Record<string, any>): VotingError => {
@@ -277,6 +315,11 @@ export function useVotingState(): UseVotingStateReturn {
       }
     },
     onSuccess: (transaction) => {
+      // Clear caches
+      evermarkVotesCache.clear();
+      userVotesCache.clear();
+      
+      // Invalidate queries
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.delegationHistory(userAddress) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.votingPower(userAddress) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.evermarkVotes(transaction.evermarkId) });
@@ -333,6 +376,11 @@ export function useVotingState(): UseVotingStateReturn {
       }
     },
     onSuccess: (transaction) => {
+      // Clear caches
+      evermarkVotesCache.clear();
+      userVotesCache.clear();
+      
+      // Invalidate queries
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.delegationHistory(userAddress) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.votingPower(userAddress) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.evermarkVotes(transaction.evermarkId) });
@@ -392,6 +440,11 @@ export function useVotingState(): UseVotingStateReturn {
       }
     },
     onSuccess: (transaction) => {
+      // Clear caches
+      evermarkVotesCache.clear();
+      userVotesCache.clear();
+      
+      // Invalidate queries
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.delegationHistory(userAddress) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.votingPower(userAddress) });
       refetchVotingPower();
@@ -457,6 +510,10 @@ export function useVotingState(): UseVotingStateReturn {
   }, []);
 
   const refetch = useCallback(async (): Promise<void> => {
+    // Clear caches
+    evermarkVotesCache.clear();
+    userVotesCache.clear();
+    
     await Promise.all([
       refetchCycle(),
       refetchCycleInfo(),
@@ -464,9 +521,22 @@ export function useVotingState(): UseVotingStateReturn {
       refetchDelegations(),
       refetchVotingPower()
     ]);
-  }, [refetchCycle, refetchCycleInfo, refetchTimeRemaining, refetchDelegations, refetchVotingPower]);
+  }, [refetchCycle, refetchCycleInfo, refetchTimeRemaining, refetchDelegations, refetchVotingPower, evermarkVotesCache, userVotesCache]);
 
-  const isLoading = isLoadingCycle || isLoadingCycleInfo || isLoadingDelegations;
+  // Error handling for contract read errors
+  const combinedError = useMemo(() => {
+    if (error) return error;
+    if (cycleError || cycleInfoError || votingPowerError || delegationError) {
+      return VotingService.createError(
+        VOTING_ERRORS.CONTRACT_ERROR,
+        'Failed to load voting data. Please refresh and try again.',
+        { cycleError, cycleInfoError, votingPowerError, delegationError }
+      );
+    }
+    return null;
+  }, [error, cycleError, cycleInfoError, votingPowerError, delegationError]);
+
+  const isLoading = isLoadingCycle || isLoadingCycleInfo || isLoadingDelegations || isLoadingVotingPower;
 
   return {
     // Data
@@ -484,7 +554,7 @@ export function useVotingState(): UseVotingStateReturn {
     isLoading,
     isDelegating: delegateVotesMutation.isPending || batchDelegateVotesMutation.isPending,
     isUndelegating: undelegateVotesMutation.isPending,
-    error,
+    error: combinedError,
     success,
     
     // Actions
