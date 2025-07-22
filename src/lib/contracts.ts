@@ -11,7 +11,8 @@ import EvermarkRewardsABI from './abis/EvermarkRewards.json';
 import EMARKABI from './abis/EMARK.json';
 import FeeCollectorABI from './abis/FeeCollector.json';
 
-export const BASE_CHAIN = defineChain({
+// Define Base chain with proper v5 syntax
+export const CHAIN = defineChain({
   id: 8453,
   name: 'Base',
   nativeCurrency: {
@@ -28,91 +29,115 @@ export const BASE_CHAIN = defineChain({
   ],
 });
 
-// Contract addresses from environment
-export const CONTRACT_ADDRESSES = {
-  EMARK_TOKEN: import.meta.env.VITE_EMARK_TOKEN_ADDRESS,
-  CARD_CATALOG: import.meta.env.VITE_CARD_CATALOG_ADDRESS,
-  EVERMARK_NFT: import.meta.env.VITE_EVERMARK_NFT_ADDRESS,
-  EVERMARK_VOTING: import.meta.env.VITE_EVERMARK_VOTING_ADDRESS,
-  EVERMARK_LEADERBOARD: import.meta.env.VITE_EVERMARK_LEADERBOARD_ADDRESS,
-  EVERMARK_REWARDS: import.meta.env.VITE_EVERMARK_REWARDS_ADDRESS,
-  FEE_COLLECTOR: import.meta.env.VITE_FEE_COLLECTOR_ADDRESS,
-} as const;
-
-// Contract instances with proper ABI typing
+// Contract addresses with validation
 export const CONTRACTS = {
-  EMARK_TOKEN: getContract({
-    client,
-    chain: BASE_CHAIN,
-    address: CONTRACT_ADDRESSES.EMARK_TOKEN,
-    abi: EMARKABI as Abi,
-  }),
-  
-  CARD_CATALOG: getContract({
-    client,
-    chain: BASE_CHAIN,
-    address: CONTRACT_ADDRESSES.CARD_CATALOG,
-    abi: CardCatalogABI as Abi,
-  }),
-  
-  EVERMARK_NFT: getContract({
-    client,
-    chain: BASE_CHAIN,
-    address: CONTRACT_ADDRESSES.EVERMARK_NFT,
-    abi: EvermarkNFTABI as Abi,
-  }),
-  
-  EVERMARK_VOTING: getContract({
-    client,
-    chain: BASE_CHAIN,
-    address: CONTRACT_ADDRESSES.EVERMARK_VOTING,
-    abi: EvermarkVotingABI as Abi,
-  }),
-  
-  EVERMARK_LEADERBOARD: getContract({
-    client,
-    chain: BASE_CHAIN,
-    address: CONTRACT_ADDRESSES.EVERMARK_LEADERBOARD,
-    abi: EvermarkLeaderboardABI as Abi,
-  }),
-  
-  EVERMARK_REWARDS: getContract({
-    client,
-    chain: BASE_CHAIN,
-    address: CONTRACT_ADDRESSES.EVERMARK_REWARDS,
-    abi: EvermarkRewardsABI as Abi,
-  }),
-  
-  FEE_COLLECTOR: getContract({
-    client,
-    chain: BASE_CHAIN,
-    address: CONTRACT_ADDRESSES.FEE_COLLECTOR,
-    abi: FeeCollectorABI as Abi,
-  }),
+  EMARK_TOKEN: import.meta.env.VITE_EMARK_TOKEN_ADDRESS || '',
+  CARD_CATALOG: import.meta.env.VITE_CARD_CATALOG_ADDRESS || '',
+  EVERMARK_NFT: import.meta.env.VITE_EVERMARK_NFT_ADDRESS || '',
+  EVERMARK_VOTING: import.meta.env.VITE_EVERMARK_VOTING_ADDRESS || '',
+  EVERMARK_LEADERBOARD: import.meta.env.VITE_EVERMARK_LEADERBOARD_ADDRESS || '',
+  EVERMARK_REWARDS: import.meta.env.VITE_EVERMARK_REWARDS_ADDRESS || '',
+  FEE_COLLECTOR: import.meta.env.VITE_FEE_COLLECTOR_ADDRESS || '',
 } as const;
 
-// Validation helpers
-export function validateContractAddresses(): boolean {
-  return Object.values(CONTRACT_ADDRESSES).every(address => 
-    address && 
-    address.length === 42 && 
-    address.startsWith('0x')
-  );
+// Properly typed contract getters for Thirdweb v5
+export function getEmarkTokenContract() {
+  if (!CONTRACTS.EMARK_TOKEN) {
+    throw new Error('EMARK_TOKEN address not configured');
+  }
+  return getContract({
+    client,
+    chain: CHAIN,
+    address: CONTRACTS.EMARK_TOKEN,
+    abi: EMARKABI as Abi,
+  });
 }
 
+export function getCardCatalogContract() {
+  if (!CONTRACTS.CARD_CATALOG) {
+    throw new Error('CARD_CATALOG address not configured');
+  }
+  return getContract({
+    client,
+    chain: CHAIN,
+    address: CONTRACTS.CARD_CATALOG,
+    abi: CardCatalogABI as Abi,
+  });
+}
+
+export function getEvermarkNFTContract() {
+  if (!CONTRACTS.EVERMARK_NFT) {
+    throw new Error('EVERMARK_NFT address not configured');
+  }
+  return getContract({
+    client,
+    chain: CHAIN,
+    address: CONTRACTS.EVERMARK_NFT,
+    abi: EvermarkNFTABI as Abi,
+  });
+}
+
+export function getEvermarkVotingContract() {
+  if (!CONTRACTS.EVERMARK_VOTING) {
+    throw new Error('EVERMARK_VOTING address not configured');
+  }
+  return getContract({
+    client,
+    chain: CHAIN,
+    address: CONTRACTS.EVERMARK_VOTING,
+    abi: EvermarkVotingABI as Abi,
+  });
+}
+
+export function getEvermarkLeaderboardContract() {
+  if (!CONTRACTS.EVERMARK_LEADERBOARD) {
+    throw new Error('EVERMARK_LEADERBOARD address not configured');
+  }
+  return getContract({
+    client,
+    chain: CHAIN,
+    address: CONTRACTS.EVERMARK_LEADERBOARD,
+    abi: EvermarkLeaderboardABI as Abi,
+  });
+}
+
+export function getEvermarkRewardsContract() {
+  if (!CONTRACTS.EVERMARK_REWARDS) {
+    throw new Error('EVERMARK_REWARDS address not configured');
+  }
+  return getContract({
+    client,
+    chain: CHAIN,
+    address: CONTRACTS.EVERMARK_REWARDS,
+    abi: EvermarkRewardsABI as Abi,
+  });
+}
+
+export function getFeeCollectorContract() {
+  if (!CONTRACTS.FEE_COLLECTOR) {
+    throw new Error('FEE_COLLECTOR address not configured');
+  }
+  return getContract({
+    client,
+    chain: CHAIN,
+    address: CONTRACTS.FEE_COLLECTOR,
+    abi: FeeCollectorABI as Abi,
+  });
+}
+
+// Contract validation
+export function validateContractAddresses(): { isValid: boolean; missing: string[] } {
+  const missing = Object.entries(CONTRACTS)
+    .filter(([_, address]) => !address || address.length !== 42 || !address.startsWith('0x'))
+    .map(([name, _]) => name);
+  
+  return {
+    isValid: missing.length === 0,
+    missing
+  };
+}
+
+// Explorer URL helper
 export function getContractExplorerUrl(address: string): string {
-  return `${BASE_CHAIN.blockExplorers?.[0]?.url}/address/${address}`;
-}
-
-// Contract interaction helpers
-export function getEvermarkNFT() {
-  return CONTRACTS.EVERMARK_NFT;
-}
-
-export function getCardCatalog() {
-  return CONTRACTS.CARD_CATALOG;
-}
-
-export function getEvermarkVoting() {
-  return CONTRACTS.EVERMARK_VOTING;
+  return `${CHAIN.blockExplorers?.[0]?.url}/address/${address}`;
 }

@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useCallback, useState } from 'react';
+import React, { createContext, useContext, useCallback } from 'react';
 import { useActiveAccount, useSendTransaction } from 'thirdweb/react';
-import { prepareContractCall } from 'thirdweb';
-import { CONTRACTS } from '@/lib/contracts';
+import { prepareContractCall, waitForReceipt } from 'thirdweb';
+import { getEvermarkNFTContract } from '@/lib/contracts';
+import { client, CHAIN } from '@/lib/thirdweb';
 
 export interface MintResult {
   success: boolean;
@@ -50,10 +51,12 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
         account: account.address
       });
 
-      // Prepare the contract call for minting
+      const contract = getEvermarkNFTContract();
+
+      // Prepare the contract call for minting with proper v5 syntax
       const transaction = prepareContractCall({
-        contract: CONTRACTS.EVERMARK_NFT,
-        method: 'mintEvermark',
+        contract,
+        method: 'function mintEvermark(string metadataURI, string title, string creator) payable returns (uint256)',
         params: [metadataURI, title, creator],
         value: BigInt('1000000000000000'), // 0.001 ETH minting fee
       });
@@ -61,8 +64,12 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
       // Send the transaction
       const result = await sendTransaction(transaction);
 
-      // Wait for confirmation and get token ID
-      const receipt = await result.wait();
+      // Wait for confirmation and get receipt
+      const receipt = await waitForReceipt({
+        client,
+        chain: CHAIN,
+        transactionHash: result.transactionHash
+      });
       
       // Extract token ID from logs
       const tokenId = extractTokenIdFromReceipt(receipt);
@@ -85,7 +92,7 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
       if (error instanceof Error) {
         if (error.message.includes('insufficient funds')) {
           errorMessage = 'Insufficient funds for minting fee and gas';
-        } else if (error.message.includes('user rejected')) {
+        } else if (error.message.includes('user rejected') || error.message.includes('User denied')) {
           errorMessage = 'Transaction was rejected by user';
         } else {
           errorMessage = error.message;
@@ -103,7 +110,7 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
     try {
       if (!account) return false;
       
-      // Check user's ETH balance
+      // Check user's ETH balance using v5 syntax
       const balance = await account.getBalance();
       const minRequired = BigInt('2000000000000000'); // 0.002 ETH for fee + gas
       
@@ -116,7 +123,7 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
 
   const estimateGasCost = useCallback(async (): Promise<{ gasPrice: string; estimatedCost: string }> => {
     try {
-      // This would integrate with actual gas estimation
+      // This would integrate with actual gas estimation in v5
       return {
         gasPrice: '0.001 ETH',
         estimatedCost: '~$2.50 USD'
@@ -132,7 +139,7 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
 
   const getTransactionDetails = useCallback(async (txHash: string): Promise<any> => {
     try {
-      // This would fetch actual transaction details from the blockchain
+      // This would use Thirdweb v5 methods to fetch transaction details
       const response = await fetch(`https://api.basescan.org/api?module=proxy&action=eth_getTransactionReceipt&txhash=${txHash}`);
       return await response.json();
     } catch (error) {
@@ -142,10 +149,12 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
   }, []);
 
   const isConfigured = useCallback((): boolean => {
-    return !!(
-      CONTRACTS.EVERMARK_NFT &&
-      CONTRACTS.CARD_CATALOG
-    );
+    try {
+      getEvermarkNFTContract();
+      return true;
+    } catch {
+      return false;
+    }
   }, []);
 
   const value: BlockchainContextType = {
@@ -161,34 +170,4 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
       {children}
     </BlockchainContext.Provider>
   );
-}
-
-// Hook for using blockchain services
-export function useBlockchain(): BlockchainContextType {
-  const context = useContext(BlockchainContext);
-  if (!context) {
-    throw new Error('useBlockchain must be used within BlockchainProvider');
-  }
-  return context;
-}
-
-// Helper function to extract token ID from transaction receipt
-function extractTokenIdFromReceipt(receipt: any): bigint | null {
-  try {
-    // Look for EvermarkMinted event in logs
-    const logs = receipt.logs || [];
-    
-    for (const log of logs) {
-      // Look for the EvermarkMinted event signature
-      if (log.topics?.[0] === '0x...') { // Replace with actual event signature
-        // Parse the token ID from the log data
-        return BigInt(log.topics[1]); // Assuming tokenId is the first indexed parameter
-      }
-    }
-    
-    return null;
-  } catch (error) {
-    console.error('Failed to extract token ID:', error);
-    return null;
-  }
 }

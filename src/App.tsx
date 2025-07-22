@@ -7,10 +7,10 @@ import { ErrorBoundary } from '@/components/ui';
 // Lazy load pages for better performance
 const HomePage = React.lazy(() => import('@/pages/HomePage'));
 const ExplorePage = React.lazy(() => import('@/pages/ExplorePage'));
-const LeaderboardPage = React.lazy(() => import('@/pages/LeaderboardPage'));
-const StakingPage = React.lazy(() => import('@/pages/StakingPage'));
-const EvermarkDetailPage = React.lazy(() => import('@/pages/EvermarkDetailPage'));
-const CreatePage = React.lazy(() => import('@/pages/CreatePage'));
+const LeaderboardPage = React.lazy(() => import('@/features/leaderboard/pages/LeaderboardPage'));
+const StakingPage = React.lazy(() => import('@/features/staking/pages/StakingPage'));
+const EvermarkDetailPage = React.lazy(() => import('@/features/evermarks/pages/EvermarkDetailPage'));
+const CreatePage = React.lazy(() => import('@/features/evermarks/pages/CreatePage'));
 const NotFoundPage = React.lazy(() => import('@/pages/NotFoundPage'));
 
 // Loading fallback component

@@ -1,6 +1,7 @@
 import React, { createContext, useContext } from 'react';
 import { useActiveAccount, useConnect, useDisconnect } from 'thirdweb/react';
-import { inAppWallet, createWallet } from 'thirdweb/wallets';
+import { createWallet, inAppWallet } from 'thirdweb/wallets';
+import { client } from '@/lib/thirdweb';
 
 interface WalletContextType {
   // Connection state
@@ -20,6 +21,14 @@ interface WalletProviderProps {
   children: React.ReactNode;
 }
 
+// Define available wallets for v5
+const wallets = [
+  inAppWallet(),
+  createWallet('io.metamask'),
+  createWallet('com.coinbase.wallet'),
+  createWallet('me.rainbow'),
+];
+
 export function WalletProvider({ children }: WalletProviderProps) {
   const account = useActiveAccount();
   const { connect: thirdwebConnect, isConnecting } = useConnect();
@@ -27,12 +36,11 @@ export function WalletProvider({ children }: WalletProviderProps) {
 
   const connect = async (): Promise<{ success: boolean; error?: string }> => {
     try {
-      const wallet = createWallet('io.metamask');
+      // Try to connect with the first available wallet
+      const wallet = wallets[0]; // Default to in-app wallet
       await thirdwebConnect(async () => {
-        const account = await wallet.connect({
-          client: import.meta.env.VITE_THIRDWEB_CLIENT_ID,
-        });
-        return account;
+        const connectedAccount = await wallet.connect({ client });
+        return connectedAccount;
       });
       
       return { success: true };

@@ -1,15 +1,22 @@
-// src/components/ConnectButton.tsx - Wallet connection button
-
 import React from 'react';
 import { ConnectButton, useActiveAccount } from 'thirdweb/react';
 import { client } from '@/lib/thirdweb';
 import { CHAIN } from '@/lib/contracts';
 import { WalletIcon, UserIcon } from 'lucide-react';
+import { createWallet, inAppWallet } from 'thirdweb/wallets';
 
 interface WalletConnectProps {
   className?: string;
   variant?: 'default' | 'compact';
 }
+
+// Define supported wallets for v5
+const wallets = [
+  inAppWallet(),
+  createWallet('io.metamask'),
+  createWallet('com.coinbase.wallet'),
+  createWallet('me.rainbow'),
+];
 
 export function WalletConnect({ className = '', variant = 'default' }: WalletConnectProps) {
   const account = useActiveAccount();
@@ -28,31 +35,26 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
         </div>
       );
     }
-
-    return (
-      <ConnectButton
-        client={client}
-        chain={CHAIN}
-        connectButton={{
-          label: "Connect Wallet",
-          className: `inline-flex items-center px-4 py-2 bg-gradient-to-r from-cyber-primary to-cyber-secondary text-black font-medium rounded-lg hover:opacity-90 transition-opacity ${className}`
-        }}
-        detailsButton={{
-          displayBalanceToken: {
-            [CHAIN.id]: "0x1234567890123456789012345678901234567890" // EMARK token address
-          }
-        }}
-      />
-    );
   }
 
   return (
     <ConnectButton
       client={client}
+      wallets={wallets}
       chain={CHAIN}
       connectButton={{
-        label: "Connect Wallet",
+        label: (
+          <span className="flex items-center">
+            <WalletIcon className="h-4 w-4 mr-2" />
+            Connect Wallet
+          </span>
+        ),
         className: `inline-flex items-center px-4 py-2 bg-gradient-to-r from-cyber-primary to-cyber-secondary text-black font-medium rounded-lg hover:opacity-90 transition-opacity ${className}`
+      }}
+      detailsButton={{
+        displayBalanceToken: {
+          [CHAIN.id]: import.meta.env.VITE_EMARK_TOKEN_ADDRESS
+        }
       }}
     />
   );
@@ -81,6 +83,7 @@ export function SimpleConnectButton({ className = '' }: { className?: string }) 
   return (
     <ConnectButton
       client={client}
+      wallets={wallets}
       chain={CHAIN}
       connectButton={{
         label: (

@@ -1,5 +1,3 @@
-// hooks/core/useUserData.ts - Core hook for user blockchain data
-
 import { useMemo } from 'react';
 import { useReadContract } from 'thirdweb/react';
 import { useActiveAccount } from 'thirdweb/react';
@@ -28,37 +26,49 @@ export interface UserUnbonding {
 
 export function useUserData(userAddress?: string) {
   const account = useActiveAccount();
-  const { emarkToken, cardCatalog } = useContracts();
+  const contracts = useContracts();
   
   const effectiveAddress = userAddress || account?.address;
   const hasWallet = !!account;
 
-  // EMARK token balance
+  // EMARK token balance - only query if contract exists
   const { data: emarkBalance, refetch: refetchEmarkBalance } = useReadContract({
-    contract: emarkToken,
+    contract: contracts.emarkToken,
     method: "function balanceOf(address) view returns (uint256)",
     params: effectiveAddress ? [effectiveAddress] : undefined,
+    queryOptions: {
+      enabled: !!contracts.emarkToken && !!effectiveAddress
+    }
   });
 
   // EMARK allowance for staking contract
   const { data: stakingAllowance, refetch: refetchAllowance } = useReadContract({
-    contract: emarkToken,
+    contract: contracts.emarkToken,
     method: "function allowance(address owner, address spender) view returns (uint256)",
-    params: effectiveAddress ? [effectiveAddress, cardCatalog.address] : undefined,
+    params: effectiveAddress && contracts.cardCatalog ? [effectiveAddress, contracts.cardCatalog.address] : undefined,
+    queryOptions: {
+      enabled: !!contracts.emarkToken && !!contracts.cardCatalog && !!effectiveAddress
+    }
   });
 
   // wEMARK balance (from CardCatalog)
   const { data: wEmarkBalance, refetch: refetchWEmarkBalance } = useReadContract({
-    contract: cardCatalog,
+    contract: contracts.cardCatalog,
     method: "function balanceOf(address) view returns (uint256)",
     params: effectiveAddress ? [effectiveAddress] : undefined,
+    queryOptions: {
+      enabled: !!contracts.cardCatalog && !!effectiveAddress
+    }
   });
 
   // User staking summary
   const { data: userSummary, refetch: refetchSummary } = useReadContract({
-    contract: cardCatalog,
+    contract: contracts.cardCatalog,
     method: "function getUserSummary(address) view returns (uint256 stakedBalance, uint256 availableVotingPower, uint256 delegatedPower, uint256 unbondingAmount_, uint256 unbondingReleaseTime_, bool canClaimUnbonding)",
     params: effectiveAddress ? [effectiveAddress] : undefined,
+    queryOptions: {
+      enabled: !!contracts.cardCatalog && !!effectiveAddress
+    }
   });
 
   // Memoized data structures
@@ -96,12 +106,14 @@ export function useUserData(userAddress?: string) {
 
   // Refetch all data
   const refetch = async () => {
-    await Promise.all([
-      refetchEmarkBalance(),
-      refetchAllowance(),
-      refetchWEmarkBalance(),
-      refetchSummary()
-    ]);
+    const refetchPromises = [];
+    
+    if (refetchEmarkBalance) refetchPromises.push(refetchEmarkBalance());
+    if (refetchAllowance) refetchPromises.push(refetchAllowance());
+    if (refetchWEmarkBalance) refetchPromises.push(refetchWEmarkBalance());
+    if (refetchSummary) refetchPromises.push(refetchSummary());
+    
+    await Promise.all(refetchPromises);
   };
 
   return {
