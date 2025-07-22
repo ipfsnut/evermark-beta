@@ -1,3 +1,5 @@
+// src/features/tokens/components/TokenTransfer.tsx - Fixed contract integration
+
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { 
   Send,
@@ -10,7 +12,10 @@ import { useSendTransaction } from 'thirdweb/react';
 import { getContract } from 'thirdweb';
 import { client } from '@/lib/thirdweb';
 import { CHAIN, CONTRACTS } from '@/lib/contracts';
-import { EMARK_TOKEN_ABI } from '@/lib/abis';
+
+// Import ABI from the actual JSON file
+import EMARK_ABI from '@/features/tokens/abis/EMARK.json';
+
 import { TokenService } from '../services/TokenService';
 
 interface TokenTransferProps {
@@ -28,13 +33,20 @@ export function TokenTransfer({ tokenState, className = '' }: TokenTransferProps
   const { mutateAsync: sendTransaction } = useSendTransaction();
   const { tokenBalance, formatTokenAmount, parseTokenAmount, validateAmount, isConnected, userAddress } = tokenState;
 
-  // Contract instance for transfers
-  const emarkToken = useMemo(() => getContract({
-    client,
-    chain: CHAIN,
-    address: CONTRACTS.EMARK_TOKEN,
-    abi: EMARK_TOKEN_ABI
-  }), []);
+  // Contract instance for transfers with proper error handling
+  const emarkToken = useMemo(() => {
+    try {
+      return getContract({
+        client,
+        chain: CHAIN,
+        address: CONTRACTS.EMARK_TOKEN,
+        abi: EMARK_ABI as any // Cast to any to avoid TypeScript ABI issues
+      });
+    } catch (error) {
+      console.error('Failed to create token contract for transfers:', error);
+      return null;
+    }
+  }, []);
 
   const validation = useMemo(() => {
     if (!amount || !recipient) return { isValid: false, errors: [] };
@@ -59,8 +71,8 @@ export function TokenTransfer({ tokenState, className = '' }: TokenTransferProps
 
   const handleMaxClick = useCallback(() => {
     if (tokenBalance?.emarkBalance) {
-      // Reserve some for gas fees
-      const gasReserve = BigInt('10000000000000000'); // 0.01 EMARK
+      // Reserve some for gas fees - use a more conservative amount
+      const gasReserve = BigInt('100000000000000000'); // 0.1 EMARK
       const maxAmount = tokenBalance.emarkBalance > gasReserve 
         ? tokenBalance.emarkBalance - gasReserve 
         : BigInt(0);
@@ -69,7 +81,7 @@ export function TokenTransfer({ tokenState, className = '' }: TokenTransferProps
   }, [tokenBalance, formatTokenAmount]);
 
   const handleTransfer = useCallback(async () => {
-    if (!validation.isValid) return;
+    if (!validation.isValid || !emarkToken) return;
     
     setLocalError(null);
     
@@ -116,6 +128,18 @@ export function TokenTransfer({ tokenState, className = '' }: TokenTransferProps
           <Send className="mx-auto h-12 w-12 text-gray-500 mb-4" />
           <h3 className="text-lg font-medium text-white mb-2">Connect Wallet</h3>
           <p className="text-gray-400">Connect your wallet to send EMARK tokens</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!emarkToken) {
+    return (
+      <div className={`bg-gray-800/50 border border-gray-700 rounded-lg p-6 ${className}`}>
+        <div className="text-center py-8">
+          <AlertCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
+          <h3 className="text-lg font-medium text-white mb-2">Contract Error</h3>
+          <p className="text-gray-400">Unable to load token contract. Please check configuration.</p>
         </div>
       </div>
     );

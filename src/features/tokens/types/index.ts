@@ -1,4 +1,4 @@
-// features/tokens/types/index.ts - Type definitions for the Tokens feature
+// src/features/tokens/types/index.ts - Fixed type definitions
 
 export interface TokenBalance {
   // Raw balance values (wei)
@@ -53,11 +53,10 @@ export interface TokenApprovalParams {
   isUnlimited?: boolean;
 }
 
-export interface TokenApprovalResult {
-  success: boolean;
-  hash?: string;
-  error?: string;
-}
+// Fixed TokenApprovalResult with better typing
+export type TokenApprovalResult = 
+  | { success: true; hash: string; error?: never }
+  | { success: false; hash?: never; error: string };
 
 // Hook return type
 export interface UseTokenStateReturn {
@@ -150,7 +149,7 @@ export type TokenEvent =
   | { type: 'APPROVAL_FAILED'; error: TokenError }
   | { type: 'BALANCE_UPDATED'; newBalance: bigint }
   | { type: 'ALLOWANCE_UPDATED'; spender: string; newAllowance: bigint }
-  | { type: 'TRANSACTION_INITIATED'; type: TokenTransaction['type']; amount: bigint }
+  | { type: 'TRANSACTION_INITIATED'; transactionType: TokenTransaction['type']; amount: bigint }
   | { type: 'TRANSACTION_CONFIRMED'; hash: string }
   | { type: 'TRANSACTION_FAILED'; error: TokenError }
   | { type: 'DATA_REFRESHED'; timestamp: number }

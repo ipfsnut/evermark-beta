@@ -1,14 +1,17 @@
-// features/tokens/hooks/useTokenState.ts - Main state management hook for tokens feature
+// src/features/tokens/hooks/useTokenState.ts - Cleaner approach without conditional params
 
 import { useState, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useReadContract } from 'thirdweb/react';
+import { useReadContract, useSendTransaction } from 'thirdweb/react';
 import { useActiveAccount } from 'thirdweb/react';
-import { prepareContractCall, sendTransaction } from 'thirdweb';
-import { getContract } from 'thirdweb';
+import { prepareContractCall, getContract, readContract } from 'thirdweb';
 import { client } from '@/lib/thirdweb';
 import { CHAIN, CONTRACTS } from '@/lib/contracts';
-import { EMARK_TOKEN_ABI, CARD_CATALOG_ABI } from '@/lib/abis';
+
+// Import ABIs from the actual JSON files
+import EMARK_ABI from '@/features/tokens/abis/EMARK.json';
+import REWARDS_ABI from '@/features/tokens/abis/EvermarkRewards.json';
+
 import { TokenService } from '../services/TokenService';
 import {
   type TokenBalance,
@@ -30,7 +33,7 @@ const QUERY_KEYS = {
 
 /**
  * Main state management hook for Tokens feature
- * Handles balance queries, allowances, approvals, and validation
+ * Uses React Query for all contract reads to avoid thirdweb useReadContract params issues
  */
 export function useTokenState(): UseTokenStateReturn {
   // State
@@ -40,66 +43,117 @@ export function useTokenState(): UseTokenStateReturn {
   // Wallet and contracts
   const account = useActiveAccount();
   const queryClient = useQueryClient();
+  const { mutateAsync: sendTransaction } = useSendTransaction();
   
-  // Contract instances
-  const emarkToken = useMemo(() => getContract({
-    client,
-    chain: CHAIN,
-    address: CONTRACTS.EMARK_TOKEN,
-    abi: EMARK_TOKEN_ABI
-  }), []);
+  // Contract instances with proper error handling
+  const emarkToken = useMemo(() => {
+    try {
+      return getContract({
+        client,
+        chain: CHAIN,
+        address: CONTRACTS.EMARK_TOKEN,
+        abi: EMARK_ABI as any
+      });
+    } catch (error) {
+      console.error('Failed to create EMARK token contract:', error);
+      return null;
+    }
+  }, []);
 
-  const cardCatalog = useMemo(() => getContract({
-    client,
-    chain: CHAIN,
-    address: CONTRACTS.CARD_CATALOG,
-    abi: CARD_CATALOG_ABI
-  }), []);
+  const stakingContract = useMemo(() => {
+    try {
+      return getContract({
+        client,
+        chain: CHAIN,
+        address: CONTRACTS.CARD_CATALOG,
+        abi: REWARDS_ABI as any
+      });
+    } catch (error) {
+      console.error('Failed to create staking contract:', error);
+      return null;
+    }
+  }, []);
   
   const userAddress = account?.address;
   const isConnected = !!account && !!userAddress;
   const stakingContractAddress = CONTRACTS.CARD_CATALOG;
 
-  // Token balance query
+  // Token balance query using React Query + readContract
   const { 
     data: emarkBalance, 
     isLoading: isLoadingBalance,
     error: balanceError,
     refetch: refetchBalance
-  } = useReadContract({
-    contract: emarkToken,
-    method: "function balanceOf(address) view returns (uint256)",
-    params: userAddress ? [userAddress] : undefined,
+  } = useQuery({
+    queryKey: QUERY_KEYS.tokenBalance(userAddress),
+    queryFn: async () => {
+      if (!emarkToken || !userAddress) {
+        return BigInt(0);
+      }
+
+      try {
+        const balance = await readContract({
+          contract: emarkToken,
+          method: "function balanceOf(address) view returns (uint256)",
+          params: [userAddress]
+        });
+        return balance;
+      } catch (error) {
+        console.error('Error reading token balance:', error);
+        return BigInt(0);
+      }
+    },
+    enabled: !!emarkToken && !!userAddress,
+    refetchInterval: 15000,
+    retry: 3
   });
 
-  // Token allowance query (for staking contract)
+  // Token allowance query using React Query + readContract
   const { 
     data: stakingAllowance, 
     isLoading: isLoadingAllowance,
     error: allowanceError,
     refetch: refetchAllowance
-  } = useReadContract({
-    contract: emarkToken,
-    method: "function allowance(address owner, address spender) view returns (uint256)",
-    params: userAddress ? [userAddress, stakingContractAddress] : undefined,
+  } = useQuery({
+    queryKey: QUERY_KEYS.tokenAllowance(userAddress, stakingContractAddress),
+    queryFn: async () => {
+      if (!emarkToken || !userAddress || !stakingContractAddress) {
+        return BigInt(0);
+      }
+
+      try {
+        const allowance = await readContract({
+          contract: emarkToken,
+          method: "function allowance(address owner, address spender) view returns (uint256)",
+          params: [userAddress, stakingContractAddress]
+        });
+        return allowance;
+      } catch (error) {
+        console.error('Error reading token allowance:', error);
+        return BigInt(0);
+      }
+    },
+    enabled: !!emarkToken && !!userAddress && !!stakingContractAddress,
+    refetchInterval: 15000,
+    retry: 3
   });
 
   // Token info query
   const { 
     data: tokenInfoData,
-    isLoading: isLoadingTokenInfo
+    isLoading: isLoadingTokenInfo,
+    error: tokenInfoError
   } = useQuery({
     queryKey: QUERY_KEYS.tokenInfo(CONTRACTS.EMARK_TOKEN),
     queryFn: async () => {
-      // In a real implementation, you might fetch this from the contract
-      // For now, return static info
+      // Return default token info since we have the contract metadata
       return TokenService.createDefaultTokenInfo(CONTRACTS.EMARK_TOKEN, userAddress || '');
     },
     enabled: !!CONTRACTS.EMARK_TOKEN,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Approval mutation
+  // Approval mutation with proper error handling
   const approvalMutation = useMutation({
     mutationFn: async ({ spender, amount }: { spender: string; amount: bigint }) => {
       if (!account) {
@@ -109,27 +163,31 @@ export function useTokenState(): UseTokenStateReturn {
         );
       }
 
+      if (!emarkToken) {
+        throw TokenService.createError(
+          TOKEN_ERRORS.CONTRACT_ERROR,
+          'Token contract not available'
+        );
+      }
+
       setApprovalError(null);
       setIsApproving(true);
 
       try {
-        // Prepare approval transaction
+        // Prepare approval transaction with proper method signature
         const transaction = prepareContractCall({
           contract: emarkToken,
-          method: "function approve(address spender, uint256 amount)",
+          method: "function approve(address spender, uint256 amount) returns (bool)",
           params: [spender, amount]
         });
 
         // Send transaction
-        const result = await sendTransaction({
-          transaction,
-          account
-        });
+        const result = await sendTransaction(transaction);
 
         return {
           success: true,
           hash: result.transactionHash
-        };
+        } as const;
       } catch (error: any) {
         console.error('Approval failed:', error);
         const tokenError = TokenService.parseContractError(error);
@@ -153,7 +211,7 @@ export function useTokenState(): UseTokenStateReturn {
     }
   });
 
-  // Computed values
+  // Computed values with proper null checks
   const tokenBalance: TokenBalance | null = useMemo(() => {
     if (!isConnected || emarkBalance === undefined || stakingAllowance === undefined) {
       return null;
@@ -177,26 +235,35 @@ export function useTokenState(): UseTokenStateReturn {
     };
   }, [tokenInfoData, userAddress, emarkBalance, stakingAllowance, stakingContractAddress]);
 
+  // Error handling with proper fallbacks
   const error = useMemo(() => {
     if (balanceError) return 'Failed to load token balance';
     if (allowanceError) return 'Failed to load token allowance';
+    if (tokenInfoError) return 'Failed to load token information';
+    if (!emarkToken) return 'Token contract not available';
     return null;
-  }, [balanceError, allowanceError]);
+  }, [balanceError, allowanceError, tokenInfoError, emarkToken]);
 
   const isLoading = isLoadingBalance || isLoadingAllowance || isLoadingTokenInfo;
 
-  // Action creators
+  // Action creators with proper error handling
   const approveForStaking = useCallback(async (amount?: bigint): Promise<TokenApprovalResult> => {
     if (!isConnected) {
       const error = TokenService.createError(
         TOKEN_ERRORS.WALLET_NOT_CONNECTED,
         'Please connect your wallet first'
       );
-      return { success: false, error: TokenService.getUserFriendlyError(error) };
+      return { 
+        success: false, 
+        error: TokenService.getUserFriendlyError(error) 
+      } as const;
     }
 
     if (!tokenBalance) {
-      return { success: false, error: 'Token balance not loaded' };
+      return { 
+        success: false, 
+        error: 'Token balance not loaded' 
+      } as const;
     }
 
     try {
@@ -213,7 +280,10 @@ export function useTokenState(): UseTokenStateReturn {
       });
 
       if (!validation.isValid) {
-        return { success: false, error: validation.errors[0] };
+        return { 
+          success: false, 
+          error: validation.errors[0] || 'Validation failed' 
+        } as const;
       }
 
       const result = await approvalMutation.mutateAsync({
@@ -223,10 +293,11 @@ export function useTokenState(): UseTokenStateReturn {
 
       return result;
     } catch (error: any) {
+      const errorMessage = error?.message || 'Approval failed';
       return { 
         success: false, 
-        error: error.message || 'Approval failed' 
-      };
+        error: errorMessage
+      } as const;
     }
   }, [isConnected, tokenBalance, stakingContractAddress, approvalMutation]);
 
@@ -240,19 +311,27 @@ export function useTokenState(): UseTokenStateReturn {
     }
 
     try {
-      // This would typically make a contract call
-      // For now, return cached value if it's the staking contract
+      // Return cached value if it's the staking contract
       if (spender === stakingContractAddress) {
         return stakingAllowance || BigInt(0);
       }
 
-      // For other spenders, would need to make a new contract call
+      // For other spenders, make a fresh contract call
+      if (emarkToken) {
+        const allowance = await readContract({
+          contract: emarkToken,
+          method: "function allowance(address owner, address spender) view returns (uint256)",
+          params: [userAddress, spender]
+        });
+        return allowance;
+      }
+
       return BigInt(0);
     } catch (error) {
       console.error('Error checking allowance:', error);
       return BigInt(0);
     }
-  }, [userAddress, stakingContractAddress, stakingAllowance]);
+  }, [userAddress, stakingContractAddress, stakingAllowance, emarkToken]);
 
   // Utility functions
   const formatTokenAmount = useCallback((amount: bigint, decimals = 2): string => {
