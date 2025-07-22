@@ -1,9 +1,7 @@
 // src/hooks/useWrapping.ts - Hook for token wrapping (staking) operations
 
 import { useState, useCallback } from 'react';
-import { useReadContract, useSendTransaction } from 'thirdweb/react';
 import { useActiveAccount } from 'thirdweb/react';
-import { prepareContractCall } from 'thirdweb';
 import { useContracts } from './core/useContracts';
 import { useTransactionUtils } from './core/useTransactionUtils';
 import { useUserData } from './core/useUserData';
@@ -210,114 +208,4 @@ export function useWrapping(userAddress?: string): UseWrappingReturn {
     refetch,
     hasWalletAccess
   };
-}
-
-// src/hooks/useWrappingStats.ts - Hook for protocol-wide staking statistics
-
-import { useReadContract } from 'thirdweb/react';
-import { useContracts } from './core/useContracts';
-
-export interface UseWrappingStatsReturn {
-  totalProtocolWrapped: bigint;
-  unbondingPeriod: number;
-  unbondingPeriodDays: number;
-  totalUnbonding: bigint;
-  isLoading: boolean;
-}
-
-export function useWrappingStats(): UseWrappingStatsReturn {
-  const { cardCatalog } = useContracts();
-
-  // Get total staked amount
-  const { data: totalSupply, isLoading: isLoadingSupply } = useReadContract({
-    contract: cardCatalog,
-    method: "function totalSupply() view returns (uint256)",
-  });
-
-  // Get unbonding period
-  const { data: unbondingPeriod, isLoading: isLoadingPeriod } = useReadContract({
-    contract: cardCatalog,
-    method: "function UNBONDING_PERIOD() view returns (uint256)",
-  });
-
-  // Get total unbonding amount
-  const { data: totalUnbonding, isLoading: isLoadingUnbonding } = useReadContract({
-    contract: cardCatalog,
-    method: "function totalUnbondingAmount() view returns (uint256)",
-  });
-
-  const isLoading = isLoadingSupply || isLoadingPeriod || isLoadingUnbonding;
-  const unbondingPeriodSeconds = Number(unbondingPeriod || 0);
-  const unbondingPeriodDays = Math.floor(unbondingPeriodSeconds / (24 * 60 * 60));
-
-  return {
-    totalProtocolWrapped: totalSupply || BigInt(0),
-    unbondingPeriod: unbondingPeriodSeconds,
-    unbondingPeriodDays,
-    totalUnbonding: totalUnbonding || BigInt(0),
-    isLoading
-  };
-}
-
-// src/providers/WalletProvider.tsx - Wallet connection utilities
-
-import React, { createContext, useContext, useCallback } from 'react';
-import { useActiveAccount, useConnect } from 'thirdweb/react';
-
-interface WalletConnectionResult {
-  success: boolean;
-  error?: string;
-}
-
-interface WalletContextType {
-  isConnected: boolean;
-  address?: string;
-  requireConnection: () => Promise<WalletConnectionResult>;
-}
-
-const WalletContext = createContext<WalletContextType | null>(null);
-
-export function WalletProvider({ children }: { children: React.ReactNode }) {
-  const account = useActiveAccount();
-  const { connect } = useConnect();
-
-  const requireConnection = useCallback(async (): Promise<WalletConnectionResult> => {
-    if (account?.address) {
-      return { success: true };
-    }
-
-    try {
-      // In a real implementation, this would trigger the wallet connection flow
-      // For now, we'll return a helpful message
-      return {
-        success: false,
-        error: 'Please connect your wallet to continue'
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to connect wallet'
-      };
-    }
-  }, [account]);
-
-  const value: WalletContextType = {
-    isConnected: !!account?.address,
-    address: account?.address,
-    requireConnection
-  };
-
-  return (
-    <WalletContext.Provider value={value}>
-      {children}
-    </WalletContext.Provider>
-  );
-}
-
-export function useWalletConnection(): WalletContextType {
-  const context = useContext(WalletContext);
-  if (!context) {
-    throw new Error('useWalletConnection must be used within WalletProvider');
-  }
-  return context;
 }
