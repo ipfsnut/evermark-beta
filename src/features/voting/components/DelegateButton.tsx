@@ -1,6 +1,4 @@
-// features/voting/components/DelegateButton.tsx - Individual evermark voting button
-
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { 
   VoteIcon, 
   ZapIcon, 
@@ -25,6 +23,7 @@ export function DelegateButton({
   const [localLoading, setLocalLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [localSuccess, setLocalSuccess] = useState<string | null>(null);
+  const [userVotes, setUserVotes] = useState<bigint>(BigInt(0));
 
   const {
     votingPower,
@@ -38,8 +37,23 @@ export function DelegateButton({
     isConnected
   } = useVotingState();
 
-  const userVotes = getUserVotes(evermarkId);
   const isProcessing = isDelegating || isUndelegating || localLoading;
+
+  // Load user's current votes for this evermark
+  useEffect(() => {
+    async function loadUserVotes() {
+      if (isConnected && evermarkId) {
+        try {
+          const votes = await getUserVotes(evermarkId);
+          setUserVotes(votes);
+        } catch (error) {
+          console.error('Failed to load user votes:', error);
+        }
+      }
+    }
+    
+    loadUserVotes();
+  }, [evermarkId, isConnected, getUserVotes]);
 
   // Handle delegation
   const handleDelegate = useCallback(async () => {
@@ -62,6 +76,11 @@ export function DelegateButton({
       const transaction = await delegateVotes(evermarkId, amountWei);
       
       setLocalSuccess(`Successfully delegated ${amount} wEMARK!`);
+      
+      // Reload user votes
+      const newVotes = await getUserVotes(evermarkId);
+      setUserVotes(newVotes);
+      
       onSuccess?.(transaction);
       
     } catch (error: any) {
@@ -70,7 +89,7 @@ export function DelegateButton({
     } finally {
       setLocalLoading(false);
     }
-  }, [amount, isConnected, isOwner, validateVoteAmount, evermarkId, delegateVotes, onSuccess]);
+  }, [amount, isConnected, isOwner, validateVoteAmount, evermarkId, delegateVotes, getUserVotes, onSuccess]);
 
   // Handle undelegation
   const handleUndelegate = useCallback(async () => {
@@ -93,6 +112,11 @@ export function DelegateButton({
       const transaction = await undelegateVotes(evermarkId, amountWei);
       
       setLocalSuccess(`Successfully undelegated ${amount} wEMARK!`);
+      
+      // Reload user votes
+      const newVotes = await getUserVotes(evermarkId);
+      setUserVotes(newVotes);
+      
       onSuccess?.(transaction);
       
     } catch (error: any) {
@@ -101,7 +125,7 @@ export function DelegateButton({
     } finally {
       setLocalLoading(false);
     }
-  }, [amount, isConnected, isOwner, userVotes, undelegateVotes, evermarkId, onSuccess]);
+  }, [amount, isConnected, isOwner, userVotes, undelegateVotes, evermarkId, getUserVotes, onSuccess]);
 
   // Quick delegate button (for compact variant)
   const handleQuickDelegate = useCallback(async () => {
@@ -121,6 +145,11 @@ export function DelegateButton({
 
       const transaction = await delegateVotes(evermarkId, quickAmount);
       setLocalSuccess(`Quick delegation successful!`);
+      
+      // Reload user votes
+      const newVotes = await getUserVotes(evermarkId);
+      setUserVotes(newVotes);
+      
       onSuccess?.(transaction);
       
     } catch (error: any) {
@@ -129,10 +158,10 @@ export function DelegateButton({
     } finally {
       setLocalLoading(false);
     }
-  }, [votingPower?.available, isConnected, isOwner, delegateVotes, evermarkId, onSuccess]);
+  }, [votingPower?.available, isConnected, isOwner, delegateVotes, evermarkId, getUserVotes, onSuccess]);
 
   // Clear messages after delay
-  React.useEffect(() => {
+  useEffect(() => {
     if (localError || localSuccess) {
       const timer = setTimeout(() => {
         setLocalError(null);
@@ -231,7 +260,7 @@ export function DelegateButton({
   }
 
   // Undelegate variant
-  if (variant = 'undelegate') {
+  if (variant === 'undelegate') {
     return (
       <button
         onClick={handleUndelegate}
@@ -287,3 +316,4 @@ export function DelegateButton({
     </button>
   );
 }
+

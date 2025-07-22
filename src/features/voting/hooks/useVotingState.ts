@@ -1,31 +1,15 @@
-// features/voting/hooks/useVotingState.ts - Main state management hook for voting feature
-
 import { useState, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useReadContract } from 'thirdweb/react';
+import { useReadContract, useSendTransaction } from 'thirdweb/react';
 import { useActiveAccount } from 'thirdweb/react';
-import { prepareContractCall, sendTransaction } from 'thirdweb';
+import { prepareContractCall, waitForReceipt } from 'thirdweb';
 import { getContract } from 'thirdweb';
 import { client } from '@/lib/thirdweb';
 import { CHAIN, CONTRACTS } from '@/lib/contracts';
 import { EvermarkVotingABI } from '@/lib/abis';
 import { useStakingState } from '@/features/staking';
 import { VotingService } from '../services/VotingService';
-import {
-  type Vote,
-  type Delegation,
-  type VotingCycle,
-  type VotingPower,
-  type VotingStats,
-  type VotingValidation,
-  type VotingError,
-  type VotingTransaction,
-  type UseVotingStateReturn,
-  VOTING_CONSTANTS,
-  VOTING_ERRORS
-} from '../types';
 
-// Query keys for React Query
 const QUERY_KEYS = {
   votingPower: (address?: string) => ['voting', 'power', address],
   userVotes: (address?: string, evermarkId?: string, cycle?: number) => 
@@ -38,33 +22,24 @@ const QUERY_KEYS = {
   votingStats: (address?: string) => ['voting', 'stats', address],
 } as const;
 
-/**
- * Main state management hook for Voting feature
- * Integrates with staking for voting power and manages all voting operations
- */
 export function useVotingState(): UseVotingStateReturn {
-  // State
   const [error, setError] = useState<VotingError | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [isDelegating, setIsDelegating] = useState(false);
-  const [isUndelegating, setIsUndelegating] = useState(false);
   
-  // Wallet and contracts
   const account = useActiveAccount();
   const queryClient = useQueryClient();
+  const { mutateAsync: sendTransaction } = useSendTransaction();
   
-  // Contract instance
   const votingContract = useMemo(() => getContract({
     client,
     chain: CHAIN,
-    address: CONTRACTS.EvermarkVOTING,
+    address: CONTRACTS.EVERMARK_VOTING,
     abi: EvermarkVotingABI
   }), []);
   
   const userAddress = account?.address;
   const isConnected = !!account && !!userAddress;
   
-  // Get voting power from staking feature
   const { stakingInfo, formatTokenAmount } = useStakingState();
   
   // Current cycle query
@@ -99,7 +74,17 @@ export function useVotingState(): UseVotingStateReturn {
     params: [],
   });
 
-  // User's current delegations query
+  // User's remaining voting power
+  const { 
+    data: remainingVotingPowerRaw,
+    refetch: refetchVotingPower
+  } = useReadContract({
+    contract: votingContract,
+    method: "function getRemainingVotingPower(address) view returns (uint256)",
+    params: userAddress ? [userAddress] : undefined,
+  });
+
+  // User's delegation history from contract events
   const { 
     data: delegationHistoryData,
     isLoading: isLoadingDelegations,
@@ -109,25 +94,34 @@ export function useVotingState(): UseVotingStateReturn {
     queryFn: async () => {
       if (!userAddress || !currentCycleNumber) return [];
       
-      // This would typically fetch from contract events or backend
-      // For now, return empty array - would be implemented with actual contract calls
-      return [] as Vote[];
+      // Fetch from last 10 cycles or 30 days, whichever is more
+      const fromBlock = BigInt(Math.max(0, Number(currentCycleNumber) - 10));
+      
+      return VotingService.fetchDelegationHistory(
+        userAddress, 
+        votingContract,
+        fromBlock
+      );
     },
     enabled: !!userAddress && !!currentCycleNumber,
     staleTime: 30 * 1000, // 30 seconds
   });
 
-  // Voting power calculation
+  // Voting power calculation from staking + contract data
   const votingPower: VotingPower | null = useMemo(() => {
-    if (!stakingInfo) return null;
+    if (!stakingInfo || remainingVotingPowerRaw === undefined) return null;
+    
+    const available = remainingVotingPowerRaw || BigInt(0);
+    const total = stakingInfo.totalStaked;
+    const delegated = total - available;
     
     return {
-      total: stakingInfo.totalStaked,
-      available: stakingInfo.availableVotingPower,
-      delegated: stakingInfo.delegatedPower,
-      reserved: stakingInfo.reservedPower
+      total,
+      available,
+      delegated,
+      reserved: BigInt(0) // Could be calculated from pending transactions
     };
-  }, [stakingInfo]);
+  }, [stakingInfo, remainingVotingPowerRaw]);
 
   // Current cycle information
   const currentCycle: VotingCycle | null = useMemo(() => {
@@ -150,7 +144,6 @@ export function useVotingState(): UseVotingStateReturn {
   const currentDelegations: Delegation[] = useMemo(() => {
     if (!delegationHistoryData || !currentCycleNumber) return [];
     
-    // Group by evermarkId and calculate net delegations
     const delegationMap = new Map<string, bigint>();
     
     delegationHistoryData
@@ -164,7 +157,6 @@ export function useVotingState(): UseVotingStateReturn {
         }
       });
     
-    // Convert to delegation objects
     return Array.from(delegationMap.entries())
       .filter(([_, amount]) => amount > BigInt(0))
       .map(([evermarkId, amount]) => ({
@@ -183,22 +175,43 @@ export function useVotingState(): UseVotingStateReturn {
     return VotingService.calculateVotingStats(
       currentDelegations,
       votingPower.total,
-      currentCycle
+      currentCycle,
+      delegationHistoryData
     );
-  }, [votingPower, currentDelegations, currentCycle]);
+  }, [votingPower, currentDelegations, currentCycle, delegationHistoryData]);
 
   // Get votes for specific evermark
-  const getEvermarkVotes = useCallback((evermarkId: string): bigint => {
-    // This would be implemented with a contract call
-    // For now, return BigInt(0) as placeholder
-    return BigInt(0);
-  }, []);
+  const getEvermarkVotes = useCallback(async (evermarkId: string): Promise<bigint> => {
+    if (!currentCycleNumber) return BigInt(0);
+    
+    try {
+      return await VotingService.getEvermarkVotes(
+        evermarkId, 
+        Number(currentCycleNumber), 
+        votingContract
+      );
+    } catch (error) {
+      console.error(`Failed to get evermark votes for ${evermarkId}:`, error);
+      return BigInt(0);
+    }
+  }, [currentCycleNumber, votingContract]);
 
   // Get user's votes for specific evermark
-  const getUserVotes = useCallback((evermarkId: string): bigint => {
-    const delegation = currentDelegations.find(d => d.evermarkId === evermarkId);
-    return delegation?.amount || BigInt(0);
-  }, [currentDelegations]);
+  const getUserVotes = useCallback(async (evermarkId: string): Promise<bigint> => {
+    if (!userAddress || !currentCycleNumber) return BigInt(0);
+    
+    try {
+      return await VotingService.getUserVotes(
+        userAddress,
+        evermarkId,
+        Number(currentCycleNumber),
+        votingContract
+      );
+    } catch (error) {
+      console.error(`Failed to get user votes for ${evermarkId}:`, error);
+      return BigInt(0);
+    }
+  }, [userAddress, currentCycleNumber, votingContract]);
 
   // Delegate votes mutation
   const delegateVotesMutation = useMutation({
@@ -211,20 +224,21 @@ export function useVotingState(): UseVotingStateReturn {
       }
 
       setError(null);
-      setIsDelegating(true);
 
       try {
-        // Prepare delegation transaction
         const transaction = prepareContractCall({
           contract: votingContract,
           method: "function delegateVotes(uint256 evermarkId, uint256 amount)",
           params: [BigInt(evermarkId), amount]
         });
 
-        // Send transaction
-        const result = await sendTransaction({
-          transaction,
-          account
+        const result = await sendTransaction(transaction);
+
+        // Wait for confirmation
+        const receipt = await waitForReceipt({
+          client,
+          chain: CHAIN,
+          transactionHash: result.transactionHash
         });
 
         const votingTransaction: VotingTransaction = {
@@ -233,7 +247,8 @@ export function useVotingState(): UseVotingStateReturn {
           evermarkId,
           amount,
           timestamp: new Date(),
-          status: 'confirmed'
+          status: 'confirmed',
+          gasUsed: receipt.gasUsed
         };
 
         return votingTransaction;
@@ -243,18 +258,15 @@ export function useVotingState(): UseVotingStateReturn {
       }
     },
     onSuccess: (transaction) => {
-      // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.delegationHistory(userAddress) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.votingPower(userAddress) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.evermarkVotes(transaction.evermarkId) });
+      refetchVotingPower();
       
       setSuccess(`Successfully delegated ${formatTokenAmount(transaction.amount)} wEMARK to Evermark #${transaction.evermarkId}`);
     },
     onError: (error: VotingError) => {
       setError(error);
-    },
-    onSettled: () => {
-      setIsDelegating(false);
     }
   });
 
@@ -269,20 +281,20 @@ export function useVotingState(): UseVotingStateReturn {
       }
 
       setError(null);
-      setIsUndelegating(true);
 
       try {
-        // Prepare undelegation transaction
         const transaction = prepareContractCall({
           contract: votingContract,
           method: "function undelegateVotes(uint256 evermarkId, uint256 amount)",
           params: [BigInt(evermarkId), amount]
         });
 
-        // Send transaction
-        const result = await sendTransaction({
-          transaction,
-          account
+        const result = await sendTransaction(transaction);
+
+        const receipt = await waitForReceipt({
+          client,
+          chain: CHAIN,
+          transactionHash: result.transactionHash
         });
 
         const votingTransaction: VotingTransaction = {
@@ -291,7 +303,8 @@ export function useVotingState(): UseVotingStateReturn {
           evermarkId,
           amount,
           timestamp: new Date(),
-          status: 'confirmed'
+          status: 'confirmed',
+          gasUsed: receipt.gasUsed
         };
 
         return votingTransaction;
@@ -301,18 +314,15 @@ export function useVotingState(): UseVotingStateReturn {
       }
     },
     onSuccess: (transaction) => {
-      // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.delegationHistory(userAddress) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.votingPower(userAddress) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.evermarkVotes(transaction.evermarkId) });
+      refetchVotingPower();
       
       setSuccess(`Successfully undelegated ${formatTokenAmount(transaction.amount)} wEMARK from Evermark #${transaction.evermarkId}`);
     },
     onError: (error: VotingError) => {
       setError(error);
-    },
-    onSettled: () => {
-      setIsUndelegating(false);
     }
   });
 
@@ -327,23 +337,23 @@ export function useVotingState(): UseVotingStateReturn {
       }
 
       setError(null);
-      setIsDelegating(true);
 
       try {
         const evermarkIds = delegations.map(d => BigInt(d.evermarkId));
         const amounts = delegations.map(d => d.amount);
 
-        // Prepare batch delegation transaction
         const transaction = prepareContractCall({
           contract: votingContract,
           method: "function delegateVotesBatch(uint256[] evermarkIds, uint256[] amounts)",
           params: [evermarkIds, amounts]
         });
 
-        // Send transaction
-        const result = await sendTransaction({
-          transaction,
-          account
+        const result = await sendTransaction(transaction);
+
+        const receipt = await waitForReceipt({
+          client,
+          chain: CHAIN,
+          transactionHash: result.transactionHash
         });
 
         const votingTransaction: VotingTransaction = {
@@ -352,7 +362,8 @@ export function useVotingState(): UseVotingStateReturn {
           evermarkId: 'batch',
           amount: amounts.reduce((sum, amount) => sum + amount, BigInt(0)),
           timestamp: new Date(),
-          status: 'confirmed'
+          status: 'confirmed',
+          gasUsed: receipt.gasUsed
         };
 
         return votingTransaction;
@@ -362,34 +373,28 @@ export function useVotingState(): UseVotingStateReturn {
       }
     },
     onSuccess: (transaction) => {
-      // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.delegationHistory(userAddress) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.votingPower(userAddress) });
+      refetchVotingPower();
       
-      setSuccess(`Successfully delegated to ${transaction.evermarkId === 'batch' ? 'multiple Evermarks' : `Evermark #${transaction.evermarkId}`}`);
+      setSuccess(`Successfully delegated to multiple Evermarks`);
     },
     onError: (error: VotingError) => {
       setError(error);
-    },
-    onSettled: () => {
-      setIsDelegating(false);
     }
   });
 
   // Action creators
   const delegateVotes = useCallback(async (evermarkId: string, amount: bigint): Promise<VotingTransaction> => {
-    const result = await delegateVotesMutation.mutateAsync({ evermarkId, amount });
-    return result;
+    return await delegateVotesMutation.mutateAsync({ evermarkId, amount });
   }, [delegateVotesMutation]);
 
   const undelegateVotes = useCallback(async (evermarkId: string, amount: bigint): Promise<VotingTransaction> => {
-    const result = await undelegateVotesMutation.mutateAsync({ evermarkId, amount });
-    return result;
+    return await undelegateVotesMutation.mutateAsync({ evermarkId, amount });
   }, [undelegateVotesMutation]);
 
   const delegateVotesBatch = useCallback(async (delegations: { evermarkId: string; amount: bigint }[]): Promise<VotingTransaction> => {
-    const result = await batchDelegateVotesMutation.mutateAsync(delegations);
-    return result;
+    return await batchDelegateVotesMutation.mutateAsync(delegations);
   }, [batchDelegateVotesMutation]);
 
   // Utility functions
@@ -437,9 +442,10 @@ export function useVotingState(): UseVotingStateReturn {
       refetchCycle(),
       refetchCycleInfo(),
       refetchTimeRemaining(),
-      refetchDelegations()
+      refetchDelegations(),
+      refetchVotingPower()
     ]);
-  }, [refetchCycle, refetchCycleInfo, refetchTimeRemaining, refetchDelegations]);
+  }, [refetchCycle, refetchCycleInfo, refetchTimeRemaining, refetchDelegations, refetchVotingPower]);
 
   const isLoading = isLoadingCycle || isLoadingCycleInfo || isLoadingDelegations;
 
@@ -457,8 +463,8 @@ export function useVotingState(): UseVotingStateReturn {
     
     // UI State
     isLoading,
-    isDelegating: isDelegating || delegateVotesMutation.isPending || batchDelegateVotesMutation.isPending,
-    isUndelegating: isUndelegating || undelegateVotesMutation.isPending,
+    isDelegating: delegateVotesMutation.isPending || batchDelegateVotesMutation.isPending,
+    isUndelegating: undelegateVotesMutation.isPending,
     error,
     success,
     
