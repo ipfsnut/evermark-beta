@@ -12,6 +12,13 @@ import { VotingService } from '../services/VotingService';
 import { cn } from '@/utils/responsive';
 import type { DelegateButtonProps } from '../types';
 
+type ButtonVariant = 'default' | 'undelegate' | 'compact' | 'icon';
+
+interface DelegateButtonExtendedProps extends Omit<DelegateButtonProps, 'variant'> {
+  amount?: string;
+  variant?: ButtonVariant;
+}
+
 export function DelegateButton({ 
   evermarkId, 
   isOwner = false,
@@ -19,7 +26,7 @@ export function DelegateButton({
   className = '',
   amount,
   onSuccess 
-}: DelegateButtonProps & { amount?: string; variant?: 'default' | 'undelegate' | 'compact' | 'icon' }) {
+}: DelegateButtonExtendedProps) {
   const [localLoading, setLocalLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [localSuccess, setLocalSuccess] = useState<string | null>(null);
@@ -316,4 +323,3 @@ export function DelegateButton({
     </button>
   );
 }
-

@@ -1,6 +1,6 @@
 import { useEffect, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { getContractEvents } from 'thirdweb';
+import { getContractEvents, prepareEvent } from 'thirdweb';
 import { useActiveAccount } from 'thirdweb/react';
 
 interface VotingEventsHookProps {
@@ -21,38 +21,84 @@ export function useVotingEvents({ votingContract, enabled = true }: VotingEvents
     if (!enabled || !votingContract || !userAddress) return;
 
     let isSubscribed = true;
-    let eventSubscription: any = null;
+    let pollTimer: NodeJS.Timeout;
 
     const setupEventListening = async () => {
       try {
-        // Listen for all voting events
-        const latestBlock = await votingContract.provider.getBlockNumber();
-        let lastProcessedBlock = latestBlock;
+        // Prepare event definitions for Thirdweb v5
+        const voteDelegatedEvent = prepareEvent({
+          signature: "event VoteDelegated(address indexed user, uint256 indexed evermarkId, uint256 amount, uint256 indexed cycle)"
+        });
+
+        const voteUndelegatedEvent = prepareEvent({
+          signature: "event VoteUndelegated(address indexed user, uint256 indexed evermarkId, uint256 amount, uint256 indexed cycle)"
+        });
+
+        const cycleStartedEvent = prepareEvent({
+          signature: "event NewVotingCycle(uint256 indexed cycleNumber, uint256 timestamp)"
+        });
+
+        const cycleFinalizedEvent = prepareEvent({
+          signature: "event CycleFinalized(uint256 indexed cycleNumber, uint256 totalVotes, uint256 totalEvermarks)"
+        });
+
+        // Get initial block number
+        let lastProcessedBlock = BigInt(0);
+        
+        try {
+          // Try to get current block number, fallback to 0 if not available
+          const currentBlock = await votingContract.client.eth.getBlockNumber?.() || BigInt(0);
+          lastProcessedBlock = currentBlock > BigInt(100) ? currentBlock - BigInt(100) : BigInt(0);
+        } catch (error) {
+          console.warn('Could not get current block number, starting from 0:', error);
+          lastProcessedBlock = BigInt(0);
+        }
 
         const pollForEvents = async () => {
           if (!isSubscribed) return;
 
           try {
-            const currentBlock = await votingContract.provider.getBlockNumber();
+            const currentBlock = await votingContract.client.eth.getBlockNumber?.() || lastProcessedBlock + BigInt(10);
             
             if (currentBlock > lastProcessedBlock) {
-              // Check for new events since last processed block
-              const events = await getContractEvents({
-                contract: votingContract,
-                fromBlock: BigInt(lastProcessedBlock + 1),
-                toBlock: BigInt(currentBlock),
-                eventName: 'VoteDelegated'
-              });
+              const fromBlock = lastProcessedBlock + BigInt(1);
+              const toBlock = currentBlock;
 
-              const undelegateEvents = await getContractEvents({
-                contract: votingContract,
-                fromBlock: BigInt(lastProcessedBlock + 1),
-                toBlock: BigInt(currentBlock),
-                eventName: 'VoteUndelegated'
-              });
+              // Check for voting events
+              const [delegateEvents, undelegateEvents, cycleEvents, finalizeEvents] = await Promise.all([
+                getContractEvents({
+                  contract: votingContract,
+                  events: [voteDelegatedEvent],
+                  fromBlock,
+                  toBlock,
+                }).catch(() => []),
+                
+                getContractEvents({
+                  contract: votingContract,
+                  events: [voteUndelegatedEvent],
+                  fromBlock,
+                  toBlock,
+                }).catch(() => []),
+                
+                getContractEvents({
+                  contract: votingContract,
+                  events: [cycleStartedEvent],
+                  fromBlock,
+                  toBlock,
+                }).catch(() => []),
+                
+                getContractEvents({
+                  contract: votingContract,
+                  events: [cycleFinalizedEvent],
+                  fromBlock,
+                  toBlock,
+                }).catch(() => [])
+              ]);
 
-              if (events.length > 0 || undelegateEvents.length > 0) {
-                console.log('New voting events detected, invalidating queries');
+              const totalEvents = delegateEvents.length + undelegateEvents.length + cycleEvents.length + finalizeEvents.length;
+
+              if (totalEvents > 0) {
+                console.log(`Detected ${totalEvents} voting events, invalidating queries`);
                 invalidateQueries();
               }
 
@@ -62,14 +108,14 @@ export function useVotingEvents({ votingContract, enabled = true }: VotingEvents
             console.error('Error polling for voting events:', error);
           }
 
-          // Poll every 15 seconds
+          // Schedule next poll
           if (isSubscribed) {
-            setTimeout(pollForEvents, 15000);
+            pollTimer = setTimeout(pollForEvents, 15000);
           }
         };
 
-        // Start polling
-        pollForEvents();
+        // Start polling after a short delay
+        pollTimer = setTimeout(pollForEvents, 1000);
 
       } catch (error) {
         console.error('Failed to setup voting event listening:', error);
@@ -80,15 +126,13 @@ export function useVotingEvents({ votingContract, enabled = true }: VotingEvents
 
     return () => {
       isSubscribed = false;
-      if (eventSubscription) {
-        eventSubscription.unsubscribe?.();
+      if (pollTimer) {
+        clearTimeout(pollTimer);
       }
     };
   }, [enabled, votingContract, userAddress, invalidateQueries]);
 
   return {
-    // Could expose subscription status, error states, etc.
     isListening: enabled && !!votingContract && !!userAddress
   };
 }
-
