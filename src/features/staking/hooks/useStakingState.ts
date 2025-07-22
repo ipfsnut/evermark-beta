@@ -1,9 +1,14 @@
-// features/staking/hooks/useStakingState.ts - Main state management hook for staking feature
+// src/features/staking/hooks/useStakingState.ts - Updated to use internal hooks
 
 import { useCallback, useMemo } from 'react';
+import { useActiveAccount } from 'thirdweb/react';
 import { toWei } from 'thirdweb/utils';
-import { useWrapping } from '@/hooks/useWrapping';
-import { useWrappingStats } from '@/hooks/useWrappingStats';
+
+// ✅ Internal feature hooks (no external dependencies)
+import { useStakingData } from './useStakingData';
+import { useStakingStats } from './useStakingStats';
+import { useStakingTransactions } from './useStakingTransactions';
+
 import { StakingService } from '../services/StakingService';
 import type { 
   UseStakingStateReturn,
@@ -15,71 +20,63 @@ import type {
 import { STAKING_CONSTANTS, STAKING_ERRORS } from '../types';
 
 /**
- * Main staking state management hook
- * Provides unified interface for all staking operations
+ * ✅ UPDATED: Main staking state management hook using internal feature hooks
+ * No longer depends on external shared hooks - completely self-contained
  */
 export function useStakingState(userAddress?: string): UseStakingStateReturn {
-  // Use existing wrapping hook as base (since wrapping = staking in this system)
-  const wrapping = useWrapping(userAddress);
-  const wrappingStats = useWrappingStats();
+  const account = useActiveAccount();
+  const effectiveAddress = userAddress || account?.address;
+  
+  // ✅ Use internal feature hooks instead of external shared hooks
+  const stakingData = useStakingData(effectiveAddress);
+  const stakingStatsData = useStakingStats();
+  const transactions = useStakingTransactions();
 
-  // Memoized staking info combining wrapping data
+  // ✅ Transform internal data to StakingInfo interface
   const stakingInfo: StakingInfo | null = useMemo(() => {
-    if (!userAddress || !wrapping.hasWalletAccess) return null;
+    if (!effectiveAddress) return null;
 
     return {
       // Token balances
-      emarkBalance: wrapping.emarkBalance || BigInt(0),
-      wEmarkBalance: wrapping.wEmarkBalance || BigInt(0),
-      totalStaked: wrapping.totalWrapped || BigInt(0),
+      emarkBalance: stakingData.emarkBalance,
+      wEmarkBalance: stakingData.wEmarkBalance,
+      totalStaked: stakingData.totalStaked,
       
       // Voting power
-      availableVotingPower: wrapping.availableVotingPower || BigInt(0),
-      delegatedPower: wrapping.delegatedPower || BigInt(0),
-      reservedPower: wrapping.reservedPower || BigInt(0),
+      availableVotingPower: stakingData.availableVotingPower,
+      delegatedPower: stakingData.delegatedPower,
+      reservedPower: BigInt(0), // Would be calculated from delegated power
       
       // Unbonding state
-      unbondingAmount: wrapping.unbondingAmount || BigInt(0),
-      unbondingReleaseTime: wrapping.unbondingReleaseTime || BigInt(0),
-      canClaimUnbonding: wrapping.canClaimUnbonding || false,
-      timeUntilRelease: StakingService.getTimeUntilRelease(wrapping.unbondingReleaseTime || BigInt(0)),
-      isUnbonding: wrapping.isUnbonding || false,
+      unbondingAmount: stakingData.unbondingAmount,
+      unbondingReleaseTime: stakingData.unbondingReleaseTime,
+      canClaimUnbonding: stakingData.canClaimUnbonding,
+      timeUntilRelease: StakingService.getTimeUntilRelease(stakingData.unbondingReleaseTime),
+      isUnbonding: stakingData.isUnbonding,
       
       // Protocol stats
-      totalProtocolStaked: wrappingStats.totalProtocolWrapped || BigInt(0),
-      unbondingPeriod: wrappingStats.unbondingPeriod || STAKING_CONSTANTS.UNBONDING_PERIOD_SECONDS,
-      unbondingPeriodDays: wrappingStats.unbondingPeriodDays || 7
+      totalProtocolStaked: stakingStatsData.totalProtocolStaked,
+      unbondingPeriod: stakingStatsData.unbondingPeriod,
+      unbondingPeriodDays: stakingStatsData.unbondingPeriodDays
     };
   }, [
-    userAddress,
-    wrapping.hasWalletAccess,
-    wrapping.emarkBalance,
-    wrapping.wEmarkBalance,
-    wrapping.totalWrapped,
-    wrapping.availableVotingPower,
-    wrapping.delegatedPower,
-    wrapping.reservedPower,
-    wrapping.unbondingAmount,
-    wrapping.unbondingReleaseTime,
-    wrapping.canClaimUnbonding,
-    wrapping.isUnbonding,
-    wrappingStats.totalProtocolWrapped,
-    wrappingStats.unbondingPeriod,
-    wrappingStats.unbondingPeriodDays
+    effectiveAddress,
+    stakingData,
+    stakingStatsData
   ]);
 
-  // Memoized staking stats
+  // ✅ Calculate staking statistics
   const stakingStats: StakingStats | null = useMemo(() => {
     if (!stakingInfo) return null;
     
     return StakingService.calculateStakingStats(
       stakingInfo,
       0, // Would track actual staking duration in production
-      BigInt(1000000) // Mock total supply - would come from token contract
+      stakingStatsData.totalSupply
     );
-  }, [stakingInfo]);
+  }, [stakingInfo, stakingStatsData.totalSupply]);
 
-  // Validation functions
+  // ✅ Validation functions using StakingService
   const validateStakeAmount = useCallback((amount: string): StakingValidation => {
     if (!stakingInfo) {
       return {
@@ -113,22 +110,20 @@ export function useStakingState(userAddress?: string): UseStakingStateReturn {
     );
   }, [stakingInfo]);
 
-  // Token formatting utility
+  // ✅ Utility functions
   const formatTokenAmount = useCallback((amount: bigint, decimals = 2): string => {
     return StakingService.formatTokenAmount(amount, decimals);
   }, []);
 
-  // Time formatting utility
   const formatTimeRemaining = useCallback((seconds: number): string => {
     return StakingService.formatTimeRemaining(seconds);
   }, []);
 
-  // Calculate staking yield
   const calculateStakingYield = useCallback((): number => {
     return stakingStats?.stakingYield || 0;
   }, [stakingStats]);
 
-  // Stake tokens action
+  // ✅ Enhanced stake action with approval handling
   const stake = useCallback(async (amount: bigint): Promise<void> => {
     if (!stakingInfo) {
       throw StakingService.createError(
@@ -138,14 +133,24 @@ export function useStakingState(userAddress?: string): UseStakingStateReturn {
     }
 
     try {
-      await wrapping.wrapTokens(amount);
+      // Check if approval is needed
+      if (stakingData.stakingAllowance < amount) {
+        console.log("🔓 Approval needed before staking");
+        await transactions.approveStaking(amount);
+        
+        // Brief delay to let approval settle
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+      
+      // Now stake the tokens
+      await transactions.stake(amount);
     } catch (error: any) {
       console.error('Stake failed:', error);
       throw StakingService.parseContractError(error);
     }
-  }, [stakingInfo, wrapping.wrapTokens]);
+  }, [stakingInfo, stakingData.stakingAllowance, transactions]);
 
-  // Request unstake action
+  // ✅ Pass through transaction actions with error handling
   const requestUnstake = useCallback(async (amount: bigint): Promise<void> => {
     if (!stakingInfo) {
       throw StakingService.createError(
@@ -155,14 +160,13 @@ export function useStakingState(userAddress?: string): UseStakingStateReturn {
     }
 
     try {
-      await wrapping.requestUnwrap(amount);
+      await transactions.requestUnstake(amount);
     } catch (error: any) {
       console.error('Request unstake failed:', error);
       throw StakingService.parseContractError(error);
     }
-  }, [stakingInfo, wrapping.requestUnwrap]);
+  }, [stakingInfo, transactions]);
 
-  // Complete unstake action
   const completeUnstake = useCallback(async (): Promise<void> => {
     if (!stakingInfo) {
       throw StakingService.createError(
@@ -179,14 +183,13 @@ export function useStakingState(userAddress?: string): UseStakingStateReturn {
     }
 
     try {
-      await wrapping.completeUnwrap();
+      await transactions.completeUnstake();
     } catch (error: any) {
       console.error('Complete unstake failed:', error);
       throw StakingService.parseContractError(error);
     }
-  }, [stakingInfo, wrapping.completeUnwrap]);
+  }, [stakingInfo, transactions]);
 
-  // Cancel unbonding action
   const cancelUnbonding = useCallback(async (): Promise<void> => {
     if (!stakingInfo) {
       throw StakingService.createError(
@@ -203,43 +206,43 @@ export function useStakingState(userAddress?: string): UseStakingStateReturn {
     }
 
     try {
-      await wrapping.cancelUnbonding();
+      await transactions.cancelUnbonding();
     } catch (error: any) {
       console.error('Cancel unbonding failed:', error);
       throw StakingService.parseContractError(error);
     }
-  }, [stakingInfo, wrapping.cancelUnbonding]);
+  }, [stakingInfo, transactions]);
 
-  // Clear error state (placeholder - would be implemented if wrapping hook supports it)
+  // ✅ State management actions (placeholders)
   const clearError = useCallback(() => {
-    // In a real implementation, this would clear error state
-    // The wrapping hook doesn't expose error clearing, so this is a no-op
     console.log('Clear error called');
   }, []);
 
-  // Clear success state (placeholder)
   const clearSuccess = useCallback(() => {
-    // In a real implementation, this would clear success state
     console.log('Clear success called');
   }, []);
 
-  // Refresh data
   const refetch = useCallback(async (): Promise<void> => {
-    await wrapping.refetch();
-  }, [wrapping.refetch]);
+    await transactions.refetch();
+  }, [transactions]);
 
-  // Return complete staking state interface
+  // ✅ Return complete staking state interface
   return {
     // Data
     stakingInfo,
     stakingStats,
     
     // UI State
-    isLoading: false, // Would be derived from wrapping state
-    isStaking: wrapping.isWrapping,
-    isUnstaking: wrapping.isUnwrapping,
-    isProcessing: wrapping.isWrapping || wrapping.isUnwrapping,
-    error: null, // Would map wrapping errors to StakingError format
+    isLoading: stakingData.isLoading || stakingStatsData.isLoading,
+    isStaking: transactions.isStaking || transactions.isApproving,
+    isUnstaking: transactions.isUnstaking,
+    isProcessing: transactions.isStaking || transactions.isUnstaking || 
+                  transactions.isCompleting || transactions.isCancelling || 
+                  transactions.isApproving,
+    error: stakingData.hasError ? StakingService.createError(
+      STAKING_ERRORS.CONTRACT_ERROR, 
+      'Failed to load staking data'
+    ) : null,
     success: null, // Would track success messages
     
     // Actions
@@ -261,7 +264,7 @@ export function useStakingState(userAddress?: string): UseStakingStateReturn {
     refetch,
     
     // Connection status
-    isConnected: wrapping.hasWalletAccess,
-    hasWalletAccess: wrapping.hasWalletAccess
+    isConnected: !!account,
+    hasWalletAccess: !!account
   };
 }

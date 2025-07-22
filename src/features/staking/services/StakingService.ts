@@ -131,14 +131,15 @@ export class StakingService {
   static formatTokenAmount(amount: bigint, decimals: number = 2): string {
     if (amount === BigInt(0)) return '0';
     
-    const formatted = fromGwei(amount);
-    const number = parseFloat(formatted);
+    // Manual conversion from wei to ether (18 decimals)
+    const divisor = BigInt(10) ** BigInt(18);
+    const etherAmount = Number(amount) / Number(divisor);
     
-    if (number < 0.0001) {
+    if (etherAmount < 0.0001) {
       return '< 0.0001';
     }
     
-    return number.toLocaleString('en-US', {
+    return etherAmount.toLocaleString('en-US', {
       minimumFractionDigits: 0,
       maximumFractionDigits: decimals
     });
@@ -256,16 +257,23 @@ export class StakingService {
       }
     }
 
-    return {
+    // ✅ FIX: Only include details if there's actual error information
+    const result: StakingError = {
       code,
       message,
       timestamp,
-      recoverable,
-      details: {
-        originalError: error?.message || 'Unknown error',
-        stack: error?.stack
-      }
+      recoverable
     };
+
+    // Only add details if there's meaningful error info
+    if (error?.message || error?.stack) {
+      result.details = {
+        originalError: error.message || 'Unknown error',
+        ...(error.stack && { stack: error.stack })
+      };
+    }
+
+    return result;
   }
 
   /**
@@ -276,13 +284,20 @@ export class StakingService {
     message: string, 
     details?: Record<string, any>
   ): StakingError {
-    return {
+    // ✅ FIX: Only include details if provided and not empty
+    const result: StakingError = {
       code,
       message,
       timestamp: Date.now(),
-      recoverable: code !== STAKING_ERRORS.WALLET_NOT_CONNECTED,
-      details
+      recoverable: code !== STAKING_ERRORS.WALLET_NOT_CONNECTED
     };
+
+    // Only add details if provided
+    if (details && Object.keys(details).length > 0) {
+      result.details = details;
+    }
+
+    return result;
   }
 
   /**
@@ -429,7 +444,9 @@ export class StakingService {
     time: number,
     compoundFrequency: number = 365
   ): bigint {
-    const principalNumber = Number(fromGwei(principal));
+    // Manual conversion from wei to ether
+    const divisor = BigInt(10) ** BigInt(18);
+    const principalNumber = Number(principal) / Number(divisor);
     const amount = principalNumber * Math.pow(1 + rate / compoundFrequency, compoundFrequency * time);
     return toWei(amount.toString());
   }

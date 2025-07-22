@@ -2,9 +2,9 @@
 
 import { useState, useCallback } from 'react';
 import { useActiveAccount } from 'thirdweb/react';
-import { useContracts } from './core/useContracts';
-import { useTransactionUtils } from './core/useTransactionUtils';
-import { useUserData } from './core/useUserData';
+import { useContracts } from '../../../hooks/core/useContracts';
+import { useTransactionUtils } from '../../../hooks/core/useTransactionUtils';
+import { useUserData } from '../../../hooks/core/useUserData';
 
 export interface UseWrappingReturn {
   // Balances and state
