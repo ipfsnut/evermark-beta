@@ -398,3 +398,5 @@ export class EvermarkBlockchainService {
     }
   }
 }
+
+export default EvermarkBlockchainService;
