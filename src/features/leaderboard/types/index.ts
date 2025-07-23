@@ -1,5 +1,5 @@
 // src/features/leaderboard/types/index.ts
-// Complete type definitions for leaderboard feature
+// Fixed types with consistent pagination
 
 export interface LeaderboardEntry {
   id: string;
@@ -39,13 +39,15 @@ export interface LeaderboardFilters {
   searchQuery?: string;
 }
 
+// Fixed: Make sortBy and sortOrder required with defaults
 export interface LeaderboardPagination {
   page: number;
   pageSize: number;
-  sortBy?: 'rank' | 'votes' | 'title' | 'creator' | 'createdAt' | 'change';
-  sortOrder?: 'asc' | 'desc';
+  sortBy: 'rank' | 'votes' | 'title' | 'creator' | 'createdAt' | 'change';
+  sortOrder: 'asc' | 'desc';
 }
 
+// Optional versions for partial updates
 export interface LeaderboardFeedOptions {
   page?: number;
   pageSize?: number;
@@ -127,33 +129,27 @@ export interface UseLeaderboardStateReturn {
 // Constants
 export const RANKING_PERIODS: RankingPeriod[] = [
   {
-    id: '24h',
-    label: '24 Hours',
-    duration: 24 * 60 * 60,
-    description: 'Rankings from the last 24 hours'
-  },
-  {
-    id: '7d',
-    label: '7 Days',
-    duration: 7 * 24 * 60 * 60,
-    description: 'Rankings from the last 7 days'
-  },
-  {
-    id: '30d',
-    label: '30 Days',
-    duration: 30 * 24 * 60 * 60,
-    description: 'Rankings from the last 30 days'
-  },
-  {
-    id: 'all',
-    label: 'All Time',
+    id: '1',
+    label: 'Cycle 1',
     duration: 0,
-    description: 'All-time rankings since launch'
+    description: 'First voting cycle'
+  },
+  {
+    id: '2',
+    label: 'Cycle 2',
+    duration: 0,
+    description: 'Second voting cycle'
+  },
+  {
+    id: '3',
+    label: 'Cycle 3',
+    duration: 0,
+    description: 'Third voting cycle'
   }
 ];
 
 export const LEADERBOARD_CONSTANTS = {
-  DEFAULT_PERIOD: '7d',
+  DEFAULT_PERIOD: '1',
   DEFAULT_PAGE_SIZE: 20,
   MAX_PAGE_SIZE: 100,
   CACHE_DURATION: 60 * 1000, // 1 minute
