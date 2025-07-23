@@ -25,7 +25,123 @@ export interface TransactionDetails {
   timestamp?: number;
 }
 
+export interface ContractInfo {
+  mintingFee: bigint;
+  referralPercentage: number;
+  maxBatchSize: number;
+  totalSupply: number;
+  isPaused: boolean;
+}
+
 export class EvermarkBlockchainService {
+  
+  /**
+   * Get current contract information and parameters
+   */
+  static async getContractInfo(): Promise<ContractInfo> {
+    try {
+      console.log('📋 Fetching contract information...');
+      
+      // Fetch all contract parameters in parallel
+      const [mintingFee, referralPercentage, maxBatchSize, totalSupply, isPaused] = await Promise.all([
+        this.getMintingFee(),
+        this.getReferralPercentage(),
+        this.getMaxBatchSize(),
+        this.getTotalSupply(),
+        this.getIsPaused()
+      ]);
+
+      const contractInfo: ContractInfo = {
+        mintingFee,
+        referralPercentage,
+        maxBatchSize,
+        totalSupply,
+        isPaused
+      };
+
+      console.log('📋 Contract info retrieved:', contractInfo);
+      return contractInfo;
+    } catch (error) {
+      console.error('Failed to get contract info:', error);
+      // Return fallback values if contract calls fail
+      return {
+        mintingFee: BigInt('1000000000000000'), // 0.001 ETH fallback
+        referralPercentage: 10, // 10% fallback
+        maxBatchSize: 10,
+        totalSupply: 0,
+        isPaused: false
+      };
+    }
+  }
+
+  /**
+   * Get current minting fee from contract
+   */
+  static async getMintingFee(): Promise<bigint> {
+    try {
+      const result = await readContract({
+        contract: CONTRACTS.EVERMARK_NFT,
+        method: "function MINTING_FEE() view returns (uint256)",
+        params: []
+      });
+      return result as bigint;
+    } catch (error) {
+      console.warn('Failed to get minting fee from contract, using fallback');
+      return BigInt('1000000000000000'); // 0.001 ETH fallback
+    }
+  }
+
+  /**
+   * Get referral percentage from contract
+   */
+  static async getReferralPercentage(): Promise<number> {
+    try {
+      const result = await readContract({
+        contract: CONTRACTS.EVERMARK_NFT,
+        method: "function REFERRAL_PERCENTAGE() view returns (uint256)",
+        params: []
+      });
+      return Number(result);
+    } catch (error) {
+      console.warn('Failed to get referral percentage from contract');
+      return 10; // 10% fallback
+    }
+  }
+
+  /**
+   * Get max batch size from contract
+   */
+  static async getMaxBatchSize(): Promise<number> {
+    try {
+      const result = await readContract({
+        contract: CONTRACTS.EVERMARK_NFT,
+        method: "function MAX_BATCH_SIZE() view returns (uint256)",
+        params: []
+      });
+      return Number(result);
+    } catch (error) {
+      console.warn('Failed to get max batch size from contract');
+      return 10; // fallback
+    }
+  }
+
+  /**
+   * Check if contract is paused
+   */
+  static async getIsPaused(): Promise<boolean> {
+    try {
+      const result = await readContract({
+        contract: CONTRACTS.EVERMARK_NFT,
+        method: "function paused() view returns (bool)",
+        params: []
+      });
+      return result as boolean;
+    } catch (error) {
+      console.warn('Failed to check if contract is paused');
+      return false; // assume not paused if we can't check
+    }
+  }
+
   /**
    * Mint a new Evermark NFT
    */
@@ -37,67 +153,77 @@ export class EvermarkBlockchainService {
     referrer?: string
   ): Promise<MintResult> {
     try {
-      console.log('🚀 Minting evermark to blockchain:', {
-        metadataURI,
-        title,
-        creator,
-        referrer,
-        account: account.address,
-        contract: CONTRACTS.EVERMARK_NFT.address
-      });
+      console.log('🚀 Starting evermark minting process...');
+      
+      // Step 1: Get current contract information
+      const contractInfo = await this.getContractInfo();
+      
+      if (contractInfo.isPaused) {
+        throw new Error('Contract is currently paused. Minting is temporarily disabled.');
+      }
 
-      // Check if user can afford the mint
-      const canAfford = await this.canAffordMint(account);
+      console.log('💰 Current minting fee:', contractInfo.mintingFee.toString(), 'wei');
+
+      // Step 2: Check if user can afford the mint
+      const canAfford = await this.canAffordMint(account, contractInfo.mintingFee);
       if (!canAfford) {
         throw new Error('Insufficient funds for minting fee and gas');
       }
 
-      // Prepare the contract call based on whether we have a referrer
+      // Step 3: Prepare the contract call
       const transaction = referrer && referrer !== account.address
         ? prepareContractCall({
             contract: CONTRACTS.EVERMARK_NFT,
             method: "function mintEvermarkWithReferral(string metadataURI, string title, string creator, address referrer) payable returns (uint256)",
             params: [metadataURI, title, creator, referrer],
-            value: BigInt('1000000000000000'), // 0.001 ETH minting fee
+            value: contractInfo.mintingFee,
           })
         : prepareContractCall({
             contract: CONTRACTS.EVERMARK_NFT,
             method: "function mintEvermark(string metadataURI, string title, string creator) payable returns (uint256)",
             params: [metadataURI, title, creator],
-            value: BigInt('1000000000000000'), // 0.001 ETH minting fee
+            value: contractInfo.mintingFee,
           });
 
-      console.log('📝 Prepared transaction, sending...');
+      console.log('📝 Transaction prepared, sending to blockchain...');
 
-      // Send the transaction
+      // Step 4: Send the transaction
       const result = await sendTransaction({
         transaction,
         account
       });
 
-      console.log('⏳ Transaction sent, waiting for confirmation...');
+      console.log('⏳ Transaction sent, waiting for confirmation...', result.transactionHash);
 
-      // Wait for transaction confirmation
+      // Step 5: Wait for transaction confirmation
       const receipt = await waitForReceipt({
         client,
         chain: CONTRACTS.EVERMARK_NFT.chain,
         transactionHash: result.transactionHash as `0x${string}`,
       });
 
-      // Extract token ID from transaction logs
-      const tokenId = this.extractTokenIdFromReceipt(receipt);
+      // Step 6: Extract token ID from transaction logs
+      const tokenIdBigInt = this.extractTokenIdFromReceipt(receipt);
 
       console.log('✅ Evermark minted successfully:', {
         txHash: result.transactionHash,
-        tokenId,
-        gasUsed: receipt.gasUsed?.toString()
+        tokenId: tokenIdBigInt?.toString(),
+        gasUsed: receipt.gasUsed?.toString(),
+        mintingFee: contractInfo.mintingFee.toString()
       });
 
-      return {
+      // Properly construct the result object based on whether we have a token ID
+      const mintResult: MintResult = {
         success: true,
-        txHash: result.transactionHash,
-        tokenId: tokenId?.toString()
+        txHash: result.transactionHash
       };
+
+      // Only add tokenId if we successfully extracted it
+      if (tokenIdBigInt) {
+        mintResult.tokenId = tokenIdBigInt.toString();
+      }
+
+      return mintResult;
 
     } catch (error) {
       console.error('❌ Blockchain minting failed:', error);
@@ -105,14 +231,20 @@ export class EvermarkBlockchainService {
       let errorMessage = 'Blockchain transaction failed';
       
       if (error instanceof Error) {
-        if (error.message.includes('insufficient funds')) {
+        const message = error.message.toLowerCase();
+        
+        if (message.includes('insufficient funds')) {
           errorMessage = 'Insufficient funds for minting fee and gas';
-        } else if (error.message.includes('user rejected') || error.message.includes('denied')) {
+        } else if (message.includes('user rejected') || message.includes('denied') || message.includes('user denied')) {
           errorMessage = 'Transaction was rejected by user';
-        } else if (error.message.includes('network')) {
+        } else if (message.includes('network') || message.includes('connection')) {
           errorMessage = 'Network error - please check your connection and try again';
-        } else if (error.message.includes('nonce')) {
+        } else if (message.includes('nonce')) {
           errorMessage = 'Transaction nonce error - please try again';
+        } else if (message.includes('paused')) {
+          errorMessage = 'Contract is currently paused - minting is temporarily disabled';
+        } else if (message.includes('gas')) {
+          errorMessage = 'Transaction failed due to gas estimation error';
         } else {
           errorMessage = error.message;
         }
@@ -126,7 +258,7 @@ export class EvermarkBlockchainService {
   }
 
   /**
-   * Batch mint multiple Evermarks (for power users)
+   * Batch mint multiple Evermarks
    */
   static async batchMintEvermarks(
     account: Account,
@@ -142,8 +274,15 @@ export class EvermarkBlockchainService {
         throw new Error('No evermarks to mint');
       }
 
-      if (evermarks.length > 10) {
-        throw new Error('Maximum 10 evermarks per batch');
+      // Get contract info to check max batch size
+      const contractInfo = await this.getContractInfo();
+      
+      if (contractInfo.isPaused) {
+        throw new Error('Contract is currently paused. Minting is temporarily disabled.');
+      }
+
+      if (evermarks.length > contractInfo.maxBatchSize) {
+        throw new Error(`Maximum ${contractInfo.maxBatchSize} evermarks per batch`);
       }
 
       console.log(`🚀 Batch minting ${evermarks.length} evermarks...`);
@@ -153,8 +292,16 @@ export class EvermarkBlockchainService {
       const titles = evermarks.map(e => e.title);
       const creators = evermarks.map(e => e.creator);
 
-      // Calculate total fee
-      const totalFee = BigInt('1000000000000000') * BigInt(evermarks.length); // 0.001 ETH per NFT
+      // Calculate total fee using current contract fee
+      const totalFee = contractInfo.mintingFee * BigInt(evermarks.length);
+
+      console.log('💰 Total batch minting fee:', totalFee.toString(), 'wei');
+
+      // Check if user can afford batch mint
+      const canAfford = await this.canAffordMint(account, totalFee);
+      if (!canAfford) {
+        throw new Error('Insufficient funds for batch minting fee and gas');
+      }
 
       // Prepare batch mint transaction
       const transaction = prepareContractCall({
@@ -179,11 +326,14 @@ export class EvermarkBlockchainService {
 
       console.log(`✅ Batch minted ${evermarks.length} evermarks successfully`);
 
-      return {
+      // Construct result without explicitly setting undefined values
+      const batchResult: MintResult = {
         success: true,
         txHash: result.transactionHash,
-        tokenId: `batch-${evermarks.length}` // For batch mints, we'll handle token IDs differently
+        tokenId: `batch-${evermarks.length}-${Date.now()}` // Unique identifier for batch
       };
+
+      return batchResult;
 
     } catch (error) {
       console.error('❌ Batch minting failed:', error);
@@ -197,7 +347,7 @@ export class EvermarkBlockchainService {
   /**
    * Check if user has enough balance to mint
    */
-  static async canAffordMint(account: Account): Promise<boolean> {
+  static async canAffordMint(account: Account, mintingFee?: bigint): Promise<boolean> {
     try {
       const rpcRequest = getRpcClient({
         client,
@@ -210,7 +360,21 @@ export class EvermarkBlockchainService {
       });
       
       const balanceBigInt = BigInt(balance as string);
-      const minRequired = BigInt('2000000000000000'); // 0.002 ETH (fee + gas buffer)
+      
+      // Use provided minting fee or fetch from contract
+      const fee = mintingFee || await this.getMintingFee();
+      
+      // Add gas buffer (estimated 0.001 ETH for gas)
+      const gasBuffer = BigInt('1000000000000000'); // 0.001 ETH
+      const minRequired = fee + gasBuffer;
+      
+      console.log('💰 Balance check:', {
+        userBalance: balanceBigInt.toString(),
+        mintingFee: fee.toString(),
+        gasBuffer: gasBuffer.toString(),
+        required: minRequired.toString(),
+        canAfford: balanceBigInt >= minRequired
+      });
       
       return balanceBigInt >= minRequired;
     } catch (error) {
@@ -224,12 +388,15 @@ export class EvermarkBlockchainService {
    */
   static async estimateGasCost(): Promise<GasEstimate> {
     try {
-      // In a real implementation, you'd estimate gas here
-      // For now, return reasonable estimates for Base network
+      const mintingFee = await this.getMintingFee();
+      const mintingFeeEth = Number(mintingFee) / 1e18;
+      const estimatedGas = 0.001; // ETH
+      const totalCost = mintingFeeEth + estimatedGas;
+      
       return {
-        gasPrice: '0.001 ETH',
-        estimatedCost: '~$2.50 USD',
-        estimatedCostUSD: '2.50'
+        gasPrice: `${estimatedGas} ETH`,
+        estimatedCost: `~$${(totalCost * 2500).toFixed(2)} USD`, // Rough ETH price estimate
+        estimatedCostUSD: (totalCost * 2500).toFixed(2)
       };
     } catch (error) {
       console.warn('Gas estimation failed:', error);
@@ -361,41 +528,65 @@ export class EvermarkBlockchainService {
   }
 
   /**
-   * Get contract info for debugging
+   * Get contract debugging info
    */
-  static getContractInfo() {
+  static getDebugInfo() {
     return {
       address: CONTRACTS.EVERMARK_NFT.address,
       chain: CONTRACTS.EVERMARK_NFT.chain.id,
+      chainName: CONTRACTS.EVERMARK_NFT.chain.name,
       isConfigured: this.isConfigured()
     };
   }
 
   /**
    * Extract token ID from transaction receipt
-   * This looks for the EvermarkMinted event in the logs
+   * This looks for the Transfer event (ERC721 minting signature)
    */
   private static extractTokenIdFromReceipt(receipt: any): bigint | null {
     try {
       const logs = receipt.logs || [];
       
-      // Look for Transfer event (ERC721) for minting
+      // ERC721 Transfer event signature: Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
       const transferSignature = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
       
       for (const log of logs) {
         if (log.topics && log.topics[0] === transferSignature) {
-          // For minting, from address is 0x0, tokenId is topics[3]
-          if (log.topics[1] === '0x0000000000000000000000000000000000000000000000000000000000000000') {
-            return BigInt(log.topics[3]);
+          // For minting, from address is 0x0 (topics[1]), to address is minter (topics[2]), tokenId is topics[3]
+          const fromAddress = log.topics[1];
+          const zeroAddress = '0x0000000000000000000000000000000000000000000000000000000000000000';
+          
+          if (fromAddress === zeroAddress) {
+            // This is a mint event
+            const tokenId = log.topics[3];
+            return BigInt(tokenId);
           }
         }
       }
       
+      // If we can't find the Transfer event, look for EvermarkMinted event
+      // You would need to implement this based on your specific contract events
+      console.warn('Could not find Transfer event in transaction logs');
       return null;
+      
     } catch (error) {
-      console.error('Failed to extract token ID:', error);
+      console.error('Failed to extract token ID from receipt:', error);
       return null;
     }
+  }
+
+  /**
+   * Helper method to format wei to ETH
+   */
+  static weiToEth(wei: bigint): string {
+    return (Number(wei) / 1e18).toFixed(6);
+  }
+
+  /**
+   * Helper method to format ETH to wei
+   */
+  static ethToWei(eth: number): bigint {
+    return BigInt(Math.floor(eth * 1e18));
   }
 }
 

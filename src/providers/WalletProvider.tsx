@@ -1,15 +1,13 @@
+// src/providers/WalletProvider.tsx - Fixed based on actual Thirdweb v5 API
 import React, { createContext, useContext } from 'react';
-import { useActiveAccount, useConnect, useDisconnect } from 'thirdweb/react';
+import { useActiveAccount, useConnect, useDisconnect, useActiveWallet } from 'thirdweb/react';
 import { createWallet, inAppWallet } from 'thirdweb/wallets';
 import { client } from '@/lib/thirdweb';
 
 interface WalletContextType {
-  // Connection state
   isConnected: boolean;
   address: string | null;
   isConnecting: boolean;
-  
-  // Connection methods
   connect: () => Promise<{ success: boolean; error?: string }>;
   disconnect: () => Promise<void>;
   requireConnection: () => Promise<{ success: boolean; error?: string }>;
@@ -21,43 +19,62 @@ interface WalletProviderProps {
   children: React.ReactNode;
 }
 
-// Define available wallets for v5
-const wallets = [
-  inAppWallet(),
-  createWallet('io.metamask'),
-  createWallet('com.coinbase.wallet'),
-  createWallet('me.rainbow'),
-];
-
 export function WalletProvider({ children }: WalletProviderProps) {
   const account = useActiveAccount();
-  const { connect: thirdwebConnect, isConnecting } = useConnect();
+  const wallet = useActiveWallet();
+  const { connect: thirdwebConnect, isConnecting, error: connectError } = useConnect();
   const { disconnect: thirdwebDisconnect } = useDisconnect();
 
   const connect = async (): Promise<{ success: boolean; error?: string }> => {
     try {
-      // Try to connect with the first available wallet
-      const wallet = wallets[0]; // Default to in-app wallet
-      await thirdwebConnect(async () => {
-        const connectedAccount = await wallet.connect({ client });
-        return connectedAccount;
-      });
+      // Use the correct useConnect API signature with browser wallets
+      const connectedWallet = await thirdwebConnect((async () => {
+        // Try MetaMask first (most common browser wallet)
+        try {
+          const metamaskWallet = createWallet('io.metamask');
+          await metamaskWallet.connect({ client });
+          return metamaskWallet;
+        } catch (metamaskError) {
+          // Fallback to Coinbase Wallet
+          console.warn('MetaMask failed, trying Coinbase:', metamaskError);
+          const coinbaseWallet = createWallet('com.coinbase.wallet');
+          await coinbaseWallet.connect({ client });
+          return coinbaseWallet;
+        }
+      }) as any); // Type assertion to bypass strict TypeScript union type issue
       
-      return { success: true };
+      if (connectedWallet) {
+        return { success: true };
+      } else {
+        return { success: false, error: 'Failed to connect wallet' };
+      }
     } catch (error) {
       console.error('Wallet connection failed:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to connect wallet'
-      };
+      
+      let errorMessage = 'Failed to connect wallet';
+      if (error instanceof Error) {
+        if (error.message.includes('rejected') || error.message.includes('denied')) {
+          errorMessage = 'Connection rejected by user';
+        } else if (error.message.includes('No wallet')) {
+          errorMessage = 'No wallet extension found. Please install MetaMask or Coinbase Wallet.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      return { success: false, error: errorMessage };
     }
   };
 
   const disconnect = async (): Promise<void> => {
     try {
-      await thirdwebDisconnect();
+      // useDisconnect requires the wallet parameter
+      if (wallet) {
+        thirdwebDisconnect(wallet);
+        console.log('✅ Wallet disconnected successfully');
+      }
     } catch (error) {
-      console.error('Wallet disconnection failed:', error);
+      console.error('❌ Disconnect failed:', error);
     }
   };
 
@@ -65,7 +82,6 @@ export function WalletProvider({ children }: WalletProviderProps) {
     if (account?.address) {
       return { success: true };
     }
-    
     return await connect();
   };
 

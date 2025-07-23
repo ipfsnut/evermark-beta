@@ -1,5 +1,11 @@
 // features/voting/index.ts - Public API exports for voting feature
 
+import { DelegateButton } from './components/DelegateButton';
+import { VotingPanel } from './components/VotingPanel';
+import { useVotingState } from './hooks/useVotingState';
+import { VotingService } from './services/VotingService';
+import { BatchVotingRequest, EvermarkRanking, VOTING_CONSTANTS, VotingAnalytics, VotingError, VotingErrorCode, VotingFeatureFlags, VotingNotification, VotingPerformanceMetrics, VotingPower, VotingTheme, VotingTransaction, VotingValidation } from './types';
+
 // Types - Export all public interfaces
 export type {
   Vote,

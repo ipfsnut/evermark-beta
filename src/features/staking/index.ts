@@ -1,6 +1,27 @@
-// features/staking/index.ts - Fixed public API exports for staking feature
+// features/staking/index.ts - Fixed and simplified public API exports
 
-// Types - Export all public interfaces
+// ✅ IMPORT TYPES AND CONSTANTS FIRST
+import { 
+  STAKING_CONSTANTS, 
+  STAKING_ERRORS,
+  type StakingInfo,
+  type StakeAction,
+  type StakeFormData,
+  type UnstakeFormData,
+  type StakingTransaction,
+  type StakingValidation,
+  type StakingConfiguration,
+  type StakingStats,
+  type StakingError,
+  type StakingEvent,
+  type UseStakingStateReturn,
+  type StakingErrorCode,
+  type StakingWidgetProps,
+  type StakeFormProps,
+  type UnstakeFormProps
+} from './types';
+
+// ✅ CORE TYPES - Re-export for external use
 export type {
   StakingInfo,
   StakeAction,
@@ -13,43 +34,33 @@ export type {
   StakingError,
   StakingEvent,
   UseStakingStateReturn,
-  StakingServiceParams,
-  StakingContractCall,
   StakingErrorCode,
   StakingWidgetProps,
   StakeFormProps,
-  UnstakeFormProps,
-  StakingTheme,
-  StakingAnalytics,
-  StakingAPIResponse,
-  StakingHistoryItem,
-  StakingHistory,
-  StakingNotification,
-  StakingFeatureFlags,
-  StakingPerformanceMetrics,
-  StakingRewards,
-  StakingDelegation,
-  StakingGovernance
-} from './types';
+  UnstakeFormProps
+};
 
-// Constants
-export { STAKING_CONSTANTS, STAKING_ERRORS } from './types';
+// ✅ CONSTANTS - Import and re-export
+export { STAKING_CONSTANTS, STAKING_ERRORS };
 
-// Services
-export { StakingService } from './services/StakingService';
+// ✅ SERVICES - Core business logic
+import { StakingService } from './services/StakingService';
+export { StakingService };
 
-// ✅ FIXED: Export the correct internal hooks
-export { useStakingState } from './hooks/useStakingState';
-export { useStakingData } from './hooks/useStakingData';
-export { useStakingStats } from './hooks/useStakingStats';
-export { useStakingTransactions } from './hooks/useStakingTransactions';
+// ✅ HOOKS - Internal feature hooks
+import { useStakingState } from './hooks/useStakingState';
+import { useStakingData } from './hooks/useStakingData';
+import { useStakingStats } from './hooks/useStakingStats';
+import { useStakingTransactions } from './hooks/useStakingTransactions';
+export { useStakingState, useStakingData, useStakingStats, useStakingTransactions };
 
-// ✅ FIXED: Export existing components only
-export { StakingWidget } from './components/StakingWidget';
-export { StakeForm } from './components/StakeForm';
-export { UnstakeForm } from './components/UnstakeForm';
+// ✅ COMPONENTS - Existing UI components
+import { StakingWidget } from './components/StakingWidget';
+import { StakeForm } from './components/StakeForm';
+import { UnstakeForm } from './components/UnstakeForm';
+export { StakingWidget, StakeForm, UnstakeForm };
 
-// Feature configuration and utilities
+// ✅ CORE CONFIGURATION - Simplified and working
 export const stakingConfig = {
   name: 'staking',
   version: '1.0.0',
@@ -63,11 +74,11 @@ export const stakingConfig = {
     completeUnstake: true,
     votingPower: true,
     stakingStats: true,
-    rewardsCalculation: false, // Future feature
-    autoCompounding: false     // Future feature
+    rewardsCalculation: false,
+    autoCompounding: false
   },
   
-  // Default configuration
+  // Default configuration values
   defaults: {
     minStakeAmount: '1',
     maxStakeAmount: '10000000',
@@ -76,10 +87,10 @@ export const stakingConfig = {
     transactionTimeout: 60000 // 60 seconds
   },
   
-  // Contract integration
+  // Contract integration points
   contracts: {
     emarkToken: 'EMARK_TOKEN',
-    stakingContract: 'CARD_CATALOG', // Uses wrapping contract
+    stakingContract: 'CARD_CATALOG',
     votingContract: 'CARD_CATALOG'
   },
   
@@ -90,36 +101,35 @@ export const stakingConfig = {
     enableTransactionHistory: true,
     showStakingStats: true
   }
-};
+} as const;
 
-// Utility functions for external use
+// ✅ UTILITY FUNCTIONS - Only what's actually implemented
 export const stakingUtils = {
   /**
    * Check if staking is enabled for a given chain/network
    */
   isStakingEnabled: (chainId?: number): boolean => {
-    // In production, this would check against supported chains
-    return true;
+    return true; // Always enabled for now
   },
   
   /**
-   * Get minimum stake amount for a chain
+   * Get minimum stake amount
    */
-  getMinStakeAmount: (chainId?: number): bigint => {
+  getMinStakeAmount: (): bigint => {
     return STAKING_CONSTANTS.MIN_STAKE_AMOUNT;
   },
   
   /**
-   * Get maximum stake amount for a chain
+   * Get maximum stake amount
    */
-  getMaxStakeAmount: (chainId?: number): bigint => {
+  getMaxStakeAmount: (): bigint => {
     return STAKING_CONSTANTS.MAX_STAKE_AMOUNT;
   },
   
   /**
-   * Get unbonding period for a chain
+   * Get unbonding period in seconds
    */
-  getUnbondingPeriod: (chainId?: number): number => {
+  getUnbondingPeriod: (): number => {
     return STAKING_CONSTANTS.UNBONDING_PERIOD_SECONDS;
   },
   
@@ -140,77 +150,15 @@ export const stakingUtils = {
   /**
    * Validate stake amount
    */
-  validateAmount: (
-    amount: string, 
-    balance: bigint, 
-    type: 'stake' | 'unstake' = 'stake'
-  ): StakingValidation => {
-    if (type === 'stake') {
-      return StakingService.validateStakeAmount(amount, balance);
-    } else {
-      return StakingService.validateUnstakeAmount(amount, balance);
-    }
+  validateStakeAmount: (amount: string, balance: bigint): StakingValidation => {
+    return StakingService.validateStakeAmount(amount, balance);
   },
   
   /**
-   * Create transaction summary
+   * Validate unstake amount
    */
-  createTransactionSummary: (
-    type: StakingTransaction['type'],
-    amount?: bigint,
-    currentStake?: bigint
-  ) => {
-    return StakingService.generateTransactionSummary(type, amount, currentStake);
-  },
-  
-  /**
-   * Calculate voting power from staked amount
-   */
-  calculateVotingPower: (stakedAmount: bigint, multiplier = 1): bigint => {
-    return StakingService.calculateVotingPower(stakedAmount, multiplier);
-  },
-  
-  /**
-   * Get staking recommendations based on user goals
-   */
-  getStakingRecommendations: (
-    balance: bigint,
-    currentStake: bigint,
-    userGoal: 'maximize_rewards' | 'moderate_risk' | 'maximum_voting_power'
-  ) => {
-    return StakingService.getStakingRecommendations(balance, currentStake, userGoal);
-  },
-  
-  /**
-   * Calculate estimated APY
-   */
-  calculateAPY: (
-    totalStaked: bigint,
-    totalRewards: bigint,
-    timeperiod?: number
-  ): number => {
-    return StakingService.calculateAPY(totalStaked, totalRewards, timeperiod);
-  },
-  
-  /**
-   * Check if amount is economically viable
-   */
-  isEconomicallyViable: (amount: bigint, gasPrice?: bigint): boolean => {
-    return StakingService.isEconomicallyViable(amount, gasPrice);
-  },
-  
-  /**
-   * Get gas cost estimates
-   */
-  getGasCostEstimates: () => {
-    return StakingService.estimateGasCosts();
-  },
-  
-  /**
-   * Format percentage for display
-   */
-  formatPercentage: (value: number, decimals = 2): string => {
-    return StakingService.formatPercentage(value, decimals);
+  validateUnstakeAmount: (amount: string, balance: bigint): StakingValidation => {
+    return StakingService.validateUnstakeAmount(amount, balance);
   },
   
   /**
@@ -223,16 +171,33 @@ export const stakingUtils = {
   /**
    * Create standardized error
    */
-  createError: (
-    code: StakingErrorCode,
-    message: string,
-    details?: Record<string, any>
-  ): StakingError => {
-    return StakingService.createError(code, message, details);
+  createError: (code: StakingErrorCode, message: string): StakingError => {
+    return StakingService.createError(code, message);
+  },
+  
+  /**
+   * Calculate voting power from staked amount
+   */
+  calculateVotingPower: (stakedAmount: bigint): bigint => {
+    return StakingService.calculateVotingPower(stakedAmount);
+  },
+  
+  /**
+   * Check if amount is economically viable
+   */
+  isEconomicallyViable: (amount: bigint): boolean => {
+    return StakingService.isEconomicallyViable(amount);
+  },
+  
+  /**
+   * Format percentage for display
+   */
+  formatPercentage: (value: number, decimals = 2): string => {
+    return StakingService.formatPercentage(value, decimals);
   }
 };
 
-// Integration helpers
+// ✅ INTEGRATION HELPERS - Simplified
 export const stakingIntegration = {
   /**
    * Initialize staking feature with configuration
@@ -245,61 +210,117 @@ export const stakingIntegration = {
   },
   
   /**
-   * Connect to external token service
+   * Get feature status
    */
-  connectTokenService: (tokenService: any) => {
-    // Integration point for external token services
+  getFeatureStatus: () => {
     return {
-      getBalance: (address: string) => tokenService.getBalance(address),
-      approve: (spender: string, amount: bigint) => tokenService.approve(spender, amount),
-      transfer: (to: string, amount: bigint) => tokenService.transfer(to, amount)
+      isEnabled: true,
+      version: stakingConfig.version,
+      features: stakingConfig.features
     };
   },
   
   /**
-   * Connect to external analytics service
+   * Validate configuration
    */
-  connectAnalytics: (analyticsService: any) => {
+  validateConfig: (config: typeof stakingConfig) => {
+    const requiredFields = ['name', 'version', 'features', 'defaults'];
+    const missing = requiredFields.filter(field => !(field in config));
+    
     return {
-      track: (event: StakingAnalytics) => analyticsService.track('staking', event),
-      identify: (userId: string) => analyticsService.identify(userId)
-    };
-  },
-  
-  /**
-   * Connect to external notification service
-   */
-  connectNotifications: (notificationService: any) => {
-    return {
-      show: (notification: StakingNotification) => notificationService.show(notification),
-      clear: (id: string) => notificationService.clear(id)
+      isValid: missing.length === 0,
+      missingFields: missing,
+      config
     };
   }
 };
 
-// ✅ SIMPLIFIED: Removed complex theme and performance utilities to avoid type errors
-// These can be added back when needed
-
-// Feature flags
+// ✅ FEATURE FLAGS - Simple and working
 export const stakingFeatureFlags = {
   enableAdvancedMetrics: true,
   enableNotifications: true,
   enableTransactionHistory: true,
   enableAPYCalculations: true,
-  enableAutoCompounding: false, // Future feature
+  enableAutoCompounding: false,
   enableGasOptimization: true,
-  enableBatchTransactions: false // Future feature
+  enableBatchTransactions: false
 } as const;
 
-// Default export for convenience
-export default {
+// ✅ MAIN STAKING API - Everything you need
+export const StakingAPI = {
+  // Core service
+  service: StakingService,
+  
+  // React hook for state management
+  useStaking: useStakingState,
+  
+  // UI components
+  components: {
+    StakingWidget,
+    StakeForm,
+    UnstakeForm
+  },
+  
+  // Configuration and utilities
   config: stakingConfig,
   utils: stakingUtils,
   integration: stakingIntegration,
   featureFlags: stakingFeatureFlags,
-  StakingService,
-  useStakingState,
+  
+  // Constants and types
+  constants: STAKING_CONSTANTS,
+  errors: STAKING_ERRORS
+};
+
+// ✅ DEFAULT EXPORT - Complete staking module
+export default {
+  // Main API
+  ...StakingAPI,
+  
+  // Direct component exports for convenience
   StakingWidget,
   StakeForm,
-  UnstakeForm
+  UnstakeForm,
+  
+  // Direct hook export
+  useStakingState,
+  
+  // Service class
+  StakingService,
+  
+  // Type guards and validators
+  validators: {
+    isStakingInfo: (obj: any): obj is StakingInfo => {
+      return obj && 
+        typeof obj.emarkBalance === 'bigint' &&
+        typeof obj.wEmarkBalance === 'bigint' &&
+        typeof obj.totalStaked === 'bigint';
+    },
+    
+    isStakingError: (obj: any): obj is StakingError => {
+      return obj &&
+        typeof obj.code === 'string' &&
+        typeof obj.message === 'string' &&
+        typeof obj.timestamp === 'number';
+    },
+    
+    isValidStakeAmount: (amount: string): boolean => {
+      const parsed = parseFloat(amount);
+      return !isNaN(parsed) && parsed > 0;
+    }
+  },
+  
+  // Error handling utilities
+  errorHandler: {
+    createError: StakingService.createError,
+    parseError: StakingService.parseContractError,
+    
+    isRecoverableError: (error: StakingError): boolean => {
+      return error.recoverable;
+    },
+    
+    getErrorMessage: (error: StakingError): string => {
+      return error.message;
+    }
+  }
 };

@@ -1,8 +1,12 @@
 // features/tokens/index.ts - Public API exports for the Tokens feature
 
+import { TokenBalance } from './components/TokenBalance';
+import { useTokenState } from './hooks/useTokenState';
+import { TokenService } from './services/TokenService';
+import { TOKEN_CONSTANTS, TokenApprovalParams, TokenDisplayInfo } from './types';
+
 // Types - Export all public interfaces
 export type {
-  TokenBalance,
   TokenInfo,
   TokenTransaction,
   TokenValidation,

@@ -1,5 +1,3 @@
-// src/components/layout/Sidebar.tsx - Navigation sidebar
-import React from 'react';
 import { Navigation } from './Navigation';
 import { useAppUI } from '@/providers/AppContext';
 import { cn } from '@/utils/responsive';
@@ -9,7 +7,7 @@ interface SidebarProps {
   className?: string;
 }
 
-export function Sidebar({ isOpen, className }: SidebarProps) {
+export function Sidebar({ className }: SidebarProps) {
   const { theme } = useAppUI();
 
   return (

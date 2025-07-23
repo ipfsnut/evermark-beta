@@ -1,5 +1,5 @@
 // src/components/ui/ErrorBoundary.tsx - Error boundary for graceful error handling
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangleIcon, RefreshCwIcon, HomeIcon } from 'lucide-react';
 
 interface Props {
@@ -14,7 +14,7 @@ interface State {
 }
 
 export class ErrorBoundary extends Component<Props, State> {
-  public state: State = {
+  public override state: State = {
     hasError: false
   };
 
@@ -25,7 +25,7 @@ export class ErrorBoundary extends Component<Props, State> {
     };
   }
 
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  public override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('🚨 React Error Boundary caught an error:', error, errorInfo);
     
     // Log to external service in production
@@ -48,7 +48,7 @@ export class ErrorBoundary extends Component<Props, State> {
     this.setState({ hasError: false, error: undefined, errorInfo: undefined });
   };
 
-  public render() {
+  public override render() {
     if (this.state.hasError) {
       // Custom fallback UI
       if (this.props.fallback) {
