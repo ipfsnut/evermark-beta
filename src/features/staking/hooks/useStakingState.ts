@@ -1,10 +1,6 @@
-// src/features/staking/hooks/useStakingState.ts - Updated to use internal hooks
-
 import { useCallback, useMemo } from 'react';
 import { useActiveAccount } from 'thirdweb/react';
-import { toWei } from 'thirdweb/utils';
 
-// ✅ Internal feature hooks (no external dependencies)
 import { useStakingData } from './useStakingData';
 import { useStakingStats } from './useStakingStats';
 import { useStakingTransactions } from './useStakingTransactions';
@@ -15,7 +11,6 @@ import type {
   StakingInfo,
   StakingStats,
   StakingValidation,
-  StakingError
 } from '../types';
 import { STAKING_CONSTANTS, STAKING_ERRORS } from '../types';
 

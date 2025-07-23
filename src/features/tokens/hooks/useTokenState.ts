@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useReadContract, useSendTransaction } from 'thirdweb/react';
+import { useSendTransaction } from 'thirdweb/react';
 import { useActiveAccount } from 'thirdweb/react';
 import { prepareContractCall, getContract, readContract } from 'thirdweb';
 import { client } from '@/lib/thirdweb';
@@ -10,7 +10,6 @@ import { CHAIN, CONTRACTS } from '@/lib/contracts';
 
 // Import ABIs from the actual JSON files
 import EMARK_ABI from '@/features/tokens/abis/EMARK.json';
-import REWARDS_ABI from '@/features/tokens/abis/EvermarkRewards.json';
 
 import { TokenService } from '../services/TokenService';
 import {
@@ -56,20 +55,6 @@ export function useTokenState(): UseTokenStateReturn {
       });
     } catch (error) {
       console.error('Failed to create EMARK token contract:', error);
-      return null;
-    }
-  }, []);
-
-  const stakingContract = useMemo(() => {
-    try {
-      return getContract({
-        client,
-        chain: CHAIN,
-        address: CONTRACTS.CARD_CATALOG,
-        abi: REWARDS_ABI as any
-      });
-    } catch (error) {
-      console.error('Failed to create staking contract:', error);
       return null;
     }
   }, []);
@@ -146,8 +131,7 @@ export function useTokenState(): UseTokenStateReturn {
   } = useQuery({
     queryKey: QUERY_KEYS.tokenInfo(CONTRACTS.EMARK_TOKEN),
     queryFn: async () => {
-      // Return default token info since we have the contract metadata
-      return TokenService.createDefaultTokenInfo(CONTRACTS.EMARK_TOKEN, userAddress || '');
+      return TokenService.createDefaultTokenInfo(CONTRACTS.EMARK_TOKEN);
     },
     enabled: !!CONTRACTS.EMARK_TOKEN,
     staleTime: 5 * 60 * 1000, // 5 minutes

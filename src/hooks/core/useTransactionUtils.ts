@@ -29,7 +29,6 @@ export function useTransactionUtils() {
 
   const executeTransaction = useCallback(async (
     contract: ThirdwebContract,
-    abi: any,
     functionName: string,
     params: any[] = [],
     options: TransactionOptions = {}
@@ -48,7 +47,7 @@ export function useTransactionUtils() {
       // Prepare the contract call
       const transaction = prepareContractCall({
         contract,
-        method: functionName,
+        method: `function ${functionName}()`,
         params
       });
 
@@ -83,7 +82,6 @@ export function useTransactionUtils() {
   const executeBatchTransactions = useCallback(async (
     transactions: Array<{
       contractAddress: string;
-      abi: any;
       functionName: string;
       params: any[];
       options?: TransactionOptions;
@@ -101,7 +99,6 @@ export function useTransactionUtils() {
       
       const result = await executeTransaction(
         contract,
-        tx.abi,
         tx.functionName,
         tx.params,
         tx.options

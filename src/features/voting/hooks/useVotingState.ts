@@ -10,7 +10,6 @@ import { CHAIN, CONTRACTS } from '@/lib/contracts';
 import { EvermarkVotingABI } from '@/lib/abis';
 import { useStakingState } from '@/features/staking';
 import { VotingService } from '../services/VotingService';
-import { useVotingEvents } from './useVotingEvents';
 import type { 
   VotingPower, 
   VotingCycle, 
@@ -19,11 +18,11 @@ import type {
   VotingValidation, 
   VotingError, 
   VotingTransaction, 
-  Vote, 
   UseVotingStateReturn,
   VotingErrorCode
 } from '../types';
 import { VOTING_ERRORS } from '../types';
+import { useVotingEvents } from '../services/useVotingEvents';
 
 const QUERY_KEYS = {
   votingPower: (address?: string) => ['voting', 'power', address],
@@ -439,7 +438,7 @@ export function useVotingState(): UseVotingStateReturn {
         throw VotingService.parseContractError(error);
       }
     },
-    onSuccess: (transaction) => {
+    onSuccess: () => {
       // Clear caches
       evermarkVotesCache.clear();
       userVotesCache.clear();

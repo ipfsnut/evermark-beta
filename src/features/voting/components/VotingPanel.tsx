@@ -1,12 +1,11 @@
 // features/voting/components/VotingPanel.tsx - Main voting interface component
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   VoteIcon, 
   TrendingUpIcon, 
   AlertCircleIcon, 
   CheckCircleIcon, 
-  ZapIcon,
   ClockIcon,
   InfoIcon,
   BarChart3Icon
@@ -20,7 +19,6 @@ import type { VotingPanelProps } from '../types';
 export function VotingPanel({ 
   evermarkId, 
   isOwner = false, 
-  showHistory = false,
   className = '' 
 }: VotingPanelProps) {
   const [voteAmount, setVoteAmount] = useState('');
@@ -31,8 +29,6 @@ export function VotingPanel({
     currentCycle,
     error,
     success,
-    isDelegating,
-    isUndelegating,
     getEvermarkVotes,
     getUserVotes,
     validateVoteAmount,
@@ -57,6 +53,7 @@ export function VotingPanel({
       }, 5000);
       return () => clearTimeout(timer);
     }
+    return
   }, [error, success, clearErrors, clearSuccess]);
 
   // Validate amount whenever it changes

@@ -1,6 +1,6 @@
 // features/staking/components/StakingWidget.tsx - Main staking widget component
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { 
   LockIcon, 
   UnlockIcon, 

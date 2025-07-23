@@ -117,7 +117,7 @@ export class LeaderboardService {
         contentType: 'Custom' as const,
         tags: [],
         verified: false, // Would need verification logic
-        change: { direction: 'same' as const, positions: 0 } // Would need previous data to calculate
+        change: { direction: 'same' as const, positions: 0 } // RankingChange type - would need previous data to calculate
       }));
 
       const totalCount = Number(cycleStats[1]); // leaderboardSize
@@ -210,35 +210,26 @@ export class LeaderboardService {
   }
 
   /**
-   * Get available periods (cycles) - always returns at least one period
+   * Get available periods (cycles) - updated to match your types
    */
   static getAvailablePeriods(): RankingPeriod[] {
-    const periods = [
+    return [
       { id: '1', label: 'Cycle 1', duration: 0, description: 'First voting cycle' },
       { id: '2', label: 'Cycle 2', duration: 0, description: 'Second voting cycle' },
       { id: '3', label: 'Cycle 3', duration: 0, description: 'Third voting cycle' },
-      // Add more as needed
     ];
-    
-    // Ensure we always have at least one period
-    if (periods.length === 0) {
-      periods.push({ id: '1', label: 'Default Cycle', duration: 0, description: 'Default voting cycle' });
-    }
-    
-    return periods;
   }
 
   /**
    * Get period by ID - always returns a valid period
    */
-  static getPeriodById(periodId: string) {
+  static getPeriodById(periodId: string): RankingPeriod {
     const periods = this.getAvailablePeriods();
     const period = periods.find(p => p.id === periodId);
     
     if (!period) {
       console.warn(`Period ${periodId} not found, falling back to default`);
-      // Always return the first period as fallback
-      return periods[0];
+      return periods[0]; // Return first period as fallback
     }
     
     return period;
@@ -250,7 +241,6 @@ export class LeaderboardService {
   static getDefaultFilters(): LeaderboardFilters {
     return {
       period: '1'
-      // Don't include undefined properties - just omit them
     };
   }
 

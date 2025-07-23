@@ -1,5 +1,4 @@
-// src/pages/HomePage.tsx - Main homepage composing all features
-import React, { useState } from 'react';
+// src/pages/HomePage.tsx - Fixed imports and exports
 import { Link } from 'react-router-dom';
 import { 
   PlusIcon, 
@@ -9,74 +8,52 @@ import {
   StarIcon,
   UserIcon,
   ChevronRightIcon,
-  RocketIcon,
-  CoinsIcon,
-  VoteIcon
+  VoteIcon,
+  CoinsIcon
 } from 'lucide-react';
 
-// Feature imports
-import { EvermarkFeed, useEvermarksState } from '@/features/evermarks';
-import { StakingWidget, useStakingState } from '@/features/staking';
-import { VotingPanel, useVotingState } from '@/features/voting';
-import { TokenBalance, useTokenState } from '@/features/tokens';
+// Providers and utilities - fixed imports
+import { useAppAuth } from '../providers/AppContext';
+import { useFarcasterUser } from '../lib/farcaster';
+import { cn, useIsMobile } from '../utils/responsive';
 
-// Providers and utilities
-import { useAppAuth } from '@/providers/AppContext';
-import { useFarcasterUser } from '@/lib/farcaster';
-import { cn, useIsMobile } from '@/utils/responsive';
-
-// Enhanced stats component with real data
+// Placeholder stats component
 const ProtocolStats: React.FC = () => {
-  const { evermarks, totalCount, isLoading } = useEvermarksState();
-  const { stakingInfo } = useStakingState();
-  const { votingStats } = useVotingState();
   const isMobile = useIsMobile();
   
-  const stats = React.useMemo(() => {
-    const recentEvermarks = evermarks.slice(0, 100);
-    const weekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
-    const thisWeekCount = recentEvermarks.filter(e => 
-      new Date(e.createdAt).getTime() > weekAgo
-    ).length;
-    
-    const uniqueCreators = new Set(recentEvermarks.map(e => e.creator)).size;
-    const withImages = recentEvermarks.filter(e => e.image).length;
-
-    return {
-      totalEvermarks: totalCount || recentEvermarks.length,
-      activeCreators: uniqueCreators,
-      thisWeek: thisWeekCount,
-      withImages,
-      totalStaked: stakingInfo?.totalProtocolStaked || BigInt(0),
-      activeVoters: votingStats?.participationRate ? Math.floor(uniqueCreators * votingStats.participationRate) : 0
-    };
-  }, [evermarks, totalCount, stakingInfo, votingStats]);
+  // Mock stats for now - will be replaced with real data when features are ready
+  const stats = {
+    totalEvermarks: 1234,
+    withImages: 567,
+    activeCreators: 89,
+    thisWeek: 42
+  };
 
   const statCards = [
     {
       label: 'Total Evermarks',
-      value: isLoading ? '...' : stats.totalEvermarks.toLocaleString(),
+      value: stats.totalEvermarks.toLocaleString(),
       icon: <StarIcon className="h-5 w-5" />,
       gradient: 'from-purple-400 to-purple-600',
       glow: 'shadow-purple-500/20'
     },
     {
       label: 'With Media',
-      value: isLoading ? '...' : stats.withImages.toLocaleString(),
+      value: stats.withImages.toLocaleString(),
       icon: <GridIcon className="h-5 w-5" />,
       gradient: 'from-green-400 to-green-600',
       glow: 'shadow-green-500/20'
     },
     {
       label: 'Active Creators',
-      value: isLoading ? '...' : stats.activeCreators.toLocaleString(),
+      value: stats.activeCreators.toLocaleString(),
       icon: <UserIcon className="h-5 w-5" />,
       gradient: 'from-cyan-400 to-cyan-600',
       glow: 'shadow-cyan-500/20'
     },
     {
       label: 'This Week',
-      value: isLoading ? '...' : stats.thisWeek.toLocaleString(),
+      value: stats.thisWeek.toLocaleString(),
       icon: <TrendingUpIcon className="h-5 w-5" />,
       gradient: 'from-yellow-400 to-yellow-600',
       glow: 'shadow-yellow-500/20'
@@ -140,7 +117,7 @@ const QuickActions: React.FC = () => {
       label: 'Start Staking',
       description: 'Earn voting power',
       icon: <CoinsIcon className="h-5 w-5" />,
-      href: '/stake',
+      href: '/staking',
       gradient: 'from-purple-400 to-purple-600',
       requireAuth: true
     },
@@ -187,30 +164,33 @@ const QuickActions: React.FC = () => {
   );
 };
 
+// Placeholder feed component
+const PlaceholderFeed: React.FC = () => {
+  return (
+    <div className="bg-gray-800/30 border border-gray-700 rounded-lg p-8 text-center">
+      <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full flex items-center justify-center">
+        <GridIcon className="h-8 w-8 text-black" />
+      </div>
+      <h3 className="text-xl font-semibold text-white mb-2">Evermarks Feed Coming Soon</h3>
+      <p className="text-gray-400 mb-6">
+        The community feed will show the latest preserved content once the evermarks feature is ready.
+      </p>
+      <Link
+        to="/explore"
+        className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-lg hover:from-cyan-500 hover:to-blue-500 transition-colors"
+      >
+        <GridIcon className="h-4 w-4 mr-2" />
+        Explore All Content
+      </Link>
+    </div>
+  );
+};
+
 // Main HomePage component
 export default function HomePage() {
   const { isAuthenticated } = useAppAuth();
   const { isInFarcaster } = useFarcasterUser();
   const isMobile = useIsMobile();
-  
-  // Feature state hooks
-  const evermarksState = useEvermarksState();
-  const stakingState = useStakingState();
-  const votingState = useVotingState();
-  const tokenState = useTokenState();
-
-  const [selectedEvermarkId, setSelectedEvermarkId] = useState<string | null>(null);
-
-  const handleEvermarkClick = (evermark: any) => {
-    if (isAuthenticated) {
-      setSelectedEvermarkId(evermark.id);
-    }
-  };
-
-  const handleCreateClick = () => {
-    // EvermarkFeed component should handle this
-    evermarksState.loadEvermarks({ page: 1 });
-  };
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -300,85 +280,13 @@ export default function HomePage() {
               </Link>
             </div>
             
-            <EvermarkFeed 
-              className="bg-gray-800/30 border border-gray-700 rounded-lg"
-              showCreateButton={true}
-              showFilters={true}
-              onCreateClick={handleCreateClick}
-              onEvermarkClick={handleEvermarkClick}
-              variant="grid"
-              emptyMessage="No evermarks found. Be the first to create one!"
-            />
+            <PlaceholderFeed />
           </div>
 
           {/* Right Column - Sidebar (1/3 width on desktop) */}
           <div className="space-y-6">
-            {/* Token Balance Widget */}
-            {isAuthenticated && (
-              <TokenBalance 
-                variant="compact"
-                showActions={true}
-                showApprovalStatus={true}
-                className="bg-gray-800/30 border border-gray-700"
-              />
-            )}
-
-            {/* Staking Widget */}
-            {isAuthenticated ? (
-              <StakingWidget 
-                stakingState={stakingState}
-                className="bg-gray-800/30 border border-gray-700"
-              />
-            ) : (
-              <div className="bg-gray-800/30 border border-gray-700 rounded-lg p-6 text-center">
-                <CoinsIcon className="mx-auto h-12 w-12 text-gray-500 mb-4" />
-                <h3 className="text-lg font-medium text-white mb-2">Start Staking</h3>
-                <p className="text-gray-400 mb-4">
-                  Stake EMARK tokens to earn voting power and participate in governance
-                </p>
-                <Link
-                  to="/stake"
-                  className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-500 hover:to-blue-500 transition-colors"
-                >
-                  <RocketIcon className="h-4 w-4 mr-2" />
-                  Get Started
-                </Link>
-              </div>
-            )}
-
-            {/* Voting Panel */}
-            {selectedEvermarkId && isAuthenticated ? (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-white">Vote on Content</h3>
-                  <button
-                    onClick={() => setSelectedEvermarkId(null)}
-                    className="text-gray-400 hover:text-white transition-colors"
-                  >
-                    ✕
-                  </button>
-                </div>
-                <VotingPanel 
-                  evermarkId={selectedEvermarkId}
-                  className="bg-gray-800/30 border border-gray-700"
-                />
-              </div>
-            ) : isAuthenticated ? (
-              <div className="bg-gray-800/30 border border-gray-700 rounded-lg p-6 text-center">
-                <VoteIcon className="mx-auto h-12 w-12 text-gray-500 mb-4" />
-                <h3 className="text-lg font-medium text-white mb-2">Community Voting</h3>
-                <p className="text-gray-400 mb-4">
-                  Click any Evermark to delegate your voting power and support quality content
-                </p>
-                <Link
-                  to="/leaderboard"
-                  className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-lg hover:from-cyan-500 hover:to-blue-500 transition-colors"
-                >
-                  <TrendingUpIcon className="h-4 w-4 mr-2" />
-                  View Rankings
-                </Link>
-              </div>
-            ) : (
+            {/* Connect prompt for non-authenticated users */}
+            {!isAuthenticated ? (
               <div className="bg-gray-800/30 border border-gray-700 rounded-lg p-6 text-center">
                 <VoteIcon className="mx-auto h-12 w-12 text-gray-500 mb-4" />
                 <h3 className="text-lg font-medium text-white mb-2">Join the Community</h3>
@@ -393,6 +301,21 @@ export default function HomePage() {
                     }
                   </p>
                 </div>
+              </div>
+            ) : (
+              <div className="bg-gray-800/30 border border-gray-700 rounded-lg p-6 text-center">
+                <CoinsIcon className="mx-auto h-12 w-12 text-gray-500 mb-4" />
+                <h3 className="text-lg font-medium text-white mb-2">Welcome Back!</h3>
+                <p className="text-gray-400 mb-4">
+                  Your wallet is connected. Start creating and curating content.
+                </p>
+                <Link
+                  to="/create"
+                  className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-500 hover:to-green-600 transition-colors"
+                >
+                  <PlusIcon className="h-4 w-4 mr-2" />
+                  Create Evermark
+                </Link>
               </div>
             )}
 

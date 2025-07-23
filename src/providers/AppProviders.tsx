@@ -1,11 +1,9 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter } from 'react-router-dom';
 import { ThirdwebProvider } from 'thirdweb/react';
 
-import { FarcasterProvider } from '@/lib/farcaster';
-import { client } from '@/lib/thirdweb';
-import { WalletProvider } from './WalletProvider';
+import { FarcasterProvider } from '../lib/farcaster';
+  import { WalletProvider } from './WalletProvider';
 import { BlockchainProvider } from './BlockchainProvider';
 import { AppContextProvider } from './AppContext';
 
@@ -38,31 +36,28 @@ const queryClient = new QueryClient({
 
 /**
  * AppProviders - Combines all global providers with proper order:
- * 1. BrowserRouter (routing)
- * 2. React Query (data management)
- * 3. Thirdweb Provider (blockchain SDK)
- * 4. Farcaster Provider (authentication & context detection)
- * 5. Wallet Provider (wallet connection management)
- * 6. Blockchain Provider (contract interactions)
- * 7. App Context (unified state management)
+ * 1. React Query (data management)
+ * 2. Thirdweb Provider (blockchain SDK)
+ * 3. Farcaster Provider (authentication & context detection)
+ * 4. Wallet Provider (wallet connection management)
+ * 5. Blockchain Provider (contract interactions)
+ * 6. App Context (unified state management)
  */
 export function AppProviders({ children }: AppProvidersProps) {
   return (
-    <BrowserRouter>
-      <QueryClientProvider client={queryClient}>
-        <ThirdwebProvider>
-          <FarcasterProvider>
-            <WalletProvider>
-              <BlockchainProvider>
-                <AppContextProvider>
-                  {children}
-                </AppContextProvider>
-              </BlockchainProvider>
-            </WalletProvider>
-          </FarcasterProvider>
-        </ThirdwebProvider>
-      </QueryClientProvider>
-    </BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <ThirdwebProvider>
+        <FarcasterProvider>
+          <WalletProvider>
+            <BlockchainProvider>
+              <AppContextProvider>
+                {children}
+              </AppContextProvider>
+            </BlockchainProvider>
+          </WalletProvider>
+        </FarcasterProvider>
+      </ThirdwebProvider>
+    </QueryClientProvider>
   );
 }
 

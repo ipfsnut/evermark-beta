@@ -1,6 +1,6 @@
 // src/lib/farcaster.tsx - Farcaster integration provider
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState } from 'react';
 
 interface FarcasterUser {
   fid: number;

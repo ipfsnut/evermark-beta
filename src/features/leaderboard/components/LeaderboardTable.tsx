@@ -1,35 +1,38 @@
 // src/features/leaderboard/components/LeaderboardTable.tsx
 // Main leaderboard display component
 
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  TrendingUpIcon,
-  TrendingDownIcon,
-  MinusIcon,
-  StarIcon,
-  ExternalLinkIcon,
-  UserIcon,
-  CalendarIcon,
-  TagIcon,
-  SearchIcon,
-  FilterIcon,
-  RefreshCwIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  EyeIcon,
-  MessageCircleIcon,
-  FileTextIcon,
-  BookOpenIcon,
-  GlobeIcon,
-  HashIcon
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Star,
+  ExternalLink,
+  User,
+  Calendar,
+  Tag,
+  Search,
+  Filter,
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+  MessageCircle,
+  FileText,
+  BookOpen,
+  Globe,
+  Hash
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
-import { useLeaderboardState } from '../hooks/useLeaderboardState';
+import useLeaderboardState from '../hooks/useLeaderboardState';
 import { LeaderboardService } from '../services/LeaderboardService';
-import { cn } from '@/utils/responsive';
 import type { LeaderboardEntry, RankingChange } from '../types';
+
+// Simple utility function since we can't import from @/utils/responsive
+function cn(...classes: (string | undefined | boolean)[]): string {
+  return classes.filter(Boolean).join(' ');
+}
 
 interface LeaderboardTableProps {
   className?: string;
@@ -49,13 +52,14 @@ export function LeaderboardTable({
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   
+  const leaderboardState = useLeaderboardState();
+  
   const {
     entries,
     stats,
     currentPeriod,
     availablePeriods,
     pagination,
-    filters,
     totalCount,
     totalPages,
     isLoading,
@@ -71,7 +75,7 @@ export function LeaderboardTable({
     setPagination,
     clearFilters,
     refresh
-  } = useLeaderboardState();
+  } = leaderboardState;
 
   // Handle entry click
   const handleEntryClick = (entry: LeaderboardEntry) => {
@@ -102,15 +106,15 @@ export function LeaderboardTable({
   const getContentTypeIcon = (contentType: LeaderboardEntry['contentType']) => {
     switch (contentType) {
       case 'Cast':
-        return <MessageCircleIcon className="h-4 w-4" />;
+        return <MessageCircle className="h-4 w-4" />;
       case 'DOI':
-        return <FileTextIcon className="h-4 w-4" />;
+        return <FileText className="h-4 w-4" />;
       case 'ISBN':
-        return <BookOpenIcon className="h-4 w-4" />;
+        return <BookOpen className="h-4 w-4" />;
       case 'URL':
-        return <GlobeIcon className="h-4 w-4" />;
+        return <Globe className="h-4 w-4" />;
       default:
-        return <HashIcon className="h-4 w-4" />;
+        return <Hash className="h-4 w-4" />;
     }
   };
 
@@ -118,13 +122,13 @@ export function LeaderboardTable({
   const getRankingChangeIcon = (change: RankingChange) => {
     switch (change.direction) {
       case 'up':
-        return <TrendingUpIcon className="h-3 w-3 text-green-400" />;
+        return <TrendingUp className="h-3 w-3 text-green-400" />;
       case 'down':
-        return <TrendingDownIcon className="h-3 w-3 text-red-400" />;
+        return <TrendingDown className="h-3 w-3 text-red-400" />;
       case 'new':
-        return <StarIcon className="h-3 w-3 text-blue-400" />;
+        return <Star className="h-3 w-3 text-blue-400" />;
       default:
-        return <MinusIcon className="h-3 w-3 text-gray-500" />;
+        return <Minus className="h-3 w-3 text-gray-500" />;
     }
   };
 
@@ -201,7 +205,7 @@ export function LeaderboardTable({
             className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-600 transition-colors disabled:opacity-50"
             title="Refresh leaderboard"
           >
-            <RefreshCwIcon className={cn("h-4 w-4 text-gray-300", isRefreshing && "animate-spin")} />
+            <RefreshCw className={cn("h-4 w-4 text-gray-300", isRefreshing && "animate-spin")} />
           </button>
         </div>
       </div>
@@ -214,7 +218,7 @@ export function LeaderboardTable({
             {/* Search */}
             <form onSubmit={handleSearch} className="flex-1">
               <div className="relative">
-                <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
                   value={searchQuery}
@@ -248,7 +252,7 @@ export function LeaderboardTable({
           {isFiltered && (
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2 text-sm text-gray-400">
-                <FilterIcon className="h-4 w-4" />
+                <Filter className="h-4 w-4" />
                 <span>Filters active</span>
               </div>
               <button
@@ -312,7 +316,7 @@ export function LeaderboardTable({
       {/* Empty state */}
       {isEmpty && !isLoading && (
         <div className="text-center py-12">
-          <TrendingUpIcon className="mx-auto h-12 w-12 text-gray-500 mb-4" />
+          <TrendingUp className="mx-auto h-12 w-12 text-gray-500 mb-4" />
           <h3 className="text-lg font-medium text-gray-300 mb-2">
             {isFiltered ? 'No results found' : 'No evermarks yet'}
           </h3>
@@ -369,18 +373,18 @@ export function LeaderboardTable({
                       
                       <div className="flex items-center space-x-3 text-sm text-gray-400 mt-1">
                         <div className="flex items-center">
-                          <UserIcon className="h-3 w-3 mr-1" />
+                          <User className="h-3 w-3 mr-1" />
                           <span className="truncate">{entry.creator}</span>
                         </div>
                         
                         <div className="flex items-center">
-                          <CalendarIcon className="h-3 w-3 mr-1" />
+                          <Calendar className="h-3 w-3 mr-1" />
                           <span>{formatDistanceToNow(new Date(entry.createdAt), { addSuffix: true })}</span>
                         </div>
                         
                         {entry.verified && (
                           <div className="flex items-center text-green-400">
-                            <StarIcon className="h-3 w-3" />
+                            <Star className="h-3 w-3" />
                           </div>
                         )}
                       </div>
@@ -395,7 +399,7 @@ export function LeaderboardTable({
                       {/* Tags */}
                       {entry.tags.length > 0 && (
                         <div className="flex items-center space-x-2 mt-2">
-                          <TagIcon className="h-3 w-3 text-gray-500" />
+                          <Tag className="h-3 w-3 text-gray-500" />
                           <div className="flex flex-wrap gap-1">
                             {entry.tags.slice(0, 3).map((tag, index) => (
                               <span
@@ -435,7 +439,7 @@ export function LeaderboardTable({
                 {/* External link indicator */}
                 {entry.sourceUrl && (
                   <div className="flex-shrink-0">
-                    <ExternalLinkIcon className="h-4 w-4 text-gray-500 group-hover:text-cyan-400 transition-colors" />
+                    <ExternalLink className="h-4 w-4 text-gray-500 group-hover:text-cyan-400 transition-colors" />
                   </div>
                 )}
               </div>
@@ -459,7 +463,7 @@ export function LeaderboardTable({
               disabled={!hasPreviousPage}
               className="p-2 rounded-lg bg-gray-800 border border-gray-600 text-gray-300 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <ChevronLeftIcon className="h-4 w-4" />
+              <ChevronLeft className="h-4 w-4" />
             </button>
 
             <span className="px-3 py-2 text-sm text-gray-300">
@@ -471,7 +475,7 @@ export function LeaderboardTable({
               disabled={!hasNextPage}
               className="p-2 rounded-lg bg-gray-800 border border-gray-600 text-gray-300 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <ChevronRightIcon className="h-4 w-4" />
+              <ChevronRight className="h-4 w-4" />
             </button>
           </div>
         </div>

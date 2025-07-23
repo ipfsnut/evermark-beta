@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FilterIcon,  CalendarIcon, CheckIcon } from 'lucide-react';
+import { FilterIcon, XIcon, CalendarIcon, CheckIcon } from 'lucide-react';
 import type { EvermarkFilters } from '../types';
 
 interface EvermarkFiltersProps {

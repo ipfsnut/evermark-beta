@@ -71,7 +71,7 @@ export class EvermarkService {
 
   // ===== CREATION WORKFLOW =====
   
-  static async createEvermark(input: CreateEvermarkInput, account: any): Promise<CreateEvermarkResult> {
+  static async createEvermark(input: CreateEvermarkInput, account?: any): Promise<CreateEvermarkResult> {
     try {
       console.log('🚀 EvermarkService: Starting creation workflow');
       
@@ -121,13 +121,13 @@ export class EvermarkService {
         };
       }
 
-      // Step 5: Mint to blockchain - FIX: Pass all required parameters
+      // Step 5: Mint to blockchain - FIXED: Pass all required parameters correctly
       console.log('⛓️ Minting to blockchain...');
       const mintResult = await EvermarkBlockchainService.mintEvermark(
         account,                          // account (required)
         metadataResult.metadataURI!,     // metadataURI (required)
         input.metadata.title,            // title (required)
-        input.metadata.author,           // creator (required) - this was missing!
+        input.metadata.author,           // creator (required) - THIS WAS THE FIX!
         undefined                        // referrer (optional)
       );
 
@@ -140,18 +140,28 @@ export class EvermarkService {
 
       // Step 6: Save to database
       console.log('💾 Saving to database...');
-      const dbResult = await APIService.createEvermarkRecord({
-        tokenId: mintResult.tokenId!,
-        title: input.metadata.title,
-        author: input.metadata.author,
-        description: input.metadata.description || '',
-        sourceUrl: input.metadata.sourceUrl,
-        metadataURI: metadataResult.metadataURI!,
-        txHash: mintResult.txHash!,
-        imageUrl,
-        contentType: input.metadata.contentType || 'Custom',
-        tags: input.metadata.tags || []
-      });
+      try {
+        const dbResult = await APIService.createEvermarkRecord({
+          tokenId: mintResult.tokenId!,
+          title: input.metadata.title,
+          author: input.metadata.author,
+          description: input.metadata.description || '',
+          sourceUrl: input.metadata.sourceUrl,
+          metadataURI: metadataResult.metadataURI!,
+          txHash: mintResult.txHash!,
+          imageUrl,
+          contentType: input.metadata.contentType || 'Custom',
+          tags: input.metadata.tags || []
+        });
+
+        if (!dbResult.success) {
+          console.warn('Database save failed:', dbResult.error);
+          // Continue anyway since blockchain mint succeeded
+        }
+      } catch (error) {
+        console.warn('Database save failed:', error);
+        // Continue anyway since blockchain mint succeeded
+      }
 
       console.log('✅ Evermark creation complete!');
 
@@ -162,7 +172,7 @@ export class EvermarkService {
         txHash: mintResult.txHash,
         metadataURI: metadataResult.metadataURI,
         imageUrl,
-        castData
+        castData: castData || undefined // Convert null to undefined
       };
 
     } catch (error) {

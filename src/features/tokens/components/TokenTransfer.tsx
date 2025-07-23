@@ -1,9 +1,9 @@
 // src/features/tokens/components/TokenTransfer.tsx - Fixed contract integration
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { 
   Send,
-  RefreshCw,
+  
   CheckCircle,
   AlertCircle
 } from 'lucide-react';
@@ -94,7 +94,7 @@ export function TokenTransfer({ tokenState, className = '' }: TokenTransferProps
         params: [recipient, amountWei]
       });
 
-      const result = await sendTransaction(transaction);
+      await sendTransaction(transaction);
       
       setLocalSuccess(`Successfully sent ${amount} EMARK to ${recipient.slice(0, 6)}...${recipient.slice(-4)}`);
       setAmount('');
@@ -119,6 +119,7 @@ export function TokenTransfer({ tokenState, className = '' }: TokenTransferProps
       }, 5000);
       return () => clearTimeout(timer);
     }
+    return
   }, [localError, localSuccess]);
 
   if (!isConnected) {

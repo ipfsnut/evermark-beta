@@ -1,6 +1,6 @@
 // src/providers/AppContext.tsx - Global state management following clean architecture
 import React, { createContext, useContext, useReducer, useCallback, useEffect } from 'react';
-import { useFarcasterUser } from '@/lib/farcaster';
+import { useFarcasterUser } from '../lib/farcaster';
 import { useWalletConnection } from './WalletProvider';
 
 // Global UI state interface

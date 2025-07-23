@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { 
   VoteIcon, 
   ZapIcon, 
@@ -176,6 +176,7 @@ export function DelegateButton({
       }, 3000);
       return () => clearTimeout(timer);
     }
+    return
   }, [localError, localSuccess]);
 
   // Don't render for owners

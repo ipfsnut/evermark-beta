@@ -1,5 +1,4 @@
 // src/pages/NotFoundPage.tsx - 404 error page with cyber theme
-import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   HomeIcon, 

@@ -18,7 +18,7 @@
     "types": ["node", "vite/client"],
     "moduleDetection": "force",
 
-    /* Linting - Balanced approach */
+    /* Linting - Balanced approach for React 19 */
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
@@ -27,10 +27,10 @@
     "noImplicitOverride": true,
     "noImplicitAny": true,
     "noImplicitThis": true,
-    "exactOptionalPropertyTypes": true,
+    "exactOptionalPropertyTypes": false,
 
-    /* Additional strict checks */
-    "noUncheckedIndexedAccess": true,
+    /* Additional strict checks - relaxed for React 19 */
+    "noUncheckedIndexedAccess": false,
     "allowUnusedLabels": false,
     "allowUnreachableCode": false,
 

@@ -5,10 +5,10 @@ import {
   SearchIcon,
   UserIcon
 } from 'lucide-react';
-import { useAppUI, useAppAuth } from '@/providers/AppContext';
-import { useFarcasterUser } from '@/lib/farcaster';
-import { WalletConnect } from '@/components/ConnectButton';
-import { cn, useIsMobile } from '@/utils/responsive';
+import { useAppUI, useAppAuth } from '../../providers/AppContext';
+import { useFarcasterUser } from '../../lib/farcaster';
+import { WalletConnect } from '../ConnectButton';
+import { cn, useIsMobile } from '../../utils/responsive';
 
 export function Header() {
   const { toggleSidebar, notifications, theme } = useAppUI();

@@ -35,7 +35,7 @@ export function useUserData(userAddress?: string) {
   const { data: emarkBalance, refetch: refetchEmarkBalance } = useReadContract({
     contract: contracts.emarkToken,
     method: "function balanceOf(address) view returns (uint256)",
-    params: effectiveAddress ? [effectiveAddress] : undefined,
+    params: [effectiveAddress || '0x0000000000000000000000000000000000000000'],
     queryOptions: {
       enabled: !!contracts.emarkToken && !!effectiveAddress
     }
@@ -45,7 +45,7 @@ export function useUserData(userAddress?: string) {
   const { data: stakingAllowance, refetch: refetchAllowance } = useReadContract({
     contract: contracts.emarkToken,
     method: "function allowance(address owner, address spender) view returns (uint256)",
-    params: effectiveAddress && contracts.cardCatalog ? [effectiveAddress, contracts.cardCatalog.address] : undefined,
+    params: [effectiveAddress || '0x0000000000000000000000000000000000000000', contracts.cardCatalog?.address || '0x0000000000000000000000000000000000000000'],
     queryOptions: {
       enabled: !!contracts.emarkToken && !!contracts.cardCatalog && !!effectiveAddress
     }
@@ -55,7 +55,7 @@ export function useUserData(userAddress?: string) {
   const { data: wEmarkBalance, refetch: refetchWEmarkBalance } = useReadContract({
     contract: contracts.cardCatalog,
     method: "function balanceOf(address) view returns (uint256)",
-    params: effectiveAddress ? [effectiveAddress] : undefined,
+    params: [effectiveAddress || '0x0000000000000000000000000000000000000000'],
     queryOptions: {
       enabled: !!contracts.cardCatalog && !!effectiveAddress
     }
@@ -65,7 +65,7 @@ export function useUserData(userAddress?: string) {
   const { data: userSummary, refetch: refetchSummary } = useReadContract({
     contract: contracts.cardCatalog,
     method: "function getUserSummary(address) view returns (uint256 stakedBalance, uint256 availableVotingPower, uint256 delegatedPower, uint256 unbondingAmount_, uint256 unbondingReleaseTime_, bool canClaimUnbonding)",
-    params: effectiveAddress ? [effectiveAddress] : undefined,
+    params: [effectiveAddress || '0x0000000000000000000000000000000000000000'],
     queryOptions: {
       enabled: !!contracts.cardCatalog && !!effectiveAddress
     }

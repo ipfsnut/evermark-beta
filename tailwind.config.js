@@ -1,133 +1,70 @@
+// tailwind.config.js - Fix dark mode configuration
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
-  darkMode: 'class',
+  darkMode: 'class', // This enables class-based dark mode
   theme: {
     extend: {
-      // Cyber theme colors from existing project
       colors: {
-        // Primary cyber palette
-        cyber: {
-          primary: '#00ff41',    // Matrix green
-          secondary: '#00ffff',  // Cyan
-          accent: '#ff0080',     // Hot pink
-          warning: '#ffff00',    // Electric yellow
-          dark: '#0a0a0a',       // Near black
-          darker: '#000000',     // Pure black
-        },
+        // Your cyber theme colors
+        'cyber-primary': '#00ff41',
+        'cyber-secondary': '#0080ff', 
+        'cyber-accent': '#ff0080',
         
-        // Enhanced grays for dark theme
-        gray: {
-          850: '#1f2937',
-          900: '#111827',
-          950: '#0f172a',
-        },
-
-        // Evermark brand colors (preserved from existing)
-        evermark: {
-          primary: '#8B5CF6',    // Purple-600
-          secondary: '#06B6D4',  // Cyan-500
-          accent: '#EC4899',     // Pink-500
-          success: '#10B981',    // Emerald-500
-          warning: '#F59E0B',    // Amber-500
-          error: '#EF4444',      // Red-500
-        }
+        // Your evermark theme colors
+        'evermark-primary': '#00ff41',
+        'evermark-secondary': '#0080ff',
+        'evermark-accent': '#ff0080',
       },
-
-      // Typography enhancements
-      fontFamily: {
-        'serif': ['Georgia', 'Times New Roman', 'serif'],
-        'mono': ['Fira Code', 'Monaco', 'Consolas', 'monospace'],
+      boxShadow: {
+        'cyber': '0 0 10px currentColor',
+        'cyber-lg': '0 0 20px currentColor, 0 0 30px currentColor',
       },
-
-      // Animation enhancements
       animation: {
-        'glow': 'glow 2s ease-in-out infinite alternate',
-        'matrix-rain': 'matrix-rain 20s linear infinite',
-        'cyber-pulse': 'cyber-pulse 1.5s ease-in-out infinite',
-        'fade-in': 'fade-in 0.5s ease-out',
-        'slide-up': 'slide-up 0.3s ease-out',
-        'scale-in': 'scale-in 0.2s ease-out',
+        'matrix-scroll': 'matrix-scroll 20s linear infinite',
+        'cyber-pulse': 'cyberPulse 1.5s ease-in-out infinite',
+        'shimmer': 'shimmer 1.5s infinite',
+        'fade-in': 'fadeIn 0.5s ease-out',
+        'slide-up': 'slideUp 0.3s ease-out',
+        'scale-in': 'scaleIn 0.2s ease-out',
       },
-
       keyframes: {
-        glow: {
-          '0%': { 
-            textShadow: '0 0 5px currentColor, 0 0 10px currentColor, 0 0 15px currentColor',
-            filter: 'brightness(1)'
-          },
-          '100%': { 
-            textShadow: '0 0 10px currentColor, 0 0 20px currentColor, 0 0 30px currentColor',
-            filter: 'brightness(1.2)'
-          }
+        'matrix-scroll': {
+          '0%': { transform: 'translate(0, 0)' },
+          '100%': { transform: 'translate(20px, 20px)' }
         },
-        'matrix-rain': {
-          '0%': { transform: 'translateY(-100vh)', opacity: '0' },
-          '10%': { opacity: '1' },
-          '90%': { opacity: '1' },
-          '100%': { transform: 'translateY(100vh)', opacity: '0' }
-        },
-        'cyber-pulse': {
+        'cyberPulse': {
           '0%, 100%': { 
-            boxShadow: '0 0 5px currentColor',
+            'box-shadow': '0 0 5px currentColor',
             opacity: '1'
           },
           '50%': { 
-            boxShadow: '0 0 20px currentColor, 0 0 30px currentColor',
+            'box-shadow': '0 0 20px currentColor, 0 0 30px currentColor',
             opacity: '0.8'
           }
         },
-        'fade-in': {
-          '0%': { opacity: '0' },
-          '100%': { opacity: '1' }
+        'shimmer': {
+          '0%': { 'background-position': '-200% 0' },
+          '100%': { 'background-position': '200% 0' }
         },
-        'slide-up': {
-          '0%': { transform: 'translateY(20px)', opacity: '0' },
-          '100%': { transform: 'translateY(0)', opacity: '1' }
+        'fadeIn': {
+          from: { opacity: '0', transform: 'translateY(20px)' },
+          to: { opacity: '1', transform: 'translateY(0)' }
         },
-        'scale-in': {
-          '0%': { transform: 'scale(0.95)', opacity: '0' },
-          '100%': { transform: 'scale(1)', opacity: '1' }
+        'slideUp': {
+          from: { opacity: '0', transform: 'translateY(20px)' },
+          to: { opacity: '1', transform: 'translateY(0)' }
+        },
+        'scaleIn': {
+          from: { opacity: '0', transform: 'scale(0.95)' },
+          to: { opacity: '1', transform: 'scale(1)' }
         }
-      },
-
-      // Enhanced shadows for cyber effects
-      boxShadow: {
-        'cyber': '0 0 10px rgba(0, 255, 65, 0.3)',
-        'cyber-lg': '0 0 20px rgba(0, 255, 65, 0.4)',
-        'cyber-xl': '0 0 30px rgba(0, 255, 65, 0.5)',
-        'neon': '0 0 5px currentColor, 0 0 10px currentColor, 0 0 15px currentColor',
-        'neon-lg': '0 0 10px currentColor, 0 0 20px currentColor, 0 0 30px currentColor',
-      },
+      }
     },
   },
-  plugins: [
-    // Custom utilities for cyber theme
-    function({ addUtilities }) {
-      addUtilities({
-        '.text-glow': {
-          textShadow: '0 0 10px currentColor',
-        },
-        '.text-glow-lg': {
-          textShadow: '0 0 20px currentColor, 0 0 30px currentColor',
-        },
-        '.border-glow': {
-          boxShadow: '0 0 10px currentColor',
-        },
-        '.border-glow-lg': {
-          boxShadow: '0 0 20px currentColor',
-        },
-        '.scrollbar-hide': {
-          '-ms-overflow-style': 'none',
-          'scrollbar-width': 'none',
-          '&::-webkit-scrollbar': {
-            display: 'none'
-          }
-        },
-      })
-    }
-  ],
-};
+  plugins: [],
+}

@@ -1,287 +1,233 @@
-// src/features/leaderboard/services/LeaderboardService.ts
-// Real blockchain integration using viem and your contract
-
-import { createPublicClient, http, formatUnits } from 'viem';
-import { base } from 'viem/chains'; // Assuming you're on Base - adjust as needed
-import { 
+// src/features/leaderboard/hooks/useLeaderboardState.ts
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { LeaderboardService } from '../services/LeaderboardService';
+import type { 
   LeaderboardEntry, 
-  LeaderboardFeedResult, 
   LeaderboardStats,
   LeaderboardFeedOptions,
   LeaderboardFilters,
-  RankingPeriod
+  LeaderboardPagination,
+  UseLeaderboardStateReturn,
 } from '../types';
-
-// Your actual contract configuration
-const LEADERBOARD_CONTRACT = {
-  address: '0x...' as const, // Replace with your deployed contract address
-  abi: [
-    {
-      "inputs": [
-        {"internalType": "uint256", "name": "cycle", "type": "uint256"},
-        {"internalType": "uint256", "name": "startRank", "type": "uint256"},
-        {"internalType": "uint256", "name": "count", "type": "uint256"}
-      ],
-      "name": "getLeaderboard",
-      "outputs": [
-        {
-          "components": [
-            {"internalType": "uint256", "name": "evermarkId", "type": "uint256"},
-            {"internalType": "uint256", "name": "votes", "type": "uint256"},
-            {"internalType": "address", "name": "creator", "type": "address"}
-          ],
-          "internalType": "struct LiveLeaderboard.LeaderboardEntry[]",
-          "name": "",
-          "type": "tuple[]"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [{"internalType": "uint256", "name": "cycle", "type": "uint256"}],
-      "name": "getCycleStats",
-      "outputs": [
-        {"internalType": "uint256", "name": "totalUpdates", "type": "uint256"},
-        {"internalType": "uint256", "name": "leaderboardSize", "type": "uint256"},
-        {"internalType": "uint256", "name": "lastUpdate", "type": "uint256"},
-        {"internalType": "bool", "name": "initialized", "type": "bool"}
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [{"internalType": "uint256", "name": "cycle", "type": "uint256"}],
-      "name": "getLeaderboardSize",
-      "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
-      "stateMutability": "view",
-      "type": "function"
-    }
-  ] as const
-};
-
-// Public client for reading contract data
-const publicClient = createPublicClient({
-  chain: base, // Adjust to your chain
-  transport: http()
-});
+import { LEADERBOARD_CONSTANTS } from '../types';
 
 /**
- * LeaderboardService - Real blockchain integration
+ * Hook for managing leaderboard state and data fetching
  */
-export class LeaderboardService {
-  
-  /**
-   * Fetch leaderboard data from the actual contract
-   */
-  static async fetchLeaderboard(options: LeaderboardFeedOptions): Promise<LeaderboardFeedResult> {
-    const { 
-      page = 1, 
-      pageSize = 20, 
-      filters 
-    } = options;
-    
-    // Get current cycle from period filter or default to 1
-    const cycle = filters?.period ? parseInt(filters.period) : 1;
-    const startRank = (page - 1) * pageSize + 1;
-    
+export function useLeaderboardState(): UseLeaderboardStateReturn {
+  // Core data state
+  const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
+  const [stats, setStats] = useState<LeaderboardStats | null>(null);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  // UI state
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Filters and pagination
+  const [filters, setFiltersState] = useState<LeaderboardFilters>(() => 
+    LeaderboardService.getDefaultFilters()
+  );
+  const [pagination, setPaginationState] = useState<LeaderboardPagination>(() => 
+    LeaderboardService.getDefaultPagination()
+  );
+
+  // Available periods
+  const availablePeriods = useMemo(() => 
+    LeaderboardService.getAvailablePeriods(), []
+  );
+
+  // Current period
+  const currentPeriod = useMemo(() => 
+    LeaderboardService.getPeriodById(filters.period || LEADERBOARD_CONSTANTS.DEFAULT_PERIOD), 
+    [filters.period]
+  );
+
+  // Computed properties
+  const hasNextPage = useMemo(() => 
+    pagination.page < totalPages, 
+    [pagination.page, totalPages]
+  );
+
+  const hasPreviousPage = useMemo(() => 
+    pagination.page > 1, 
+    [pagination.page]
+  );
+
+  const isEmpty = useMemo(() => 
+    entries.length === 0, 
+    [entries.length]
+  );
+
+  const isFiltered = useMemo(() => {
+    const defaultFilters = LeaderboardService.getDefaultFilters();
+    return (
+      filters.searchQuery !== undefined ||
+      filters.contentType !== undefined ||
+      filters.minVotes !== undefined ||
+      filters.period !== defaultFilters.period
+    );
+  }, [filters]);
+
+  // Load leaderboard data
+  const loadLeaderboard = useCallback(async (options?: Partial<LeaderboardFeedOptions>) => {
     try {
-      // Call the actual contract
-      const [leaderboardData, cycleStats] = await Promise.all([
-        publicClient.readContract({
-          address: LEADERBOARD_CONTRACT.address,
-          abi: LEADERBOARD_CONTRACT.abi,
-          functionName: 'getLeaderboard',
-          args: [BigInt(cycle), BigInt(startRank), BigInt(pageSize)]
-        }),
-        publicClient.readContract({
-          address: LEADERBOARD_CONTRACT.address,
-          abi: LEADERBOARD_CONTRACT.abi,
-          functionName: 'getCycleStats',
-          args: [BigInt(cycle)]
-        })
+      const loadOptions: LeaderboardFeedOptions = {
+        page: options?.page || pagination.page,
+        pageSize: options?.pageSize || pagination.pageSize,
+        sortBy: options?.sortBy || pagination.sortBy,
+        sortOrder: options?.sortOrder || pagination.sortOrder,
+        filters: { ...filters, ...options?.filters }
+      };
+
+      setIsLoading(true);
+      setError(null);
+
+      const [feedResult, statsResult] = await Promise.all([
+        LeaderboardService.fetchLeaderboard(loadOptions),
+        LeaderboardService.fetchLeaderboardStats(loadOptions.filters?.period || filters.period || LEADERBOARD_CONSTANTS.DEFAULT_PERIOD)
       ]);
 
-      // Transform contract data to our format
-      const entries: LeaderboardEntry[] = (leaderboardData as any[]).map((entry, index) => ({
-        id: `${cycle}-${entry.evermarkId}`,
-        evermarkId: entry.evermarkId.toString(),
-        rank: startRank + index,
-        totalVotes: entry.votes,
-        voteCount: 1, // We don't have this from contract, would need separate call
-        percentageOfTotal: 0, // Calculate if needed
-        title: `Evermark #${entry.evermarkId}`, // Would need to fetch from metadata
-        description: '', // Would need to fetch from metadata
-        creator: entry.creator,
-        createdAt: new Date().toISOString(), // Would need to fetch from contract events
-        contentType: 'Custom' as const,
-        tags: [],
-        verified: false, // Would need verification logic
-        change: { direction: 'same' as const, positions: 0 } // Would need previous data to calculate
-      }));
+      setEntries(feedResult.entries);
+      setTotalCount(feedResult.totalCount);
+      setTotalPages(feedResult.totalPages);
+      setLastUpdated(feedResult.lastUpdated);
+      setStats(statsResult);
 
-      const totalCount = Number(cycleStats[1]); // leaderboardSize
-      const totalPages = Math.ceil(totalCount / pageSize);
-
-      return {
-        entries,
-        totalCount,
-        totalPages,
-        currentPage: page,
-        pageSize,
-        hasNextPage: page * pageSize < totalCount,
-        hasPreviousPage: page > 1,
-        lastUpdated: new Date(),
-        filters: filters || {}
-      };
-
-    } catch (error) {
-      console.error('Failed to fetch leaderboard from contract:', error);
-      
-      // Return empty result on error
-      return {
-        entries: [],
-        totalCount: 0,
-        totalPages: 0,
-        currentPage: page,
-        pageSize,
-        hasNextPage: false,
-        hasPreviousPage: false,
-        lastUpdated: new Date(),
-        filters: filters || {}
-      };
+    } catch (err) {
+      console.error('Failed to load leaderboard:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load leaderboard data');
+    } finally {
+      setIsLoading(false);
     }
-  }
+  }, [pagination, filters]);
 
-  /**
-   * Fetch cycle statistics from contract
-   */
-  static async fetchLeaderboardStats(period: string): Promise<LeaderboardStats> {
-    const cycle = parseInt(period) || 1;
-    
+  // Refresh data
+  const refresh = useCallback(async () => {
     try {
-      const stats = await publicClient.readContract({
-        address: LEADERBOARD_CONTRACT.address,
-        abi: LEADERBOARD_CONTRACT.abi,
-        functionName: 'getCycleStats',
-        args: [BigInt(cycle)]
-      });
+      setIsRefreshing(true);
+      setError(null);
 
-      return {
-        totalEvermarks: Number(stats[1]), // leaderboardSize
-        totalVotes: BigInt(0), // Would need to calculate from all entries
-        activeVoters: Number(stats[0]), // totalUpdates as proxy
-        participationRate: 0.5, // Would need to calculate
-        averageVotesPerEvermark: BigInt(0), // Would need to calculate
-        topEvermarkVotes: BigInt(0), // Would need to fetch top entry
-        period: period
+      const loadOptions: LeaderboardFeedOptions = {
+        page: pagination.page,
+        pageSize: pagination.pageSize,
+        sortBy: pagination.sortBy,
+        sortOrder: pagination.sortOrder,
+        filters
       };
-    } catch (error) {
-      console.error('Failed to fetch cycle stats:', error);
-      return {
-        totalEvermarks: 0,
-        totalVotes: BigInt(0),
-        activeVoters: 0,
-        participationRate: 0,
-        averageVotesPerEvermark: BigInt(0),
-        topEvermarkVotes: BigInt(0),
-        period: period
-      };
+
+      const [feedResult, statsResult] = await Promise.all([
+        LeaderboardService.fetchLeaderboard(loadOptions),
+        LeaderboardService.fetchLeaderboardStats(filters.period || LEADERBOARD_CONSTANTS.DEFAULT_PERIOD)
+      ]);
+
+      setEntries(feedResult.entries);
+      setTotalCount(feedResult.totalCount);
+      setTotalPages(feedResult.totalPages);
+      setLastUpdated(feedResult.lastUpdated);
+      setStats(statsResult);
+
+    } catch (err) {
+      console.error('Failed to refresh leaderboard:', err);
+      setError(err instanceof Error ? err.message : 'Failed to refresh leaderboard data');
+    } finally {
+      setIsRefreshing(false);
     }
-  }
+  }, [pagination, filters]);
 
-  /**
-   * Format vote amounts for display
-   */
-  static formatVoteAmount(amount: bigint): string {
-    if (amount === BigInt(0)) return '0';
-    
-    const formatted = formatUnits(amount, 18);
-    const number = parseFloat(formatted);
-    
-    if (number < 0.0001) return '< 0.0001';
-    if (number >= 1000000) return `${(number / 1000000).toFixed(1)}M`;
-    if (number >= 1000) return `${(number / 1000).toFixed(1)}K`;
-    
-    return number.toLocaleString('en-US', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2
-    });
-  }
+  // Set period (resets pagination)
+  const setPeriod = useCallback((periodId: string) => {
+    setFiltersState(prev => ({ ...prev, period: periodId }));
+    setPaginationState(prev => ({ ...prev, page: 1 })); // Reset to first page
+  }, []);
 
-  /**
-   * Get available periods (cycles) - always returns at least one period
-   */
-  static getAvailablePeriods(): RankingPeriod[] {
-    const periods = [
-      { id: '1', label: 'Cycle 1', duration: 0, description: 'First voting cycle' },
-      { id: '2', label: 'Cycle 2', duration: 0, description: 'Second voting cycle' },
-      { id: '3', label: 'Cycle 3', duration: 0, description: 'Third voting cycle' },
-      // Add more as needed
-    ];
-    
-    // Ensure we always have at least one period
-    if (periods.length === 0) {
-      periods.push({ id: '1', label: 'Default Cycle', duration: 0, description: 'Default voting cycle' });
-    }
-    
-    return periods;
-  }
+  // Set filters (resets pagination)
+  const setFilters = useCallback((newFilters: Partial<LeaderboardFilters>) => {
+    setFiltersState(prev => ({ ...prev, ...newFilters }));
+    setPaginationState(prev => ({ ...prev, page: 1 })); // Reset to first page
+  }, []);
 
-  /**
-   * Get period by ID - always returns a valid period
-   */
-  static getPeriodById(periodId: string): RankingPeriod {
-    const periods = this.getAvailablePeriods();
-    const period = periods.find(p => p.id === periodId);
+  // Set pagination
+  const setPagination = useCallback((newPagination: Partial<LeaderboardPagination>) => {
+    setPaginationState(prev => ({ ...prev, ...newPagination }));
+  }, []);
+
+  // Clear filters
+  const clearFilters = useCallback(() => {
+    setFiltersState(LeaderboardService.getDefaultFilters());
+    setPaginationState(prev => ({ ...prev, page: 1 })); // Reset to first page
+  }, []);
+
+  // Entry lookup functions
+  const getEntryByEvermarkId = useCallback((evermarkId: string): LeaderboardEntry | null => {
+    return entries.find(entry => entry.evermarkId === evermarkId) || null;
+  }, [entries]);
+
+  const getEntryRank = useCallback((evermarkId: string): number | null => {
+    const entry = getEntryByEvermarkId(evermarkId);
+    return entry ? entry.rank : null;
+  }, [getEntryByEvermarkId]);
+
+  // Load data on mount and when dependencies change
+  useEffect(() => {
+    loadLeaderboard();
+  }, [loadLeaderboard]);
+
+  // Auto-refresh interval (optional)
+  useEffect(() => {
+    if (!LEADERBOARD_CONSTANTS.AUTO_REFRESH) return;
+
+    const interval = setInterval(() => {
+      if (!isLoading && !isRefreshing) {
+        refresh();
+      }
+    }, LEADERBOARD_CONSTANTS.REFRESH_INTERVAL);
+
+    return () => clearInterval(interval);
+  }, [refresh, isLoading, isRefreshing]);
+
+  return {
+    // Data
+    entries,
+    stats,
+    currentPeriod,
+    availablePeriods,
     
-    if (!period) {
-      console.warn(`Period ${periodId} not found, falling back to default`);
-      // Guaranteed fallback - periods[0] is guaranteed to exist due to our getAvailablePeriods implementation
-      return periods[0]!;
-    }
+    // Pagination & filtering
+    pagination,
+    filters,
+    totalCount,
+    totalPages,
     
-    return period;
-  }
-
-  /**
-   * Default filters - only include defined properties
-   */
-  static getDefaultFilters(): LeaderboardFilters {
-    return {
-      period: '1'
-      // Don't include undefined properties - just omit them
-    };
-  }
-
-  /**
-   * Default pagination - always provides required fields
-   */
-  static getDefaultPagination() {
-    return {
-      page: 1,
-      pageSize: 20,
-      sortBy: 'rank' as const,
-      sortOrder: 'asc' as const
-    };
-  }
-
-  /**
-   * Check if contract is deployed and accessible
-   */
-  static async healthCheck(): Promise<boolean> {
-    try {
-      // Try to read basic contract info
-      await publicClient.readContract({
-        address: LEADERBOARD_CONTRACT.address,
-        abi: LEADERBOARD_CONTRACT.abi,
-        functionName: 'getCycleStats',
-        args: [BigInt(1)]
-      });
-      return true;
-    } catch (error) {
-      console.error('Contract health check failed:', error);
-      return false;
-    }
-  }
+    // UI State
+    isLoading,
+    isRefreshing,
+    error,
+    lastUpdated,
+    
+    // Actions
+    loadLeaderboard,
+    refresh,
+    
+    // Filtering & pagination
+    setPeriod,
+    setFilters,
+    setPagination,
+    clearFilters,
+    
+    // Entry actions
+    getEntryByEvermarkId,
+    getEntryRank,
+    
+    // Computed properties
+    hasNextPage,
+    hasPreviousPage,
+    isEmpty,
+    isFiltered
+  };
 }
+
+export default useLeaderboardState;

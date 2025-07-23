@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useMutation } from '@tanstack/react-query';
+import { useActiveAccount } from 'thirdweb/react';
 import { EvermarkService } from '../services/EvermarkService';
 import type { CreateEvermarkInput, CreateEvermarkResult, EvermarkMetadata } from '../types';
 
@@ -39,6 +40,9 @@ const initialFormData: Partial<EvermarkMetadata> = {
 };
 
 export function useEvermarkCreate(): UseEvermarkCreateResult {
+  // Get the active account for blockchain operations
+  const account = useActiveAccount();
+  
   // Form state
   const [formData, setFormData] = useState<Partial<EvermarkMetadata>>(initialFormData);
   const [selectedImage, setSelectedImageState] = useState<File | null>(null);
@@ -51,6 +55,11 @@ export function useEvermarkCreate(): UseEvermarkCreateResult {
   // Creation mutation
   const createMutation = useMutation({
     mutationFn: async (input: CreateEvermarkInput) => {
+      // Check if we have an account before starting creation
+      if (!account) {
+        throw new Error('No wallet connected. Please connect your wallet to create an Evermark.');
+      }
+
       setCreateProgress(0);
       setCreateStep('Validating metadata...');
       
@@ -60,7 +69,8 @@ export function useEvermarkCreate(): UseEvermarkCreateResult {
       }, 500);
       
       try {
-        const result = await EvermarkService.createEvermark(input);
+        // Pass the account to the service
+        const result = await EvermarkService.createEvermark(input, account);
         
         if (result.success) {
           setCreateProgress(100);
@@ -161,7 +171,7 @@ export function useEvermarkCreate(): UseEvermarkCreateResult {
 
   const createError = createMutation.error instanceof Error 
     ? createMutation.error.message 
-    : createMutation.error as unknown as string;
+    : (createMutation.error ? String(createMutation.error) : null);
 
   return {
     // Creation state

@@ -1,12 +1,11 @@
 // features/staking/components/StakeForm.tsx - Stake form component
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { toWei } from 'thirdweb/utils';
 import { 
   LockIcon, 
   AlertCircleIcon, 
   InfoIcon, 
-  TrendingUpIcon,
   CheckCircleIcon 
 } from 'lucide-react';
 import { StakingService } from '../services/StakingService';
@@ -51,6 +50,7 @@ export function StakeForm({ stakingState, onSuccess, className = '' }: StakeForm
       }, 5000);
       return () => clearTimeout(timer);
     }
+    return
   }, [localError, localSuccess]);
 
   // Handle max button click

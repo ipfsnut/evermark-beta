@@ -1,8 +1,8 @@
 import type { 
   EvermarkMetadata, 
   ValidationResult, 
-  ValidationError, 
-  FarcasterCastData 
+  ValidationError,
+  FarcasterCastData
 } from '../types';
 
 export class ValidationService {
@@ -196,6 +196,66 @@ export class ValidationService {
 
     // Check direct hash
     return /^0x[a-fA-F0-9]{8,64}$/.test(input);
+  }
+
+  /**
+   * Validate Farcaster cast data structure
+   */
+  static validateFarcasterCastData(castData: FarcasterCastData): ValidationResult {
+    const errors: ValidationError[] = [];
+
+    if (!castData.content?.trim()) {
+      errors.push({ field: 'castData.content', message: 'Cast content is required' });
+    } else if (castData.content.length > 320) {
+      errors.push({ field: 'castData.content', message: 'Cast content exceeds maximum length (320 characters)' });
+    }
+
+    if (!castData.author?.trim()) {
+      errors.push({ field: 'castData.author', message: 'Cast author is required' });
+    }
+
+    if (!castData.castHash || !this.isValidFarcasterHash(castData.castHash)) {
+      errors.push({ field: 'castData.castHash', message: 'Valid cast hash is required' });
+    }
+
+    // Validate timestamp if present (it's a string in ISO format)
+    if (castData.timestamp) {
+      try {
+        const parsedDate = new Date(castData.timestamp);
+        if (isNaN(parsedDate.getTime())) {
+          errors.push({ field: 'castData.timestamp', message: 'Invalid timestamp format' });
+        } else if (parsedDate > new Date()) {
+          errors.push({ field: 'castData.timestamp', message: 'Timestamp cannot be in the future' });
+        }
+      } catch {
+        errors.push({ field: 'castData.timestamp', message: 'Invalid timestamp format' });
+      }
+    }
+
+    // Validate engagement data if present
+    if (castData.engagement) {
+      if (castData.engagement.likes < 0) {
+        errors.push({ field: 'castData.engagement.likes', message: 'Likes count cannot be negative' });
+      }
+      if (castData.engagement.recasts < 0) {
+        errors.push({ field: 'castData.engagement.recasts', message: 'Recasts count cannot be negative' });
+      }
+      if (castData.engagement.replies < 0) {
+        errors.push({ field: 'castData.engagement.replies', message: 'Replies count cannot be negative' });
+      }
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  }
+
+  /**
+   * Validate Farcaster cast hash format
+   */
+  static isValidFarcasterHash(hash: string): boolean {
+    return /^0x[a-fA-F0-9]{8,64}$/.test(hash);
   }
 
   /**

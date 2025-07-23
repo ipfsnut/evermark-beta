@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { SearchIcon, XIcon, FilterIcon,  } from 'lucide-react';
+import { SearchIcon, XIcon, FilterIcon, SortAscIcon } from 'lucide-react';
 import type { EvermarkFilters } from '../types';
 
 interface EvermarkSearchProps {

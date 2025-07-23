@@ -1,8 +1,8 @@
 // src/providers/WalletProvider.tsx - Fixed based on actual Thirdweb v5 API
 import React, { createContext, useContext } from 'react';
 import { useActiveAccount, useConnect, useDisconnect, useActiveWallet } from 'thirdweb/react';
-import { createWallet, inAppWallet } from 'thirdweb/wallets';
-import { client } from '@/lib/thirdweb';
+import { createWallet } from 'thirdweb/wallets';
+import { client } from '../lib/thirdweb';
 
 interface WalletContextType {
   isConnected: boolean;
@@ -22,13 +22,13 @@ interface WalletProviderProps {
 export function WalletProvider({ children }: WalletProviderProps) {
   const account = useActiveAccount();
   const wallet = useActiveWallet();
-  const { connect: thirdwebConnect, isConnecting, error: connectError } = useConnect();
+  const { connect: thirdwebConnect, isConnecting } = useConnect();
   const { disconnect: thirdwebDisconnect } = useDisconnect();
 
   const connect = async (): Promise<{ success: boolean; error?: string }> => {
     try {
       // Use the correct useConnect API signature with browser wallets
-      const connectedWallet = await thirdwebConnect((async () => {
+      const connectedWallet = await thirdwebConnect(async () => {
         // Try MetaMask first (most common browser wallet)
         try {
           const metamaskWallet = createWallet('io.metamask');
@@ -41,7 +41,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
           await coinbaseWallet.connect({ client });
           return coinbaseWallet;
         }
-      }) as any); // Type assertion to bypass strict TypeScript union type issue
+      });
       
       if (connectedWallet) {
         return { success: true };

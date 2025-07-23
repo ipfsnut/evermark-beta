@@ -196,19 +196,19 @@ export class EvermarkBlockchainService {
       console.log('⏳ Transaction sent, waiting for confirmation...', result.transactionHash);
 
       // Step 5: Wait for transaction confirmation
-      const receipt = await waitForReceipt({
+      const txReceipt = await waitForReceipt({
         client,
         chain: CONTRACTS.EVERMARK_NFT.chain,
         transactionHash: result.transactionHash as `0x${string}`,
       });
 
       // Step 6: Extract token ID from transaction logs
-      const tokenIdBigInt = this.extractTokenIdFromReceipt(receipt);
+      const tokenIdBigInt = this.extractTokenIdFromReceipt(txReceipt);
 
       console.log('✅ Evermark minted successfully:', {
         txHash: result.transactionHash,
         tokenId: tokenIdBigInt?.toString(),
-        gasUsed: receipt.gasUsed?.toString(),
+        gasUsed: txReceipt.gasUsed?.toString(),
         mintingFee: contractInfo.mintingFee.toString()
       });
 
@@ -318,7 +318,7 @@ export class EvermarkBlockchainService {
       });
 
       // Wait for confirmation
-      const receipt = await waitForReceipt({
+      await waitForReceipt({
         client,
         chain: CONTRACTS.EVERMARK_NFT.chain,
         transactionHash: result.transactionHash as `0x${string}`,
@@ -412,7 +412,7 @@ export class EvermarkBlockchainService {
    */
   static async getTransactionDetails(txHash: string): Promise<TransactionDetails | null> {
     try {
-      const receipt = await waitForReceipt({
+      const transactionReceipt = await waitForReceipt({
         client,
         chain: CONTRACTS.EVERMARK_NFT.chain,
         transactionHash: txHash as `0x${string}`,
@@ -420,9 +420,9 @@ export class EvermarkBlockchainService {
 
       return {
         hash: txHash,
-        status: receipt.status === 'success' ? 'confirmed' : 'failed',
-        blockNumber: Number(receipt.blockNumber),
-        gasUsed: receipt.gasUsed?.toString(),
+        status: transactionReceipt.status === 'success' ? 'confirmed' : 'failed',
+        blockNumber: Number(transactionReceipt.blockNumber),
+        gasUsed: transactionReceipt.gasUsed?.toString(),
         timestamp: Date.now() // In real implementation, get from block data
       };
     } catch (error) {
@@ -559,7 +559,9 @@ export class EvermarkBlockchainService {
           if (fromAddress === zeroAddress) {
             // This is a mint event
             const tokenId = log.topics[3];
-            return BigInt(tokenId);
+            if (tokenId) {
+              return BigInt(tokenId);
+            }
           }
         }
       }

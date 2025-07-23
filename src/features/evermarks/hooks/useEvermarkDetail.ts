@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { EvermarkService } from '../services/EvermarkService';
 import type { Evermark } from '../types';
@@ -27,7 +27,7 @@ export function useEvermarkDetail(id?: string): UseEvermarkDetailResult {
     refetch
   } = useQuery({
     queryKey: ['evermark', id],
-    queryFn: () => id ? EvermarkService.fetchEvermark(id) : null,
+    queryFn: () => id ? EvermarkService.fetchEvermark(id) : Promise.resolve(null),
     enabled: !!id,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000,   // 10 minutes
@@ -65,7 +65,7 @@ export function useEvermarkDetail(id?: string): UseEvermarkDetailResult {
     setUpdateError(null);
   }, []);
 
-  const error = queryError instanceof Error ? queryError.message : queryError as unknown as string;
+  const error = queryError instanceof Error ? queryError.message : (queryError ? String(queryError) : null);
 
   return {
     evermark: evermark || null,

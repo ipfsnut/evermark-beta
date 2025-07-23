@@ -15,7 +15,6 @@ import {
   type VotingTransaction,
   type EvermarkRanking,
   type BatchVotingRequest,
-  type BatchVotingResult,
   VOTING_CONSTANTS,
   VOTING_ERRORS
 } from '../types';
@@ -161,7 +160,6 @@ export class VotingService {
    */
   static calculateVotingStats(
     userDelegations: Delegation[],
-    totalVotingPower: bigint,
     cycleData: VotingCycle | null,
     allUserVotes?: Vote[]
   ): VotingStats {
@@ -284,7 +282,6 @@ export class VotingService {
   static validateVoteAmount(
     amount: string,
     availableVotingPower: bigint,
-    evermarkId?: string,
     userAddress?: string,
     creatorAddress?: string
   ): VotingValidation {
@@ -538,7 +535,6 @@ export class VotingService {
    * Generate voting recommendations based on user goals
    */
   static generateVotingRecommendations(
-    availablePower: bigint,
     userGoal: 'maximize_rewards' | 'support_quality' | 'diversify' = 'support_quality'
   ): {
     strategy: string;

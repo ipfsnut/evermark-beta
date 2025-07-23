@@ -1,25 +1,22 @@
-// src/pages/EvermarkDetailPage.tsx - Detailed view of a single evermark
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
-  ArrowLeftIcon,
-  ExternalLinkIcon,
-  ShareIcon,
-  HeartIcon,
-  MessageCircleIcon,
-  CalendarIcon,
-  UserIcon,
-  TagIcon,
-  CheckCircleIcon,
-  AlertCircleIcon,
-  CopyIcon,
-  EyeIcon,
-  VoteIcon,
-  TrendingUpIcon,
-  FileTextIcon,
-  LinkIcon,
-  ImageIcon,
-  ZapIcon
+  ArrowLeft,
+  ExternalLink,
+  Share,
+  MessageCircle,
+  Calendar,
+  User,
+  Tag,
+  CheckCircle,
+  AlertCircle,
+  Copy,
+  Eye,
+  Vote,
+  FileText,
+  Link as LinkIcon,
+  Image,
+  Zap
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -28,7 +25,28 @@ import { useEvermarksState, type Evermark } from '@/features/evermarks';
 import { VotingPanel } from '@/features/voting';
 import { useAppAuth } from '@/providers/AppContext';
 import { useFarcasterUser } from '@/lib/farcaster';
-import { cn, useIsMobile } from '@/utils/responsive';
+
+// Utility function for responsive classes
+function cn(...classes: (string | undefined | null | false)[]): string {
+  return classes.filter(Boolean).join(' ');
+}
+
+// Simple mobile detection hook
+function useIsMobile(): boolean {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  return isMobile;
+}
 
 // Share modal component
 const ShareModal: React.FC<{
@@ -78,7 +96,7 @@ const ShareModal: React.FC<{
                     : "bg-gray-700 text-gray-300 hover:bg-gray-600"
                 )}
               >
-                <CopyIcon className="h-3 w-3" />
+                <Copy className="h-3 w-3" />
                 {copied ? 'Copied!' : 'Copy'}
               </button>
             </div>
@@ -114,15 +132,15 @@ const ShareModal: React.FC<{
 const getContentTypeIcon = (contentType: Evermark['contentType']) => {
   switch (contentType) {
     case 'Cast':
-      return <MessageCircleIcon className="h-5 w-5" />;
+      return <MessageCircle className="h-5 w-5" />;
     case 'DOI':
-      return <FileTextIcon className="h-5 w-5" />;
+      return <FileText className="h-5 w-5" />;
     case 'ISBN':
-      return <FileTextIcon className="h-5 w-5" />;
+      return <FileText className="h-5 w-5" />;
     case 'URL':
       return <LinkIcon className="h-5 w-5" />;
     default:
-      return <FileTextIcon className="h-5 w-5" />;
+      return <FileText className="h-5 w-5" />;
   }
 };
 
@@ -241,7 +259,7 @@ export default function EvermarkDetailPage() {
               onClick={() => navigate(-1)}
               className="inline-flex items-center text-gray-400 hover:text-white transition-colors"
             >
-              <ArrowLeftIcon className="w-5 h-5 mr-2" />
+              <ArrowLeft className="w-5 h-5 mr-2" />
               Back
             </button>
             
@@ -250,7 +268,7 @@ export default function EvermarkDetailPage() {
                 onClick={() => setShowShareModal(true)}
                 className="flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-600 text-white rounded-lg transition-colors"
               >
-                <ShareIcon className="h-4 w-4" />
+                <Share className="h-4 w-4" />
                 {!isMobile && 'Share'}
               </button>
               
@@ -264,7 +282,7 @@ export default function EvermarkDetailPage() {
                       : "bg-gray-800 hover:bg-gray-700 border border-gray-600 text-white"
                   )}
                 >
-                  <VoteIcon className="h-4 w-4" />
+                  <Vote className="h-4 w-4" />
                   {!isMobile && (showVoting ? 'Hide Voting' : 'Vote')}
                 </button>
               )}
@@ -291,7 +309,7 @@ export default function EvermarkDetailPage() {
                 
                 {evermark.verified && (
                   <div className="flex items-center gap-1 bg-green-900/30 text-green-300 px-3 py-1 rounded-full border border-green-500/30">
-                    <CheckCircleIcon className="h-4 w-4" />
+                    <CheckCircle className="h-4 w-4" />
                     <span className="text-sm font-medium">Verified</span>
                   </div>
                 )}
@@ -305,16 +323,16 @@ export default function EvermarkDetailPage() {
               {/* Author and Date */}
               <div className="flex flex-wrap items-center gap-4 text-gray-400">
                 <div className="flex items-center gap-2">
-                  <UserIcon className="h-4 w-4" />
+                  <User className="h-4 w-4" />
                   <span>by {evermark.author}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <CalendarIcon className="h-4 w-4" />
+                  <Calendar className="h-4 w-4" />
                   <span>{formatDistanceToNow(new Date(evermark.createdAt), { addSuffix: true })}</span>
                 </div>
                 {evermark.viewCount !== undefined && (
                   <div className="flex items-center gap-2">
-                    <EyeIcon className="h-4 w-4" />
+                    <Eye className="h-4 w-4" />
                     <span>{evermark.viewCount.toLocaleString()} views</span>
                   </div>
                 )}
@@ -338,12 +356,12 @@ export default function EvermarkDetailPage() {
                       </>
                     ) : evermark.imageStatus === 'failed' ? (
                       <>
-                        <AlertCircleIcon className="inline h-3 w-3 mr-1 text-red-400" />
+                        <AlertCircle className="inline h-3 w-3 mr-1 text-red-400" />
                         Failed to process
                       </>
                     ) : (
                       <>
-                        <ImageIcon className="inline h-3 w-3 mr-1 text-gray-400" />
+                        <Image className="inline h-3 w-3 mr-1 text-gray-400" />
                         No image
                       </>
                     )}
@@ -370,7 +388,7 @@ export default function EvermarkDetailPage() {
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors break-all"
                 >
-                  <ExternalLinkIcon className="h-4 w-4 flex-shrink-0" />
+                  <ExternalLink className="h-4 w-4 flex-shrink-0" />
                   {evermark.sourceUrl}
                 </a>
               </div>
@@ -386,7 +404,7 @@ export default function EvermarkDetailPage() {
                       key={index}
                       className="inline-flex items-center gap-1 bg-purple-900/30 text-purple-300 px-3 py-1 rounded-full border border-purple-500/30"
                     >
-                      <TagIcon className="h-3 w-3" />
+                      <Tag className="h-3 w-3" />
                       {tag}
                     </span>
                   ))}
@@ -395,9 +413,10 @@ export default function EvermarkDetailPage() {
             )}
 
             {/* Extended Metadata */}
-            {evermark.extendedMetadata && Object.keys(evermark.extendedMetadata).some(key => 
-              evermark.extendedMetadata[key] && key !== 'tags' && key !== 'customFields'
-            ) && (
+            {evermark.extendedMetadata && Object.keys(evermark.extendedMetadata).some(key => {
+              const metadata = evermark.extendedMetadata as Record<string, any>;
+              return metadata[key] && key !== 'tags' && key !== 'customFields';
+            }) && (
               <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6">
                 <h2 className="text-lg font-semibold text-white mb-4">Additional Information</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
@@ -447,7 +466,7 @@ export default function EvermarkDetailPage() {
               </div>
             ) : !isAuthenticated ? (
               <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6 text-center">
-                <VoteIcon className="mx-auto h-12 w-12 text-gray-500 mb-4" />
+                <Vote className="mx-auto h-12 w-12 text-gray-500 mb-4" />
                 <h3 className="text-lg font-medium text-white mb-2">Vote on Content</h3>
                 <p className="text-gray-400 mb-4">
                   Connect your wallet to vote on this evermark and earn rewards
@@ -463,7 +482,7 @@ export default function EvermarkDetailPage() {
               </div>
             ) : (
               <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6 text-center">
-                <VoteIcon className="mx-auto h-12 w-12 text-gray-500 mb-4" />
+                <Vote className="mx-auto h-12 w-12 text-gray-500 mb-4" />
                 <h3 className="text-lg font-medium text-white mb-2">Support This Content</h3>
                 <p className="text-gray-400 mb-4">
                   Click the Vote button above to delegate your voting power to this evermark
@@ -472,7 +491,7 @@ export default function EvermarkDetailPage() {
                   onClick={handleVoteClick}
                   className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-500 hover:to-blue-500 transition-colors font-medium"
                 >
-                  <ZapIcon className="h-4 w-4 mr-2" />
+                  <Zap className="h-4 w-4 mr-2" />
                   Start Voting
                 </button>
               </div>

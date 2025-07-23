@@ -109,7 +109,7 @@ export const votingUtils = {
   /**
    * Check if voting is enabled for a given chain/network
    */
-  isVotingEnabled: (chainId?: number): boolean => {
+  isVotingEnabled: (): boolean => {
     // In production, this would check against supported chains
     return true;
   },
@@ -117,21 +117,21 @@ export const votingUtils = {
   /**
    * Get minimum vote amount for a chain
    */
-  getMinVoteAmount: (chainId?: number): bigint => {
+  getMinVoteAmount: (): bigint => {
     return VOTING_CONSTANTS.MIN_VOTE_AMOUNT;
   },
   
   /**
    * Get maximum vote amount for a chain
    */
-  getMaxVoteAmount: (chainId?: number): bigint => {
+  getMaxVoteAmount: (): bigint => {
     return VOTING_CONSTANTS.MAX_VOTE_AMOUNT;
   },
   
   /**
    * Get current cycle duration for a chain
    */
-  getCycleDuration: (chainId?: number): number => {
+  getCycleDuration: (): number => {
     return VOTING_CONSTANTS.CYCLE_DURATION;
   },
   
@@ -469,10 +469,10 @@ export const votingPerformance = {
       recordFailure: () => {
         // Update failure metrics
       },
-      recordGasUsage: (gasUsed: bigint, gasPrice: bigint) => {
+      recordGasUsage: () => {
         // Update gas efficiency metrics
       },
-      recordEngagement: (action: string) => {
+      recordEngagement: () => {
         metrics.userEngagement += 1;
       },
       getMetrics: () => ({ ...metrics })

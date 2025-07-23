@@ -78,7 +78,6 @@ export function useStakingStats(): StakingStatsData {
     const activeStakers = stakingStats ? Number(stakingStats[3]) : 0;
     const totalWEmark = stakingStats?.[0] || wEmarkSupply || BigInt(0);
     const liquidEmark = stakingStats?.[1] || BigInt(0);
-    const unbondingFromStats = stakingStats?.[2] || totalUnbondingAmount;
     
     // Calculate staking ratio (percentage of total EMARK supply that's staked)
     const stakingRatio = totalEmarkSupply > BigInt(0) 

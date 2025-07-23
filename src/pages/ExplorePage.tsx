@@ -1,5 +1,5 @@
-// src/pages/ExplorePage.tsx - Explore all evermarks with filtering and pagination
-import React, { useState, useCallback } from 'react';
+// src/pages/ExplorePage.tsx - Fixed without feature dependencies
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   SearchIcon, 
@@ -11,91 +11,53 @@ import {
   StarIcon,
   UserIcon,
   TagIcon,
-  RefreshCwIcon,
   PlusIcon,
-  CompassIcon,
-  SortAscIcon,
-  SortDescIcon
+  CompassIcon
 } from 'lucide-react';
 
-// Feature imports
-import { EvermarkFeed, useEvermarksState, type Evermark } from '@/features/evermarks';
-import { VotingPanel } from '@/features/voting';
 import { useAppAuth } from '@/providers/AppContext';
 import { useFarcasterUser } from '@/lib/farcaster';
 import { cn, useIsMobile } from '@/utils/responsive';
 
 type ViewMode = 'grid' | 'list';
-type SortOption = 'newest' | 'oldest' | 'title' | 'author' | 'votes';
 
-const SORT_OPTIONS = [
-  { value: 'newest', label: 'Newest First', icon: ClockIcon },
-  { value: 'oldest', label: 'Oldest First', icon: ClockIcon },
-  { value: 'title', label: 'Title A-Z', icon: SortAscIcon },
-  { value: 'author', label: 'Author A-Z', icon: UserIcon },
-  { value: 'votes', label: 'Most Voted', icon: TrendingUpIcon }
-] as const;
-
-const CONTENT_TYPE_FILTERS = [
-  { value: '', label: 'All Types', icon: '📄' },
-  { value: 'Cast', label: 'Farcaster Cast', icon: '💬' },
-  { value: 'DOI', label: 'Academic Paper', icon: '📚' },
-  { value: 'ISBN', label: 'Book', icon: '📖' },
-  { value: 'URL', label: 'Web Content', icon: '🌐' },
-  { value: 'Custom', label: 'Custom Content', icon: '✨' }
-] as const;
+// Mock data for demonstration
+const mockStats = {
+  total: 1234,
+  thisWeek: 42,
+  creators: 89,
+  verified: 234
+};
 
 // Enhanced stats component
 const ExploreStats: React.FC = () => {
-  const { evermarks, totalCount, isLoading, filters } = useEvermarksState();
   const isMobile = useIsMobile();
   
-  const stats = React.useMemo(() => {
-    const recentEvermarks = evermarks.slice(0, 100);
-    const weekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
-    const thisWeekCount = recentEvermarks.filter(e => 
-      new Date(e.createdAt).getTime() > weekAgo
-    ).length;
-    
-    const uniqueCreators = new Set(recentEvermarks.map(e => e.creator)).size;
-    const withImages = recentEvermarks.filter(e => e.image).length;
-    const verifiedCount = recentEvermarks.filter(e => e.verified).length;
-
-    return {
-      total: totalCount || recentEvermarks.length,
-      thisWeek: thisWeekCount,
-      creators: uniqueCreators,
-      withImages,
-      verified: verifiedCount,
-      isFiltered: filters.search || filters.contentType || filters.author || filters.verified !== undefined
-    };
-  }, [evermarks, totalCount, filters]);
-
   const statCards = [
     {
-      label: stats.isFiltered ? 'Found' : 'Total',
-      value: isLoading ? '...' : stats.total.toLocaleString(),
+      label: 'Total',
+      value: mockStats.total.toLocaleString(),
       icon: <CompassIcon className="h-5 w-5" />,
       gradient: 'from-cyan-400 to-cyan-600',
       glow: 'shadow-cyan-500/20'
     },
     {
       label: 'This Week',
-      value: isLoading ? '...' : stats.thisWeek.toLocaleString(),
+      value: mockStats.thisWeek.toLocaleString(),
       icon: <ClockIcon className="h-5 w-5" />,
       gradient: 'from-green-400 to-green-600',
       glow: 'shadow-green-500/20'
     },
     {
       label: 'Creators',
-      value: isLoading ? '...' : stats.creators.toLocaleString(),
+      value: mockStats.creators.toLocaleString(),
       icon: <UserIcon className="h-5 w-5" />,
       gradient: 'from-purple-400 to-purple-600',
       glow: 'shadow-purple-500/20'
     },
     {
       label: 'Verified',
-      value: isLoading ? '...' : stats.verified.toLocaleString(),
+      value: mockStats.verified.toLocaleString(),
       icon: <StarIcon className="h-5 w-5" />,
       gradient: 'from-yellow-400 to-yellow-600',
       glow: 'shadow-yellow-500/20'
@@ -133,129 +95,29 @@ const ExploreStats: React.FC = () => {
   );
 };
 
-// Filter panel component
-const FilterPanel: React.FC<{
-  isOpen: boolean;
-  onClose: () => void;
-  onApplyFilters: (filters: any) => void;
-  currentFilters: any;
-}> = ({ isOpen, onClose, onApplyFilters, currentFilters }) => {
-  const [tempFilters, setTempFilters] = useState(currentFilters);
-
-  const handleApply = () => {
-    onApplyFilters(tempFilters);
-    onClose();
-  };
-
-  const handleReset = () => {
-    const resetFilters = {
-      search: '',
-      contentType: undefined,
-      verified: undefined,
-      author: ''
-    };
-    setTempFilters(resetFilters);
-    onApplyFilters(resetFilters);
-    onClose();
-  };
-
-  if (!isOpen) return null;
-
+// Placeholder content feed
+const PlaceholderFeed: React.FC<{ viewMode: ViewMode }> = ({ viewMode }) => {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-gray-900 border border-gray-700 rounded-lg shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b border-gray-700">
-          <h3 className="text-xl font-bold text-white">Filter Evermarks</h3>
-          <button
-            onClick={onClose}
-            className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
-          >
-            ✕
-          </button>
+    <div className="bg-gray-800/30 border border-gray-700 rounded-lg p-8 text-center">
+      <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full flex items-center justify-center">
+        {viewMode === 'grid' ? <GridIcon className="h-8 w-8 text-black" /> : <ListIcon className="h-8 w-8 text-black" />}
+      </div>
+      <h3 className="text-xl font-semibold text-white mb-2">Evermarks Coming Soon</h3>
+      <p className="text-gray-400 mb-6">
+        The explore feed will show all preserved content once the evermarks feature is ready.
+      </p>
+      <div className="grid gap-4 max-w-md mx-auto">
+        <div className="bg-gray-700/50 rounded-lg p-4">
+          <div className="w-full h-4 bg-gray-600 rounded mb-2"></div>
+          <div className="w-3/4 h-3 bg-gray-600 rounded"></div>
         </div>
-        
-        <div className="p-6 space-y-6">
-          {/* Content Type Filter */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-3">
-              Content Type
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              {CONTENT_TYPE_FILTERS.map((type) => (
-                <button
-                  key={type.value}
-                  onClick={() => setTempFilters({ ...tempFilters, contentType: type.value || undefined })}
-                  className={cn(
-                    "flex items-center justify-center px-3 py-2 rounded-lg border transition-all duration-200 text-sm",
-                    tempFilters.contentType === type.value || (!tempFilters.contentType && !type.value)
-                      ? 'border-cyan-400 bg-cyan-900/30 text-cyan-300'
-                      : 'border-gray-600 bg-gray-700/50 text-gray-300 hover:border-gray-500'
-                  )}
-                >
-                  <span className="mr-2">{type.icon}</span>
-                  {type.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Verification Filter */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-3">
-              Verification Status
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { value: undefined, label: 'All' },
-                { value: true, label: 'Verified' },
-                { value: false, label: 'Unverified' }
-              ].map((option) => (
-                <button
-                  key={option.label}
-                  onClick={() => setTempFilters({ ...tempFilters, verified: option.value })}
-                  className={cn(
-                    "px-3 py-2 rounded-lg border transition-all duration-200 text-sm",
-                    tempFilters.verified === option.value
-                      ? 'border-green-400 bg-green-900/30 text-green-300'
-                      : 'border-gray-600 bg-gray-700/50 text-gray-300 hover:border-gray-500'
-                  )}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Author Filter */}
-          <div>
-            <label htmlFor="author-filter" className="block text-sm font-medium text-gray-300 mb-2">
-              Author
-            </label>
-            <input
-              id="author-filter"
-              type="text"
-              value={tempFilters.author || ''}
-              onChange={(e) => setTempFilters({ ...tempFilters, author: e.target.value })}
-              className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-20"
-              placeholder="Filter by author name"
-            />
-          </div>
+        <div className="bg-gray-700/50 rounded-lg p-4">
+          <div className="w-full h-4 bg-gray-600 rounded mb-2"></div>
+          <div className="w-2/3 h-3 bg-gray-600 rounded"></div>
         </div>
-
-        <div className="flex gap-3 p-6 border-t border-gray-700">
-          <button
-            onClick={handleReset}
-            className="flex-1 px-4 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
-          >
-            Reset
-          </button>
-          <button
-            onClick={handleApply}
-            className="flex-1 px-4 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-lg hover:from-cyan-500 hover:to-blue-500 transition-colors font-medium"
-          >
-            Apply Filters
-          </button>
+        <div className="bg-gray-700/50 rounded-lg p-4">
+          <div className="w-full h-4 bg-gray-600 rounded mb-2"></div>
+          <div className="w-4/5 h-3 bg-gray-600 rounded"></div>
         </div>
       </div>
     </div>
@@ -271,54 +133,7 @@ export default function ExplorePage() {
   
   // Local state
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  const [sortOption, setSortOption] = useState<SortOption>('newest');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
-  const [selectedEvermarkId, setSelectedEvermarkId] = useState<string | null>(null);
-  
-  // Feature state
-  const evermarksState = useEvermarksState();
-  const { setFilters, setPagination, filters, pagination, clearFilters } = evermarksState;
-
-  // Handle search
-  const handleSearch = useCallback((query: string) => {
-    setSearchQuery(query);
-    setFilters({ search: query });
-  }, [setFilters]);
-
-  // Handle sort change
-  const handleSortChange = useCallback((sort: SortOption) => {
-    setSortOption(sort);
-    
-    const sortMapping: Record<SortOption, { sortBy: any; sortOrder: 'asc' | 'desc' }> = {
-      newest: { sortBy: 'created_at', sortOrder: 'desc' },
-      oldest: { sortBy: 'created_at', sortOrder: 'asc' },
-      title: { sortBy: 'title', sortOrder: 'asc' },
-      author: { sortBy: 'author', sortOrder: 'asc' },
-      votes: { sortBy: 'votes', sortOrder: 'desc' }
-    };
-
-    const { sortBy, sortOrder } = sortMapping[sort];
-    setPagination({ sortBy, sortOrder, page: 1 });
-  }, [setPagination]);
-
-  // Handle filter application
-  const handleApplyFilters = useCallback((newFilters: any) => {
-    setFilters(newFilters);
-  }, [setFilters]);
-
-  // Handle evermark click
-  const handleEvermarkClick = useCallback((evermark: Evermark) => {
-    navigate(`/evermark/${evermark.id}`);
-  }, [navigate]);
-
-  // Handle voting panel
-  const handleVoteClick = useCallback((evermarkId: string, event: React.MouseEvent) => {
-    event.stopPropagation();
-    if (isAuthenticated) {
-      setSelectedEvermarkId(evermarkId);
-    }
-  }, [isAuthenticated]);
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -355,7 +170,7 @@ export default function ExplorePage() {
               type="text"
               placeholder="Search evermarks..."
               value={searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-12 pr-4 py-4 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-20 transition-colors"
             />
           </div>
@@ -367,39 +182,19 @@ export default function ExplorePage() {
           )}>
             <div className="flex items-center gap-3">
               {/* Filter Button */}
-              <button
-                onClick={() => setShowFilters(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-800 border border-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-              >
+              <button className="flex items-center gap-2 px-4 py-2 bg-gray-800 border border-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
                 <FilterIcon className="h-4 w-4" />
                 Filters
-                {(filters.contentType || filters.verified !== undefined || filters.author) && (
-                  <span className="ml-2 w-2 h-2 bg-cyan-400 rounded-full" />
-                )}
               </button>
 
               {/* Sort Dropdown */}
-              <select
-                value={sortOption}
-                onChange={(e) => handleSortChange(e.target.value as SortOption)}
-                className="px-4 py-2 bg-gray-800 border border-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-20"
-              >
-                {SORT_OPTIONS.map(option => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
+              <select className="px-4 py-2 bg-gray-800 border border-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-20">
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="title">Title A-Z</option>
+                <option value="author">Author A-Z</option>
+                <option value="votes">Most Voted</option>
               </select>
-
-              {/* Clear Filters */}
-              {(filters.search || filters.contentType || filters.author || filters.verified !== undefined) && (
-                <button
-                  onClick={clearFilters}
-                  className="text-gray-400 hover:text-white transition-colors text-sm"
-                >
-                  Clear all
-                </button>
-              )}
             </div>
 
             <div className="flex items-center gap-3">
@@ -452,58 +247,39 @@ export default function ExplorePage() {
         )}>
           {/* Main Feed */}
           <div className={cn("space-y-6", !isMobile && "lg:col-span-3")}>
-            <EvermarkFeed
-              variant={viewMode}
-              showCreateButton={false}
-              showFilters={false}
-              onEvermarkClick={handleEvermarkClick}
-              emptyMessage="No evermarks match your search criteria"
-              className="bg-gray-800/30 border border-gray-700 rounded-lg"
-            />
+            <PlaceholderFeed viewMode={viewMode} />
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Voting Panel */}
-            {selectedEvermarkId && isAuthenticated ? (
-              <div className="bg-gray-800/50 border border-gray-700 rounded-lg">
-                <div className="p-4 border-b border-gray-700">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-white">Vote on Content</h3>
-                    <button
-                      onClick={() => setSelectedEvermarkId(null)}
-                      className="text-gray-400 hover:text-white transition-colors"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                </div>
-                <div className="p-4">
-                  <VotingPanel evermarkId={selectedEvermarkId} />
+            {/* Connect prompt or voting panel */}
+            {!isAuthenticated ? (
+              <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6 text-center">
+                <TagIcon className="mx-auto h-12 w-12 text-gray-500 mb-4" />
+                <h3 className="text-lg font-medium text-white mb-2">
+                  Join the Community
+                </h3>
+                <p className="text-gray-400 mb-4">
+                  Connect your wallet to vote on content and earn rewards
+                </p>
+                <div className="bg-gradient-to-r from-blue-900/50 to-purple-900/50 border border-blue-500/30 rounded-lg p-4">
+                  <p className="text-sm text-blue-300">
+                    {isInFarcaster 
+                      ? "🚀 Farcaster wallet integration available"
+                      : "🖥️ Connect any Ethereum wallet"
+                    }
+                  </p>
                 </div>
               </div>
             ) : (
               <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6 text-center">
                 <TagIcon className="mx-auto h-12 w-12 text-gray-500 mb-4" />
                 <h3 className="text-lg font-medium text-white mb-2">
-                  {isAuthenticated ? 'Select Content to Vote' : 'Join the Community'}
+                  Select Content to Vote
                 </h3>
                 <p className="text-gray-400 mb-4">
-                  {isAuthenticated 
-                    ? 'Click any Evermark to delegate your voting power'
-                    : 'Connect your wallet to vote on content and earn rewards'
-                  }
+                  Click any Evermark to delegate your voting power
                 </p>
-                {!isAuthenticated && (
-                  <div className="bg-gradient-to-r from-blue-900/50 to-purple-900/50 border border-blue-500/30 rounded-lg p-4">
-                    <p className="text-sm text-blue-300">
-                      {isInFarcaster 
-                        ? "🚀 Farcaster wallet integration available"
-                        : "🖥️ Connect any Ethereum wallet"
-                      }
-                    </p>
-                  </div>
-                )}
               </div>
             )}
 
@@ -559,14 +335,6 @@ export default function ExplorePage() {
           </div>
         </div>
       </div>
-
-      {/* Filter Panel Modal */}
-      <FilterPanel
-        isOpen={showFilters}
-        onClose={() => setShowFilters(false)}
-        onApplyFilters={handleApplyFilters}
-        currentFilters={filters}
-      />
     </div>
   );
 }

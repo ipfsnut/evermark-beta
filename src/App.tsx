@@ -1,17 +1,17 @@
 import React, { Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { AppProviders } from '@/providers/AppProviders';
-import { Layout } from '@/components/layout';
-import { ErrorBoundary } from '@/components/ui';
+import { AppProviders } from '../src/providers/AppProviders';
+import { Layout } from '../src/components/layout';
+import { ErrorBoundary } from '../src/components/ui';
 
 // Lazy load pages for better performance
-const HomePage = React.lazy(() => import('@/pages/HomePage'));
-const ExplorePage = React.lazy(() => import('@/pages/ExplorePage'));
-const LeaderboardPage = React.lazy(() => import('@/features/leaderboard/pages/LeaderboardPage'));
-const StakingPage = React.lazy(() => import('@/features/staking/pages/StakingPage'));
-const EvermarkDetailPage = React.lazy(() => import('@/features/evermarks/pages/EvermarkDetailPage'));
-const CreatePage = React.lazy(() => import('@/features/evermarks/pages/CreatePage'));
-const NotFoundPage = React.lazy(() => import('@/pages/NotFoundPage'));
+const HomePage = React.lazy(() => import('../src/pages/HomePage'));
+const ExplorePage = React.lazy(() => import('../src/pages/ExplorePage'));
+const LeaderboardPage = React.lazy(() => import('../src/features/leaderboard/pages/LeaderboardPage'));
+const StakingPage = React.lazy(() => import('../src/features/staking/pages/StakingPage'));
+const EvermarkDetailPage = React.lazy(() => import('../src/features/evermarks/pages/EvermarkDetailPage'));
+const CreatePage = React.lazy(() => import('../src/features/evermarks/pages/CreatePage'));
+const NotFoundPage = React.lazy(() => import('../src/pages/NotFoundPage'));
 
 // Loading fallback component
 function PageLoader() {

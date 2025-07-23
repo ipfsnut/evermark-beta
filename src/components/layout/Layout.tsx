@@ -2,9 +2,9 @@
 import React from 'react';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
-import { useAppUI } from '@/providers/AppContext';
-import { useFarcasterUser } from '@/lib/farcaster';
-import { cn } from '@/utils/responsive';
+import { useAppUI } from '../../providers/AppContext';
+import { useFarcasterUser } from '../../lib/farcaster';
+import { cn } from '../../utils/responsive';
 
 interface LayoutProps {
   children: React.ReactNode;

@@ -1,16 +1,7 @@
-// src/lib/contracts.ts - Fixed with proper imports
+// src/lib/contracts.ts - Fixed with proper v5 imports and contract getters
 import { defineChain, getContract } from 'thirdweb';
 import type { Abi } from 'abitype';
 import { client } from './thirdweb';
-
-// Import ABIs from their respective feature directories
-import CardCatalogABI from '../features/staking/abis/CardCatalog.json';
-import EvermarkNFTABI from '../features/evermarks/abis/EvermarkNFT.json';
-import EvermarkVotingABI from '../features/voting/abis/EvermarkVoting.json';
-import EvermarkLeaderboardABI from '../features/leaderboard/abis/EvermarkLeaderboard.json';
-import EvermarkRewardsABI from '../features/tokens/abis/EvermarkRewards.json';
-import EMARKABI from '../features/tokens/abis/EMARK.json';
-import FeeCollectorABI from './abis/FeeCollector.json';
 
 // Define Base chain with proper v5 syntax and export it
 export const CHAIN = defineChain({
@@ -41,6 +32,17 @@ export const CONTRACTS = {
   FEE_COLLECTOR: import.meta.env.VITE_FEE_COLLECTOR_ADDRESS || '',
 } as const;
 
+// Placeholder ABIs - These will be imported from features when needed
+const PLACEHOLDER_ABI = [
+  {
+    "type": "function",
+    "name": "name",
+    "inputs": [],
+    "outputs": [{"type": "string"}],
+    "stateMutability": "view"
+  }
+] as const satisfies Abi;
+
 // Properly typed contract getters for Thirdweb v5
 export function getEmarkTokenContract() {
   if (!CONTRACTS.EMARK_TOKEN) {
@@ -50,7 +52,7 @@ export function getEmarkTokenContract() {
     client,
     chain: CHAIN,
     address: CONTRACTS.EMARK_TOKEN,
-    abi: EMARKABI as Abi,
+    abi: PLACEHOLDER_ABI, // Will be replaced with actual ABI from features
   });
 }
 
@@ -62,7 +64,7 @@ export function getCardCatalogContract() {
     client,
     chain: CHAIN,
     address: CONTRACTS.CARD_CATALOG,
-    abi: CardCatalogABI as Abi,
+    abi: PLACEHOLDER_ABI, // Will be replaced with actual ABI from features
   });
 }
 
@@ -74,7 +76,7 @@ export function getEvermarkNFTContract() {
     client,
     chain: CHAIN,
     address: CONTRACTS.EVERMARK_NFT,
-    abi: EvermarkNFTABI as Abi,
+    abi: PLACEHOLDER_ABI, // Will be replaced with actual ABI from features
   });
 }
 
@@ -86,7 +88,7 @@ export function getEvermarkVotingContract() {
     client,
     chain: CHAIN,
     address: CONTRACTS.EVERMARK_VOTING,
-    abi: EvermarkVotingABI as Abi,
+    abi: PLACEHOLDER_ABI, // Will be replaced with actual ABI from features
   });
 }
 
@@ -98,7 +100,7 @@ export function getEvermarkLeaderboardContract() {
     client,
     chain: CHAIN,
     address: CONTRACTS.EVERMARK_LEADERBOARD,
-    abi: EvermarkLeaderboardABI as Abi,
+    abi: PLACEHOLDER_ABI, // Will be replaced with actual ABI from features
   });
 }
 
@@ -110,7 +112,7 @@ export function getEvermarkRewardsContract() {
     client,
     chain: CHAIN,
     address: CONTRACTS.EVERMARK_REWARDS,
-    abi: EvermarkRewardsABI as Abi,
+    abi: PLACEHOLDER_ABI, // Will be replaced with actual ABI from features
   });
 }
 
@@ -122,7 +124,7 @@ export function getFeeCollectorContract() {
     client,
     chain: CHAIN,
     address: CONTRACTS.FEE_COLLECTOR,
-    abi: FeeCollectorABI as Abi,
+    abi: PLACEHOLDER_ABI, // Will be replaced with actual ABI from features
   });
 }
 

@@ -8,8 +8,8 @@ import {
   PlusIcon,
   BookOpenIcon
 } from 'lucide-react';
-import { useAppAuth } from '@/providers/AppContext';
-import { cn } from '@/utils/responsive';
+import { useAppAuth } from '../../providers/AppContext';
+import { cn } from '../../utils/responsive';
 
 // Navigation item interface
 interface NavItem {

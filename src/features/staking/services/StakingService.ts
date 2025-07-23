@@ -1,6 +1,6 @@
 // features/staking/services/StakingService.ts - Business logic for staking operations
 
-import { toWei, fromGwei } from 'thirdweb/utils';
+import { toWei } from 'thirdweb/utils';
 import type { 
   StakingInfo,
   StakingStats,
@@ -306,7 +306,6 @@ export class StakingService {
   static generateTransactionSummary(
     type: StakingTransaction['type'],
     amount?: bigint,
-    currentStake?: bigint
   ): {
     title: string;
     description: string;

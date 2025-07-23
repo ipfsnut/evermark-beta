@@ -6,7 +6,6 @@ import {
   type TokenInfo,
   type TokenValidation,
   type TokenApprovalParams,
-  type TokenApprovalResult,
   type TokenError,
   type TokenErrorCode,
   type TokenDisplayInfo,
@@ -210,11 +209,11 @@ export class TokenService {
    * Check if an error is recoverable
    */
   private static isRecoverableError(code: TokenErrorCode): boolean {
-    const recoverableErrors = new Set([
-      TOKEN_ERRORS.NETWORK_ERROR,
-      TOKEN_ERRORS.TRANSACTION_FAILED,
-      TOKEN_ERRORS.APPROVAL_FAILED
-    ]);
+    const recoverableErrors = new Set<TokenErrorCode>([
+  "TRANSACTION_FAILED",
+  "NETWORK_ERROR", 
+  "APPROVAL_FAILED"
+]);
     return recoverableErrors.has(code);
   }
 
@@ -291,7 +290,6 @@ export class TokenService {
    * Get approval transaction summary
    */
   static getApprovalSummary(
-    spender: string,
     amount: bigint,
     isUnlimited = false
   ): {
@@ -464,7 +462,7 @@ export class TokenService {
   /**
    * Generate approval transaction data
    */
-  static generateApprovalData(spender: string, amount: bigint): {
+  static generateApprovalData(spender: string): {
     to: string;
     data: string;
     value: bigint;
@@ -506,7 +504,7 @@ export class TokenService {
   /**
    * Helper to create default token info
    */
-  static createDefaultTokenInfo(address: string, userAddress: string): TokenInfo {
+  static createDefaultTokenInfo(address: string): TokenInfo {
     return {
       address,
       name: 'Evermark Token',

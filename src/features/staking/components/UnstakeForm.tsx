@@ -1,6 +1,6 @@
 // features/staking/components/UnstakeForm.tsx - Unstake form component
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { toWei } from 'thirdweb/utils';
 import { 
   UnlockIcon, 
@@ -51,6 +51,7 @@ export function UnstakeForm({ stakingState, onSuccess, className = '' }: Unstake
       }, 5000);
       return () => clearTimeout(timer);
     }
+    return
   }, [localError, localSuccess]);
 
   // Handle max button click

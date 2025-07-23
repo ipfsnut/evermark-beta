@@ -1,7 +1,6 @@
 // src/features/evermarks/components/EvermarkCard.tsx
 // Individual evermark card component
 
-import React from 'react';
 import { 
   User, 
   Calendar, 

@@ -1,6 +1,6 @@
 // features/tokens/components/TokenBalance.tsx - Token balance display component
 
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { 
   CoinsIcon,
   RefreshCwIcon,
@@ -45,7 +45,6 @@ export function TokenBalance({
     approvalError,
     approveForStaking,
     approveUnlimited,
-    formatTokenAmount,
     needsApproval,
     refetch,
     clearErrors,

@@ -4,13 +4,20 @@
 
 /* Base styles for cyber theme */
 @layer base {
+  /* Default to dark mode */
   html {
-    @apply dark;
+    @apply dark; /* This will work once tailwind.config.js is fixed */
   }
 
   body {
     @apply bg-black text-white antialiased;
     @apply selection:bg-cyber-primary selection:bg-opacity-30 selection:text-white;
+  }
+
+  /* Light mode overrides */
+  html:not(.dark) body {
+    @apply bg-white text-black;
+    @apply selection:bg-blue-600 selection:bg-opacity-30 selection:text-white;
   }
 
   /* Custom scrollbar for webkit browsers */
@@ -19,7 +26,11 @@
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-gray-900;
+    @apply bg-gray-900 dark:bg-gray-900;
+  }
+
+  html:not(.dark) ::-webkit-scrollbar-track {
+    @apply bg-gray-200;
   }
 
   ::-webkit-scrollbar-thumb {
@@ -35,6 +46,10 @@
     scrollbar-width: thin;
     scrollbar-color: #00ff41 #111827;
   }
+
+  html:not(.dark) * {
+    scrollbar-color: #3b82f6 #e5e7eb;
+  }
 }
 
 /* Component styles */
@@ -47,12 +62,24 @@
     @apply active:scale-95 transform;
   }
 
+  /* Light mode button adjustments */
+  html:not(.dark) .btn-cyber {
+    @apply border-blue-600 bg-blue-600 bg-opacity-10;
+    @apply hover:bg-opacity-20;
+  }
+
   /* Cyber card component */
   .card-cyber {
     @apply bg-gray-900 bg-opacity-50 backdrop-blur-sm;
     @apply border border-gray-700 hover:border-cyber-primary;
     @apply transition-all duration-300;
     @apply hover:shadow-cyber-lg;
+  }
+
+  /* Light mode card adjustments */
+  html:not(.dark) .card-cyber {
+    @apply bg-white bg-opacity-50;
+    @apply border-gray-300 hover:border-blue-600;
   }
 
   /* Input field styling */
@@ -63,11 +90,24 @@
     @apply transition-all duration-200;
   }
 
+  /* Light mode input adjustments */
+  html:not(.dark) .input-cyber {
+    @apply bg-white border-gray-300;
+    @apply focus:border-blue-600 focus:ring-blue-600;
+    @apply text-black placeholder-gray-500;
+  }
+
   /* Navigation link styling */
   .nav-link {
     @apply flex items-center px-3 py-2 rounded-lg transition-all duration-200;
     @apply text-gray-300 hover:text-white hover:bg-gray-800;
     @apply border border-transparent hover:border-gray-600;
+  }
+
+  /* Light mode nav adjustments */
+  html:not(.dark) .nav-link {
+    @apply text-gray-700 hover:text-black hover:bg-gray-100;
+    @apply hover:border-gray-300;
   }
 
   .nav-link.active {
@@ -76,10 +116,19 @@
     @apply shadow-cyber;
   }
 
+  html:not(.dark) .nav-link.active {
+    @apply from-blue-600 to-blue-800;
+    @apply text-blue-600 border-blue-600;
+  }
+
   /* Loading spinner */
   .spinner-cyber {
     @apply animate-spin rounded-full border-2 border-gray-700;
     @apply border-t-cyber-primary;
+  }
+
+  html:not(.dark) .spinner-cyber {
+    @apply border-gray-300 border-t-blue-600;
   }
 
   /* Text glow utilities */
@@ -109,6 +158,12 @@
       linear-gradient(transparent 98%, #00ff41 100%);
     background-size: 20px 20px;
     animation: matrix-scroll 20s linear infinite;
+  }
+
+  html:not(.dark) .matrix-bg::before {
+    background-image: 
+      linear-gradient(90deg, transparent 98%, #3b82f6 100%),
+      linear-gradient(transparent 98%, #3b82f6 100%);
   }
 
   @keyframes matrix-scroll {
@@ -223,6 +278,10 @@
     @apply focus:outline-none focus:ring-2 focus:ring-cyber-primary focus:ring-opacity-50;
   }
 
+  html:not(.dark) .focus-cyber {
+    @apply focus:ring-blue-600;
+  }
+
   /* Backdrop blur utilities */
   .backdrop-blur-cyber {
     backdrop-filter: blur(8px) saturate(180%);
@@ -234,9 +293,17 @@
     @apply bg-clip-text text-transparent;
   }
 
+  html:not(.dark) .text-gradient-cyber {
+    @apply from-blue-600 via-blue-800 to-purple-600;
+  }
+
   .text-gradient-evermark {
     @apply bg-gradient-to-r from-evermark-primary via-evermark-secondary to-evermark-accent;
     @apply bg-clip-text text-transparent;
+  }
+
+  html:not(.dark) .text-gradient-evermark {
+    @apply from-green-600 via-blue-600 to-purple-600;
   }
 
   /* Button variants */
@@ -253,6 +320,10 @@
   .btn-ghost {
     @apply btn-cyber bg-transparent border-gray-600;
     @apply hover:bg-gray-800 hover:border-gray-500;
+  }
+
+  html:not(.dark) .btn-ghost {
+    @apply border-gray-300 hover:bg-gray-100 hover:border-gray-400;
   }
 
   /* Card variants */
@@ -284,6 +355,10 @@
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
+  }
+
+  html:not(.dark) .loading-shimmer {
+    background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.1), transparent);
   }
 
   @keyframes shimmer {

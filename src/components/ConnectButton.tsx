@@ -1,4 +1,4 @@
-import React from 'react';
+// src/components/ConnectButton.tsx - Fixed for Thirdweb v5
 import { ConnectButton, useActiveAccount } from 'thirdweb/react';
 import { client } from '@/lib/thirdweb';
 import { CHAIN } from '@/lib/contracts';
@@ -10,11 +10,11 @@ interface WalletConnectProps {
   variant?: 'default' | 'compact';
 }
 
-// Define supported wallets for v5
-const wallets = [
+// Define supported wallets for v5 - Fixed wallet array typing
+const getWallets = () => [
   inAppWallet(),
   createWallet('io.metamask'),
-  createWallet('com.coinbase.wallet'),
+  createWallet('com.coinbase.wallet'), 
   createWallet('me.rainbow'),
 ];
 
@@ -40,7 +40,7 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
   return (
     <ConnectButton
       client={client}
-      wallets={wallets}
+      wallets={getWallets()}
       chain={CHAIN}
       connectButton={{
         label: (
@@ -83,7 +83,7 @@ export function SimpleConnectButton({ className = '' }: { className?: string }) 
   return (
     <ConnectButton
       client={client}
-      wallets={wallets}
+      wallets={getWallets()}
       chain={CHAIN}
       connectButton={{
         label: (

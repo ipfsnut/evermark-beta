@@ -1,4 +1,4 @@
-// src/lib/thirdweb.tsx - Fixed thirdweb v5 imports and exports
+// src/lib/thirdweb.tsx - Fixed thirdweb v5 implementation
 import { createThirdwebClient } from 'thirdweb';
 import { defineChain } from 'thirdweb/chains';
 import { ThirdwebProvider } from 'thirdweb/react';
@@ -32,12 +32,14 @@ if (!import.meta.env.VITE_THIRDWEB_CLIENT_ID) {
   console.warn('⚠️ VITE_THIRDWEB_CLIENT_ID not configured - some features may not work');
 }
 
-// Thirdweb Provider component
+// Thirdweb Provider component - Fixed for v5
 interface AppThirdwebProviderProps {
   children: ReactNode;
 }
 
 export function AppThirdwebProvider({ children }: AppThirdwebProviderProps) {
+  // In Thirdweb v5, the ThirdwebProvider doesn't need any props
+  // The client and chain are passed to individual components/hooks
   return (
     <ThirdwebProvider>
       {children}

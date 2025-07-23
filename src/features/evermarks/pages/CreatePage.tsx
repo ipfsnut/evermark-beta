@@ -1,5 +1,4 @@
 // src/pages/CreatePage.tsx - Create Evermark page
-import React from 'react';
 import { CreateEvermarkForm } from '@/features/evermarks';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeftIcon } from 'lucide-react';

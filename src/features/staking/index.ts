@@ -108,7 +108,7 @@ export const stakingUtils = {
   /**
    * Check if staking is enabled for a given chain/network
    */
-  isStakingEnabled: (chainId?: number): boolean => {
+  isStakingEnabled: (): boolean => {
     return true; // Always enabled for now
   },
   
