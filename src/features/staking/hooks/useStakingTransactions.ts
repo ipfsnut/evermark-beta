@@ -55,7 +55,8 @@ export function useStakingTransactions(): StakingTransactions {
         'approve',
         [cardCatalog.address, amount],
         { 
-          successMessage: 'EMARK spending approved for staking'
+          successMessage: 'EMARK spending approved for staking',
+          errorMessage: 'Failed to approve EMARK spending'
         }
       );
       
@@ -88,7 +89,8 @@ export function useStakingTransactions(): StakingTransactions {
         'wrap',
         [amount],
         { 
-          successMessage: `Successfully staked ${amount.toString()} EMARK tokens!`
+          successMessage: `Successfully staked ${amount.toString()} EMARK tokens!`,
+          errorMessage: 'Failed to stake tokens'
         }
       );
       
@@ -121,7 +123,8 @@ export function useStakingTransactions(): StakingTransactions {
         'requestUnwrap',
         [amount],
         { 
-          successMessage: `Unstake request submitted for ${amount.toString()} wEMARK`
+          successMessage: `Unstake request submitted for ${amount.toString()} wEMARK`,
+          errorMessage: 'Failed to request unstake'
         }
       );
       
@@ -153,7 +156,8 @@ export function useStakingTransactions(): StakingTransactions {
         'completeUnwrap',
         [],
         { 
-          successMessage: 'Successfully claimed unstaked EMARK tokens!'
+          successMessage: 'Successfully claimed unstaked EMARK tokens!',
+          errorMessage: 'Failed to complete unstake'
         }
       );
       
@@ -185,7 +189,8 @@ export function useStakingTransactions(): StakingTransactions {
         'cancelUnbonding',
         [],
         { 
-          successMessage: 'Unbonding request cancelled successfully'
+          successMessage: 'Unbonding request cancelled successfully',
+          errorMessage: 'Failed to cancel unbonding'
         }
       );
       

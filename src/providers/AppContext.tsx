@@ -35,6 +35,7 @@ interface AppContextType {
   
   // UI state
   isSidebarOpen: boolean;
+  sidebarOpen: boolean; // Alias for backwards compatibility
   isMobile: boolean;
   theme: Theme;
   isDarkMode: boolean;
@@ -321,6 +322,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     
     // UI state
     isSidebarOpen,
+    sidebarOpen: isSidebarOpen, // Alias for backwards compatibility
     isMobile,
     theme,
     isDarkMode,
