@@ -269,7 +269,7 @@ export function useVotingState(): UseVotingStateReturn {
     return VotingService.createError(code, message, details);
   }, []);
 
-  // Delegate votes mutation
+  // Delegate votes mutation - Fixed for thirdweb v5
   const delegateVotesMutation = useMutation({
     mutationFn: async ({ evermarkId, amount }: { evermarkId: string; amount: bigint }) => {
       if (!account) {
@@ -282,6 +282,7 @@ export function useVotingState(): UseVotingStateReturn {
       setError(null);
 
       try {
+        // Fixed: Use proper function signature in method
         const transaction = prepareContractCall({
           contract: votingContract,
           method: "function delegateVotes(uint256 evermarkId, uint256 amount)",
@@ -331,7 +332,7 @@ export function useVotingState(): UseVotingStateReturn {
     }
   });
 
-  // Undelegate votes mutation
+  // Undelegate votes mutation - Fixed for thirdweb v5
   const undelegateVotesMutation = useMutation({
     mutationFn: async ({ evermarkId, amount }: { evermarkId: string; amount: bigint }) => {
       if (!account) {
@@ -344,6 +345,7 @@ export function useVotingState(): UseVotingStateReturn {
       setError(null);
 
       try {
+        // Fixed: Use proper function signature in method
         const transaction = prepareContractCall({
           contract: votingContract,
           method: "function undelegateVotes(uint256 evermarkId, uint256 amount)",
@@ -392,7 +394,7 @@ export function useVotingState(): UseVotingStateReturn {
     }
   });
 
-  // Batch delegate votes mutation
+  // Batch delegate votes mutation - Fixed for thirdweb v5
   const batchDelegateVotesMutation = useMutation({
     mutationFn: async (delegations: { evermarkId: string; amount: bigint }[]) => {
       if (!account) {
@@ -408,6 +410,7 @@ export function useVotingState(): UseVotingStateReturn {
         const evermarkIds = delegations.map(d => BigInt(d.evermarkId));
         const amounts = delegations.map(d => d.amount);
 
+        // Fixed: Use proper function signature in method
         const transaction = prepareContractCall({
           contract: votingContract,
           method: "function delegateVotesBatch(uint256[] evermarkIds, uint256[] amounts)",

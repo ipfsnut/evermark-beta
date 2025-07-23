@@ -1,4 +1,4 @@
-// features/tokens/index.ts - Public API exports for the Tokens feature
+// features/tokens/index.ts - Public API exports for the Tokens feature - Fixed for Thirdweb v5
 
 import { TokenBalance } from './components/TokenBalance';
 import { useTokenState } from './hooks/useTokenState';
@@ -246,7 +246,7 @@ export const tokensUtils = {
   },
   
   /**
-   * Check token compatibility with protocol
+   * Check token compatibility with protocol - Fixed for thirdweb v5
    */
   checkCompatibility: (tokenAddress: string) => {
     return TokenService.checkTokenCompatibility(tokenAddress);

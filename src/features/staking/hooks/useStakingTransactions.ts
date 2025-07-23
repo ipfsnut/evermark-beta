@@ -1,8 +1,10 @@
-// src/features/staking/hooks/useStakingTransactions.ts
+// src/features/staking/hooks/useStakingTransactions.ts - Fixed for Thirdweb v5
 import { useState, useCallback } from 'react';
-import { useActiveAccount } from 'thirdweb/react';
+import { useActiveAccount, useSendTransaction } from 'thirdweb/react';
+import { prepareContractCall, waitForReceipt } from 'thirdweb';
 import { useContracts } from '@/hooks/core/useContracts';
-import { useTransactionUtils } from '@/hooks/core/useTransactionUtils';
+import { client } from '@/lib/thirdweb';
+import { CHAIN } from '@/lib/contracts';
 
 export interface StakingTransactions {
   // Transaction states
@@ -26,7 +28,7 @@ export interface StakingTransactions {
 export function useStakingTransactions(): StakingTransactions {
   const account = useActiveAccount();
   const { cardCatalog, emarkToken } = useContracts();
-  const { executeTransaction } = useTransactionUtils();
+  const { mutateAsync: sendTransaction } = useSendTransaction();
   
   // Transaction states
   const [isStaking, setIsStaking] = useState(false);
@@ -49,26 +51,27 @@ export function useStakingTransactions(): StakingTransactions {
         user: account.address
       });
       
-      const result = await executeTransaction(
-        emarkToken,
-        emarkToken.abi,
-        'approve',
-        [cardCatalog.address, amount],
-        { 
-          successMessage: 'EMARK spending approved for staking',
-          errorMessage: 'Failed to approve EMARK spending'
-        }
-      );
+      // Fixed: Use prepareContractCall with thirdweb v5 pattern
+      const transaction = prepareContractCall({
+        contract: emarkToken,
+        method: "function approve(address spender, uint256 amount) returns (bool)",
+        params: [cardCatalog.address, amount]
+      });
       
-      if (!result.success) {
-        throw new Error(result.error || 'Approval failed');
-      }
+      const result = await sendTransaction(transaction);
       
-      console.log("✅ EMARK approval successful:", result.hash);
+      // Wait for confirmation
+      await waitForReceipt({
+        client,
+        chain: CHAIN,
+        transactionHash: result.transactionHash
+      });
+      
+      console.log("✅ EMARK approval successful:", result.transactionHash);
     } finally {
       setIsApproving(false);
     }
-  }, [account, cardCatalog.address, emarkToken, executeTransaction]);
+  }, [account, cardCatalog.address, emarkToken, sendTransaction]);
   
   // Stake EMARK tokens (wrap to wEMARK)
   const stake = useCallback(async (amount: bigint) => {
@@ -83,26 +86,27 @@ export function useStakingTransactions(): StakingTransactions {
         user: account.address
       });
       
-      const result = await executeTransaction(
-        cardCatalog,
-        cardCatalog.abi,
-        'wrap',
-        [amount],
-        { 
-          successMessage: `Successfully staked ${amount.toString()} EMARK tokens!`,
-          errorMessage: 'Failed to stake tokens'
-        }
-      );
+      // Fixed: Use prepareContractCall with thirdweb v5 pattern
+      const transaction = prepareContractCall({
+        contract: cardCatalog,
+        method: "function wrap(uint256 amount)",
+        params: [amount]
+      });
       
-      if (!result.success) {
-        throw new Error(result.error || 'Staking failed');
-      }
+      const result = await sendTransaction(transaction);
       
-      console.log("✅ Staking successful:", result.hash);
+      // Wait for confirmation
+      await waitForReceipt({
+        client,
+        chain: CHAIN,
+        transactionHash: result.transactionHash
+      });
+      
+      console.log("✅ Staking successful:", result.transactionHash);
     } finally {
       setIsStaking(false);
     }
-  }, [account, cardCatalog, executeTransaction]);
+  }, [account, cardCatalog, sendTransaction]);
   
   // Request unstake (start unbonding period)
   const requestUnstake = useCallback(async (amount: bigint) => {
@@ -117,26 +121,27 @@ export function useStakingTransactions(): StakingTransactions {
         user: account.address
       });
       
-      const result = await executeTransaction(
-        cardCatalog,
-        cardCatalog.abi,
-        'requestUnwrap',
-        [amount],
-        { 
-          successMessage: `Unstake request submitted for ${amount.toString()} wEMARK`,
-          errorMessage: 'Failed to request unstake'
-        }
-      );
+      // Fixed: Use prepareContractCall with thirdweb v5 pattern
+      const transaction = prepareContractCall({
+        contract: cardCatalog,
+        method: "function requestUnwrap(uint256 amount)",
+        params: [amount]
+      });
       
-      if (!result.success) {
-        throw new Error(result.error || 'Unstake request failed');
-      }
+      const result = await sendTransaction(transaction);
       
-      console.log("✅ Unstake request successful:", result.hash);
+      // Wait for confirmation
+      await waitForReceipt({
+        client,
+        chain: CHAIN,
+        transactionHash: result.transactionHash
+      });
+      
+      console.log("✅ Unstake request successful:", result.transactionHash);
     } finally {
       setIsUnstaking(false);
     }
-  }, [account, cardCatalog, executeTransaction]);
+  }, [account, cardCatalog, sendTransaction]);
   
   // Complete unstake (claim after unbonding period)
   const completeUnstake = useCallback(async () => {
@@ -150,26 +155,27 @@ export function useStakingTransactions(): StakingTransactions {
         user: account.address
       });
       
-      const result = await executeTransaction(
-        cardCatalog,
-        cardCatalog.abi,
-        'completeUnwrap',
-        [],
-        { 
-          successMessage: 'Successfully claimed unstaked EMARK tokens!',
-          errorMessage: 'Failed to complete unstake'
-        }
-      );
+      // Fixed: Use prepareContractCall with thirdweb v5 pattern
+      const transaction = prepareContractCall({
+        contract: cardCatalog,
+        method: "function completeUnwrap()",
+        params: []
+      });
       
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to complete unstake');
-      }
+      const result = await sendTransaction(transaction);
       
-      console.log("✅ Unstake completion successful:", result.hash);
+      // Wait for confirmation
+      await waitForReceipt({
+        client,
+        chain: CHAIN,
+        transactionHash: result.transactionHash
+      });
+      
+      console.log("✅ Unstake completion successful:", result.transactionHash);
     } finally {
       setIsCompleting(false);
     }
-  }, [account, cardCatalog, executeTransaction]);
+  }, [account, cardCatalog, sendTransaction]);
   
   // Cancel unbonding (cancel unstake request)
   const cancelUnbonding = useCallback(async () => {
@@ -183,26 +189,27 @@ export function useStakingTransactions(): StakingTransactions {
         user: account.address
       });
       
-      const result = await executeTransaction(
-        cardCatalog,
-        cardCatalog.abi,
-        'cancelUnbonding',
-        [],
-        { 
-          successMessage: 'Unbonding request cancelled successfully',
-          errorMessage: 'Failed to cancel unbonding'
-        }
-      );
+      // Fixed: Use prepareContractCall with thirdweb v5 pattern
+      const transaction = prepareContractCall({
+        contract: cardCatalog,
+        method: "function cancelUnbonding()",
+        params: []
+      });
       
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to cancel unbonding');
-      }
+      const result = await sendTransaction(transaction);
       
-      console.log("✅ Unbonding cancellation successful:", result.hash);
+      // Wait for confirmation
+      await waitForReceipt({
+        client,
+        chain: CHAIN,
+        transactionHash: result.transactionHash
+      });
+      
+      console.log("✅ Unbonding cancellation successful:", result.transactionHash);
     } finally {
       setIsCancelling(false);
     }
-  }, [account, cardCatalog, executeTransaction]);
+  }, [account, cardCatalog, sendTransaction]);
   
   // Refetch data (placeholder - would trigger data hooks to refresh)
   const refetch = useCallback(async () => {

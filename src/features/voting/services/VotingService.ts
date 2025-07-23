@@ -159,10 +159,7 @@ export class VotingService {
    * Calculate real voting statistics from contract data
    */
   static calculateVotingStats(
-    userDelegations: Delegation[],
-    cycleData: VotingCycle | null,
-    allUserVotes?: Vote[]
-  ): VotingStats {
+userDelegations: Delegation[], cycleData: VotingCycle | null, allUserVotes?: Vote[]  ): VotingStats {
     const totalVotesCast = userDelegations.reduce((sum, delegation) => sum + delegation.amount, BigInt(0));
     const activeEvermarks = userDelegations.filter(d => d.isActive).length;
     const averageVotesPerEvermark = activeEvermarks > 0 ? totalVotesCast / BigInt(activeEvermarks) : BigInt(0);
@@ -280,11 +277,7 @@ export class VotingService {
    * Validate vote amount with comprehensive checks
    */
   static validateVoteAmount(
-    amount: string,
-    availableVotingPower: bigint,
-    userAddress?: string,
-    creatorAddress?: string
-  ): VotingValidation {
+amount: string, availableVotingPower: bigint, userAddress?: string, creatorAddress?: string, creatorAddress?: string | undefined  ): VotingValidation {
     const errors: string[] = [];
     const warnings: string[] = [];
 
@@ -535,8 +528,7 @@ export class VotingService {
    * Generate voting recommendations based on user goals
    */
   static generateVotingRecommendations(
-    userGoal: 'maximize_rewards' | 'support_quality' | 'diversify' = 'support_quality'
-  ): {
+availablePower: bigint, userGoal: string, userGoal: 'maximize_rewards' | 'support_quality' | 'diversify' = 'support_quality'  ): {
     strategy: string;
     description: string;
     suggestedDistribution: 'equal' | 'weighted' | 'concentrated';
