@@ -1,4 +1,5 @@
-// src/pages/HomePage.tsx - Fixed imports and exports
+// src/pages/HomePage.tsx - Updated with Supabase test and real evermarks
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   PlusIcon, 
@@ -12,48 +13,161 @@ import {
   CoinsIcon
 } from 'lucide-react';
 
-// Providers and utilities - fixed imports
+// Providers and utilities
 import { useAppAuth } from '../providers/AppContext';
 import { useFarcasterUser } from '../lib/farcaster';
 import { cn, useIsMobile } from '../utils/responsive';
 
-// Placeholder stats component
+// Evermarks feature
+import { useEvermarksState, EvermarkFeed } from '../features/evermarks';
+
+// Quick Supabase Test Component
+const QuickSupabaseTest = () => {
+  const [testResult, setTestResult] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const testConnection = async () => {
+      try {
+        // Test if supabase client exists and can connect
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        
+        console.log('Environment check:', {
+          hasUrl: !!supabaseUrl,
+          hasKey: !!supabaseKey,
+          url: supabaseUrl?.substring(0, 30) + '...'
+        });
+
+        if (!supabaseUrl || !supabaseKey) {
+          setTestResult({ 
+            success: false, 
+            error: 'Missing Supabase environment variables',
+            hasUrl: !!supabaseUrl,
+            hasKey: !!supabaseKey
+          });
+          return;
+        }
+
+        // Try to import and use supabase
+        const { createClient } = await import('@supabase/supabase-js');
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        
+        // Test query
+        const { data, error, count } = await supabase
+          .from('evermarks')
+          .select('*', { count: 'exact' })
+          .limit(3);
+
+        setTestResult({
+          success: !error,
+          error: error?.message,
+          count,
+          sampleData: data?.slice(0, 2), // Just first 2 records
+          hasData: (data?.length || 0) > 0
+        });
+
+      } catch (error) {
+        console.error('Supabase test failed:', error);
+        setTestResult({
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    testConnection();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="bg-yellow-900/30 border border-yellow-500/50 rounded-lg p-4 mb-4">
+        <p className="text-yellow-300">🔍 Testing Supabase connection...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`border rounded-lg p-4 mb-4 ${
+      testResult?.success 
+        ? 'bg-green-900/30 border-green-500/50' 
+        : 'bg-red-900/30 border-red-500/50'
+    }`}>
+      <h3 className={`font-semibold mb-2 ${
+        testResult?.success ? 'text-green-300' : 'text-red-300'
+      }`}>
+        🔍 Supabase Connection Test
+      </h3>
+      
+      {testResult?.success ? (
+        <div className="text-green-200 space-y-2">
+          <p>✅ Successfully connected to Supabase!</p>
+          <p>📊 Found {testResult.count || 0} evermarks in database</p>
+          {testResult.hasData && (
+            <div>
+              <p>📝 Sample data:</p>
+              <pre className="text-xs bg-gray-800 p-2 rounded mt-2 overflow-auto max-h-32">
+                {JSON.stringify(testResult.sampleData, null, 2)}
+              </pre>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="text-red-200 space-y-2">
+          <p>❌ Supabase connection failed</p>
+          <p className="text-sm">Error: {testResult?.error}</p>
+          {!testResult?.hasUrl && <p className="text-sm">• Missing VITE_SUPABASE_URL</p>}
+          {!testResult?.hasKey && <p className="text-sm">• Missing VITE_SUPABASE_ANON_KEY</p>}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Real Protocol Stats using the evermarks hook
 const ProtocolStats: React.FC = () => {
   const isMobile = useIsMobile();
+  const { totalCount, evermarks, isLoading } = useEvermarksState();
   
-  // Mock stats for now - will be replaced with real data when features are ready
+  // Calculate stats from real data
   const stats = {
-    totalEvermarks: 1234,
-    withImages: 567,
-    activeCreators: 89,
-    thisWeek: 42
+    totalEvermarks: totalCount,
+    withImages: evermarks.filter(e => e.image).length,
+    activeCreators: new Set(evermarks.map(e => e.author)).size,
+    thisWeek: evermarks.filter(e => {
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      return new Date(e.createdAt) > weekAgo;
+    }).length
   };
 
   const statCards = [
     {
       label: 'Total Evermarks',
-      value: stats.totalEvermarks.toLocaleString(),
+      value: isLoading ? '...' : stats.totalEvermarks.toLocaleString(),
       icon: <StarIcon className="h-5 w-5" />,
       gradient: 'from-purple-400 to-purple-600',
       glow: 'shadow-purple-500/20'
     },
     {
       label: 'With Media',
-      value: stats.withImages.toLocaleString(),
+      value: isLoading ? '...' : stats.withImages.toLocaleString(),
       icon: <GridIcon className="h-5 w-5" />,
       gradient: 'from-green-400 to-green-600',
       glow: 'shadow-green-500/20'
     },
     {
       label: 'Active Creators',
-      value: stats.activeCreators.toLocaleString(),
+      value: isLoading ? '...' : stats.activeCreators.toLocaleString(),
       icon: <UserIcon className="h-5 w-5" />,
       gradient: 'from-cyan-400 to-cyan-600',
       glow: 'shadow-cyan-500/20'
     },
     {
       label: 'This Week',
-      value: stats.thisWeek.toLocaleString(),
+      value: isLoading ? '...' : stats.thisWeek.toLocaleString(),
       icon: <TrendingUpIcon className="h-5 w-5" />,
       gradient: 'from-yellow-400 to-yellow-600',
       glow: 'shadow-yellow-500/20'
@@ -164,24 +278,73 @@ const QuickActions: React.FC = () => {
   );
 };
 
-// Placeholder feed component
-const PlaceholderFeed: React.FC = () => {
-  return (
-    <div className="bg-gray-800/30 border border-gray-700 rounded-lg p-8 text-center">
-      <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full flex items-center justify-center">
-        <GridIcon className="h-8 w-8 text-black" />
+// Real Evermarks Feed Component
+const EvermarksFeed: React.FC = () => {
+  const { evermarks, isLoading, error, isEmpty } = useEvermarksState();
+
+  if (error) {
+    return (
+      <div className="bg-red-900/30 border border-red-500/50 rounded-lg p-6 text-center">
+        <div className="w-16 h-16 mx-auto mb-4 bg-red-600/20 rounded-full flex items-center justify-center">
+          <GridIcon className="h-8 w-8 text-red-400" />
+        </div>
+        <h3 className="text-xl font-semibold text-red-300 mb-2">Failed to Load Evermarks</h3>
+        <p className="text-red-400 mb-6">{error}</p>
+        <Link
+          to="/explore"
+          className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+        >
+          Try Explore Page
+        </Link>
       </div>
-      <h3 className="text-xl font-semibold text-white mb-2">Evermarks Feed Coming Soon</h3>
-      <p className="text-gray-400 mb-6">
-        The community feed will show the latest preserved content once the evermarks feature is ready.
-      </p>
-      <Link
-        to="/explore"
-        className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-lg hover:from-cyan-500 hover:to-blue-500 transition-colors"
-      >
-        <GridIcon className="h-4 w-4 mr-2" />
-        Explore All Content
-      </Link>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="bg-gray-800/30 border border-gray-700 rounded-lg p-8 text-center">
+        <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full flex items-center justify-center animate-pulse">
+          <GridIcon className="h-8 w-8 text-black" />
+        </div>
+        <h3 className="text-xl font-semibold text-white mb-2">Loading Evermarks...</h3>
+        <p className="text-gray-400">Fetching the latest preserved content</p>
+      </div>
+    );
+  }
+
+  if (isEmpty) {
+    return (
+      <div className="bg-gray-800/30 border border-gray-700 rounded-lg p-8 text-center">
+        <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full flex items-center justify-center">
+          <GridIcon className="h-8 w-8 text-black" />
+        </div>
+        <h3 className="text-xl font-semibold text-white mb-2">No Evermarks Yet</h3>
+        <p className="text-gray-400 mb-6">
+          Be the first to preserve content forever on the blockchain!
+        </p>
+        <Link
+          to="/create"
+          className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-500 hover:to-green-600 transition-colors"
+        >
+          <PlusIcon className="h-4 w-4 mr-2" />
+          Create First Evermark
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <EvermarkFeed
+        showCreateButton={false}
+        showFilters={false}
+        variant="grid"
+        onEvermarkClick={(evermark) => {
+          // Navigate to evermark detail page
+          window.location.href = `/evermark/${evermark.id}`;
+        }}
+        className="space-y-6"
+      />
     </div>
   );
 };
@@ -247,6 +410,11 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* Supabase Test (temporary) */}
+      <div className="container mx-auto px-4 py-6">
+        <QuickSupabaseTest />
+      </div>
+
       {/* Protocol Stats */}
       <div className="container mx-auto px-4 py-12">
         <ProtocolStats />
@@ -280,7 +448,7 @@ export default function HomePage() {
               </Link>
             </div>
             
-            <PlaceholderFeed />
+            <EvermarksFeed />
           </div>
 
           {/* Right Column - Sidebar (1/3 width on desktop) */}

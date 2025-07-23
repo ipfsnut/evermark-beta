@@ -1,3 +1,4 @@
+import { supabase } from '@/lib/supabase';
 import type { 
   Evermark, 
   EvermarkFeedOptions, 
@@ -5,44 +6,84 @@ import type {
   EvermarkDatabaseRow 
 } from '../types';
 
-// API configuration
-const API_CONFIG = {
-  BASE_URL: import.meta.env.VITE_API_URL || '/.netlify/functions',
-  TIMEOUT: 30000, // 30 seconds
-  RETRY_ATTEMPTS: 3,
-  RETRY_DELAY: 1000 // 1 second
-};
-
 export class APIService {
   /**
-   * Fetch evermarks with pagination and filtering
+   * Fetch evermarks with pagination and filtering directly from Supabase
    */
   static async fetchEvermarks(options: EvermarkFeedOptions): Promise<EvermarkFeedResult> {
     try {
-      const params = this.buildSearchParams(options);
-      const url = `${API_CONFIG.BASE_URL}/evermarks?${params}`;
+      console.log('🔍 Fetching evermarks from Supabase with options:', options);
       
-      const response = await this.fetchWithRetry(url);
-      
-      if (!response.ok) {
-        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      // Start building the query
+      let query = supabase
+        .from('evermarks')
+        .select('*', { count: 'exact' });
+
+      // Apply filters
+      if (options.filters) {
+        const { filters } = options;
+        
+        if (filters.search) {
+          query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%,author.ilike.%${filters.search}%`);
+        }
+        
+        if (filters.author) {
+          query = query.ilike('author', `%${filters.author}%`);
+        }
+        
+        if (filters.contentType) {
+          query = query.eq('content_type', filters.contentType);
+        }
+        
+        if (filters.verified !== undefined) {
+          query = query.eq('verified', filters.verified);
+        }
+        
+        if (filters.tags && filters.tags.length > 0) {
+          // Using JSON contains for tags in metadata
+          query = query.contains('metadata->tags', filters.tags);
+        }
+        
+        if (filters.dateRange) {
+          query = query
+            .gte('created_at', filters.dateRange.start.toISOString())
+            .lte('created_at', filters.dateRange.end.toISOString());
+        }
       }
 
-      const data = await response.json();
+      // Apply sorting
+      const sortField = options.sortBy === 'created_at' ? 'created_at' : options.sortBy;
+      query = query.order(sortField, { ascending: options.sortOrder === 'asc' });
+
+      // Apply pagination
+      const offset = (options.page - 1) * options.pageSize;
+      query = query.range(offset, offset + options.pageSize - 1);
+
+      // Execute query
+      const { data, error, count } = await query;
+
+      if (error) {
+        console.error('Supabase query error:', error);
+        throw new Error(`Database query failed: ${error.message}`);
+      }
+
+      console.log('✅ Successfully fetched', data?.length || 0, 'evermarks from Supabase');
+
+      // Transform data
+      const evermarks = (data || []).map((item) => this.transformSupabaseToEvermark(item));
       
-      // Transform API data to our Evermark type
-      const evermarks = (data.data || []).map(this.transformAPIToEvermark);
+      const totalPages = Math.ceil((count || 0) / options.pageSize);
       
       return {
         evermarks,
-        totalCount: data.count || 0,
+        totalCount: count || 0,
         page: options.page,
-        totalPages: Math.ceil((data.count || 0) / options.pageSize),
-        hasNextPage: options.page < Math.ceil((data.count || 0) / options.pageSize),
+        totalPages,
+        hasNextPage: options.page < totalPages,
         hasPreviousPage: options.page > 1
       };
     } catch (error) {
-      console.error('Error fetching evermarks:', error);
+      console.error('Error fetching evermarks from Supabase:', error);
       throw new Error(
         error instanceof Error ? error.message : 'Failed to fetch evermarks'
       );
@@ -50,24 +91,31 @@ export class APIService {
   }
 
   /**
-   * Fetch a single evermark by ID
+   * Fetch a single evermark by ID from Supabase
    */
   static async fetchEvermark(id: string): Promise<Evermark | null> {
     try {
-      const url = `${API_CONFIG.BASE_URL}/evermarks?id=${encodeURIComponent(id)}`;
-      const response = await this.fetchWithRetry(url);
+      console.log('🔍 Fetching single evermark from Supabase:', id);
       
-      if (!response.ok) {
-        if (response.status === 404) {
+      const { data, error } = await supabase
+        .from('evermarks')
+        .select('*')
+        .eq('token_id', id)
+        .single();
+      
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // No rows returned
           return null;
         }
-        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+        console.error('Supabase query error:', error);
+        throw new Error(`Database query failed: ${error.message}`);
       }
 
-      const data = await response.json();
-      return this.transformAPIToEvermark(data);
+      console.log('✅ Successfully fetched evermark from Supabase');
+      return this.transformSupabaseToEvermark(data);
     } catch (error) {
-      console.error('Error fetching evermark:', error);
+      console.error('Error fetching evermark from Supabase:', error);
       throw new Error(
         error instanceof Error ? error.message : 'Failed to fetch evermark'
       );
@@ -75,7 +123,7 @@ export class APIService {
   }
 
   /**
-   * Create a new evermark record
+   * Create a new evermark record in Supabase
    */
   static async createEvermarkRecord(evermarkData: {
     tokenId: string;
@@ -90,29 +138,42 @@ export class APIService {
     tags: string[];
   }): Promise<{ success: boolean; id?: string; error?: string }> {
     try {
-      const response = await this.fetchWithRetry(
-        `${API_CONFIG.BASE_URL}/evermarks`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+      console.log('💾 Creating evermark record in Supabase:', evermarkData.title);
+      
+      const { data, error } = await supabase
+        .from('evermarks')
+        .insert([{
+          token_id: parseInt(evermarkData.tokenId),
+          title: evermarkData.title,
+          author: evermarkData.author,
+          description: evermarkData.description,
+          source_url: evermarkData.sourceUrl,
+          token_uri: evermarkData.metadataURI,
+          tx_hash: evermarkData.txHash,
+          processed_image_url: evermarkData.imageUrl,
+          content_type: evermarkData.contentType,
+          metadata: {
+            tags: evermarkData.tags || [],
+            contentType: evermarkData.contentType
           },
-          body: JSON.stringify(evermarkData)
-        }
-      );
+          verified: false,
+          metadata_fetched: true
+        }])
+        .select()
+        .single();
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(errorData.error || `API Error: ${response.status}`);
+      if (error) {
+        console.error('Supabase insert error:', error);
+        throw new Error(`Database insert failed: ${error.message}`);
       }
 
-      const result = await response.json();
+      console.log('✅ Successfully created evermark record in Supabase');
       return {
         success: true,
-        id: result.id
+        id: data.token_id.toString()
       };
     } catch (error) {
-      console.error('Error creating evermark record:', error);
+      console.error('Error creating evermark record in Supabase:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to create evermark record'
@@ -121,114 +182,38 @@ export class APIService {
   }
 
   /**
-   * Fetch with retry logic
+   * Transform Supabase data to Evermark type
    */
-  private static async fetchWithRetry(
-    url: string, 
-    options: RequestInit = {}, 
-    attempt = 1
-  ): Promise<Response> {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
-
-      const response = await fetch(url, {
-        ...options,
-        signal: controller.signal
-      });
-
-      clearTimeout(timeoutId);
-      return response;
-    } catch (error) {
-      if (attempt < API_CONFIG.RETRY_ATTEMPTS) {
-        console.warn(`API request attempt ${attempt} failed, retrying...`, error);
-        await this.delay(API_CONFIG.RETRY_DELAY * attempt);
-        return this.fetchWithRetry(url, options, attempt + 1);
-      }
-      throw error;
-    }
-  }
-
-  /**
-   * Delay utility for retries
-   */
-  private static delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
-  /**
-   * Build search parameters for API requests
-   */
-  private static buildSearchParams(options: EvermarkFeedOptions): URLSearchParams {
-    const params = new URLSearchParams();
-    
-    // Pagination
-    params.append('page', options.page.toString());
-    params.append('pageSize', options.pageSize.toString());
-    params.append('sortBy', options.sortBy);
-    params.append('sortOrder', options.sortOrder);
-    
-    // Filters
-    if (options.filters) {
-      const { filters } = options;
-      
-      if (filters.search) {
-        params.append('search', filters.search);
-      }
-      if (filters.author) {
-        params.append('author', filters.author);
-      }
-      if (filters.contentType) {
-        params.append('contentType', filters.contentType);
-      }
-      if (filters.verified !== undefined) {
-        params.append('verified', filters.verified.toString());
-      }
-      if (filters.tags && filters.tags.length > 0) {
-        params.append('tags', filters.tags.join(','));
-      }
-      if (filters.dateRange) {
-        params.append('startDate', filters.dateRange.start.toISOString());
-        params.append('endDate', filters.dateRange.end.toISOString());
-      }
-    }
-    
-    return params;
-  }
-
-  /**
-   * Transform API data to Evermark type
-   */
-  private static transformAPIToEvermark(apiData: EvermarkDatabaseRow): Evermark {
+  private static transformSupabaseToEvermark(supabaseData: any): Evermark {
     return {
-      id: apiData.token_id?.toString() || apiData.token_id?.toString() || '',
-      tokenId: apiData.token_id || parseInt(apiData.token_id?.toString() || '0') || 0,
-      title: apiData.title || 'Untitled',
-      author: apiData.author || 'Unknown Author',
-      creator: apiData.owner || apiData.author || 'Unknown Creator',
-      description: apiData.description || '',
-      sourceUrl: apiData.source_url,
-      image: apiData.processed_image_url || this.extractImageFromMetadata(apiData.metadata),
-      metadataURI: apiData.token_uri || '',
+      id: supabaseData.token_id?.toString() || '',
+      tokenId: supabaseData.token_id || 0,
+      title: supabaseData.title || 'Untitled',
+      author: supabaseData.author || 'Unknown Author',
+      creator: supabaseData.owner || supabaseData.author || 'Unknown Creator',
+      description: supabaseData.description || '',
+      sourceUrl: supabaseData.source_url,
+      image: supabaseData.processed_image_url || this.extractImageFromMetadata(supabaseData.metadata),
+      metadataURI: supabaseData.token_uri || '',
       
-      contentType: this.mapContentType(apiData.content_type),
-      tags: this.extractTags(apiData),
-      verified: apiData.verified || false,
+      contentType: this.mapContentType(supabaseData.content_type),
+      tags: this.extractTags(supabaseData),
+      verified: supabaseData.verified || false,
       
-      creationTime: Math.floor(new Date(apiData.created_at).getTime() / 1000),
-      createdAt: apiData.created_at,
-      updatedAt: apiData.updated_at || apiData.created_at,
-      lastSyncedAt: apiData.last_synced_at,
+      creationTime: Math.floor(new Date(supabaseData.created_at).getTime() / 1000),
+      createdAt: supabaseData.created_at,
+      updatedAt: supabaseData.updated_at || supabaseData.created_at,
+      lastSyncedAt: supabaseData.last_synced_at,
       
-      imageStatus: this.mapImageStatus(apiData.image_processing_status),
+      imageStatus: this.mapImageStatus(supabaseData.image_processing_status),
       
       extendedMetadata: {
-        doi: apiData.metadata?.doi || apiData.metadata?.evermark?.doi,
-        isbn: apiData.metadata?.isbn || apiData.metadata?.evermark?.isbn,
-        castData: apiData.metadata?.castData || apiData.metadata?.evermark?.castData,
-        tags: this.extractTags(apiData),
-        customFields: this.extractCustomFields(apiData),
-        processedImageUrl: apiData.processed_image_url
+        doi: supabaseData.metadata?.doi,
+        isbn: supabaseData.metadata?.isbn,
+        castData: supabaseData.metadata?.castData,
+        tags: this.extractTags(supabaseData),
+        customFields: this.extractCustomFields(supabaseData),
+        processedImageUrl: supabaseData.processed_image_url
       },
       
       votes: 0, // Would come from voting service
@@ -242,10 +227,14 @@ export class APIService {
   private static mapContentType(contentType?: string): Evermark['contentType'] {
     if (!contentType) return 'Custom';
     const type = contentType.toLowerCase();
+    
+    // Handle your specific database values
+    if (type.includes('custom content') || type.includes('custom')) return 'Custom';
     if (type.includes('cast') || type.includes('farcaster')) return 'Cast';
     if (type.includes('doi') || type.includes('academic')) return 'DOI';
     if (type.includes('isbn') || type.includes('book')) return 'ISBN';
     if (type.includes('url') || type.includes('web')) return 'URL';
+    
     return 'Custom';
   }
 
@@ -272,24 +261,20 @@ export class APIService {
            metadata.evermark?.image;
   }
 
-  private static extractTags(apiData: EvermarkDatabaseRow): string[] {
+  private static extractTags(supabaseData: any): string[] {
     const tags: string[] = [];
     
     // Extract from metadata
-    const metadata = apiData.metadata || apiData.metadata_json || apiData.ipfs_metadata;
+    const metadata = supabaseData.metadata;
     if (metadata?.tags && Array.isArray(metadata.tags)) {
       tags.push(...metadata.tags);
     }
     
-    if (metadata?.evermark?.tags && Array.isArray(metadata.evermark.tags)) {
-      tags.push(...metadata.evermark.tags);
-    }
-    
-    // Extract from description
-    if (apiData.description) {
-      const tagMatches = apiData.description.match(/Tags:\s*([^|]+)/i);
+    // Extract from description (your data shows "Tags: important" pattern)
+    if (supabaseData.description) {
+      const tagMatches = supabaseData.description.match(/Tags:\s*([^|]+)/i);
       if (tagMatches) {
-        const extractedTags = tagMatches[1].split(',').map(tag => tag.trim());
+        const extractedTags = tagMatches[1].split(',').map((tag: string) => tag.trim());
         tags.push(...extractedTags);
       }
     }
@@ -297,33 +282,39 @@ export class APIService {
     return [...new Set(tags.filter(tag => tag && tag.length > 0))];
   }
 
-  private static extractCustomFields(apiData: EvermarkDatabaseRow): Array<{ key: string; value: string }> {
+  private static extractCustomFields(supabaseData: any): Array<{ key: string; value: string }> {
     const customFields: Array<{ key: string; value: string }> = [];
     
-    // From metadata.customFields
-    const metadata = apiData.metadata || apiData.metadata_json || apiData.ipfs_metadata;
+    const metadata = supabaseData.metadata;
     if (metadata?.customFields && Array.isArray(metadata.customFields)) {
       customFields.push(...metadata.customFields);
     }
     
-    if (metadata?.evermark?.customFields && Array.isArray(metadata.evermark.customFields)) {
-      customFields.push(...metadata.evermark.customFields);
-    }
-    
-    // From metadata.attributes (IPFS format)
-    if (metadata?.attributes && Array.isArray(metadata.attributes)) {
-      const standardTraits = new Set(['Content Type', 'Author', 'Created At', 'content_type', 'author', 'created_at']);
-      
-      metadata.attributes.forEach((attr: any) => {
-        if (attr.trait_type && attr.value && !standardTraits.has(attr.trait_type)) {
-          customFields.push({
-            key: attr.trait_type,
-            value: attr.value.toString()
-          });
-        }
-      });
-    }
-    
     return customFields;
+  }
+
+  /**
+   * Test the Supabase connection
+   */
+  static async testConnection(): Promise<{ success: boolean; error?: string; count?: number }> {
+    try {
+      const { data, error, count } = await supabase
+        .from('evermarks')
+        .select('*', { count: 'exact', head: true });
+      
+      if (error) {
+        throw error;
+      }
+      
+      return {
+        success: true,
+        count: count || 0
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
   }
 }

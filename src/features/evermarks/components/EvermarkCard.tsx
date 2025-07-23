@@ -1,5 +1,5 @@
 // src/features/evermarks/components/EvermarkCard.tsx
-// Individual evermark card component
+// Fixed version with proper image handling and styling
 
 import { 
   User, 
@@ -71,6 +71,23 @@ export function EvermarkCard({
     }
   };
 
+  // Generate placeholder image with gradient based on token ID
+  const getPlaceholderGradient = () => {
+    const gradients = [
+      'from-purple-500 to-pink-500',
+      'from-blue-500 to-cyan-500',
+      'from-green-500 to-teal-500',
+      'from-orange-500 to-red-500',
+      'from-indigo-500 to-purple-500',
+      'from-pink-500 to-rose-500',
+      'from-cyan-500 to-blue-500',
+      'from-teal-500 to-green-500'
+    ];
+    
+    const gradientIndex = evermark.tokenId % gradients.length;
+    return gradients[gradientIndex];
+  };
+
   // Get image status indicator
   const getImageStatusIndicator = () => {
     if (!showImage || evermark.imageStatus === 'processed') return null;
@@ -78,7 +95,7 @@ export function EvermarkCard({
     const statusConfig = {
       processing: { icon: Clock, color: 'text-yellow-400', text: 'Processing' },
       failed: { icon: AlertCircle, color: 'text-red-400', text: 'Failed' },
-      none: { icon: AlertCircle, color: 'text-gray-400', text: 'No image' }
+      none: { icon: Hash, color: 'text-gray-400', text: 'No image' }
     };
 
     const status = statusConfig[evermark.imageStatus];
@@ -88,7 +105,7 @@ export function EvermarkCard({
 
     return (
       <div className="absolute bottom-2 left-2 z-10 bg-black/80 text-xs px-2 py-1 rounded flex items-center gap-1 backdrop-blur-sm">
-        <IconComponent className="h-3 w-3" />
+        <IconComponent className={`h-3 w-3 ${status.color}`} />
         <span className={status.color}>{status.text}</span>
       </div>
     );
@@ -96,7 +113,7 @@ export function EvermarkCard({
 
   // Variant-specific classes
   const getVariantClasses = () => {
-    const baseClasses = 'bg-gray-800/50 border border-gray-700 rounded-lg overflow-hidden transition-all duration-300 group cursor-pointer hover:border-purple-400/50 hover:shadow-lg hover:shadow-purple-500/20 backdrop-blur-sm';
+    const baseClasses = 'bg-gray-800/50 border border-gray-700 rounded-xl overflow-hidden transition-all duration-300 group cursor-pointer hover:border-purple-400/50 hover:shadow-lg hover:shadow-purple-500/20 backdrop-blur-sm hover:scale-[1.02]';
     
     switch (variant) {
       case 'hero':
@@ -104,7 +121,7 @@ export function EvermarkCard({
       case 'compact':
         return `${baseClasses} hover:border-blue-400/50 hover:shadow-blue-500/20`;
       case 'list':
-        return `${baseClasses} flex flex-row hover:border-green-400/50 hover:shadow-green-500/20`;
+        return `${baseClasses} flex flex-row hover:border-green-400/50 hover:shadow-green-500/20 hover:scale-[1.01]`;
       default:
         return baseClasses;
     }
@@ -146,14 +163,31 @@ export function EvermarkCard({
         onClick={handleClick}
       >
         {/* Image */}
-        {showImage && evermark.image && (
+        {showImage && (
           <div className={`relative ${getImageClasses()}`}>
-            <img
-              src={evermark.image}
-              alt={evermark.title}
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
+            {evermark.image ? (
+              <img
+                src={evermark.image}
+                alt={evermark.title}
+                className="w-full h-full object-cover"
+                loading="lazy"
+                onError={(e) => {
+                  // Hide broken image and show placeholder
+                  const target = e.currentTarget;
+                  target.style.display = 'none';
+                  const placeholder = target.nextElementSibling as HTMLElement;
+                  if (placeholder) placeholder.style.display = 'flex';
+                }}
+              />
+            ) : null}
+            
+            {/* Placeholder for missing/failed images */}
+            <div 
+              className={`w-full h-full bg-gradient-to-br ${getPlaceholderGradient()} flex items-center justify-center ${evermark.image ? 'hidden' : 'flex'}`}
+            >
+              <Hash className="h-6 w-6 text-white/80" />
+            </div>
+            
             <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent" />
             {evermark.verified && (
               <div className="absolute top-2 right-2 bg-green-600 rounded-full p-1">
@@ -168,16 +202,16 @@ export function EvermarkCard({
         <div className="flex-1 min-w-0 p-4 flex flex-col justify-between">
           {/* Title and meta */}
           <div>
-            <h3 className={`${getTitleClasses()} group-hover:text-purple-400 transition-colors mb-1`}>
+            <h3 className={`${getTitleClasses()} group-hover:text-purple-400 transition-colors mb-1 line-clamp-2`}>
               {evermark.title}
             </h3>
             
             <div className="flex items-center gap-3 text-sm text-gray-400 mb-2">
-              <div className="flex items-center">
-                <User className="h-3 w-3 mr-1" />
+              <div className="flex items-center min-w-0 flex-1">
+                <User className="h-3 w-3 mr-1 flex-shrink-0" />
                 <span className="truncate">{evermark.author}</span>
               </div>
-              <div className="flex items-center">
+              <div className="flex items-center flex-shrink-0">
                 {getContentTypeIcon(evermark.contentType)}
                 <span className="ml-1">{evermark.contentType}</span>
               </div>
@@ -233,14 +267,33 @@ export function EvermarkCard({
       onClick={handleClick}
     >
       {/* Image */}
-      {showImage && evermark.image && (
+      {showImage && (
         <div className={`relative ${getImageClasses()}`}>
-          <img
-            src={evermark.image}
-            alt={evermark.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-            loading="lazy"
-          />
+          {evermark.image ? (
+            <img
+              src={evermark.image}
+              alt={evermark.title}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              loading="lazy"
+              onError={(e) => {
+                // Replace with placeholder on error
+                const target = e.currentTarget;
+                target.style.display = 'none';
+                const placeholder = target.nextElementSibling as HTMLElement;
+                if (placeholder) placeholder.style.display = 'flex';
+              }}
+            />
+          ) : null}
+          
+          {/* Fallback placeholder */}
+          <div 
+            className={`absolute inset-0 bg-gradient-to-br ${getPlaceholderGradient()} flex items-center justify-center ${evermark.image ? 'hidden' : 'flex'}`}
+          >
+            <div className="text-center">
+              <Hash className="h-12 w-12 text-white/80 mx-auto mb-2" />
+              <span className="text-white/60 text-sm font-medium">#{evermark.tokenId}</span>
+            </div>
+          </div>
           
           {/* Gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
@@ -258,6 +311,11 @@ export function EvermarkCard({
             <span>{evermark.contentType}</span>
           </div>
 
+          {/* Token ID badge */}
+          <div className="absolute bottom-3 right-3 bg-black/80 text-white px-2 py-1 rounded text-xs font-mono backdrop-blur-sm">
+            #{evermark.tokenId}
+          </div>
+
           {getImageStatusIndicator()}
         </div>
       )}
@@ -271,7 +329,7 @@ export function EvermarkCard({
 
         {/* Author and date */}
         <div className="flex items-center justify-between text-sm text-gray-400 mb-3">
-          <div className="flex items-center min-w-0">
+          <div className="flex items-center min-w-0 flex-1">
             <User className="h-4 w-4 mr-1 flex-shrink-0" />
             <span className="truncate">{evermark.author}</span>
           </div>
