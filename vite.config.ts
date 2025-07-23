@@ -4,7 +4,14 @@ import { resolve } from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react({
+      // Use automatic JSX runtime for React 19
+      jsxRuntime: 'automatic',
+      // Ensure proper JSX handling
+      jsxImportSource: 'react'
+    })
+  ],
   
   // Path resolution for clean imports
   resolve: {
@@ -66,6 +73,17 @@ export default defineConfig({
       'thirdweb',
       'viem',
       'wagmi'
+    ],
+    // Exclude problematic packages from pre-bundling
+    exclude: [
+      '@farcaster/frame-sdk',
+      '@farcaster/frame-wagmi-connector'
     ]
+  },
+
+  // ESBuild configuration for JSX
+  esbuild: {
+    jsx: 'automatic',
+    jsxImportSource: 'react'
   }
 })

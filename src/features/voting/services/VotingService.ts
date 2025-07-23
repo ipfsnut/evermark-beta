@@ -277,7 +277,7 @@ userDelegations: Delegation[], cycleData: VotingCycle | null, allUserVotes?: Vot
    * Validate vote amount with comprehensive checks
    */
   static validateVoteAmount(
-amount: string, availableVotingPower: bigint, userAddress?: string, creatorAddress?: string, creatorAddress?: string | undefined  ): VotingValidation {
+amount: string, availableVotingPower: bigint, userAddress?: string, creatorAddress?: string | undefined  ): VotingValidation {
     const errors: string[] = [];
     const warnings: string[] = [];
 
@@ -528,7 +528,7 @@ amount: string, availableVotingPower: bigint, userAddress?: string, creatorAddre
    * Generate voting recommendations based on user goals
    */
   static generateVotingRecommendations(
-availablePower: bigint, userGoal: string, userGoal: 'maximize_rewards' | 'support_quality' | 'diversify' = 'support_quality'  ): {
+availablePower: bigint, userGoal: 'maximize_rewards' | 'support_quality' | 'diversify' = 'support_quality'  ): {
     strategy: string;
     description: string;
     suggestedDistribution: 'equal' | 'weighted' | 'concentrated';

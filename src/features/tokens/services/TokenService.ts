@@ -290,9 +290,7 @@ export class TokenService {
    * Get approval transaction summary
    */
   static getApprovalSummary(
-    amount: bigint,
-    isUnlimited = false
-  ): {
+spender: string, amount: bigint, isUnlimited = false  ): {
     title: string;
     description: string;
     amount: string;
