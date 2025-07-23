@@ -6,16 +6,6 @@ import { resolve } from 'path'
 export default defineConfig({
   plugins: [react()],
   
-  // ADD THIS: CSS configuration with PostCSS for Tailwind
-  css: {
-    postcss: {
-      plugins: [
-        require('tailwindcss'),
-        require('autoprefixer'),
-      ],
-    },
-  },
-  
   // Path resolution for clean imports
   resolve: {
     alias: {

@@ -1,12 +1,14 @@
-// tailwind.config.js - Fix dark mode configuration
-
 /** @type {import('tailwindcss').Config} */
-export default {
+module.exports = {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   darkMode: 'class', // This enables class-based dark mode
+  corePlugins: {
+    // Ensure dark mode utilities are generated
+    preflight: true,
+  },
   theme: {
     extend: {
       colors: {
