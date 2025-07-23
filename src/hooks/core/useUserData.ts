@@ -106,7 +106,8 @@ export function useUserData(userAddress?: string) {
 
   // Refetch all data
   const refetch = async () => {
-    const refetchPromises = [];
+    // Fixed: Properly type the refetch promises array
+    const refetchPromises: Promise<any>[] = [];
     
     if (refetchEmarkBalance) refetchPromises.push(refetchEmarkBalance());
     if (refetchAllowance) refetchPromises.push(refetchAllowance());

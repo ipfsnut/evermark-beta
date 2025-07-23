@@ -156,10 +156,10 @@ export const votingUtils = {
     amount: string, 
     availablePower: bigint, 
     evermarkId?: string,
-    userAddress?: string,
-    creatorAddress?: string
+    userAddress?: string
   ): VotingValidation => {
-    return VotingService.validateVoteAmount(amount, availablePower, evermarkId, userAddress, creatorAddress);
+    // Fixed: Removed the extra creatorAddress parameter
+    return VotingService.validateVoteAmount(amount, availablePower, evermarkId, userAddress);
   },
   
   /**
