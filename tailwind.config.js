@@ -4,7 +4,7 @@ module.exports = {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
-  darkMode: 'class', // This enables class-based dark mode
+  darkMode: 'class', // This enables class-based dark mode - CRITICAL!
   corePlugins: {
     // Ensure dark mode utilities are generated
     preflight: true,
