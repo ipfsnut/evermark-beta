@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Hash, AlertCircle, Clock, Image, RefreshCw, Wifi, WifiOff } from 'lucide-react';
+import { Hash, AlertCircle, Clock, ImageIcon, RefreshCw, Wifi, WifiOff } from 'lucide-react';
 
 interface EvermarkImageProps {
   evermark: {
@@ -323,7 +323,7 @@ export const EvermarkImage: React.FC<EvermarkImageProps> = ({
         
         {loadingState === 'idle' && !isVisible && (
           <div className="bg-black/80 text-xs px-2 py-1 rounded flex items-center gap-1 backdrop-blur-sm">
-            <Image className="h-3 w-3 text-gray-400" />
+            <ImageIcon className="h-3 w-3 text-gray-400" />
             <span className="text-gray-400">Lazy loading</span>
           </div>
         )}
