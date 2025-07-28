@@ -1,4 +1,10 @@
+// =============================================================================
+// File: src/features/evermarks/services/APIService.ts
+// ENHANCED VERSION - Updated to use hybrid storage
+// =============================================================================
+
 import { supabase } from '@/lib/supabase';
+import { SupabaseImageService } from './SupabaseImageService';
 import type { 
   Evermark, 
   EvermarkFeedOptions, 
@@ -8,18 +14,17 @@ import type {
 
 export class APIService {
   /**
-   * Fetch evermarks with pagination and filtering directly from Supabase
+   * Fetch evermarks with enhanced image URLs
    */
   static async fetchEvermarks(options: EvermarkFeedOptions): Promise<EvermarkFeedResult> {
     try {
-      console.log('🔍 Fetching evermarks from Supabase with options:', options);
+      console.log('🔍 Fetching evermarks with hybrid image support:', options);
       
-      // Start building the query
       let query = supabase
         .from('evermarks')
         .select('*', { count: 'exact' });
 
-      // Apply filters
+      // Apply filters (keeping existing logic)
       if (options.filters) {
         const { filters } = options;
         
@@ -40,7 +45,6 @@ export class APIService {
         }
         
         if (filters.tags && filters.tags.length > 0) {
-          // Using JSON contains for tags in metadata
           query = query.contains('metadata->tags', filters.tags);
         }
         
@@ -59,7 +63,6 @@ export class APIService {
       const offset = (options.page - 1) * options.pageSize;
       query = query.range(offset, offset + options.pageSize - 1);
 
-      // Execute query
       const { data, error, count } = await query;
 
       if (error) {
@@ -67,9 +70,9 @@ export class APIService {
         throw new Error(`Database query failed: ${error.message}`);
       }
 
-      console.log('✅ Successfully fetched', data?.length || 0, 'evermarks from Supabase');
+      console.log('✅ Successfully fetched', data?.length || 0, 'evermarks');
 
-      // Transform data
+      // Transform data with enhanced image handling
       const evermarks = (data || []).map((item) => this.transformSupabaseToEvermark(item));
       
       const totalPages = Math.ceil((count || 0) / options.pageSize);
@@ -83,19 +86,17 @@ export class APIService {
         hasPreviousPage: options.page > 1
       };
     } catch (error) {
-      console.error('Error fetching evermarks from Supabase:', error);
-      throw new Error(
-        error instanceof Error ? error.message : 'Failed to fetch evermarks'
-      );
+      console.error('Error fetching evermarks:', error);
+      throw error;
     }
   }
 
   /**
-   * Fetch a single evermark by ID from Supabase
+   * Fetch single evermark with enhanced image handling
    */
   static async fetchEvermark(id: string): Promise<Evermark | null> {
     try {
-      console.log('🔍 Fetching single evermark from Supabase:', id);
+      console.log('🔍 Fetching evermark with enhanced images:', id);
       
       const { data, error } = await supabase
         .from('evermarks')
@@ -104,87 +105,28 @@ export class APIService {
         .single();
       
       if (error) {
-        if (error.code === 'PGRST116') {
-          // No rows returned
-          return null;
-        }
-        console.error('Supabase query error:', error);
+        if (error.code === 'PGRST116') return null;
         throw new Error(`Database query failed: ${error.message}`);
       }
 
-      console.log('✅ Successfully fetched evermark from Supabase');
       return this.transformSupabaseToEvermark(data);
     } catch (error) {
-      console.error('Error fetching evermark from Supabase:', error);
-      throw new Error(
-        error instanceof Error ? error.message : 'Failed to fetch evermark'
-      );
+      console.error('Error fetching evermark:', error);
+      throw error;
     }
   }
 
   /**
-   * Create a new evermark record in Supabase
-   */
-  static async createEvermarkRecord(evermarkData: {
-    tokenId: string;
-    title: string;
-    author: string;
-    description: string;
-    sourceUrl?: string;
-    metadataURI: string;
-    txHash: string;
-    imageUrl?: string;
-    contentType: string;
-    tags: string[];
-  }): Promise<{ success: boolean; id?: string; error?: string }> {
-    try {
-      console.log('💾 Creating evermark record in Supabase:', evermarkData.title);
-      
-      const { data, error } = await supabase
-        .from('evermarks')
-        .insert([{
-          token_id: parseInt(evermarkData.tokenId),
-          title: evermarkData.title,
-          author: evermarkData.author,
-          description: evermarkData.description,
-          source_url: evermarkData.sourceUrl,
-          token_uri: evermarkData.metadataURI,
-          tx_hash: evermarkData.txHash,
-          processed_image_url: evermarkData.imageUrl,
-          content_type: evermarkData.contentType,
-          metadata: {
-            tags: evermarkData.tags || [],
-            contentType: evermarkData.contentType
-          },
-          verified: false,
-          metadata_fetched: true
-        }])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Supabase insert error:', error);
-        throw new Error(`Database insert failed: ${error.message}`);
-      }
-
-      console.log('✅ Successfully created evermark record in Supabase');
-      return {
-        success: true,
-        id: data.token_id.toString()
-      };
-    } catch (error) {
-      console.error('Error creating evermark record in Supabase:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to create evermark record'
-      };
-    }
-  }
-
-  /**
-   * Transform Supabase data to Evermark type
+   * Enhanced transformation with hybrid image support
    */
   private static transformSupabaseToEvermark(supabaseData: any): Evermark {
+    // Get best available image URL using hybrid service
+    const imageUrl = SupabaseImageService.getImageUrl({
+      supabaseImageUrl: supabaseData.supabase_image_url,
+      processed_image_url: supabaseData.processed_image_url,
+      ipfsHash: supabaseData.metadata?.ipfsHash
+    });
+
     return {
       id: supabaseData.token_id?.toString() || '',
       tokenId: supabaseData.token_id || 0,
@@ -193,7 +135,7 @@ export class APIService {
       creator: supabaseData.owner || supabaseData.author || 'Unknown Creator',
       description: supabaseData.description || '',
       sourceUrl: supabaseData.source_url,
-      image: supabaseData.processed_image_url || this.extractImageFromMetadata(supabaseData.metadata),
+      image: imageUrl,
       metadataURI: supabaseData.token_uri || '',
       
       contentType: this.mapContentType(supabaseData.content_type),
@@ -213,22 +155,91 @@ export class APIService {
         castData: supabaseData.metadata?.castData,
         tags: this.extractTags(supabaseData),
         customFields: this.extractCustomFields(supabaseData),
-        processedImageUrl: supabaseData.processed_image_url
+        processedImageUrl: imageUrl
       },
       
-      votes: 0, // Would come from voting service
-      viewCount: 0 // Would come from analytics
+      votes: 0,
+      viewCount: 0
     };
   }
 
   /**
-   * Helper methods for data transformation
+   * Create evermark record with hybrid image support
    */
+  static async createEvermarkRecord(evermarkData: {
+    tokenId: string;
+    title: string;
+    author: string;
+    description: string;
+    sourceUrl?: string;
+    metadataURI: string;
+    txHash: string;
+    supabaseImageUrl?: string;
+    thumbnailUrl?: string;
+    ipfsHash?: string;
+    contentType: string;
+    tags: string[];
+    fileSize?: number;
+    dimensions?: string;
+  }): Promise<{ success: boolean; id?: string; error?: string }> {
+    try {
+      console.log('💾 Creating evermark with hybrid image support:', evermarkData.title);
+      
+      const { data, error } = await supabase
+        .from('evermarks')
+        .insert([{
+          token_id: parseInt(evermarkData.tokenId),
+          title: evermarkData.title,
+          author: evermarkData.author,
+          description: evermarkData.description,
+          source_url: evermarkData.sourceUrl,
+          token_uri: evermarkData.metadataURI,
+          tx_hash: evermarkData.txHash,
+          
+          // Hybrid image fields
+          supabase_image_url: evermarkData.supabaseImageUrl,
+          thumbnail_url: evermarkData.thumbnailUrl,
+          processed_image_url: evermarkData.supabaseImageUrl, // Primary is Supabase now
+          image_file_size: evermarkData.fileSize,
+          image_dimensions: evermarkData.dimensions,
+          
+          content_type: evermarkData.contentType,
+          metadata: {
+            tags: evermarkData.tags || [],
+            contentType: evermarkData.contentType,
+            ipfsHash: evermarkData.ipfsHash
+          },
+          verified: false,
+          metadata_fetched: true,
+          image_processing_status: evermarkData.supabaseImageUrl ? 'completed' : 'pending'
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Database insert error:', error);
+        throw new Error(`Database insert failed: ${error.message}`);
+      }
+
+      console.log('✅ Successfully created evermark record');
+      return {
+        success: true,
+        id: data.token_id.toString()
+      };
+    } catch (error) {
+      console.error('Error creating evermark record:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to create record'
+      };
+    }
+  }
+
+  // Keep existing helper methods unchanged
   private static mapContentType(contentType?: string): Evermark['contentType'] {
     if (!contentType) return 'Custom';
     const type = contentType.toLowerCase();
     
-    // Handle your specific database values
     if (type.includes('custom content') || type.includes('custom')) return 'Custom';
     if (type.includes('cast') || type.includes('farcaster')) return 'Cast';
     if (type.includes('doi') || type.includes('academic')) return 'DOI';
@@ -254,23 +265,14 @@ export class APIService {
     }
   }
 
-  private static extractImageFromMetadata(metadata?: Record<string, any>): string | undefined {
-    if (!metadata) return undefined;
-    return metadata.image || 
-           metadata.originalMetadata?.image || 
-           metadata.evermark?.image;
-  }
-
   private static extractTags(supabaseData: any): string[] {
     const tags: string[] = [];
     
-    // Extract from metadata
     const metadata = supabaseData.metadata;
     if (metadata?.tags && Array.isArray(metadata.tags)) {
       tags.push(...metadata.tags);
     }
     
-    // Extract from description (your data shows "Tags: important" pattern)
     if (supabaseData.description) {
       const tagMatches = supabaseData.description.match(/Tags:\s*([^|]+)/i);
       if (tagMatches) {
@@ -292,29 +294,5 @@ export class APIService {
     
     return customFields;
   }
-
-  /**
-   * Test the Supabase connection
-   */
-  static async testConnection(): Promise<{ success: boolean; error?: string; count?: number }> {
-    try {
-      const { data, error, count } = await supabase
-        .from('evermarks')
-        .select('*', { count: 'exact', head: true });
-      
-      if (error) {
-        throw error;
-      }
-      
-      return {
-        success: true,
-        count: count || 0
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
-    }
-  }
 }
+

@@ -16,13 +16,18 @@ export interface Evermark {
   verified: boolean;
   
   // Timestamps
-  creationTime: number; // Unix timestamp
-  createdAt: string;    // ISO string
-  updatedAt: string;    // ISO string
+  creationTime: number;
+  createdAt: string;
+  updatedAt: string;
   lastSyncedAt?: string;
   
-  // Image processing
+  // ENHANCED: Image processing with hybrid storage
   imageStatus: 'processed' | 'processing' | 'failed' | 'none';
+  supabaseImageUrl?: string;    // NEW: Primary image source
+  thumbnailUrl?: string;        // NEW: Thumbnail for performance
+  ipfsHash?: string;           // NEW: IPFS backup hash
+  imageFileSize?: number;      // NEW: File size tracking
+  imageDimensions?: string;    // NEW: Dimensions as "width,height"
   
   // Extended metadata
   extendedMetadata: {
@@ -268,8 +273,13 @@ export interface EvermarkDatabaseRow {
   tx_hash?: string;
   block_number?: number;
   
-  // Image processing
-  processed_image_url?: string;
+  // ENHANCED: Hybrid image storage
+  processed_image_url?: string;           // Legacy field
+  supabase_image_url?: string;           // NEW: Primary Supabase Storage URL
+  thumbnail_url?: string;                // NEW: Thumbnail URL
+  ipfs_image_hash?: string;             // NEW: IPFS backup hash
+  image_file_size?: number;             // NEW: File size in bytes
+  image_dimensions?: string;            // NEW: "width,height" format
   image_processing_status?: 'pending' | 'processing' | 'completed' | 'failed';
   
   // JSON metadata storage
