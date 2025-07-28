@@ -33,7 +33,7 @@ const getContentTypeStyle = (contentType: string) => {
   return styles[contentType as keyof typeof styles] || styles.Custom;
 };
 
-// FIXED: Progressive loading with fallback and retry logic
+// FIXED: Simplified image loading with better error handling
 export const EvermarkImage: React.FC<EvermarkImageProps> = ({
   evermark,
   variant = 'standard',
@@ -42,40 +42,37 @@ export const EvermarkImage: React.FC<EvermarkImageProps> = ({
   onImageLoad,
   onImageError
 }) => {
-  // ENHANCED: More detailed state management
+  // SIMPLIFIED: Much simpler state management
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
-  const [loadingState, setLoadingState] = useState<'idle' | 'loading' | 'loaded' | 'error' | 'retrying'>('idle');
-  const [currentSourceIndex, setCurrentSourceIndex] = useState(0);
-  const [retryCount, setRetryCount] = useState(0);
+  const [loadingState, setLoadingState] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   const [isVisible, setIsVisible] = useState(false);
   
-  const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
+  const attemptedUrls = useRef<Set<string>>(new Set());
   
   const contentStyle = getContentTypeStyle(evermark.contentType);
   
-  // FIXED: Get all possible image sources in priority order
+  // FIXED: Get image sources in priority order (simplified)
   const getImageSources = useCallback((): string[] => {
     const sources: string[] = [];
     
-    // Priority 1: Thumbnail for better loading performance (if compact variant)
+    // Priority 1: Thumbnail for compact/list variants
     if ((variant === 'compact' || variant === 'list') && evermark.thumbnailUrl) {
       sources.push(evermark.thumbnailUrl);
     }
     
-    // Priority 2: Supabase image URL (fastest, most reliable)
+    // Priority 2: Supabase image URL (primary)
     if (evermark.supabaseImageUrl) {
       sources.push(evermark.supabaseImageUrl);
     }
     
     // Priority 3: Legacy processed image URL
-    if (evermark.processed_image_url) {
+    if (evermark.processed_image_url && evermark.processed_image_url !== evermark.supabaseImageUrl) {
       sources.push(evermark.processed_image_url);
     }
     
-    // Priority 4: IPFS gateway (slowest but most permanent)
+    // Priority 4: IPFS gateway (backup)
     if (evermark.ipfsHash) {
       sources.push(`https://gateway.pinata.cloud/ipfs/${evermark.ipfsHash}`);
     }
@@ -103,122 +100,95 @@ export const EvermarkImage: React.FC<EvermarkImageProps> = ({
     return () => observer.disconnect();
   }, []);
 
-  // FIXED: Progressive loading with retry mechanism
-  const loadImageWithFallback = useCallback(async (sourceIndex: number = 0): Promise<void> => {
+  // FIXED: Simple image loading with native browser fallback
+  const loadImage = useCallback(async () => {
     const sources = getImageSources();
-    
-    if (sourceIndex >= sources.length) {
+    if (sources.length === 0) {
       setLoadingState('error');
-      setCurrentImageUrl(null);
-      onImageError?.('All image sources failed to load');
+      onImageError?.('No image sources available');
       return;
     }
 
-    const imageUrl = sources[sourceIndex];
-    
-    // Abort any previous loading attempt
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    
-    abortControllerRef.current = new AbortController();
-    
-    try {
-      setLoadingState('loading');
-      setCurrentSourceIndex(sourceIndex);
-      
-      // Create a new image element for testing
-      const testImage = new Image();
-      
-      const loadPromise = new Promise<void>((resolve, reject) => {
-        const timeout = setTimeout(() => {
-          reject(new Error('Image load timeout'));
-        }, 10000); // 10 second timeout
+    setLoadingState('loading');
+
+    // Try each source in order
+    for (const source of sources) {
+      // Skip if we've already tried this URL and it failed
+      if (attemptedUrls.current.has(source)) {
+        continue;
+      }
+
+      try {
+        console.log(`🖼️ Trying image source: ${source.includes('supabase') ? 'Supabase' : source.includes('ipfs') ? 'IPFS' : 'Legacy'}`);
         
-        testImage.onload = () => {
-          clearTimeout(timeout);
-          resolve();
-        };
+        // FIXED: Use native Image() constructor with proper error handling
+        const testImage = new Image();
         
-        testImage.onerror = () => {
-          clearTimeout(timeout);
-          reject(new Error('Image load failed'));
-        };
-        
-        // Handle abort
-        abortControllerRef.current?.signal.addEventListener('abort', () => {
-          clearTimeout(timeout);
-          reject(new Error('Image load aborted'));
+        const loadPromise = new Promise<void>((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            reject(new Error('Image load timeout'));
+          }, 8000); // 8 second timeout
+          
+          testImage.onload = () => {
+            clearTimeout(timeout);
+            resolve();
+          };
+          
+          testImage.onerror = () => {
+            clearTimeout(timeout);
+            reject(new Error('Image load failed'));
+          };
         });
-      });
-      
-      // Start loading
-      testImage.src = imageUrl;
-      
-      // Wait for load or timeout
-      await loadPromise;
-      
-      // If we get here, the image loaded successfully
-      setCurrentImageUrl(imageUrl);
-      setLoadingState('loaded');
-      setRetryCount(0);
-      onImageLoad?.();
-      
-    } catch (error) {
-      console.warn(`Image source ${sourceIndex} failed:`, error);
-      
-      // Try next source or retry current source
-      if (sourceIndex < sources.length - 1) {
-        // Try next source immediately
-        await loadImageWithFallback(sourceIndex + 1);
-      } else if (retryCount < 2) {
-        // Retry current source with exponential backoff
-        setLoadingState('retrying');
-        const retryDelay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
         
-        retryTimeoutRef.current = setTimeout(() => {
-          setRetryCount(prev => prev + 1);
-          loadImageWithFallback(0); // Start from beginning
-        }, retryDelay);
-      } else {
-        // All sources and retries failed
-        setLoadingState('error');
-        setCurrentImageUrl(null);
-        onImageError?.(`Failed to load image after ${retryCount + 1} attempts`);
+        // FIXED: Set crossOrigin to handle CORS issues
+        testImage.crossOrigin = 'anonymous';
+        testImage.src = source;
+        
+        // Wait for load
+        await loadPromise;
+        
+        // Success!
+        setCurrentImageUrl(source);
+        setLoadingState('loaded');
+        onImageLoad?.();
+        console.log(`✅ Image loaded successfully from ${source.includes('supabase') ? 'Supabase' : source.includes('ipfs') ? 'IPFS' : 'Legacy'}`);
+        return;
+
+      } catch (error) {
+        console.warn(`❌ Failed to load image from source:`, error);
+        attemptedUrls.current.add(source);
+        continue;
       }
     }
-  }, [getImageSources, retryCount, onImageLoad, onImageError]);
+
+    // All sources failed
+    setLoadingState('error');
+    setCurrentImageUrl(null);
+    onImageError?.('All image sources failed to load');
+    console.error('💥 All image sources failed');
+  }, [getImageSources, onImageLoad, onImageError]);
 
   // FIXED: Manual retry function
   const handleRetry = useCallback(() => {
-    setRetryCount(0);
-    setCurrentSourceIndex(0);
-    loadImageWithFallback(0);
-  }, [loadImageWithFallback]);
+    console.log('🔄 Manual retry triggered');
+    attemptedUrls.current.clear(); // Clear failed attempts
+    setLoadingState('idle');
+    loadImage();
+  }, [loadImage]);
 
-  // Start loading when visible and sources are available
+  // Start loading when visible
   useEffect(() => {
-    if (!isVisible) return;
-    
-    const sources = getImageSources();
-    if (sources.length > 0) {
-      loadImageWithFallback(0);
-    } else {
-      setLoadingState('error');
+    if (isVisible && loadingState === 'idle') {
+      loadImage();
     }
-  }, [isVisible, getImageSources, loadImageWithFallback]);
+  }, [isVisible, loadingState, loadImage]);
 
-  // Cleanup on unmount
+  // Reset when evermark changes
   useEffect(() => {
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-      if (retryTimeoutRef.current) {
-        clearTimeout(retryTimeoutRef.current);
-      }
-    };
-  }, []);
+    attemptedUrls.current.clear();
+    setLoadingState('idle');
+    setCurrentImageUrl(null);
+  }, [evermark.id, evermark.supabaseImageUrl, evermark.ipfsHash]);
 
   // Variant-specific classes
   const getSizeClasses = () => {
@@ -240,7 +210,7 @@ export const EvermarkImage: React.FC<EvermarkImageProps> = ({
 
   return (
     <div ref={containerRef} className={`${getSizeClasses()} ${className} group`}>
-      {/* FIXED: Actual Image with better error handling */}
+      {/* FIXED: Actual Image with simplified error handling */}
       {currentImageUrl && (
         <img
           ref={imageRef}
@@ -251,6 +221,7 @@ export const EvermarkImage: React.FC<EvermarkImageProps> = ({
             ${loadingState === 'loaded' ? 'opacity-100' : 'opacity-0'}
           `}
           loading="lazy"
+          crossOrigin="anonymous"
           onLoad={() => {
             if (loadingState === 'loading') {
               setLoadingState('loaded');
@@ -258,15 +229,14 @@ export const EvermarkImage: React.FC<EvermarkImageProps> = ({
             }
           }}
           onError={() => {
-            console.warn('Image render failed, trying next source...');
-            if (currentSourceIndex < getImageSources().length - 1) {
-              loadImageWithFallback(currentSourceIndex + 1);
-            }
+            console.warn('Image render failed, marking as error');
+            setLoadingState('error');
+            setCurrentImageUrl(null);
           }}
         />
       )}
 
-      {/* ENHANCED: Content-Aware Placeholder with better error states */}
+      {/* SIMPLIFIED: Content-Aware Placeholder */}
       {showPlaceholder && shouldShowPlaceholder && (
         <div className={`
           absolute inset-0 bg-gradient-to-br ${contentStyle.gradient}
@@ -285,19 +255,12 @@ export const EvermarkImage: React.FC<EvermarkImageProps> = ({
         </div>
       )}
 
-      {/* ENHANCED: Status Indicators with better UX */}
+      {/* SIMPLIFIED: Status Indicators */}
       <div className="absolute bottom-2 left-2 z-10">
         {loadingState === 'loading' && (
           <div className="bg-black/80 text-xs px-2 py-1 rounded flex items-center gap-1 backdrop-blur-sm">
-            <Clock className="h-3 w-3 text-blue-400 animate-spin" />
+            <RefreshCw className="h-3 w-3 text-blue-400 animate-spin" />
             <span className="text-blue-400">Loading...</span>
-          </div>
-        )}
-        
-        {loadingState === 'retrying' && (
-          <div className="bg-black/80 text-xs px-2 py-1 rounded flex items-center gap-1 backdrop-blur-sm">
-            <RefreshCw className="h-3 w-3 text-yellow-400 animate-spin" />
-            <span className="text-yellow-400">Retrying...</span>
           </div>
         )}
         
@@ -308,7 +271,7 @@ export const EvermarkImage: React.FC<EvermarkImageProps> = ({
               className="flex items-center gap-1 text-red-400 hover:text-red-300 transition-colors"
               title="Click to retry loading"
             >
-              <WifiOff className="h-3 w-3" />
+              <AlertCircle className="h-3 w-3" />
               <span>Retry</span>
             </button>
           </div>
@@ -320,23 +283,16 @@ export const EvermarkImage: React.FC<EvermarkImageProps> = ({
             <span className="text-blue-400">Processing</span>
           </div>
         )}
-        
-        {loadingState === 'idle' && !isVisible && (
-          <div className="bg-black/80 text-xs px-2 py-1 rounded flex items-center gap-1 backdrop-blur-sm">
-            <ImageIcon className="h-3 w-3 text-gray-400" />
-            <span className="text-gray-400">Lazy loading</span>
-          </div>
-        )}
       </div>
 
-      {/* ENHANCED: Source indicator for debugging */}
+      {/* SIMPLIFIED: Source indicator */}
       {loadingState === 'loaded' && currentImageUrl && (
         <div className="absolute top-2 left-2 z-10">
           <div className="bg-black/80 text-xs px-2 py-1 rounded backdrop-blur-sm">
             <Wifi className="h-3 w-3 text-green-400 inline mr-1" />
             <span className="text-green-400">
               {currentImageUrl.includes('supabase') ? 'Supabase' : 
-               currentImageUrl.includes('ipfs') ? 'IPFS' : 'Source'}
+               currentImageUrl.includes('ipfs') ? 'IPFS' : 'Legacy'}
             </span>
           </div>
         </div>
@@ -349,13 +305,6 @@ export const EvermarkImage: React.FC<EvermarkImageProps> = ({
 
       {/* Gradient Overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
-
-      {/* ENHANCED: Loading Progress Indicator */}
-      {(loadingState === 'loading' || loadingState === 'retrying') && (
-        <div className="absolute inset-x-0 bottom-0 h-1 bg-gray-700">
-          <div className="h-full bg-gradient-to-r from-blue-400 to-cyan-400 animate-pulse" />
-        </div>
-      )}
     </div>
   );
 };
