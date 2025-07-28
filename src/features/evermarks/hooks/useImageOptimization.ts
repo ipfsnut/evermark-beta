@@ -6,15 +6,25 @@ interface UseImageOptimizationOptions {
   fallbackDelay?: number;
   retryAttempts?: number;
   preferThumbnail?: boolean;
+  enableProgressiveLoading?: boolean;
 }
 
 interface UseImageOptimizationResult {
   imageUrl: string | null;
   isLoading: boolean;
   hasError: boolean;
+  currentSource: 'supabase' | 'ipfs' | 'processed' | 'thumbnail' | null;
+  retryCount: number;
+  loadProgress: number;
   loadImage: () => void;
   retryLoad: () => void;
-  currentSource: 'supabase' | 'ipfs' | 'processed' | null;
+  resetState: () => void;
+}
+
+interface ImageSource {
+  url: string;
+  type: 'supabase' | 'ipfs' | 'processed' | 'thumbnail';
+  priority: number;
 }
 
 export function useImageOptimization(
@@ -31,121 +41,234 @@ export function useImageOptimization(
     preload = false,
     fallbackDelay = 2000,
     retryAttempts = 2,
-    preferThumbnail = false
+    preferThumbnail = false,
+    enableProgressiveLoading = true
   } = options;
 
+  // ENHANCED: More detailed state management
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
-  const [attempts, setAttempts] = useState(0);
-  const [currentSource, setCurrentSource] = useState<'supabase' | 'ipfs' | 'processed' | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [currentSourceIndex, setCurrentSourceIndex] = useState(0);
+  const [currentSource, setCurrentSource] = useState<'supabase' | 'ipfs' | 'processed' | 'thumbnail' | null>(null);
+  const [loadProgress, setLoadProgress] = useState(0);
+
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Get image URLs in priority order
-  const getImageUrls = useCallback((): Array<{ url: string; source: 'supabase' | 'ipfs' | 'processed' }> => {
-    const urls: Array<{ url: string; source: 'supabase' | 'ipfs' | 'processed' }> = [];
+  // FIXED: Get image sources in optimized priority order
+  const getImageSources = useCallback((): ImageSource[] => {
+    const sources: ImageSource[] = [];
     
     // Use thumbnail first if preferred and available
     if (preferThumbnail && evermark.thumbnailUrl) {
-      urls.push({ url: evermark.thumbnailUrl, source: 'supabase' });
+      sources.push({ 
+        url: evermark.thumbnailUrl, 
+        type: 'thumbnail', 
+        priority: 1 
+      });
     }
     
-    // Supabase URLs (primary)
+    // Supabase URLs (primary - fastest and most reliable)
     if (evermark.supabaseImageUrl) {
-      urls.push({ url: evermark.supabaseImageUrl, source: 'supabase' });
+      sources.push({ 
+        url: evermark.supabaseImageUrl, 
+        type: 'supabase', 
+        priority: preferThumbnail ? 2 : 1 
+      });
     }
     
     // Legacy processed image URL
     if (evermark.processed_image_url) {
-      urls.push({ url: evermark.processed_image_url, source: 'processed' });
-    }
-    
-    // IPFS as fallback
-    if (evermark.ipfsHash) {
-      urls.push({ 
-        url: `https://gateway.pinata.cloud/ipfs/${evermark.ipfsHash}`, 
-        source: 'ipfs' 
+      sources.push({ 
+        url: evermark.processed_image_url, 
+        type: 'processed', 
+        priority: 3 
       });
     }
     
-    return urls;
+    // IPFS as fallback (slowest but most permanent)
+    if (evermark.ipfsHash) {
+      sources.push({ 
+        url: `https://gateway.pinata.cloud/ipfs/${evermark.ipfsHash}`, 
+        type: 'ipfs', 
+        priority: 4 
+      });
+    }
+    
+    return sources.sort((a, b) => a.priority - b.priority);
   }, [evermark, preferThumbnail]);
 
-  const loadImage = useCallback(async () => {
-    const urls = getImageUrls();
-    if (urls.length === 0) {
-      setImageUrl(null);
+  // ENHANCED: Progressive loading with retry and fallback
+  const loadImageWithFallback = useCallback(async (sourceIndex: number = 0): Promise<void> => {
+    const sources = getImageSources();
+    
+    if (sourceIndex >= sources.length) {
       setIsLoading(false);
+      setHasError(true);
+      setImageUrl(null);
       setCurrentSource(null);
+      setLoadProgress(0);
       return;
     }
 
-    // Cancel any previous request
+    const source = sources[sourceIndex];
+    
+    // Abort any previous request
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
-
+    
+    abortControllerRef.current = new AbortController();
     setIsLoading(true);
     setHasError(false);
-    abortControllerRef.current = new AbortController();
+    setCurrentSourceIndex(sourceIndex);
+    setCurrentSource(source.type);
 
-    // Try URLs in priority order
-    for (let i = 0; i < urls.length && i <= attempts; i++) {
-      try {
-        const { url, source } = urls[i];
-        
-        // Test if image loads
-        await new Promise<void>((resolve, reject) => {
-          const img = new Image();
-          img.onload = () => resolve();
-          img.onerror = () => reject(new Error('Image load failed'));
-          img.src = url;
-          
-          // Add timeout for slow loading images
-          const timeout = setTimeout(() => {
-            reject(new Error('Image load timeout'));
-          }, fallbackDelay);
-          
-          img.onload = () => {
-            clearTimeout(timeout);
-            resolve();
-          };
-          
-          img.onerror = () => {
-            clearTimeout(timeout);
-            reject(new Error('Image load failed'));
-          };
+    // ENHANCED: Progressive loading simulation for better UX
+    if (enableProgressiveLoading) {
+      setLoadProgress(0);
+      progressIntervalRef.current = setInterval(() => {
+        setLoadProgress(prev => {
+          if (prev >= 90) {
+            if (progressIntervalRef.current) {
+              clearInterval(progressIntervalRef.current);
+            }
+            return 90; // Stay at 90% until actual load completes
+          }
+          return prev + Math.random() * 10;
         });
+      }, 100);
+    }
 
-        // Success - use this URL
-        setImageUrl(url);
-        setCurrentSource(source);
-        setIsLoading(false);
-        setHasError(false);
-        return;
-
-      } catch (error) {
-        console.warn(`Image load failed for source ${urls[i].source}:`, error);
+    try {
+      // Test if image loads with timeout and abort support
+      await new Promise<void>((resolve, reject) => {
+        const img = new Image();
         
-        // If this was the last URL, set error state
-        if (i === urls.length - 1 || i >= retryAttempts) {
-          setHasError(true);
-          setIsLoading(false);
-          setImageUrl(null);
-          setCurrentSource(null);
-        }
+        const cleanup = () => {
+          if (progressIntervalRef.current) {
+            clearInterval(progressIntervalRef.current);
+          }
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+          }
+        };
+        
+        // Set up timeout
+        timeoutRef.current = setTimeout(() => {
+          cleanup();
+          reject(new Error(`Image load timeout for ${source.type}`));
+        }, source.type === 'ipfs' ? 15000 : fallbackDelay); // Longer timeout for IPFS
+        
+        // Set up load handlers
+        img.onload = () => {
+          cleanup();
+          resolve();
+        };
+        
+        img.onerror = () => {
+          cleanup();
+          reject(new Error(`Image load failed for ${source.type}`));
+        };
+        
+        // Handle abort
+        abortControllerRef.current?.signal.addEventListener('abort', () => {
+          cleanup();
+          reject(new Error('Image load aborted'));
+        });
+        
+        // Start loading
+        img.src = source.url;
+      });
+
+      // Success - use this URL
+      setImageUrl(source.url);
+      setCurrentSource(source.type);
+      setIsLoading(false);
+      setHasError(false);
+      setRetryCount(0);
+      setLoadProgress(100);
+      
+      console.log(`✅ Image loaded successfully from ${source.type}`);
+
+    } catch (error) {
+      console.warn(`❌ Image load failed for ${source.type}:`, error);
+      
+      // Clear progress on error
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+      setLoadProgress(0);
+      
+      // Try next source or retry
+      if (sourceIndex < sources.length - 1) {
+        console.log(`🔄 Trying next source: ${sources[sourceIndex + 1].type}`);
+        await loadImageWithFallback(sourceIndex + 1);
+      } else if (retryCount < retryAttempts) {
+        // Retry from beginning with exponential backoff
+        const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 5000);
+        console.log(`⏳ Retrying in ${retryDelay}ms (attempt ${retryCount + 1})`);
+        
+        setTimeout(() => {
+          setRetryCount(prev => prev + 1);
+          loadImageWithFallback(0);
+        }, retryDelay);
+      } else {
+        // All sources and retries failed
+        setIsLoading(false);
+        setHasError(true);
+        setImageUrl(null);
+        setCurrentSource(null);
+        console.error(`💥 All image sources failed after ${retryCount + 1} attempts`);
       }
     }
-  }, [getImageUrls, attempts, retryAttempts, fallbackDelay]);
+  }, [getImageSources, retryCount, retryAttempts, fallbackDelay, enableProgressiveLoading]);
 
+  // ENHANCED: Manual retry function
   const retryLoad = useCallback(() => {
-    if (attempts < retryAttempts) {
-      setAttempts(prev => prev + 1);
-      setHasError(false);
-      loadImage();
+    console.log('🔄 Manual retry triggered');
+    setRetryCount(0);
+    setCurrentSourceIndex(0);
+    setHasError(false);
+    loadImageWithFallback(0);
+  }, [loadImageWithFallback]);
+
+  // ENHANCED: Reset state function
+  const resetState = useCallback(() => {
+    setRetryCount(0);
+    setCurrentSourceIndex(0);
+    setHasError(false);
+    setIsLoading(false);
+    setImageUrl(null);
+    setCurrentSource(null);
+    setLoadProgress(0);
+    
+    // Cancel any ongoing operations
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
     }
-  }, [attempts, retryAttempts, loadImage]);
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+    }
+  }, []);
+
+  // ENHANCED: Trigger loading
+  const loadImage = useCallback(() => {
+    const sources = getImageSources();
+    if (sources.length > 0) {
+      loadImageWithFallback(0);
+    } else {
+      setHasError(true);
+      setImageUrl(null);
+      setCurrentSource(null);
+    }
+  }, [getImageSources, loadImageWithFallback]);
 
   // Initial load or preload
   useEffect(() => {
@@ -154,7 +277,7 @@ export function useImageOptimization(
     }
   }, [loadImage, preload, lazy]);
 
-  // Cleanup
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (timeoutRef.current) {
@@ -163,27 +286,41 @@ export function useImageOptimization(
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
     };
   }, []);
 
   // Reset state when evermark changes
   useEffect(() => {
-    setAttempts(0);
-    setHasError(false);
-    setImageUrl(null);
-    setCurrentSource(null);
+    resetState();
     
     if (!lazy) {
-      loadImage();
+      // Small delay to allow for cleanup
+      setTimeout(() => {
+        loadImage();
+      }, 50);
     }
-  }, [evermark.supabaseImageUrl, evermark.processed_image_url, evermark.ipfsHash, lazy, loadImage]);
+  }, [
+    evermark.supabaseImageUrl, 
+    evermark.processed_image_url, 
+    evermark.ipfsHash, 
+    evermark.thumbnailUrl,
+    lazy,
+    resetState,
+    loadImage
+  ]);
 
   return {
     imageUrl,
     isLoading,
     hasError,
+    currentSource,
+    retryCount,
+    loadProgress,
     loadImage,
     retryLoad,
-    currentSource
+    resetState
   };
 }

@@ -51,11 +51,12 @@ export class EvermarkService {
   }
 
   /**
-   * ENHANCED creation workflow with hybrid image storage
+   * FIXED: Single upload workflow - no more double upload!
+   * Generates predictable temporary ID that gets moved to final location
    */
   static async createEvermark(input: CreateEvermarkInput, account?: any): Promise<CreateEvermarkResult> {
     try {
-      console.log('🚀 Starting enhanced evermark creation with hybrid storage');
+      console.log('🚀 Starting FIXED evermark creation with single upload');
       
       if (!account) {
         return {
@@ -85,15 +86,19 @@ export class EvermarkService {
       let ipfsHash: string | undefined;
       let fileSize: number | undefined;
       let dimensions: string | undefined;
+      let tempImageId: string | undefined;
 
-      // ENHANCED: Process image with hybrid storage
+      // FIXED: Generate predictable temporary ID that we can update later
       if (input.image) {
-        console.log('📸 Processing image with hybrid storage...');
+        console.log('📸 Processing image with SINGLE upload strategy...');
         
-        // Upload to Supabase (primary) + IPFS (backup)
+        // Generate predictable temp ID based on user + timestamp
+        tempImageId = `temp_${account.address.slice(-8)}_${Date.now()}`;
+        
+        // Single upload to Supabase with predictable temp ID
         const supabaseResult = await SupabaseImageService.uploadImage(
           input.image,
-          `temp-${Date.now()}`, // Temporary ID, will update with real tokenId
+          tempImageId,
           {
             generateThumbnail: true,
             maxWidth: 1200,
@@ -103,6 +108,7 @@ export class EvermarkService {
         );
 
         if (supabaseResult.success) {
+          // Store temp URLs - these will be updated after we get tokenId
           supabaseImageUrl = supabaseResult.supabaseUrl;
           thumbnailUrl = supabaseResult.thumbnailUrl;
           fileSize = supabaseResult.fileSize;
@@ -136,6 +142,10 @@ export class EvermarkService {
       console.log('📄 Creating metadata...');
       const metadataResult = await MetadataService.uploadMetadata(input.metadata, supabaseImageUrl);
       if (!metadataResult.success) {
+        // Cleanup uploaded image if metadata fails
+        if (tempImageId) {
+          await SupabaseImageService.deleteImage(tempImageId);
+        }
         return {
           success: false,
           error: metadataResult.error || 'Failed to create metadata'
@@ -153,6 +163,10 @@ export class EvermarkService {
       );
 
       if (!mintResult.success) {
+        // Cleanup uploaded image if minting fails
+        if (tempImageId) {
+          await SupabaseImageService.deleteImage(tempImageId);
+        }
         return {
           success: false,
           error: mintResult.error || 'Blockchain minting failed'
@@ -161,32 +175,29 @@ export class EvermarkService {
 
       const tokenId = mintResult.tokenId!;
 
-      // Update Supabase image paths with real tokenId if we uploaded images
-      if (supabaseImageUrl && tokenId) {
+      // FIXED: Move image from temp location to final location instead of re-uploading
+      if (supabaseImageUrl && tempImageId && tokenId) {
         try {
-          // Copy images to correct tokenId path
-          const finalImageResult = await SupabaseImageService.uploadImage(
-            input.image!,
-            tokenId,
-            {
-              generateThumbnail: true,
-              maxWidth: 1200,
-              maxHeight: 900,
-              quality: 0.9
-            }
-          );
-
-          if (finalImageResult.success) {
-            supabaseImageUrl = finalImageResult.supabaseUrl;
-            thumbnailUrl = finalImageResult.thumbnailUrl;
+          console.log('📁 Moving image from temp to final location...');
+          const moveResult = await SupabaseImageService.moveImageToTokenId(tempImageId, tokenId);
+          
+          if (moveResult.success) {
+            // Update URLs to point to final location
+            supabaseImageUrl = moveResult.finalImageUrl;
+            thumbnailUrl = moveResult.finalThumbnailUrl;
+            console.log('✅ Image successfully moved to final location');
+          } else {
+            console.warn('⚠️ Failed to move image, keeping temp location:', moveResult.error);
+            // Keep using temp URLs - better than losing the image entirely
           }
-        } catch (updateError) {
-          console.warn('Failed to update image paths with tokenId:', updateError);
+        } catch (moveError) {
+          console.warn('⚠️ Image move failed, keeping temp location:', moveError);
+          // Continue with temp URLs rather than failing entire operation
         }
       }
 
-      // Save to database with enhanced image data
-      console.log('💾 Saving to database with hybrid image data...');
+      // Save to database with final image data
+      console.log('💾 Saving to database with FINAL image data...');
       try {
         const dbResult = await APIService.createEvermarkRecord({
           tokenId,
@@ -212,11 +223,11 @@ export class EvermarkService {
         console.warn('Database save failed (non-critical):', dbError);
       }
 
-      console.log('✅ Enhanced evermark creation complete!');
+      console.log('✅ FIXED evermark creation complete with single upload!');
 
       return {
         success: true,
-        message: 'Evermark created successfully with hybrid image storage',
+        message: 'Evermark created successfully with optimized single upload',
         tokenId,
         txHash: mintResult.txHash,
         metadataURI: metadataResult.metadataURI,

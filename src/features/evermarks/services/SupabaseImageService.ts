@@ -1,6 +1,6 @@
 // =============================================================================
 // File: src/features/evermarks/services/SupabaseImageService.ts
-// COMPLETE VERSION - Handles Supabase Storage operations for images
+// ENHANCED VERSION - Adds move functionality to fix double upload issue
 // =============================================================================
 
 import { supabase } from '@/lib/supabase';
@@ -12,6 +12,13 @@ interface ImageUploadResult {
   error?: string;
   fileSize?: number;
   dimensions?: string;
+}
+
+interface ImageMoveResult {
+  success: boolean;
+  finalImageUrl?: string;
+  finalThumbnailUrl?: string;
+  error?: string;
 }
 
 interface ImageProcessingOptions {
@@ -82,6 +89,132 @@ export class SupabaseImageService {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Upload failed'
+      };
+    }
+  }
+
+  /**
+   * NEW: Move image from temporary location to final tokenId location
+   * This fixes the double upload issue by moving instead of re-uploading
+   */
+  static async moveImageToTokenId(
+    tempTokenId: string, 
+    finalTokenId: string
+  ): Promise<ImageMoveResult> {
+    try {
+      console.log(`📁 Moving image from ${tempTokenId} to ${finalTokenId}`);
+
+      // Get list of files for temp token ID
+      const { data: files, error: listError } = await supabase.storage
+        .from(this.STORAGE_BUCKET)
+        .list(`evermarks/${tempTokenId}`);
+
+      if (listError) {
+        throw new Error(`Failed to list temp files: ${listError.message}`);
+      }
+
+      if (!files || files.length === 0) {
+        return {
+          success: false,
+          error: 'No temporary files found to move'
+        };
+      }
+
+      let finalImageUrl: string | undefined;
+      let finalThumbnailUrl: string | undefined;
+
+      // Move each file from temp to final location
+      for (const file of files) {
+        const tempPath = `evermarks/${tempTokenId}/${file.name}`;
+        const finalPath = `evermarks/${finalTokenId}/${file.name}`;
+
+        // Copy file to new location
+        const { error: copyError } = await supabase.storage
+          .from(this.STORAGE_BUCKET)
+          .copy(tempPath, finalPath);
+
+        if (copyError) {
+          console.warn(`Failed to copy ${file.name}:`, copyError);
+          continue;
+        }
+
+        // Delete original temp file
+        const { error: deleteError } = await supabase.storage
+          .from(this.STORAGE_BUCKET)
+          .remove([tempPath]);
+
+        if (deleteError) {
+          console.warn(`Failed to delete temp file ${file.name}:`, deleteError);
+          // Continue anyway - copy succeeded
+        }
+
+        // Generate public URLs for final location
+        const { data: { publicUrl } } = supabase.storage
+          .from(this.STORAGE_BUCKET)
+          .getPublicUrl(finalPath);
+
+        // Determine if this is main image or thumbnail
+        if (file.name.startsWith('image.')) {
+          finalImageUrl = publicUrl;
+        } else if (file.name.startsWith('thumbnail.')) {
+          finalThumbnailUrl = publicUrl;
+        }
+
+        console.log(`✅ Moved ${file.name} to final location`);
+      }
+
+      return {
+        success: true,
+        finalImageUrl,
+        finalThumbnailUrl
+      };
+
+    } catch (error) {
+      console.error('❌ Failed to move image to final location:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Move operation failed'
+      };
+    }
+  }
+
+  /**
+   * NEW: Cleanup temporary images (for error scenarios)
+   */
+  static async cleanupTempImages(tempTokenId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      console.log(`🧹 Cleaning up temporary images for ${tempTokenId}`);
+
+      const { data: files, error: listError } = await supabase.storage
+        .from(this.STORAGE_BUCKET)
+        .list(`evermarks/${tempTokenId}`);
+
+      if (listError) {
+        throw new Error(`Failed to list temp files: ${listError.message}`);
+      }
+
+      if (!files || files.length === 0) {
+        return { success: true }; // Nothing to clean up
+      }
+
+      const filesToDelete = files.map(file => `evermarks/${tempTokenId}/${file.name}`);
+
+      const { error: deleteError } = await supabase.storage
+        .from(this.STORAGE_BUCKET)
+        .remove(filesToDelete);
+
+      if (deleteError) {
+        throw deleteError;
+      }
+
+      console.log(`✅ Cleaned up ${filesToDelete.length} temporary files`);
+      return { success: true };
+
+    } catch (error) {
+      console.error('❌ Failed to cleanup temp images:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Cleanup failed'
       };
     }
   }
@@ -339,88 +472,6 @@ export class SupabaseImageService {
   }
 
   /**
-   * Get storage info for a token
-   */
-  static async getStorageInfo(tokenId: string): Promise<{
-    success: boolean;
-    info?: {
-      hasImage: boolean;
-      hasThumbnail: boolean;
-      imageSize?: number;
-      thumbnailSize?: number;
-      totalSize: number;
-    };
-    error?: string;
-  }> {
-    try {
-      const { data, error } = await supabase.storage
-        .from(this.STORAGE_BUCKET)
-        .list(`evermarks/${tokenId}`);
-
-      if (error) throw error;
-
-      const files = data || [];
-      const imageFile = files.find(f => f.name.startsWith('image.'));
-      const thumbnailFile = files.find(f => f.name.startsWith('thumbnail.'));
-
-      const imageSize = imageFile?.metadata?.size || 0;
-      const thumbnailSize = thumbnailFile?.metadata?.size || 0;
-
-      return {
-        success: true,
-        info: {
-          hasImage: !!imageFile,
-          hasThumbnail: !!thumbnailFile,
-          imageSize,
-          thumbnailSize,
-          totalSize: imageSize + thumbnailSize
-        }
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Info retrieval failed'
-      };
-    }
-  }
-
-  /**
-   * Copy image to new token ID (useful for updating paths)
-   */
-  static async copyImage(
-    fromTokenId: string,
-    toTokenId: string
-  ): Promise<{ success: boolean; error?: string }> {
-    try {
-      const { data: files } = await supabase.storage
-        .from(this.STORAGE_BUCKET)
-        .list(`evermarks/${fromTokenId}`);
-
-      if (!files || files.length === 0) {
-        return { success: true }; // No files to copy
-      }
-
-      for (const file of files) {
-        const fromPath = `evermarks/${fromTokenId}/${file.name}`;
-        const toPath = `evermarks/${toTokenId}/${file.name}`;
-
-        const { error } = await supabase.storage
-          .from(this.STORAGE_BUCKET)
-          .copy(fromPath, toPath);
-
-        if (error) throw error;
-      }
-
-      return { success: true };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Copy failed'
-      };
-    }
-  }
-
-  /**
    * Health check for Supabase storage
    */
   static async healthCheck(): Promise<{ isHealthy: boolean; error?: string }> {
@@ -447,87 +498,6 @@ export class SupabaseImageService {
   }
 
   /**
-   * Get storage usage statistics
-   */
-  static async getStorageStats(): Promise<{
-    success: boolean;
-    stats?: {
-      totalFiles: number;
-      totalSize: number;
-      imageCount: number;
-      thumbnailCount: number;
-    };
-    error?: string;
-  }> {
-    try {
-      const { data, error } = await supabase.storage
-        .from(this.STORAGE_BUCKET)
-        .list('evermarks', { limit: 1000 });
-
-      if (error) throw error;
-
-      let totalFiles = 0;
-      let totalSize = 0;
-      let imageCount = 0;
-      let thumbnailCount = 0;
-
-      // This is a simplified version - for full stats you'd need to recurse through folders
-      if (data) {
-        for (const item of data) {
-          if (item.metadata?.size) {
-            totalFiles++;
-            totalSize += item.metadata.size;
-            
-            if (item.name.includes('image.')) imageCount++;
-            if (item.name.includes('thumbnail.')) thumbnailCount++;
-          }
-        }
-      }
-
-      return {
-        success: true,
-        stats: {
-          totalFiles,
-          totalSize,
-          imageCount,
-          thumbnailCount
-        }
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Stats retrieval failed'
-      };
-    }
-  }
-
-  /**
-   * Create signed URL for temporary access
-   */
-  static async createSignedUrl(
-    tokenId: string,
-    type: 'image' | 'thumbnail' = 'image',
-    expiresIn = 3600
-  ): Promise<{ success: boolean; url?: string; error?: string }> {
-    try {
-      const fileName = `evermarks/${tokenId}/${type}.jpg`; // Assume jpg for simplicity
-
-      const { data, error } = await supabase.storage
-        .from(this.STORAGE_BUCKET)
-        .createSignedUrl(fileName, expiresIn);
-
-      if (error) throw error;
-
-      return { success: true, url: data.signedUrl };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Signed URL creation failed'
-      };
-    }
-  }
-
-  /**
    * Utility: Format file size for display
    */
   static formatFileSize(bytes: number): string {
@@ -535,30 +505,5 @@ export class SupabaseImageService {
     if (bytes === 0) return '0 Bytes';
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
     return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
-  }
-
-  /**
-   * Utility: Check if image processing is supported in browser
-   */
-  static isProcessingSupported(): boolean {
-    try {
-      const canvas = document.createElement('canvas');
-      return !!(canvas.getContext && canvas.getContext('2d'));
-    } catch {
-      return false;
-    }
-  }
-
-  /**
-   * Get configuration info
-   */
-  static getConfig() {
-    return {
-      bucket: this.STORAGE_BUCKET,
-      maxFileSize: this.MAX_FILE_SIZE,
-      supportedTypes: this.SUPPORTED_TYPES,
-      maxFileSizeFormatted: this.formatFileSize(this.MAX_FILE_SIZE),
-      isProcessingSupported: this.isProcessingSupported()
-    };
   }
 }
