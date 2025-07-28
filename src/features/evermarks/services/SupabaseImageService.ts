@@ -1,6 +1,6 @@
 // =============================================================================
 // File: src/features/evermarks/services/SupabaseImageService.ts
-// NEW FILE - Handles Supabase Storage operations for images
+// COMPLETE VERSION - Handles Supabase Storage operations for images
 // =============================================================================
 
 import { supabase } from '@/lib/supabase';
@@ -157,23 +157,31 @@ export class SupabaseImageService {
 
           canvas.width = width;
           canvas.height = height;
-          ctx?.drawImage(img, 0, 0, width, height);
+          
+          if (ctx) {
+            // High quality drawing
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, 0, 0, width, height);
 
-          canvas.toBlob(
-            (blob) => {
-              if (blob) {
-                const processedFile = new File([blob], file.name, {
-                  type: file.type,
-                  lastModified: Date.now()
-                });
-                resolve(processedFile);
-              } else {
-                reject(new Error('Canvas processing failed'));
-              }
-            },
-            file.type,
-            options.quality || 0.9
-          );
+            canvas.toBlob(
+              (blob) => {
+                if (blob) {
+                  const processedFile = new File([blob], file.name, {
+                    type: file.type,
+                    lastModified: Date.now()
+                  });
+                  resolve(processedFile);
+                } else {
+                  reject(new Error('Canvas processing failed'));
+                }
+              },
+              file.type,
+              options.quality || 0.9
+            );
+          } else {
+            reject(new Error('Canvas context not available'));
+          }
         } catch (error) {
           reject(error);
         }
@@ -214,8 +222,14 @@ export class SupabaseImageService {
   private static async getImageDimensions(file: File): Promise<{ width: number; height: number }> {
     return new Promise((resolve, reject) => {
       const img = new Image();
-      img.onload = () => resolve({ width: img.width, height: img.height });
-      img.onerror = () => reject(new Error('Failed to get dimensions'));
+      img.onload = () => {
+        resolve({ width: img.width, height: img.height });
+        URL.revokeObjectURL(img.src);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(img.src);
+        reject(new Error('Failed to get dimensions'));
+      };
       img.src = URL.createObjectURL(file);
     });
   }
@@ -224,6 +238,10 @@ export class SupabaseImageService {
    * Validate image file
    */
   private static validateImageFile(file: File): { isValid: boolean; error?: string } {
+    if (!file) {
+      return { isValid: false, error: 'No file provided' };
+    }
+
     if (!this.SUPPORTED_TYPES.includes(file.type)) {
       return {
         isValid: false,
@@ -238,20 +256,25 @@ export class SupabaseImageService {
       };
     }
 
+    if (file.size === 0) {
+      return { isValid: false, error: 'File appears to be empty' };
+    }
+
     return { isValid: true };
   }
 
   /**
-   * Get image URL with automatic fallback
+   * Get image URL with automatic fallback (returns undefined instead of null)
    */
   static getImageUrl(evermark: {
     supabaseImageUrl?: string;
     processed_image_url?: string;
     ipfsHash?: string;
-  }): string | null {
-    return evermark.supabaseImageUrl || 
-           evermark.processed_image_url || 
-           (evermark.ipfsHash ? `https://gateway.pinata.cloud/ipfs/${evermark.ipfsHash}` : null);
+  }): string | undefined {
+    if (evermark.supabaseImageUrl) return evermark.supabaseImageUrl;
+    if (evermark.processed_image_url) return evermark.processed_image_url;
+    if (evermark.ipfsHash) return `https://gateway.pinata.cloud/ipfs/${evermark.ipfsHash}`;
+    return undefined;
   }
 
   /**
@@ -275,7 +298,10 @@ export class SupabaseImageService {
         `evermarks/${tokenId}/image.png`,
         `evermarks/${tokenId}/image.gif`,
         `evermarks/${tokenId}/image.webp`,
-        `evermarks/${tokenId}/thumbnail.jpg`
+        `evermarks/${tokenId}/thumbnail.jpg`,
+        `evermarks/${tokenId}/thumbnail.png`,
+        `evermarks/${tokenId}/thumbnail.gif`,
+        `evermarks/${tokenId}/thumbnail.webp`
       ];
 
       const { error } = await supabase.storage
@@ -289,5 +315,250 @@ export class SupabaseImageService {
         error: error instanceof Error ? error.message : 'Delete failed'
       };
     }
+  }
+
+  /**
+   * List all images for a token
+   */
+  static async listImages(tokenId: string): Promise<{ success: boolean; files?: string[]; error?: string }> {
+    try {
+      const { data, error } = await supabase.storage
+        .from(this.STORAGE_BUCKET)
+        .list(`evermarks/${tokenId}`);
+
+      if (error) throw error;
+
+      const files = data?.map(file => file.name) || [];
+      return { success: true, files };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'List failed'
+      };
+    }
+  }
+
+  /**
+   * Get storage info for a token
+   */
+  static async getStorageInfo(tokenId: string): Promise<{
+    success: boolean;
+    info?: {
+      hasImage: boolean;
+      hasThumbnail: boolean;
+      imageSize?: number;
+      thumbnailSize?: number;
+      totalSize: number;
+    };
+    error?: string;
+  }> {
+    try {
+      const { data, error } = await supabase.storage
+        .from(this.STORAGE_BUCKET)
+        .list(`evermarks/${tokenId}`);
+
+      if (error) throw error;
+
+      const files = data || [];
+      const imageFile = files.find(f => f.name.startsWith('image.'));
+      const thumbnailFile = files.find(f => f.name.startsWith('thumbnail.'));
+
+      const imageSize = imageFile?.metadata?.size || 0;
+      const thumbnailSize = thumbnailFile?.metadata?.size || 0;
+
+      return {
+        success: true,
+        info: {
+          hasImage: !!imageFile,
+          hasThumbnail: !!thumbnailFile,
+          imageSize,
+          thumbnailSize,
+          totalSize: imageSize + thumbnailSize
+        }
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Info retrieval failed'
+      };
+    }
+  }
+
+  /**
+   * Copy image to new token ID (useful for updating paths)
+   */
+  static async copyImage(
+    fromTokenId: string,
+    toTokenId: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { data: files } = await supabase.storage
+        .from(this.STORAGE_BUCKET)
+        .list(`evermarks/${fromTokenId}`);
+
+      if (!files || files.length === 0) {
+        return { success: true }; // No files to copy
+      }
+
+      for (const file of files) {
+        const fromPath = `evermarks/${fromTokenId}/${file.name}`;
+        const toPath = `evermarks/${toTokenId}/${file.name}`;
+
+        const { error } = await supabase.storage
+          .from(this.STORAGE_BUCKET)
+          .copy(fromPath, toPath);
+
+        if (error) throw error;
+      }
+
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Copy failed'
+      };
+    }
+  }
+
+  /**
+   * Health check for Supabase storage
+   */
+  static async healthCheck(): Promise<{ isHealthy: boolean; error?: string }> {
+    try {
+      const { data, error } = await supabase.storage.listBuckets();
+      
+      if (error) throw error;
+
+      const bucket = data?.find(b => b.id === this.STORAGE_BUCKET);
+      if (!bucket) {
+        return { 
+          isHealthy: false, 
+          error: `Storage bucket "${this.STORAGE_BUCKET}" not found` 
+        };
+      }
+
+      return { isHealthy: true };
+    } catch (error) {
+      return {
+        isHealthy: false,
+        error: error instanceof Error ? error.message : 'Storage health check failed'
+      };
+    }
+  }
+
+  /**
+   * Get storage usage statistics
+   */
+  static async getStorageStats(): Promise<{
+    success: boolean;
+    stats?: {
+      totalFiles: number;
+      totalSize: number;
+      imageCount: number;
+      thumbnailCount: number;
+    };
+    error?: string;
+  }> {
+    try {
+      const { data, error } = await supabase.storage
+        .from(this.STORAGE_BUCKET)
+        .list('evermarks', { limit: 1000 });
+
+      if (error) throw error;
+
+      let totalFiles = 0;
+      let totalSize = 0;
+      let imageCount = 0;
+      let thumbnailCount = 0;
+
+      // This is a simplified version - for full stats you'd need to recurse through folders
+      if (data) {
+        for (const item of data) {
+          if (item.metadata?.size) {
+            totalFiles++;
+            totalSize += item.metadata.size;
+            
+            if (item.name.includes('image.')) imageCount++;
+            if (item.name.includes('thumbnail.')) thumbnailCount++;
+          }
+        }
+      }
+
+      return {
+        success: true,
+        stats: {
+          totalFiles,
+          totalSize,
+          imageCount,
+          thumbnailCount
+        }
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Stats retrieval failed'
+      };
+    }
+  }
+
+  /**
+   * Create signed URL for temporary access
+   */
+  static async createSignedUrl(
+    tokenId: string,
+    type: 'image' | 'thumbnail' = 'image',
+    expiresIn = 3600
+  ): Promise<{ success: boolean; url?: string; error?: string }> {
+    try {
+      const fileName = `evermarks/${tokenId}/${type}.jpg`; // Assume jpg for simplicity
+
+      const { data, error } = await supabase.storage
+        .from(this.STORAGE_BUCKET)
+        .createSignedUrl(fileName, expiresIn);
+
+      if (error) throw error;
+
+      return { success: true, url: data.signedUrl };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Signed URL creation failed'
+      };
+    }
+  }
+
+  /**
+   * Utility: Format file size for display
+   */
+  static formatFileSize(bytes: number): string {
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    if (bytes === 0) return '0 Bytes';
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+  }
+
+  /**
+   * Utility: Check if image processing is supported in browser
+   */
+  static isProcessingSupported(): boolean {
+    try {
+      const canvas = document.createElement('canvas');
+      return !!(canvas.getContext && canvas.getContext('2d'));
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Get configuration info
+   */
+  static getConfig() {
+    return {
+      bucket: this.STORAGE_BUCKET,
+      maxFileSize: this.MAX_FILE_SIZE,
+      supportedTypes: this.SUPPORTED_TYPES,
+      maxFileSizeFormatted: this.formatFileSize(this.MAX_FILE_SIZE),
+      isProcessingSupported: this.isProcessingSupported()
+    };
   }
 }

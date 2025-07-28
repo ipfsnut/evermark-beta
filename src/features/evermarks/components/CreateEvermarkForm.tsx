@@ -23,7 +23,7 @@ import { type CreateEvermarkInput, type EvermarkMetadata } from '../types';
 import { useAppAuth } from '@/providers/AppContext';
 import { cn, useIsMobile } from '@/utils/responsive';
 
-// Keep existing CONTENT_TYPES and other constants...
+// Content types configuration
 const CONTENT_TYPES = [
   { value: 'Custom', label: 'Custom Content', icon: '✨', description: 'Any type of content with flexible metadata' },
   { value: 'Cast', label: 'Farcaster Cast', icon: '💬', description: 'Social media post from Farcaster' },
@@ -47,7 +47,6 @@ const EnhancedImageUpload: React.FC<{
 }> = ({ selectedImage, onImageSelect, onImageRemove, imagePreview, uploadError }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -68,8 +67,8 @@ const EnhancedImageUpload: React.FC<{
       const file = e.dataTransfer.files[0];
       
       // Validate file
-      const validation = SupabaseImageService['validateImageFile']?.(file);
-      if (validation && !validation.isValid) {
+      const validation = ImageHelpers.validateImageFile(file);
+      if (!validation.isValid) {
         return;
       }
 
@@ -178,9 +177,63 @@ const EnhancedImageUpload: React.FC<{
   );
 };
 
-// Keep existing HelpModal component unchanged...
+// Help Modal Component
+const HelpModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+}> = ({ isOpen, onClose }) => {
+  if (!isOpen) return null;
 
-// Main CreateEvermarkForm Component - Enhanced version
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-gray-900 border border-gray-700 rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b border-gray-700">
+          <h3 className="text-xl font-bold text-white">Creating Evermarks</h3>
+          <button
+            onClick={onClose}
+            className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+          >
+            <XIcon className="h-5 w-5" />
+          </button>
+        </div>
+        
+        <div className="p-6 space-y-6 text-gray-300">
+          <div>
+            <h4 className="text-lg font-semibold text-white mb-2">What is an Evermark?</h4>
+            <p>Evermarks preserve content permanently on the blockchain. Think of them as digital bookmarks that can never be lost or deleted.</p>
+          </div>
+          
+          <div>
+            <h4 className="text-lg font-semibold text-white mb-2">Content Types</h4>
+            <div className="space-y-2">
+              {CONTENT_TYPES.map(type => (
+                <div key={type.value} className="flex items-start gap-3">
+                  <span className="text-lg">{type.icon}</span>
+                  <div>
+                    <span className="font-medium text-white">{type.label}</span>
+                    <p className="text-sm text-gray-400">{type.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          <div>
+            <h4 className="text-lg font-semibold text-white mb-2">Hybrid Storage</h4>
+            <p>Your content is stored in two places:</p>
+            <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
+              <li><strong className="text-green-400">Supabase</strong> - Fast loading and reliable access</li>
+              <li><strong className="text-cyan-400">IPFS + Blockchain</strong> - Permanent, decentralized backup</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Main CreateEvermarkForm Component
 interface CreateEvermarkFormProps {
   onSuccess?: (evermark: any) => void;
   onCancel?: () => void;
@@ -219,7 +272,7 @@ export function CreateEvermarkForm({
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   
-  // ENHANCED: Image state with validation
+  // Image state
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageUploadError, setImageUploadError] = useState<string | null>(null);
@@ -234,14 +287,13 @@ export function CreateEvermarkForm({
     clearCreateError();
   }, [clearCreateError]);
 
-  // ENHANCED: Image handling with validation and preview
+  // Image handling
   const handleImageSelect = useCallback((file: File | null) => {
     if (!file) return;
     
-    // Enhanced validation using SupabaseImageService
-    const validation = { isValid: true, error: '' }; // Would use actual validation
+    const validation = ImageHelpers.validateImageFile(file);
     if (!validation.isValid) {
-      setImageUploadError(validation.error);
+      setImageUploadError(validation.error!);
       return;
     }
     
@@ -264,7 +316,7 @@ export function CreateEvermarkForm({
     setEstimatedUploadSize('');
   }, []);
 
-  // Keep existing tag management methods unchanged...
+  // Tag management
   const handleAddTag = useCallback(() => {
     const trimmedTag = tagInput.trim().toLowerCase();
     if (trimmedTag && !tags.includes(trimmedTag) && tags.length < 10) {
@@ -284,6 +336,7 @@ export function CreateEvermarkForm({
     }
   }, [handleAddTag]);
 
+  // Auto-detect content from URL
   const handleAutoDetect = useCallback(async () => {
     if (!formData.sourceUrl) return;
     
@@ -322,7 +375,7 @@ export function CreateEvermarkForm({
            formData.description.trim().length > 0;
   }, [formData.title, formData.description]);
 
-  // ENHANCED: Form submission with hybrid image handling
+  // Form submission
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -355,7 +408,7 @@ export function CreateEvermarkForm({
         navigate('/explore');
       }
     } catch (error) {
-      console.error('Enhanced evermark creation failed:', error);
+      console.error('Evermark creation failed:', error);
     }
   }, [
     isCreating, 
@@ -386,7 +439,7 @@ export function CreateEvermarkForm({
 
   return (
     <div className={cn("min-h-screen bg-black text-white", className)}>
-      {/* Keep existing header unchanged... */}
+      {/* Header */}
       <div className="bg-gradient-to-r from-gray-900 via-black to-gray-900 border-b border-green-400/30">
         <div className="container mx-auto px-4 py-8">
           <div className="text-center space-y-6">
@@ -414,7 +467,7 @@ export function CreateEvermarkForm({
       </div>
 
       <div className="container mx-auto px-4 py-8">
-        {/* Keep existing error and progress displays... */}
+        {/* Error Display */}
         {createError && (
           <div className="mb-6 p-4 bg-red-900/30 border border-red-500/50 rounded-lg flex items-start">
             <AlertCircleIcon className="h-5 w-5 text-red-400 mr-3 mt-0.5 flex-shrink-0" />
@@ -431,6 +484,7 @@ export function CreateEvermarkForm({
           </div>
         )}
 
+        {/* Progress Display */}
         {isCreating && (
           <div className="mb-6 p-4 bg-blue-900/30 border border-blue-500/50 rounded-lg">
             <div className="flex items-start">
@@ -467,9 +521,149 @@ export function CreateEvermarkForm({
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Keep existing form fields unchanged... */}
-                
-                {/* ENHANCED: Image Upload Section */}
+                {/* Content Type Selection */}
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-cyan-400">
+                    Content Type
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {CONTENT_TYPES.map((type) => (
+                      <button
+                        key={type.value}
+                        type="button"
+                        onClick={() => handleFieldChange('contentType', type.value)}
+                        className={cn(
+                          "p-4 rounded-lg border transition-all text-left",
+                          formData.contentType === type.value
+                            ? "border-cyan-400 bg-cyan-900/30 text-cyan-300"
+                            : "border-gray-600 bg-gray-700/50 text-gray-300 hover:border-gray-500"
+                        )}
+                      >
+                        <div className="flex items-center gap-3 mb-2">
+                          <span className="text-lg">{type.icon}</span>
+                          <span className="font-medium">{type.label}</span>
+                        </div>
+                        <p className="text-xs text-gray-400">{type.description}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Title */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-cyan-400">
+                    Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.title}
+                    onChange={(e) => handleFieldChange('title', e.target.value)}
+                    placeholder="Enter a descriptive title..."
+                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-20"
+                    maxLength={100}
+                    required
+                  />
+                  <div className="text-xs text-gray-500 text-right">
+                    {formData.title.length}/100
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-cyan-400">
+                    Description *
+                  </label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => handleFieldChange('description', e.target.value)}
+                    placeholder="Describe this content and why it's worth preserving..."
+                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-20 resize-none"
+                    rows={4}
+                    maxLength={1000}
+                    required
+                  />
+                  <div className="text-xs text-gray-500 text-right">
+                    {formData.description.length}/1000
+                  </div>
+                </div>
+
+                {/* Source URL */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-cyan-400">
+                    Source URL (Optional)
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={formData.sourceUrl}
+                      onChange={(e) => handleFieldChange('sourceUrl', e.target.value)}
+                      placeholder="https://example.com/content"
+                      className="flex-1 px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-20"
+                    />
+                    {formData.sourceUrl && (
+                      <button
+                        type="button"
+                        onClick={handleAutoDetect}
+                        className="px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                        title="Auto-detect content"
+                      >
+                        <ZapIcon className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Tags */}
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-cyan-400">
+                    Tags (Optional)
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      onKeyPress={handleTagKeyPress}
+                      placeholder="Add tags..."
+                      className="flex-1 px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-20"
+                      disabled={tags.length >= 10}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddTag}
+                      disabled={!tagInput.trim() || tags.length >= 10}
+                      className="px-4 py-3 bg-gray-600 hover:bg-gray-500 disabled:bg-gray-800 disabled:text-gray-500 text-white rounded-lg transition-colors"
+                    >
+                      <TagIcon className="h-4 w-4" />
+                    </button>
+                  </div>
+                  
+                  {tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {tags.map((tag, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center bg-purple-900/30 text-purple-300 px-3 py-1 rounded-full border border-purple-500/30"
+                        >
+                          {tag}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveTag(tag)}
+                            className="ml-2 text-purple-400 hover:text-purple-200"
+                          >
+                            <XIcon className="h-3 w-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  
+                  <p className="text-xs text-gray-500">
+                    {tags.length}/10 tags • Press Enter to add
+                  </p>
+                </div>
+
+                {/* Image Upload */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="font-medium text-cyan-400">Cover Image (Optional)</h3>
@@ -497,7 +691,7 @@ export function CreateEvermarkForm({
                   )}
                 </div>
 
-                {/* Keep existing submit button unchanged... */}
+                {/* Submit Button */}
                 <div className="pt-6 border-t border-gray-700">
                   <div className="flex gap-4">
                     {onCancel && (
@@ -532,7 +726,7 @@ export function CreateEvermarkForm({
             </div>
           </div>
 
-          {/* Right Column - Enhanced Preview */}
+          {/* Right Column - Preview */}
           <div className="space-y-6">
             <div className="bg-gray-800/50 border border-gray-700 rounded-lg shadow-lg p-6 sticky top-6">
               <div className="flex items-center justify-between mb-6">
@@ -541,7 +735,7 @@ export function CreateEvermarkForm({
               </div>
               
               <div className="space-y-6">
-                {/* ENHANCED: Preview with hybrid image handling */}
+                {/* Preview Image */}
                 {imagePreview && (
                   <div className="aspect-video bg-gray-700 rounded-lg overflow-hidden border border-gray-600 relative">
                     <img
@@ -555,7 +749,7 @@ export function CreateEvermarkForm({
                   </div>
                 )}
 
-                {/* Keep existing preview content... */}
+                {/* Preview Content */}
                 <div className="space-y-4">
                   <div>
                     <h4 className="font-medium text-white text-xl mb-2">
@@ -572,11 +766,41 @@ export function CreateEvermarkForm({
                     </div>
                   )}
 
-                  {/* Keep existing preview sections... */}
+                  {/* Content Type Badge */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">
+                      {CONTENT_TYPES.find(t => t.value === formData.contentType)?.icon}
+                    </span>
+                    <span className="text-sm text-cyan-400">
+                      {CONTENT_TYPES.find(t => t.value === formData.contentType)?.label}
+                    </span>
+                  </div>
+
+                  {/* Tags Preview */}
+                  {tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {tags.map((tag, index) => (
+                        <span
+                          key={index}
+                          className="text-xs bg-purple-900/30 text-purple-300 px-2 py-1 rounded border border-purple-500/30"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Source URL Preview */}
+                  {formData.sourceUrl && (
+                    <div className="flex items-center gap-2 text-sm text-blue-400">
+                      <LinkIcon className="h-4 w-4" />
+                      <span className="truncate">{formData.sourceUrl}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* ENHANCED: Storage info */}
+              {/* Storage Info */}
               <div className="mt-6 pt-4 border-t border-gray-700">
                 <div className="text-xs text-gray-500 space-y-1">
                   <div className="flex justify-between">
@@ -597,47 +821,12 @@ export function CreateEvermarkForm({
           </div>
         </div>
       </div>
+
+      {/* Help Modal */}
+      <HelpModal 
+        isOpen={showHelpModal}
+        onClose={() => setShowHelpModal(false)}
+      />
     </div>
   );
 }
-      }
-    });
-  }
-
-  /**
-   * Format file size for display
-   */
-  static formatFileSize(bytes: number): string {
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    if (bytes === 0) return '0 Bytes';
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
-  }
-
-  /**
-   * Parse image dimensions string
-   */
-  static parseDimensions(dimensions?: string): { width: number; height: number } | null {
-    if (!dimensions) return null;
-    const [width, height] = dimensions.split(',').map(d => parseInt(d.trim()));
-    return width && height ? { width, height } : null;
-  }
-
-  /**
-   * Get aspect ratio for responsive display
-   */
-  static getAspectRatio(dimensions?: string): number {
-    const parsed = this.parseDimensions(dimensions);
-    return parsed ? parsed.width / parsed.height : 16 / 9; // Default aspect ratio
-  }
-
-  /**
-   * Generate srcset for responsive images
-   */
-  static generateSrcSet(baseUrl: string, sizes: number[] = [400, 800, 1200]): string {
-    return sizes
-      .map(size => `${baseUrl}?width=${size} ${size}w`)
-      .join(', ');
-  }
-}
-

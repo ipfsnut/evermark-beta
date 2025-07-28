@@ -1,6 +1,9 @@
 // src/features/evermarks/types/index.ts
 // Type definitions for the Evermarks feature - INTERFACES AND TYPES ONLY
 
+// Import shared validation types from utils
+import type { ValidationResult, ValidationFieldError } from '@/utils/errors';
+
 export interface Evermark {
   id: string;
   tokenId: number;
@@ -9,7 +12,7 @@ export interface Evermark {
   creator: string;
   description: string;
   sourceUrl?: string;
-  image?: string;
+  image?: string; // Changed from string | null to string | undefined
   metadataURI: string;
   contentType: 'DOI' | 'ISBN' | 'Cast' | 'URL' | 'Custom';
   tags: string[];
@@ -128,16 +131,8 @@ export interface EvermarkFeedResult {
   hasPreviousPage: boolean;
 }
 
-export interface ValidationError {
-  field: string;
-  message: string;
-}
-
-export interface ValidationResult {
-  isValid: boolean;
-  errors: ValidationError[];
-  warnings?: ValidationError[];
-}
+// Re-export shared validation types
+export type { ValidationResult, ValidationFieldError };
 
 // State interfaces for the hook
 export interface EvermarksState {

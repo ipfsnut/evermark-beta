@@ -42,8 +42,8 @@ export class Formatters {
   /**
    * Format token amount with proper decimals
    */
-formatTokenAmount(amount: string | number): string {  
-  const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+  static formatTokenAmount(amount: string | number): string {  
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
     if (num >= 1000000) {
       return `${(num / 1000000).toFixed(2)}M`;
     } else if (num >= 1000) {
