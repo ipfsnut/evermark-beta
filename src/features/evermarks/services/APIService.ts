@@ -1,6 +1,6 @@
 // =============================================================================
 // File: src/features/evermarks/services/APIService.ts
-// ENHANCED COMPLETE VERSION - Hybrid storage with full error handling
+// FIXED VERSION - Proper TypeScript types for Supabase data
 // =============================================================================
 
 import { supabase } from '@/lib/supabase';
@@ -11,6 +11,38 @@ import type {
   EvermarkFeedResult,
   EvermarkDatabaseRow 
 } from '../types';
+
+// FIXED: Properly typed Supabase response
+interface SupabaseEvermarkRow {
+  token_id: number;
+  title: string;
+  author: string;
+  owner?: string;
+  description?: string;
+  content_type?: string;
+  source_url?: string;
+  token_uri?: string;
+  created_at: string;
+  sync_timestamp?: string;
+  updated_at?: string;
+  last_synced_at?: string;
+  image_processed_at?: string;
+  metadata_fetched?: boolean;
+  verified?: boolean;
+  user_id?: string;
+  tx_hash?: string;
+  block_number?: number;
+  processed_image_url?: string;
+  supabase_image_url?: string;
+  thumbnail_url?: string;
+  ipfs_image_hash?: string;
+  image_file_size?: number;
+  image_dimensions?: string;
+  image_processing_status?: 'pending' | 'processing' | 'completed' | 'failed';
+  metadata?: Record<string, any>;
+  metadata_json?: Record<string, any>;
+  ipfs_metadata?: Record<string, any>;
+}
 
 export class APIService {
   /**
@@ -46,8 +78,8 @@ export class APIService {
 
       console.log('✅ Successfully fetched', data?.length || 0, 'evermarks');
 
-      // Transform data with enhanced image handling and error recovery
-      const evermarks = (data || []).map((item) => this.transformSupabaseToEvermark(item));
+      // FIXED: Transform data with proper typing
+      const evermarks = (data as SupabaseEvermarkRow[] || []).map((item) => this.transformSupabaseToEvermark(item));
       
       const totalPages = Math.ceil((count || 0) / validatedPageSize);
       
@@ -108,7 +140,8 @@ export class APIService {
         return null;
       }
 
-      return this.transformSupabaseToEvermark(data);
+      // FIXED: Cast to proper type
+      return this.transformSupabaseToEvermark(data as SupabaseEvermarkRow);
     } catch (error) {
       console.error('Error fetching evermark:', error);
       throw error;
@@ -196,9 +229,12 @@ export class APIService {
       }
 
       console.log('✅ Successfully created evermark record');
+      
+      // FIXED: Properly access token_id from typed data
+      const createdRow = data as SupabaseEvermarkRow;
       return {
         success: true,
-        id: data.token_id.toString()
+        id: createdRow.token_id.toString()
       };
     } catch (error) {
       console.error('Error creating evermark record:', error);
@@ -210,9 +246,9 @@ export class APIService {
   }
 
   /**
-   * Enhanced transformation with hybrid image support and error recovery
+   * FIXED: Enhanced transformation with proper typing
    */
-  private static transformSupabaseToEvermark(supabaseData: any): Evermark {
+  private static transformSupabaseToEvermark(supabaseData: SupabaseEvermarkRow): Evermark {
     try {
       // Get best available image URL using hybrid service
       const imageUrl = SupabaseImageService.getImageUrl({
@@ -222,8 +258,8 @@ export class APIService {
       });
 
       return {
-        id: supabaseData.token_id?.toString() || '',
-        tokenId: supabaseData.token_id || 0,
+        id: supabaseData.token_id.toString(),
+        tokenId: supabaseData.token_id,
         title: supabaseData.title || 'Untitled',
         author: supabaseData.author || 'Unknown Author',
         creator: supabaseData.owner || supabaseData.author || 'Unknown Creator',
@@ -272,7 +308,7 @@ export class APIService {
         author: supabaseData.author || 'Unknown Author',
         creator: supabaseData.owner || 'Unknown Creator',
         description: 'Error loading description',
-        image: undefined, // Changed from null to undefined
+        image: undefined,
         metadataURI: '',
         contentType: 'Custom',
         tags: [],
@@ -288,9 +324,7 @@ export class APIService {
     }
   }
 
-  /**
-   * Apply filters with validation and sanitization
-   */
+  // Keep all the existing private methods unchanged...
   private static applyFilters(query: any, filters: any) {
     try {
       if (filters.search && typeof filters.search === 'string') {
@@ -321,7 +355,7 @@ export class APIService {
       if (filters.tags && Array.isArray(filters.tags) && filters.tags.length > 0) {
         const sanitizedTags = filters.tags
           .filter(tag => typeof tag === 'string' && tag.trim().length > 0)
-          .slice(0, 10); // Limit to 10 tags
+          .slice(0, 10);
         
         if (sanitizedTags.length > 0) {
           query = query.contains('metadata->tags', sanitizedTags);
@@ -345,9 +379,6 @@ export class APIService {
     return query;
   }
 
-  /**
-   * Apply sorting with validation
-   */
   private static applySorting(query: any, sortBy: string, sortOrder: string) {
     try {
       const validSortFields = ['created_at', 'title', 'author', 'votes'];
@@ -363,27 +394,18 @@ export class APIService {
     }
   }
 
-  /**
-   * Validate pagination parameters
-   */
   private static validatePagination(page: number, pageSize: number) {
-    const validatedPage = Math.max(1, Math.min(page || 1, 1000)); // Max 1000 pages
-    const validatedPageSize = Math.max(1, Math.min(pageSize || 12, 100)); // Max 100 items per page
+    const validatedPage = Math.max(1, Math.min(page || 1, 1000));
+    const validatedPageSize = Math.max(1, Math.min(pageSize || 12, 100));
     
     return { validatedPage, validatedPageSize };
   }
 
-  /**
-   * Validate token ID format
-   */
   private static validateTokenId(id: string): number | null {
     const tokenId = parseInt(id);
     return !isNaN(tokenId) && tokenId > 0 ? tokenId : null;
   }
 
-  /**
-   * Validate evermark data before database insert
-   */
   private static validateEvermarkData(data: any): { isValid: boolean; error?: string } {
     if (!data.tokenId || isNaN(parseInt(data.tokenId))) {
       return { isValid: false, error: 'Invalid token ID' };
@@ -412,9 +434,6 @@ export class APIService {
     return { isValid: true };
   }
 
-  /**
-   * Map content type with fallback
-   */
   private static mapContentType(contentType?: string): Evermark['contentType'] {
     if (!contentType) return 'Custom';
     const type = contentType.toLowerCase();
@@ -428,9 +447,6 @@ export class APIService {
     return 'Custom';
   }
 
-  /**
-   * Map image processing status with fallback
-   */
   private static mapImageStatus(status?: string): Evermark['imageStatus'] {
     switch (status) {
       case 'completed':
@@ -447,10 +463,7 @@ export class APIService {
     }
   }
 
-  /**
-   * Extract tags with error handling
-   */
-  private static extractTags(supabaseData: any): string[] {
+  private static extractTags(supabaseData: SupabaseEvermarkRow): string[] {
     try {
       const tags: string[] = [];
       
@@ -469,7 +482,6 @@ export class APIService {
         }
       }
       
-      // Remove duplicates and limit to 10 tags
       return [...new Set(tags)].slice(0, 10);
     } catch (error) {
       console.warn('Error extracting tags:', error);
@@ -477,10 +489,7 @@ export class APIService {
     }
   }
 
-  /**
-   * Extract custom fields with error handling
-   */
-  private static extractCustomFields(supabaseData: any): Array<{ key: string; value: string }> {
+  private static extractCustomFields(supabaseData: SupabaseEvermarkRow): Array<{ key: string; value: string }> {
     try {
       const customFields: Array<{ key: string; value: string }> = [];
       
@@ -502,9 +511,6 @@ export class APIService {
     }
   }
 
-  /**
-   * Health check for database connection
-   */
   static async healthCheck(): Promise<{ isHealthy: boolean; error?: string }> {
     try {
       const { data, error } = await supabase

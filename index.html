@@ -31,10 +31,12 @@
   <meta name="keywords" content="blockchain, content curation, voting, farcaster, web3, evermark, mini app" />
   <meta name="author" content="Evermark" />
 
-  <!-- Theme and Icons -->
+  <!-- Theme and Icons - Fixed with fallback -->
   <meta name="theme-color" content="#8B5CF6" />
-  <link rel="icon" type="image/png" href="/icon.png" />
+  <!-- Use data URI as fallback if icon.png doesn't exist -->
+  <link rel="icon" type="image/png" href="/icon.png" onerror="this.href='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iOCIgZmlsbD0iIzhCNUNGNiIvPgo8cGF0aCBkPSJNMTYgMjRDMjAuNDE4MyAyNCAyNCAyMC40MTgzIDI0IDE2QzI0IDExLjU4MTcgMjAuNDE4MyA4IDE2IDhDMTEuNTgxNyA4IDggMTEuNTgxNyA4IDE2QzggMjAuNDE4MyAxMS41ODE3IDI0IDE2IDI0WiIgZmlsbD0id2hpdGUiLz4KPC9zdmc+'" />
   <link rel="apple-touch-icon" href="/icon.png" />
+  <!-- Fixed manifest.json reference -->
   <link rel="manifest" href="/manifest.json" />
 
   <!-- Farcaster Detection Script -->

@@ -1,53 +1,61 @@
+// src/lib/supabase.ts - Fixed Supabase client singleton
 import { createClient } from '@supabase/supabase-js';
+
+// Ensure we only create one instance
+let supabaseInstance: ReturnType<typeof createClient> | null = null;
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl) {
-  throw new Error('Missing VITE_SUPABASE_URL environment variable');
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables');
 }
 
-if (!supabaseAnonKey) {
-  throw new Error('Missing VITE_SUPABASE_ANON_KEY environment variable');
-}
-
-// Create Supabase client
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-// Helper function to check connection
-export async function testSupabaseConnection(): Promise<boolean> {
-  try {
-    const { data, error } = await supabase
-      .from('evermarks')
-      .select('count(*)', { count: 'exact', head: true });
-    
-    return !error;
-  } catch (error) {
-    console.error('Supabase connection test failed:', error);
-    return false;
+// Create singleton instance
+function getSupabaseClient() {
+  if (!supabaseInstance) {
+    supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        // Disable auto-refresh to prevent multiple instances
+        autoRefreshToken: false,
+        persistSession: false,
+        // Use a unique storage key to prevent conflicts
+        storageKey: 'evermark-supabase-auth',
+      },
+      realtime: {
+        // Disable realtime for better performance unless needed
+        params: {
+          eventsPerSecond: 10,
+        },
+      },
+      global: {
+        headers: {
+          'X-Client-Info': 'evermark-beta@2.0.0',
+        },
+      },
+    });
   }
+  
+  return supabaseInstance;
 }
 
-// Helper to get database info for debugging
-export async function getSupabaseInfo() {
+// Export the singleton instance
+export const supabase = getSupabaseClient();
+
+// Helper function to reset client if needed (for testing)
+export const resetSupabaseClient = () => {
+  supabaseInstance = null;
+};
+
+// Health check function
+export const testSupabaseConnection = async () => {
   try {
-    const { data, error } = await supabase
-      .from('evermarks')
-      .select('count(*)', { count: 'exact', head: true });
-    
-    return {
-      connected: !error,
-      error: error?.message,
-      hasData: (data as any)?.length > 0,
-      url: supabaseUrl,
-      hasKey: !!supabaseAnonKey
-    };
+    const { error } = await supabase.from('evermarks').select('count').limit(1);
+    return { connected: !error, error };
   } catch (error) {
-    return {
-      connected: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-      url: supabaseUrl,
-      hasKey: !!supabaseAnonKey
+    return { 
+      connected: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
     };
   }
-}
+};
