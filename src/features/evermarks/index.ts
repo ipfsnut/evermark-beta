@@ -1,4 +1,4 @@
-
+// Fix the ValidationError export issue
 export type {
   Evermark,
   EvermarkMetadata,
@@ -9,7 +9,7 @@ export type {
   EvermarkFeedOptions,
   EvermarkFeedResult,
   ValidationResult,
-  ValidationError,
+  ValidationFieldError, // Fixed: Import from correct module
   UseEvermarksResult,
   FarcasterCastData
 } from './types';

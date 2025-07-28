@@ -2,7 +2,7 @@
 // Type definitions for the Evermarks feature - INTERFACES AND TYPES ONLY
 
 // Import shared validation types from utils
-import type { ValidationResult, ValidationFieldError } from '@/utils/errors';
+import type { ValidationResult, ValidationFieldError, ValidationError } from '@/utils/errors';
 
 export interface Evermark {
   id: string;
@@ -131,8 +131,8 @@ export interface EvermarkFeedResult {
   hasPreviousPage: boolean;
 }
 
-// Re-export shared validation types
-export type { ValidationResult, ValidationFieldError };
+// Re-export shared validation types (THIS IS THE FIX!)
+export type { ValidationResult, ValidationFieldError, ValidationError };
 
 // State interfaces for the hook
 export interface EvermarksState {
