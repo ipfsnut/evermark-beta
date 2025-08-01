@@ -1,6 +1,6 @@
 // =============================================================================
 // File: src/features/evermarks/services/APIService.ts
-// FIXED VERSION - Resolves type errors and null safety issues
+// COMPLETE VERSION - Handles metadata URLs properly
 // =============================================================================
 
 import { supabase } from '@/lib/supabase';
@@ -172,7 +172,7 @@ export class APIService {
   }
 
   /**
-   * FIXED: Enhanced transformation with proper null safety
+   * FIXED: Transform Supabase data to Evermark with proper metadata handling
    */
   private static transformSupabaseToEvermark(supabaseData: SupabaseEvermarkRow): Evermark {
     try {
@@ -182,11 +182,30 @@ export class APIService {
       const safeAuthor = supabaseData.author || 'Unknown Author';
       const safeCreatedAt = supabaseData.created_at || new Date().toISOString();
 
-      // Get best available image URL using hybrid service
+      // FIXED: Get IPFS hash from multiple sources
+      let ipfsHash: string | undefined;
+      
+      // Priority 1: Direct ipfs_image_hash field
+      if (supabaseData.ipfs_image_hash) {
+        ipfsHash = supabaseData.ipfs_image_hash;
+      }
+      // Priority 2: Extract from stored metadata
+      else if (supabaseData.metadata?.image) {
+        ipfsHash = supabaseData.metadata.image.replace('ipfs://', '');
+      }
+      // Priority 3: Extract from processed_image_url (old gateway URLs)
+      else if (supabaseData.processed_image_url) {
+        const extractedHash = this.extractHashFromUrl(supabaseData.processed_image_url);
+        if (extractedHash) {
+          ipfsHash = extractedHash;
+        }
+      }
+
+      // FIXED: Get best available image URL using hybrid service
       const imageUrl = SupabaseImageService.getImageUrl({
         supabaseImageUrl: supabaseData.supabase_image_url || undefined,
-        processed_image_url: supabaseData.processed_image_url || undefined,
-        ipfsHash: supabaseData.ipfs_image_hash || undefined
+        processed_image_url: ipfsHash ? `https://gateway.pinata.cloud/ipfs/${ipfsHash}` : undefined,
+        ipfsHash: ipfsHash
       });
 
       return {
@@ -209,11 +228,12 @@ export class APIService {
         updatedAt: supabaseData.updated_at || safeCreatedAt,
         lastSyncedAt: supabaseData.last_synced_at || undefined,
         
-        // Enhanced image fields
+        // Enhanced image fields with proper IPFS hash
         imageStatus: this.mapImageStatus(supabaseData.image_processing_status),
         supabaseImageUrl: supabaseData.supabase_image_url || undefined,
         thumbnailUrl: supabaseData.thumbnail_url || undefined,
-        ipfsHash: supabaseData.ipfs_image_hash || undefined,
+        processed_image_url: supabaseData.processed_image_url || undefined,
+        ipfsHash: ipfsHash || undefined,
         imageFileSize: supabaseData.image_file_size || undefined,
         imageDimensions: supabaseData.image_dimensions || undefined,
         
@@ -250,6 +270,7 @@ export class APIService {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         imageStatus: 'failed',
+        processed_image_url: supabaseData.processed_image_url || undefined,
         extendedMetadata: {},
         votes: 0,
         viewCount: 0
@@ -258,7 +279,32 @@ export class APIService {
   }
 
   /**
-   * FIXED: Enhanced validation with proper return types
+   * Extract IPFS hash from URL (for legacy compatibility)
+   */
+  private static extractHashFromUrl(url?: string | null): string | null {
+    if (!url || typeof url !== 'string') return null;
+    
+    // Handle ipfs:// protocol
+    if (url.startsWith('ipfs://')) {
+      return url.replace('ipfs://', '');
+    }
+    
+    // Handle gateway URLs
+    const gatewayMatch = url.match(/\/ipfs\/([^\/\?#]+)/);
+    if (gatewayMatch) {
+      return gatewayMatch[1];
+    }
+    
+    // Direct hash validation
+    if (/^Qm[1-9A-HJ-NP-Za-km-z]{44}$/.test(url)) {
+      return url;
+    }
+    
+    return null;
+  }
+
+  /**
+   * Enhanced validation with proper return types
    */
   private static validateTokenId(id: string): number | null {
     if (!id || typeof id !== 'string') return null;
@@ -267,7 +313,7 @@ export class APIService {
   }
 
   /**
-   * FIXED: All the helper methods with proper null safety
+   * All the helper methods with proper null safety
    */
   private static mapContentType(contentType?: string): Evermark['contentType'] {
     if (!contentType || typeof contentType !== 'string') return 'Custom';
@@ -345,7 +391,6 @@ export class APIService {
     }
   }
 
-  // FIXED: Keep all existing helper methods with improved error handling
   private static applyFilters(query: any, filters: any) {
     try {
       if (filters.search && typeof filters.search === 'string') {
@@ -402,7 +447,7 @@ export class APIService {
     return { validatedPage, validatedPageSize };
   }
 
-  // FIXED: Add missing methods with proper type handling
+  // Keep all the existing CRUD methods...
   static async createEvermarkRecord(evermarkData: {
     tokenId: string;
     title: string;
@@ -438,7 +483,7 @@ export class APIService {
         // Hybrid image fields
         supabase_image_url: evermarkData.supabaseImageUrl,
         thumbnail_url: evermarkData.thumbnailUrl,
-        processed_image_url: evermarkData.supabaseImageUrl, // Primary is Supabase now
+        processed_image_url: evermarkData.supabaseImageUrl,
         ipfs_image_hash: evermarkData.ipfsHash,
         image_file_size: evermarkData.fileSize,
         image_dimensions: evermarkData.dimensions,
@@ -467,18 +512,17 @@ export class APIService {
         console.error('Database insert error:', error);
         
         // Handle specific database errors
-        if (error.code === '23505') { // Unique constraint violation
+        if (error.code === '23505') {
           return { success: false, error: 'This evermark already exists' };
-        } else if (error.code === '23502') { // Not null violation
+        } else if (error.code === '23502') {
           return { success: false, error: 'Missing required field' };
-        } else if (error.code === '22001') { // String too long
+        } else if (error.code === '22001') {
           return { success: false, error: 'Content exceeds maximum length' };
         }
         
         throw new Error(`Database insert failed: ${error.message}`);
       }
 
-      // FIXED: Handle the unknown data type from Supabase with type guard
       if (!data || !isValidSupabaseRow(data)) {
         return { success: false, error: 'Failed to process created record' };
       }

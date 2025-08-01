@@ -4,6 +4,9 @@
 // Import shared validation types from utils
 import type { ValidationResult, ValidationFieldError, ValidationError } from '@/utils/errors';
 
+// src/features/evermarks/types/index.ts
+// FIXED: Added processed_image_url to Evermark interface
+
 export interface Evermark {
   id: string;
   tokenId: number;
@@ -28,6 +31,7 @@ export interface Evermark {
   imageStatus: 'processed' | 'processing' | 'failed' | 'none';
   supabaseImageUrl?: string;    // NEW: Primary image source
   thumbnailUrl?: string;        // NEW: Thumbnail for performance
+  processed_image_url?: string; // FIXED: Added this field for legacy support
   ipfsHash?: string;           // NEW: IPFS backup hash
   imageFileSize?: number;      // NEW: File size tracking
   imageDimensions?: string;    // NEW: Dimensions as "width,height"

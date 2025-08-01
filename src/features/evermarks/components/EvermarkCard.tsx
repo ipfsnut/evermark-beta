@@ -12,7 +12,7 @@ import {
   Clock
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { EvermarkImage } from './EvermarkImage';
+import { EvermarkImage } from '@ipfsnut/evermark-sdk-react';
 import { type Evermark } from '../types';
 
 interface EvermarkCardProps {
@@ -93,6 +93,26 @@ export function EvermarkCard({
     }
   };
 
+  // SDK configuration for image loading
+  const getSDKConfig = () => {
+    const baseConfig = {
+      resolution: {
+        preferThumbnail: variant === 'compact' || variant === 'list',
+        maxSources: 3,
+        includeIpfs: true,
+        mobileOptimization: variant === 'compact' || variant === 'list'
+      },
+      loaderOptions: {
+        debug: process.env.NODE_ENV === 'development',
+        timeout: variant === 'list' ? 5000 : 8000,
+        maxRetries: 2,
+        useCORS: true
+      }
+    };
+
+    return baseConfig;
+  };
+
   // List variant layout
   if (variant === 'list') {
     return (
@@ -100,17 +120,19 @@ export function EvermarkCard({
         className={`${getVariantClasses()} ${className}`}
         onClick={handleClick}
       >
-        {/* ENHANCED: Use new EvermarkImage component */}
+        {/* Enhanced SDK Image Component */}
         {showImage && (
           <EvermarkImage
             evermark={evermark}
             variant="list"
-            onImageLoad={() => console.log('List image loaded')}
-            onImageError={(error) => console.warn('List image error:', error)}
+            showPlaceholder={true}
+            onImageLoad={() => console.log('SDK: List image loaded successfully')}
+            onImageError={(error) => console.warn('SDK: List image error:', error)}
+            {...getSDKConfig()}
           />
         )}
 
-        {/* Content - keep existing logic */}
+        {/* Content */}
         <div className="flex-1 min-w-0 p-4 flex flex-col justify-between">
           <div>
             <h3 className={`${getTitleClasses()} group-hover:text-purple-400 transition-colors mb-1 line-clamp-2`}>
@@ -175,17 +197,19 @@ export function EvermarkCard({
       className={`${getVariantClasses()} ${className} flex flex-col h-full`}
       onClick={handleClick}
     >
-      {/* ENHANCED: Use new EvermarkImage component */}
+      {/* Enhanced SDK Image Component */}
       {showImage && (
         <EvermarkImage
           evermark={evermark}
           variant={variant}
-          onImageLoad={() => console.log('Card image loaded')}
-          onImageError={(error) => console.warn('Card image error:', error)}
+          showPlaceholder={true}
+          onImageLoad={() => console.log('SDK: Card image loaded successfully')}
+          onImageError={(error) => console.warn('SDK: Card image error:', error)}
+          {...getSDKConfig()}
         />
       )}
 
-      {/* Content - keep existing logic but remove old image handling */}
+      {/* Content */}
       <div className="flex-1 flex flex-col p-4 sm:p-6">
         <h3 className={`${getTitleClasses()} mb-3 line-clamp-2 group-hover:text-purple-400 transition-colors`}>
           {evermark.title}
