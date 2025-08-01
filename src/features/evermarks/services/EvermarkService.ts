@@ -6,37 +6,41 @@ import type {
   EvermarkFilters,
   EvermarkPagination,
   EvermarkFeedOptions,
-  EvermarkFeedResult,
-  ValidationResult
+  EvermarkFeedResult
 } from '../types';
 
-// SDK Imports
 import { 
   resolveImageSources, 
-  ValidationService as CoreValidationService,
-  createDefaultStorageConfig 
+  isValidUrl,
+  isValidIpfsHash,
+  createIpfsUrl,
+  type ImageSourceInput,
+  type SourceResolutionConfig
 } from '@ipfsnut/evermark-sdk-core';
 
 import { 
-  HybridStorageService, 
-  uploadToStorage, 
-  transferBetweenStorages,
-  getOptimalImageUrl 
+  StorageOrchestrator,
+  SupabaseStorageClient,
+  IPFSClient,
+  type TransferResult,
+  type StorageFlowResult
 } from '@ipfsnut/evermark-sdk-storage';
 
 import { 
-  ImageProcessor, 
-  FileValidator, 
-  ProgressTracker,
-  BrowserUtils 
+  ImageLoader,
+  CORSHandler,
+  PerformanceMonitor,
+  type LoadImageResult
 } from '@ipfsnut/evermark-sdk-browser';
 
-// Keep existing non-image services
+// Keep existing services
 import { APIService } from './APIService';
 import { EvermarkBlockchainService } from './BlockchainService';
 import { MetadataService } from './MetadataService';
 import { FarcasterService } from './FarcasterService';
-import { getEvermarkHybridStorage, getEvermarkStorageConfig } from '../config/sdk-config';
+
+// SDK configuration
+import { getEvermarkStorageConfig, getEvermarkStorageOrchestrator } from '../config/sdk-config';
 
 export class EvermarkService {
   
@@ -61,57 +65,64 @@ export class EvermarkService {
   }
 
   static async fetchEvermarks(options: EvermarkFeedOptions): Promise<EvermarkFeedResult> {
-    return APIService.fetchEvermarks(options);
+    const result = await APIService.fetchEvermarks(options);
+    
+    // Enhance evermarks with optimal image URLs using SDK
+    if (result.evermarks) {
+      result.evermarks = result.evermarks.map(evermark => ({
+        ...evermark,
+        image: this.getOptimalImageUrl(evermark) || evermark.image
+      }));
+    }
+    
+    return result;
   }
 
   static async fetchEvermark(id: string): Promise<Evermark | null> {
-    return APIService.fetchEvermark(id);
+    const evermark = await APIService.fetchEvermark(id);
+    
+    if (evermark) {
+      // Enhance with optimal image URL
+      evermark.image = this.getOptimalImageUrl(evermark) || evermark.image;
+    }
+    
+    return evermark;
   }
 
   /**
-   * CLEAN SDK IMPLEMENTATION: Create evermark with full SDK integration
+   * SDK-POWERED: Create evermark with complete hybrid storage
    */
   static async createEvermark(input: CreateEvermarkInput, account?: any): Promise<CreateEvermarkResult> {
     try {
-      console.log('🚀 Creating evermark with clean SDK implementation');
+      console.log('🚀 Creating evermark with SDK integration');
       
       if (!account) {
         return { success: false, error: 'No wallet account provided' };
       }
 
-      if (!this.isConfigured()) {
+      // Validate configuration
+      if (!this.isSDKConfigured()) {
         return { success: false, error: 'SDK not properly configured' };
       }
 
-      // Browser validation
-      const browserCapabilities = BrowserUtils.getDeviceInfo();
-      console.log('📱 Browser capabilities:', browserCapabilities);
-
-      // File validation using SDK
+      // Validate image file if provided
       if (input.image) {
-        const browserValidation = FileValidator.validateImageFile(input.image, {
-          maxSize: 10 * 1024 * 1024,
-          allowedTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-        });
-
-        if (!browserValidation.isValid) {
-          return {
-            success: false,
-            error: `File validation failed: ${browserValidation.errors.join(', ')}`
-          };
+        const validation = this.validateImageFile(input.image);
+        if (!validation.isValid) {
+          return { success: false, error: validation.error };
         }
       }
       
-      // Metadata validation using SDK
-      const validation = CoreValidationService.validateEvermarkMetadata(input.metadata);
-      if (!validation.isValid) {
+      // Validate metadata
+      const metadataValidation = this.validateEvermarkMetadata(input.metadata);
+      if (!metadataValidation.isValid) {
         return {
           success: false,
-          error: `Validation failed: ${validation.errors.map(e => e.message).join(', ')}`
+          error: `Validation failed: ${metadataValidation.errors.map(e => e.message).join(', ')}`
         };
       }
 
-      let hybridStorageResult: any = null;
+      let storageResult: StorageFlowResult | null = null;
       let imageUrls: {
         supabaseUrl?: string;
         thumbnailUrl?: string;
@@ -120,73 +131,43 @@ export class EvermarkService {
         dimensions?: string;
       } = {};
 
-      // Complete hybrid storage processing
+      // Process image with SDK if provided
       if (input.image) {
-        console.log('📸 Processing image with SDK hybrid storage...');
+        console.log('📸 Processing image with SDK...');
         
-        // Process image using SDK
-        const processedImage = await ImageProcessor.processImage(input.image, {
-          maxWidth: 1200,
-          maxHeight: 900,
-          quality: 0.9,
-          format: 'auto'
-        });
-
-        // Progress tracking
-        const progressTracker = new ProgressTracker();
-        progressTracker.start('Image upload');
-
-        // Use hybrid storage service
-        const hybridStorage = getEvermarkHybridStorage();
+        const orchestrator = getEvermarkStorageOrchestrator();
         
-        // Upload to primary storage (Supabase) first
-        hybridStorageResult = await hybridStorage.uploadToPrimary(processedImage, {
-          generateThumbnail: true,
-          thumbnailSize: 300,
-          folder: `temp_${account.address.slice(-8)}_${Date.now()}`
-        });
+        // Create ImageSourceInput for the upload
+        const uploadInput: ImageSourceInput = {
+          supabaseUrl: undefined, // Will be set after upload
+          preferThumbnail: false
+        };
 
-        if (hybridStorageResult.success) {
-          imageUrls.supabaseUrl = hybridStorageResult.primaryUrl;
-          imageUrls.thumbnailUrl = hybridStorageResult.thumbnailUrl;
-          imageUrls.fileSize = hybridStorageResult.fileSize;
-          imageUrls.dimensions = hybridStorageResult.dimensions;
+        try {
+          // Use the SDK's storage flow
+          storageResult = await orchestrator.ensureImageInSupabase(uploadInput, (progress) => {
+            console.log(`Upload progress: ${progress.percentage}% - ${progress.message}`);
+          });
 
-          progressTracker.update(50, 'Primary storage complete');
-
-          // Auto-transfer to backup (IPFS) in background
-          if (hybridStorageResult.autoTransferEnabled) {
-            console.log('🔄 Starting auto-transfer to IPFS backup...');
+          if (storageResult && storageResult.finalUrl) {
+            imageUrls.supabaseUrl = storageResult.finalUrl;
             
-            // Non-blocking backup upload
-            hybridStorage.transferToBackup(hybridStorageResult.primaryId, processedImage)
-              .then(backupResult => {
-                if (backupResult.success) {
-                  imageUrls.ipfsHash = backupResult.ipfsHash;
-                  console.log('✅ Auto-transfer to IPFS completed:', backupResult.ipfsHash);
-                } else {
-                  console.warn('⚠️ Auto-transfer to IPFS failed:', backupResult.error);
-                }
-              })
-              .catch(error => {
-                console.warn('⚠️ Auto-transfer error:', error);
-              });
-          }
+            // Extract additional details from transfer result
+            if (storageResult.transferResult) {
+              imageUrls.fileSize = storageResult.transferResult.fileSize;
+              imageUrls.ipfsHash = storageResult.transferResult.ipfsHash;
+            }
 
-          progressTracker.complete('Image processing complete');
-        } else {
-          progressTracker.fail('Image upload failed');
-          return {
-            success: false,
-            error: hybridStorageResult.error || 'Image upload failed'
-          };
+            console.log('✅ Image processing completed:', imageUrls);
+          }
+        } catch (uploadError) {
+          console.warn('Image upload failed, continuing without image:', uploadError);
         }
       }
 
       // Handle Farcaster cast data
       let castData;
       if (input.metadata.contentType === 'Cast' && input.metadata.castUrl) {
-        console.log('💬 Fetching Farcaster cast data...');
         try {
           castData = await FarcasterService.fetchCastMetadata(input.metadata.castUrl);
         } catch (castError) {
@@ -194,18 +175,13 @@ export class EvermarkService {
         }
       }
 
-      // Create and upload metadata to IPFS
-      console.log('📄 Creating metadata with enhanced URLs...');
+      // Create and upload metadata
       const metadataResult = await MetadataService.uploadMetadata(
         input.metadata, 
         imageUrls.supabaseUrl
       );
       
       if (!metadataResult.success) {
-        // Cleanup uploaded images if metadata fails
-        if (hybridStorageResult?.primaryId) {
-          await getEvermarkHybridStorage().cleanup(hybridStorageResult.primaryId);
-        }
         return {
           success: false,
           error: metadataResult.error || 'Failed to create metadata'
@@ -213,7 +189,6 @@ export class EvermarkService {
       }
 
       // Mint to blockchain
-      console.log('⛓️ Minting to blockchain...');
       const mintResult = await EvermarkBlockchainService.mintEvermark(
         account,
         metadataResult.metadataURI!,
@@ -223,10 +198,6 @@ export class EvermarkService {
       );
 
       if (!mintResult.success) {
-        // Cleanup uploaded images if minting fails
-        if (hybridStorageResult?.primaryId) {
-          await getEvermarkHybridStorage().cleanup(hybridStorageResult.primaryId);
-        }
         return {
           success: false,
           error: mintResult.error || 'Blockchain minting failed'
@@ -235,29 +206,7 @@ export class EvermarkService {
 
       const tokenId = mintResult.tokenId!;
 
-      // Move images from temp to final location
-      if (hybridStorageResult?.primaryId && tokenId) {
-        try {
-          console.log('📁 Moving images to final location...');
-          const moveResult = await getEvermarkHybridStorage().moveToFinalLocation(
-            hybridStorageResult.primaryId, 
-            tokenId
-          );
-          
-          if (moveResult.success) {
-            imageUrls.supabaseUrl = moveResult.finalUrls.primary;
-            imageUrls.thumbnailUrl = moveResult.finalUrls.thumbnail;
-            console.log('✅ Images moved to final location');
-          } else {
-            console.warn('⚠️ Failed to move images:', moveResult.error);
-          }
-        } catch (moveError) {
-          console.warn('⚠️ Image move failed:', moveError);
-        }
-      }
-
-      // Save to database with complete hybrid storage data
-      console.log('💾 Saving to database with complete hybrid storage data...');
+      // Save to database with hybrid storage data
       try {
         const dbResult = await APIService.createEvermarkRecord({
           tokenId,
@@ -283,41 +232,32 @@ export class EvermarkService {
         console.warn('Database save failed (non-critical):', dbError);
       }
 
-      console.log('✅ SDK evermark creation successful!');
+      console.log('✅ Evermark creation successful with SDK!');
 
       return {
         success: true,
-        message: 'Evermark created successfully with complete hybrid storage',
+        message: 'Evermark created successfully',
         tokenId,
         txHash: mintResult.txHash,
         metadataURI: metadataResult.metadataURI,
         imageUrl: imageUrls.supabaseUrl,
-        castData: castData || undefined,
-        storageDetails: {
-          primary: imageUrls.supabaseUrl ? 'supabase' : null,
-          backup: imageUrls.ipfsHash ? 'ipfs' : null,
-          autoTransfer: !!hybridStorageResult?.autoTransferEnabled
-        }
+        castData: castData || undefined
       };
 
     } catch (error) {
       console.error('❌ SDK creation failed:', error);
       
-      let errorMessage = 'Unknown error occurred';
+      let errorMessage = 'Creation failed';
       
       if (error instanceof Error) {
         const message = error.message.toLowerCase();
         
-        if (message.includes('invalid address')) {
-          errorMessage = 'Invalid contract address. Please check blockchain configuration.';
-        } else if (message.includes('insufficient funds')) {
-          errorMessage = 'Insufficient funds for minting fee and gas costs.';
+        if (message.includes('insufficient funds')) {
+          errorMessage = 'Insufficient funds for minting fee and gas costs';
         } else if (message.includes('user rejected') || message.includes('denied')) {
-          errorMessage = 'Transaction was rejected by user.';
-        } else if (message.includes('network') || message.includes('connection')) {
-          errorMessage = 'Network error. Please check connection and try again.';
-        } else if (message.includes('storage')) {
-          errorMessage = 'Storage service error. Please try again.';
+          errorMessage = 'Transaction was rejected by user';
+        } else if (message.includes('network')) {
+          errorMessage = 'Network error - please check connection and try again';
         } else {
           errorMessage = error.message;
         }
@@ -328,39 +268,111 @@ export class EvermarkService {
   }
 
   /**
-   * SDK validation
-   */
-  static validateEvermarkMetadata(metadata: EvermarkMetadata): ValidationResult {
-    return CoreValidationService.validateEvermarkMetadata(metadata);
-  }
-
-  /**
-   * Get optimal image URL using SDK
+   * SDK-POWERED: Get optimal image URL with intelligent fallback
    */
   static getOptimalImageUrl(evermark: Evermark, preferThumbnail = false): string | undefined {
-    return getOptimalImageUrl({
-      supabaseUrl: evermark.supabaseImageUrl,
-      ipfsHash: evermark.ipfsHash,
-      thumbnailUrl: evermark.thumbnailUrl,
-      processed_image_url: evermark.image
-    }, preferThumbnail);
+    try {
+      const sources: ImageSourceInput = {
+        supabaseUrl: evermark.supabaseImageUrl,
+        thumbnailUrl: evermark.thumbnailUrl,
+        processedUrl: evermark.processed_image_url,
+        ipfsHash: evermark.ipfsHash,
+        preferThumbnail
+      };
+
+      const resolvedSources = resolveImageSources(sources);
+      
+      // Return the highest priority available source
+      return resolvedSources.length > 0 ? resolvedSources[0]!.url : undefined;
+    } catch (error) {
+      console.warn('Failed to resolve optimal image URL:', error);
+      
+      // Fallback to manual resolution
+      if (preferThumbnail && evermark.thumbnailUrl) {
+        return evermark.thumbnailUrl;
+      }
+      
+      return evermark.supabaseImageUrl || 
+             evermark.processed_image_url || 
+             (evermark.ipfsHash ? createIpfsUrl(evermark.ipfsHash) : undefined);
+    }
   }
 
   /**
-   * Resolve all available image sources
+   * SDK-POWERED: Resolve all available image sources
    */
-  static resolveImageSources(evermark: Evermark) {
-    return resolveImageSources({
-      supabaseUrl: evermark.supabaseImageUrl,
-      ipfsHash: evermark.ipfsHash,
-      thumbnailUrl: evermark.thumbnailUrl,
-      processed_image_url: evermark.image,
-      preferThumbnail: false
-    });
+  static resolveImageSources(evermark: Evermark): any[] {
+    try {
+      const sources: ImageSourceInput = {
+        supabaseUrl: evermark.supabaseImageUrl,
+        thumbnailUrl: evermark.thumbnailUrl,
+        processedUrl: evermark.processed_image_url,
+        ipfsHash: evermark.ipfsHash,
+        preferThumbnail: false
+      };
+
+      return resolveImageSources(sources);
+    } catch (error) {
+      console.warn('Failed to resolve image sources:', error);
+      return [];
+    }
   }
 
   /**
-   * Enhanced search with storage optimization
+   * SDK-POWERED: Test image loading with fallbacks
+   */
+  static async testImageLoading(evermark: Evermark): Promise<LoadImageResult> {
+    try {
+      const sources = this.resolveImageSources(evermark);
+      
+      if (sources.length === 0) {
+        return {
+          success: false,
+          error: 'No image sources available'
+        };
+      }
+
+      const imageLoader = new ImageLoader({
+        debug: process.env.NODE_ENV === 'development',
+        timeout: 8000,
+        maxRetries: 2
+      });
+
+      return await imageLoader.loadImage(sources);
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Image loading test failed'
+      };
+    }
+  }
+
+  /**
+   * Validate image file
+   */
+  static validateImageFile(file: File): { isValid: boolean; error?: string } {
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+    if (!allowedTypes.includes(file.type)) {
+      return {
+        isValid: false,
+        error: 'Unsupported image format. Please use JPEG, PNG, GIF, or WebP.'
+      };
+    }
+
+    if (file.size > maxSize) {
+      return {
+        isValid: false,
+        error: `Image too large. Maximum size is ${Math.round(maxSize / 1024 / 1024)}MB.`
+      };
+    }
+
+    return { isValid: true };
+  }
+
+  /**
+   * Enhanced search with image optimization
    */
   static async searchEvermarks(
     query: string, 
@@ -376,68 +388,128 @@ export class EvermarkService {
       }
     };
     
-    const results = await this.fetchEvermarks(searchOptions);
-    
-    // Enhance results with optimal image URLs
-    if (results.evermarks) {
-      results.evermarks = results.evermarks.map(evermark => ({
-        ...evermark,
-        image: this.getOptimalImageUrl(evermark) || evermark.image
-      }));
-    }
-    
-    return results;
+    return this.fetchEvermarks(searchOptions);
   }
 
   /**
-   * Configuration check using all SDK packages
+   * Validate evermark metadata
    */
-  static isConfigured(): boolean {
+  static validateEvermarkMetadata(metadata: EvermarkMetadata): { 
+    isValid: boolean; 
+    errors: Array<{ field: string; message: string }> 
+  } {
+    const errors: Array<{ field: string; message: string }> = [];
+
+    if (!metadata.title?.trim()) {
+      errors.push({ field: 'title', message: 'Title is required' });
+    } else if (metadata.title.length > 100) {
+      errors.push({ field: 'title', message: 'Title must be 100 characters or less' });
+    }
+
+    if (!metadata.description?.trim()) {
+      errors.push({ field: 'description', message: 'Description is required' });
+    } else if (metadata.description.length > 1000) {
+      errors.push({ field: 'description', message: 'Description must be 1000 characters or less' });
+    }
+
+    if (!metadata.author?.trim()) {
+      errors.push({ field: 'author', message: 'Author is required' });
+    }
+
+    if (metadata.sourceUrl && !isValidUrl(metadata.sourceUrl)) {
+      errors.push({ field: 'sourceUrl', message: 'Invalid URL format' });
+    }
+
+    // Content type specific validation
+    if (metadata.contentType === 'Cast' && metadata.castUrl) {
+      const farcasterValidation = FarcasterService.validateFarcasterInput(metadata.castUrl);
+      if (!farcasterValidation.isValid) {
+        errors.push({ field: 'castUrl', message: farcasterValidation.error || 'Invalid cast URL' });
+      }
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  }
+
+  /**
+   * Check if SDK is properly configured
+   */
+  static isSDKConfigured(): boolean {
     try {
-      const hasCore = !!createDefaultStorageConfig;
-      const hasStorage = !!HybridStorageService;
-      const hasBrowser = !!BrowserUtils && BrowserUtils.supportsFileAPI();
-      const hasSupabase = !!import.meta.env.VITE_SUPABASE_URL;
-      const hasBlockchain = EvermarkBlockchainService.isConfigured();
+      // Test core functions
+      const coreAvailable = !!(resolveImageSources && isValidUrl && isValidIpfsHash);
       
-      console.log('🔧 SDK configuration check:', {
-        hasCore,
-        hasStorage, 
-        hasBrowser,
-        hasSupabase,
-        hasBlockchain,
-        hasPinata: !!import.meta.env.VITE_PINATA_JWT
+      // Test storage
+      const storageAvailable = !!(StorageOrchestrator && SupabaseStorageClient);
+      
+      // Test browser
+      const browserAvailable = !!(ImageLoader && CORSHandler);
+      
+      // Test configuration
+      const configAvailable = !!getEvermarkStorageConfig();
+      
+      // Test blockchain
+      const blockchainAvailable = EvermarkBlockchainService.isConfigured();
+      
+      console.log('🔧 SDK Configuration Status:', {
+        core: coreAvailable,
+        storage: storageAvailable,
+        browser: browserAvailable,
+        config: configAvailable,
+        blockchain: blockchainAvailable
       });
       
-      return hasCore && hasStorage && hasBrowser && hasSupabase && hasBlockchain;
+      return coreAvailable && storageAvailable && browserAvailable && configAvailable && blockchainAvailable;
     } catch (error) {
-      console.error('Configuration check failed:', error);
+      console.error('SDK configuration check failed:', error);
       return false;
     }
   }
 
   /**
-   * Get SDK package status for debugging
+   * Get detailed SDK status for debugging
    */
   static getSDKStatus() {
     return {
       packages: {
-        core: !!createDefaultStorageConfig,
-        storage: !!HybridStorageService,
-        browser: !!BrowserUtils,
-        react: typeof window !== 'undefined'
+        core: {
+          available: !!(resolveImageSources && isValidUrl),
+          functions: ['resolveImageSources', 'isValidUrl', 'isValidIpfsHash', 'createIpfsUrl']
+        },
+        storage: {
+          available: !!(StorageOrchestrator && SupabaseStorageClient),
+          classes: ['StorageOrchestrator', 'SupabaseStorageClient', 'IPFSClient']
+        },
+        browser: {
+          available: !!(ImageLoader && CORSHandler),
+          classes: ['ImageLoader', 'CORSHandler', 'PerformanceMonitor']
+        }
       },
       environment: {
-        supabase: !!import.meta.env.VITE_SUPABASE_URL,
+        supabase: {
+          url: !!import.meta.env.VITE_SUPABASE_URL,
+          key: !!import.meta.env.VITE_SUPABASE_ANON_KEY
+        },
         pinata: !!import.meta.env.VITE_PINATA_JWT,
         blockchain: EvermarkBlockchainService.isConfigured()
       },
-      browser: BrowserUtils ? {
-        fileApi: BrowserUtils.supportsFileAPI(),
-        dragDrop: BrowserUtils.supportsDragAndDrop(),
-        webp: BrowserUtils.supportsWebP(),
-        compression: BrowserUtils.supportsCanvasCompression()
-      } : null
+      configuration: {
+        storageConfig: (() => {
+          try {
+            const config = getEvermarkStorageConfig();
+            return {
+              available: true,
+              bucketName: config.supabase.bucketName,
+              ipfsGateway: config.ipfs.gateway
+            };
+          } catch {
+            return { available: false };
+          }
+        })()
+      }
     };
   }
 }

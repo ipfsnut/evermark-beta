@@ -1,27 +1,28 @@
+// src/features/evermarks/components/CreateEvermarkForm.tsx
+// Corrected version with proper SDK imports based on your actual package structure
+
 import React, { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   PlusIcon, 
   AlertCircleIcon, 
   CheckCircleIcon,
-  UploadIcon,
   XIcon,
   LoaderIcon,
-  InfoIcon,
-  EyeIcon,
   HelpCircleIcon,
   TagIcon,
   FileTextIcon,
-  LinkIcon,
   ZapIcon
 } from 'lucide-react';
 
+// CORRECTED: Import from your actual SDK structure
+import { ImageUpload } from '@ipfsnut/evermark-sdk-react';
+
 import { useEvermarksState } from '../hooks/useEvermarkState';
-import { SupabaseImageService } from '../services/SupabaseImageService';
-import { ImageHelpers } from '../utils/imageHelpers';
 import { type CreateEvermarkInput, type EvermarkMetadata } from '../types';
 import { useAppAuth } from '@/providers/AppContext';
 import { cn, useIsMobile } from '@/utils/responsive';
+import { getEvermarkStorageConfig } from '../config/sdk-config';
 
 // Content types configuration
 const CONTENT_TYPES = [
@@ -31,151 +32,6 @@ const CONTENT_TYPES = [
   { value: 'ISBN', label: 'Book', icon: '📚', description: 'Published book with ISBN' },
   { value: 'URL', label: 'Web Content', icon: '🌐', description: 'Content from any website' },
 ] as const;
-
-const CATEGORY_OPTIONS = [
-  'Technology', 'Science', 'Art', 'Literature', 'News', 'Education', 
-  'Entertainment', 'Sports', 'Politics', 'Business', 'Health', 'Other'
-];
-
-// Enhanced Image Upload Component
-const EnhancedImageUpload: React.FC<{
-  selectedImage: File | null;
-  onImageSelect: (file: File | null) => void;
-  onImageRemove: () => void;
-  imagePreview: string | null;
-  uploadError: string | null;
-}> = ({ selectedImage, onImageSelect, onImageRemove, imagePreview, uploadError }) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [dragActive, setDragActive] = useState(false);
-
-  const handleDrag = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
-  }, []);
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const file = e.dataTransfer.files[0];
-      
-      // Validate file
-      const validation = ImageHelpers.validateImageFile(file);
-      if (!validation.isValid) {
-        return;
-      }
-
-      onImageSelect(file);
-    }
-  }, [onImageSelect]);
-
-  const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      onImageSelect(file);
-    }
-  }, [onImageSelect]);
-
-  if (selectedImage && imagePreview) {
-    return (
-      <div className="relative group">
-        <img
-          src={imagePreview}
-          alt="Preview"
-          className="w-full h-48 object-cover rounded-lg border border-gray-600 group-hover:opacity-90 transition-opacity"
-        />
-        
-        {/* Image info overlay */}
-        <div className="absolute bottom-2 left-2 bg-black/80 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">
-          {ImageHelpers.formatFileSize(selectedImage.size)}
-        </div>
-        
-        {/* Remove button */}
-        <button
-          type="button"
-          onClick={onImageRemove}
-          className="absolute top-2 right-2 p-2 bg-red-600 hover:bg-red-700 text-white rounded-full transition-colors shadow-lg opacity-0 group-hover:opacity-100"
-        >
-          <XIcon className="h-4 w-4" />
-        </button>
-        
-        {/* Replace button */}
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg"
-        >
-          <div className="text-white text-center">
-            <UploadIcon className="h-8 w-8 mx-auto mb-2" />
-            <span className="text-sm font-medium">Replace Image</span>
-          </div>
-        </button>
-        
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleFileSelect}
-          className="hidden"
-        />
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className={cn(
-        "border-2 border-dashed rounded-lg p-8 text-center transition-colors bg-gray-800/30",
-        dragActive 
-          ? "border-cyan-400 bg-cyan-900/20" 
-          : "border-gray-600 hover:border-cyan-400",
-        uploadError && "border-red-500 bg-red-900/20"
-      )}
-      onDragEnter={handleDrag}
-      onDragLeave={handleDrag}
-      onDragOver={handleDrag}
-      onDrop={handleDrop}
-    >
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleFileSelect}
-        className="hidden"
-      />
-      
-      <div className="space-y-4">
-        <div className="text-6xl">{dragActive ? '📤' : '🖼️'}</div>
-        <div>
-          <p className="text-gray-300 mb-2">
-            {dragActive ? 'Drop your image here' : 'Add a cover image to your Evermark'}
-          </p>
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-700 text-white rounded-lg hover:from-purple-400 hover:to-purple-600 transition-colors shadow-lg shadow-purple-500/30"
-          >
-            <UploadIcon className="h-4 w-4 mr-2" />
-            Choose Image
-          </button>
-        </div>
-        <p className="text-xs text-gray-500">
-          PNG, JPG, GIF, WebP up to 10MB • Drag and drop supported
-        </p>
-        {uploadError && (
-          <p className="text-red-400 text-sm">{uploadError}</p>
-        )}
-      </div>
-    </div>
-  );
-};
 
 // Help Modal Component
 const HelpModal: React.FC<{
@@ -201,32 +57,205 @@ const HelpModal: React.FC<{
         <div className="p-6 space-y-6 text-gray-300">
           <div>
             <h4 className="text-lg font-semibold text-white mb-2">What is an Evermark?</h4>
-            <p>Evermarks preserve content permanently on the blockchain. Think of them as digital bookmarks that can never be lost or deleted.</p>
+            <p>Evermarks preserve content permanently on the blockchain with hybrid storage for optimal performance.</p>
           </div>
           
           <div>
-            <h4 className="text-lg font-semibold text-white mb-2">Content Types</h4>
-            <div className="space-y-2">
-              {CONTENT_TYPES.map(type => (
-                <div key={type.value} className="flex items-start gap-3">
-                  <span className="text-lg">{type.icon}</span>
-                  <div>
-                    <span className="font-medium text-white">{type.label}</span>
-                    <p className="text-sm text-gray-400">{type.description}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-          
-          <div>
-            <h4 className="text-lg font-semibold text-white mb-2">Hybrid Storage</h4>
-            <p>Your content is stored in two places:</p>
+            <h4 className="text-lg font-semibold text-white mb-2">Storage Architecture</h4>
+            <p>Your content is stored using our advanced SDK:</p>
             <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
-              <li><strong className="text-green-400">Supabase</strong> - Fast loading and reliable access</li>
-              <li><strong className="text-cyan-400">IPFS + Blockchain</strong> - Permanent, decentralized backup</li>
+              <li><strong className="text-green-400">Primary:</strong> Supabase for fast loading</li>
+              <li><strong className="text-cyan-400">Backup:</strong> IPFS for permanent decentralized storage</li>
+              <li><strong className="text-purple-400">Auto-transfer:</strong> Seamless fallback between sources</li>
             </ul>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Enhanced Image Upload Component using SDK
+const EnhancedImageUpload: React.FC<{
+  selectedImage: File | null;
+  onImageSelect: (file: File | null) => void;
+  onImageRemove: () => void;
+  onUploadProgress: (progress: any) => void;
+  className?: string;
+}> = ({ selectedImage, onImageSelect, onImageRemove, onUploadProgress, className }) => {
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // If we have the SDK ImageUpload component, use it
+  // Otherwise, fall back to a custom implementation
+  if (ImageUpload) {
+    return (
+      <div className={className}>
+        <ImageUpload
+          storageConfig={getEvermarkStorageConfig()}
+          generateThumbnails={true}
+          allowedTypes={['image/jpeg', 'image/png', 'image/gif', 'image/webp']}
+          maxFileSize={10 * 1024 * 1024}
+          onUploadComplete={(result: { originalUrl: string; thumbnailUrl?: string }) => {
+            console.log('✅ SDK Image upload completed:', result);
+            onUploadProgress(null);
+          }}
+          onUploadError={(error: string) => {
+            console.error('❌ SDK Image upload failed:', error);
+            setUploadError(error);
+            onUploadProgress(null);
+          }}
+          className="w-full"
+        />
+        
+        {uploadError && (
+          <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+            {uploadError}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Fallback upload component if SDK component not available
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [dragActive, setDragActive] = useState(false);
+
+  const handleDrag = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      
+      // Validate file
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      
+      if (!allowedTypes.includes(file.type)) {
+        setUploadError('Unsupported file type. Please use JPEG, PNG, GIF, or WebP.');
+        return;
+      }
+      
+      if (file.size > maxSize) {
+        setUploadError('File too large. Maximum size is 10MB.');
+        return;
+      }
+
+      setUploadError(null);
+      onImageSelect(file);
+    }
+  }, [onImageSelect]);
+
+  const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setUploadError(null);
+      onImageSelect(file);
+    }
+  }, [onImageSelect]);
+
+  if (selectedImage) {
+    return (
+      <div className="relative group">
+        <div className="w-full h-48 bg-gray-700 rounded-lg border border-gray-600 overflow-hidden">
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="text-center">
+              <div className="text-4xl mb-2">🖼️</div>
+              <div className="text-white text-sm font-medium">{selectedImage.name}</div>
+              <div className="text-gray-400 text-xs">
+                {(selectedImage.size / 1024 / 1024).toFixed(2)} MB • {selectedImage.type}
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Remove button */}
+        <button
+          type="button"
+          onClick={onImageRemove}
+          className="absolute top-2 right-2 p-2 bg-red-600 hover:bg-red-700 text-white rounded-full transition-colors shadow-lg opacity-0 group-hover:opacity-100"
+        >
+          <XIcon className="h-4 w-4" />
+        </button>
+        
+        {/* Replace button */}
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg"
+        >
+          <div className="text-white text-center">
+            <div className="text-2xl mb-2">🔄</div>
+            <span className="text-sm font-medium">Replace Image</span>
+          </div>
+        </button>
+        
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className={className}>
+      <div
+        className={cn(
+          "border-2 border-dashed rounded-lg p-8 text-center transition-colors bg-gray-800/30",
+          dragActive 
+            ? "border-cyan-400 bg-cyan-900/20" 
+            : "border-gray-600 hover:border-cyan-400",
+          uploadError && "border-red-500 bg-red-900/20"
+        )}
+        onDragEnter={handleDrag}
+        onDragLeave={handleDrag}
+        onDragOver={handleDrag}
+        onDrop={handleDrop}
+      >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+        
+        <div className="space-y-4">
+          <div className="text-6xl">{dragActive ? '📤' : '🖼️'}</div>
+          <div>
+            <p className="text-gray-300 mb-2">
+              {dragActive ? 'Drop your image here' : 'Add a cover image to your Evermark'}
+            </p>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-700 text-white rounded-lg hover:from-purple-400 hover:to-purple-600 transition-colors shadow-lg shadow-purple-500/30"
+            >
+              <PlusIcon className="h-4 w-4 mr-2" />
+              Choose Image
+            </button>
+          </div>
+          <p className="text-xs text-gray-500">
+            PNG, JPG, GIF, WebP up to 10MB • Drag and drop supported
+          </p>
+          {uploadError && (
+            <p className="text-red-400 text-sm">{uploadError}</p>
+          )}
         </div>
       </div>
     </div>
@@ -274,9 +303,7 @@ export function CreateEvermarkForm({
   
   // Image state
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
-  const [estimatedUploadSize, setEstimatedUploadSize] = useState<string>('');
+  const [uploadProgress, setUploadProgress] = useState<any>(null);
 
   const getAuthor = useCallback(() => {
     return user?.displayName || user?.username || 'Unknown Author';
@@ -286,35 +313,6 @@ export function CreateEvermarkForm({
     setFormData(prev => ({ ...prev, [field]: value }));
     clearCreateError();
   }, [clearCreateError]);
-
-  // Image handling
-  const handleImageSelect = useCallback((file: File | null) => {
-    if (!file) return;
-    
-    const validation = ImageHelpers.validateImageFile(file);
-    if (!validation.isValid) {
-      setImageUploadError(validation.error!);
-      return;
-    }
-    
-    setSelectedImage(file);
-    setImageUploadError(null);
-    setEstimatedUploadSize(ImageHelpers.formatFileSize(file.size));
-    
-    // Create preview
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setImagePreview(e.target?.result as string);
-    };
-    reader.readAsDataURL(file);
-  }, []);
-  
-  const removeImage = useCallback(() => {
-    setSelectedImage(null);
-    setImagePreview(null);
-    setImageUploadError(null);
-    setEstimatedUploadSize('');
-  }, []);
 
   // Tag management
   const handleAddTag = useCallback(() => {
@@ -375,6 +373,15 @@ export function CreateEvermarkForm({
            formData.description.trim().length > 0;
   }, [formData.title, formData.description]);
 
+  // Handle image selection
+  const handleImageSelect = useCallback((file: File | null) => {
+    setSelectedImage(file);
+  }, []);
+
+  const handleImageRemove = useCallback(() => {
+    setSelectedImage(null);
+  }, []);
+
   // Form submission
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -427,9 +434,7 @@ export function CreateEvermarkForm({
     return (
       <div className={cn("bg-gray-800/30 border border-gray-700 rounded-lg p-12 text-center", className)}>
         <PlusIcon className="mx-auto h-16 w-16 text-gray-500 mb-6" />
-        <h3 className="text-2xl font-medium text-white mb-4">
-          Connect to Create
-        </h3>
+        <h3 className="text-2xl font-medium text-white mb-4">Connect to Create</h3>
         <p className="text-gray-400 mb-6 max-w-md mx-auto">
           Please connect your wallet to create an Evermark
         </p>
@@ -460,7 +465,8 @@ export function CreateEvermarkForm({
             </div>
             
             <p className="text-gray-300 max-w-3xl mx-auto text-lg">
-              Transform any content into a permanent reference. Stored on <span className="text-green-400 font-bold">Supabase</span> for speed and <span className="text-purple-400 font-bold">IPFS + Base blockchain</span> for permanence.
+              Transform any content into a permanent reference with our advanced SDK. 
+              <span className="text-green-400 font-bold"> Hybrid storage</span> ensures optimal performance and permanence.
             </p>
           </div>
         </div>
@@ -490,7 +496,7 @@ export function CreateEvermarkForm({
             <div className="flex items-start">
               <LoaderIcon className="animate-spin h-5 w-5 text-blue-400 mr-3 mt-0.5 flex-shrink-0" />
               <div className="flex-1">
-                <p className="text-blue-300 font-medium">Creating Evermark...</p>
+                <p className="text-blue-300 font-medium">Creating Evermark with SDK...</p>
                 <p className="text-blue-400 text-sm">{createStep}</p>
                 {createProgress > 0 && (
                   <div className="mt-2 bg-gray-700 rounded-full h-2">
@@ -516,7 +522,7 @@ export function CreateEvermarkForm({
                 <h2 className="text-xl font-bold text-white">Create Evermark</h2>
                 <div className="flex items-center text-sm text-gray-400">
                   <FileTextIcon className="h-4 w-4 mr-2" />
-                  <span>Hybrid Storage</span>
+                  <span>SDK Powered</span>
                 </div>
               </div>
 
@@ -663,32 +669,28 @@ export function CreateEvermarkForm({
                   </p>
                 </div>
 
-                {/* Image Upload */}
+                {/* Enhanced Image Upload */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="font-medium text-cyan-400">Cover Image (Optional)</h3>
-                    {estimatedUploadSize && (
-                      <span className="text-xs text-gray-500">
-                        Size: {estimatedUploadSize}
-                      </span>
-                    )}
+                    <span className="text-xs text-gray-500 bg-green-900/20 px-2 py-1 rounded">
+                      SDK Enhanced
+                    </span>
                   </div>
                   
                   <EnhancedImageUpload
                     selectedImage={selectedImage}
                     onImageSelect={handleImageSelect}
-                    onImageRemove={removeImage}
-                    imagePreview={imagePreview}
-                    uploadError={imageUploadError}
+                    onImageRemove={handleImageRemove}
+                    onUploadProgress={setUploadProgress}
+                    className="w-full"
                   />
 
-                  {selectedImage && (
-                    <div className="bg-green-900/20 border border-green-500/30 p-3 rounded-lg">
-                      <p className="text-green-300 text-sm">
-                        ✅ Image will be stored in Supabase (fast) + IPFS (permanent)
-                      </p>
-                    </div>
-                  )}
+                  <div className="bg-green-900/20 border border-green-500/30 p-3 rounded-lg">
+                    <p className="text-green-300 text-sm">
+                      ✅ Advanced hybrid storage: Supabase (fast) + IPFS (permanent) with automatic fallback
+                    </p>
+                  </div>
                 </div>
 
                 {/* Submit Button */}
@@ -711,7 +713,7 @@ export function CreateEvermarkForm({
                       {isCreating ? (
                         <>
                           <LoaderIcon className="animate-spin h-5 w-5 mr-2" />
-                          Creating...
+                          Creating with SDK...
                         </>
                       ) : (
                         <>
@@ -731,25 +733,12 @@ export function CreateEvermarkForm({
             <div className="bg-gray-800/50 border border-gray-700 rounded-lg shadow-lg p-6 sticky top-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-medium text-cyan-400">Live Preview</h3>
-                <EyeIcon className="h-5 w-5 text-gray-500" />
+                <div className="text-xs text-gray-500 bg-purple-900/20 px-2 py-1 rounded">
+                  SDK Enhanced
+                </div>
               </div>
               
               <div className="space-y-6">
-                {/* Preview Image */}
-                {imagePreview && (
-                  <div className="aspect-video bg-gray-700 rounded-lg overflow-hidden border border-gray-600 relative">
-                    <img
-                      src={imagePreview}
-                      alt="Preview"
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">
-                      Preview
-                    </div>
-                  </div>
-                )}
-
-                {/* Preview Content */}
                 <div className="space-y-4">
                   <div>
                     <h4 className="font-medium text-white text-xl mb-2">
@@ -793,27 +782,163 @@ export function CreateEvermarkForm({
                   {/* Source URL Preview */}
                   {formData.sourceUrl && (
                     <div className="flex items-center gap-2 text-sm text-blue-400">
-                      <LinkIcon className="h-4 w-4" />
+                      <span>🔗</span>
                       <span className="truncate">{formData.sourceUrl}</span>
+                    </div>
+                  )}
+
+                  {/* Upload Progress Preview */}
+                  {uploadProgress && (
+                    <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                        <span className="text-sm text-blue-300">
+                          {uploadProgress.phase}: {uploadProgress.percentage}%
+                        </span>
+                      </div>
+                      {uploadProgress.message && (
+                        <p className="text-xs text-blue-400">{uploadProgress.message}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Selected Image Preview */}
+                  {selectedImage && (
+                    <div className="bg-green-900/30 border border-green-500/30 rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <CheckCircleIcon className="h-4 w-4 text-green-400" />
+                        <span className="text-sm text-green-300">Image Selected</span>
+                      </div>
+                      <div className="text-xs text-green-400">
+                        <div>File: {selectedImage.name}</div>
+                        <div>Size: {(selectedImage.size / 1024 / 1024).toFixed(2)} MB</div>
+                        <div>Type: {selectedImage.type}</div>
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Storage Info */}
+              {/* Storage Architecture Info */}
               <div className="mt-6 pt-4 border-t border-gray-700">
+                <h4 className="text-sm font-medium text-gray-300 mb-3">Storage Architecture</h4>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+                    <div>
+                      <div className="text-xs font-medium text-green-400">Primary: Supabase</div>
+                      <div className="text-xs text-gray-500">Fast loading, CDN distribution</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 bg-cyan-400 rounded-full"></div>
+                    <div>
+                      <div className="text-xs font-medium text-cyan-400">Backup: IPFS</div>
+                      <div className="text-xs text-gray-500">Permanent, decentralized storage</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 bg-purple-400 rounded-full"></div>
+                    <div>
+                      <div className="text-xs font-medium text-purple-400">Auto-transfer</div>
+                      <div className="text-xs text-gray-500">Intelligent fallback system</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Technical Details */}
+              <div className="mt-4 pt-4 border-t border-gray-700">
                 <div className="text-xs text-gray-500 space-y-1">
                   <div className="flex justify-between">
-                    <span>Primary Storage:</span>
-                    <span className="text-green-400">Supabase (Fast)</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Backup Storage:</span>
-                    <span className="text-cyan-400">IPFS (Permanent)</span>
+                    <span>SDK Version:</span>
+                    <span className="text-purple-400">v0.1.0</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Blockchain:</span>
-                    <span className="text-purple-400">Base Network</span>
+                    <span className="text-blue-400">Base Network</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Image Processing:</span>
+                    <span className="text-green-400">Enabled</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Thumbnails:</span>
+                    <span className="text-cyan-400">Auto-generated</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Form Validation Status */}
+              <div className="mt-4 pt-4 border-t border-gray-700">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-400">Form Status:</span>
+                    <span className={`text-xs ${isFormValid() ? 'text-green-400' : 'text-yellow-400'}`}>
+                      {isFormValid() ? 'Ready to Create' : 'Fill Required Fields'}
+                    </span>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="flex items-center gap-1">
+                      {formData.title.trim() ? (
+                        <CheckCircleIcon className="h-3 w-3 text-green-400" />
+                      ) : (
+                        <div className="w-3 h-3 border border-gray-500 rounded-full"></div>
+                      )}
+                      <span className={formData.title.trim() ? 'text-green-400' : 'text-gray-500'}>
+                        Title
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center gap-1">
+                      {formData.description.trim() ? (
+                        <CheckCircleIcon className="h-3 w-3 text-green-400" />
+                      ) : (
+                        <div className="w-3 h-3 border border-gray-500 rounded-full"></div>
+                      )}
+                      <span className={formData.description.trim() ? 'text-green-400' : 'text-gray-500'}>
+                        Description
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center gap-1">
+                      {selectedImage ? (
+                        <CheckCircleIcon className="h-3 w-3 text-green-400" />
+                      ) : (
+                        <div className="w-3 h-3 border border-gray-500 rounded-full"></div>
+                      )}
+                      <span className={selectedImage ? 'text-green-400' : 'text-gray-500'}>
+                        Image
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center gap-1">
+                      {tags.length > 0 ? (
+                        <CheckCircleIcon className="h-3 w-3 text-green-400" />
+                      ) : (
+                        <div className="w-3 h-3 border border-gray-500 rounded-full"></div>
+                      )}
+                      <span className={tags.length > 0 ? 'text-green-400' : 'text-gray-500'}>
+                        Tags ({tags.length})
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Creation Tip */}
+              <div className="mt-4 pt-4 border-t border-gray-700">
+                <div className="bg-gradient-to-r from-purple-900/30 to-blue-900/30 border border-purple-500/30 rounded-lg p-3">
+                  <div className="flex items-start gap-2">
+                    <span className="text-lg">💡</span>
+                    <div>
+                      <div className="text-xs font-medium text-purple-300 mb-1">Pro Tip</div>
+                      <div className="text-xs text-purple-400 leading-relaxed">
+                        Your evermark will be stored using hybrid architecture for optimal performance and permanence. 
+                        Images are automatically optimized and backed up to IPFS.
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
