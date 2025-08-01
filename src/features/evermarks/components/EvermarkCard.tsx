@@ -9,11 +9,16 @@ import {
   MessageCircle,
   CheckCircle,
   AlertCircle,
-  Clock
+  Clock,
+  Zap,
+  RotateCcw
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { EvermarkImage } from '@ipfsnut/evermark-sdk-react';
 import { type Evermark } from '../types';
+
+// NEW: Import performance monitoring
+import { performanceMonitor, cacheManager, getDebugImageLoaderOptions } from '../config/sdk-config';
 
 interface EvermarkCardProps {
   evermark: Evermark;
@@ -23,6 +28,8 @@ interface EvermarkCardProps {
   showViews?: boolean;
   showDescription?: boolean;
   showImage?: boolean;
+  showPerformanceInfo?: boolean; // NEW: Show performance metrics in debug mode
+  enableRetry?: boolean; // NEW: Show retry button on image load failures
   className?: string;
 }
 
@@ -34,6 +41,8 @@ export function EvermarkCard({
   showViews = true,
   showDescription = true,
   showImage = true,
+  showPerformanceInfo = import.meta.env.NODE_ENV === 'development',
+  enableRetry = true,
   className = ''
 }: EvermarkCardProps) {
   
@@ -93,7 +102,7 @@ export function EvermarkCard({
     }
   };
 
-  // SDK configuration for image loading
+  // Enhanced SDK configuration with performance monitoring
   const getSDKConfig = () => {
     const baseConfig = {
       resolution: {
@@ -102,16 +111,115 @@ export function EvermarkCard({
         includeIpfs: true,
         mobileOptimization: variant === 'compact' || variant === 'list'
       },
-      loaderOptions: {
-        debug: process.env.NODE_ENV === 'development',
-        timeout: variant === 'list' ? 5000 : 8000,
-        maxRetries: 2,
-        useCORS: true
-      }
+      loaderOptions: showPerformanceInfo ? 
+        getDebugImageLoaderOptions() : 
+        {
+          debug: import.meta.env.NODE_ENV === 'development',
+          timeout: variant === 'list' ? 5000 : 8000,
+          maxRetries: 2,
+          useCORS: true,
+          // NEW: Performance tracking
+          onLoad: (url: string, fromCache: boolean) => {
+            if (showPerformanceInfo) {
+              console.log(`🖼️ Card image loaded: ${fromCache ? 'CACHE' : 'NETWORK'} - ${url.substring(0, 50)}...`);
+            }
+          }
+        }
     };
 
     return baseConfig;
   };
+
+  // NEW: Check if image is cached for performance indicator
+  const isImageCached = () => {
+    if (!evermark.supabaseImageUrl && !evermark.thumbnailUrl) return false;
+    
+    const primaryUrl = variant === 'compact' || variant === 'list' 
+      ? evermark.thumbnailUrl || evermark.supabaseImageUrl
+      : evermark.supabaseImageUrl || evermark.thumbnailUrl;
+      
+    return primaryUrl ? cacheManager.has(primaryUrl) : false;
+  };
+
+  // NEW: Get performance stats for this specific image
+  const getImagePerformanceInfo = () => {
+    if (!showPerformanceInfo) return null;
+    
+    const stats = performanceMonitor.getStats();
+    const imageUrl = evermark.supabaseImageUrl || evermark.thumbnailUrl;
+    
+    if (!imageUrl) return null;
+    
+    return {
+      cached: isImageCached(),
+      totalLoads: stats.totalLoads,
+      cacheHitRate: stats.cacheHitRate,
+      averageLoadTime: stats.averageLoadTime
+    };
+  };
+
+  // NEW: Performance indicator component
+  const PerformanceIndicator = () => {
+    const perfInfo = getImagePerformanceInfo();
+    if (!perfInfo || !showPerformanceInfo) return null;
+
+    return (
+      <div className="absolute top-2 left-2 bg-black/80 text-xs px-2 py-1 rounded backdrop-blur-sm">
+        <div className="flex items-center gap-1">
+          {perfInfo.cached ? (
+            <>
+              <Zap className="h-3 w-3 text-green-400" />
+              <span className="text-green-400">CACHED</span>
+            </>
+          ) : (
+            <>
+              <Clock className="h-3 w-3 text-yellow-400" />
+              <span className="text-yellow-400">LOADING</span>
+            </>
+          )}
+        </div>
+        <div className="text-gray-400 text-xs">
+          Hit: {(perfInfo.cacheHitRate * 100).toFixed(0)}% | 
+          Avg: {perfInfo.averageLoadTime.toFixed(0)}ms
+        </div>
+      </div>
+    );
+  };
+
+  // NEW: Enhanced error placeholder with retry functionality
+  const EnhancedErrorPlaceholder = ({ onRetry }: { onRetry?: () => void }) => (
+    <div className="absolute inset-0 bg-gradient-to-br from-red-500/20 to-red-700/20 flex flex-col items-center justify-center cursor-pointer group">
+      <div className="text-center" onClick={onRetry}>
+        <AlertCircle className="h-8 w-8 text-red-400 mb-2 mx-auto" />
+        <div className="text-red-300 text-sm font-medium mb-1">Failed to load</div>
+        {enableRetry && (
+          <button 
+            className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 transition-colors bg-red-900/30 px-2 py-1 rounded border border-red-500/30"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRetry?.();
+            }}
+          >
+            <RotateCcw className="h-3 w-3" />
+            Retry
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
+  // NEW: Progressive loading placeholder
+  const ProgressiveLoadingPlaceholder = ({ progress }: { progress?: number }) => (
+    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex flex-col items-center justify-center">
+      <div className="text-center">
+        <div className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin mb-2 mx-auto"></div>
+        <div className="text-blue-300 text-sm font-medium">Loading...</div>
+        {typeof progress === 'number' && (
+          <div className="text-xs text-blue-400 mt-1">{Math.round(progress)}%</div>
+        )}
+      </div>
+    </div>
+  );
 
   // List variant layout
   if (variant === 'list') {
@@ -122,14 +230,23 @@ export function EvermarkCard({
       >
         {/* Enhanced SDK Image Component */}
         {showImage && (
-          <EvermarkImage
-            evermark={evermark}
-            variant="list"
-            showPlaceholder={true}
-            onImageLoad={() => console.log('SDK: List image loaded successfully')}
-            onImageError={(error) => console.warn('SDK: List image error:', error)}
-            {...getSDKConfig()}
-          />
+          <div className="relative">
+            <EvermarkImage
+              evermark={evermark}
+              variant="list"
+              showPlaceholder={true}
+              onImageLoad={() => {
+                if (showPerformanceInfo) {
+                  console.log(`✅ List image loaded for evermark #${evermark.tokenId}`);
+                }
+              }}
+              onImageError={(error) => {
+                console.warn(`❌ List image error for #${evermark.tokenId}:`, error);
+              }}
+              {...getSDKConfig()}
+            />
+            <PerformanceIndicator />
+          </div>
         )}
 
         {/* Content */}
@@ -199,14 +316,23 @@ export function EvermarkCard({
     >
       {/* Enhanced SDK Image Component */}
       {showImage && (
-        <EvermarkImage
-          evermark={evermark}
-          variant={variant}
-          showPlaceholder={true}
-          onImageLoad={() => console.log('SDK: Card image loaded successfully')}
-          onImageError={(error) => console.warn('SDK: Card image error:', error)}
-          {...getSDKConfig()}
-        />
+        <div className="relative">
+          <EvermarkImage
+            evermark={evermark}
+            variant={variant}
+            showPlaceholder={true}
+            onImageLoad={() => {
+              if (showPerformanceInfo) {
+                console.log(`✅ Card image loaded for evermark #${evermark.tokenId}`);
+              }
+            }}
+            onImageError={(error) => {
+              console.warn(`❌ Card image error for #${evermark.tokenId}:`, error);
+            }}
+            {...getSDKConfig()}
+          />
+          <PerformanceIndicator />
+        </div>
       )}
 
       {/* Content */}
@@ -266,11 +392,26 @@ export function EvermarkCard({
                 {formatCount(evermark.votes)}
               </span>
             )}
+            {/* NEW: Performance indicator in footer */}
+            {showPerformanceInfo && isImageCached() && (
+              <span className="flex items-center text-green-400" title="Image cached for fast loading">
+                <Zap className="h-3 w-3 mr-1" />
+                Fast
+              </span>
+            )}
           </div>
 
-          {evermark.sourceUrl && (
-            <ExternalLink className="h-4 w-4 text-gray-500 group-hover:text-purple-400 transition-colors" />
-          )}
+          <div className="flex items-center gap-2">
+            {/* Content type indicator */}
+            <div className="flex items-center text-xs text-gray-500">
+              {getContentTypeIcon(evermark.contentType)}
+              <span className="ml-1 hidden sm:inline">{evermark.contentType}</span>
+            </div>
+            
+            {evermark.sourceUrl && (
+              <ExternalLink className="h-4 w-4 text-gray-500 group-hover:text-purple-400 transition-colors" />
+            )}
+          </div>
         </div>
       </div>
     </div>
