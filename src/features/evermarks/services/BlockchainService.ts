@@ -1,10 +1,23 @@
-// src/features/evermarks/services/BlockchainService.ts
-// Enhanced blockchain service with proper address validation and error handling
+// =============================================================================
+// File: src/features/evermarks/services/BlockchainService.ts
+// NO METADATASERVICE DEPENDENCIES - Enhanced with SDK error types
+// =============================================================================
 
 import { prepareContractCall, sendTransaction, readContract, waitForReceipt, getRpcClient } from 'thirdweb';
 import type { Account } from 'thirdweb/wallets';
 import { client } from '@/lib/thirdweb';
 import { CONTRACTS } from '@/lib/contracts';
+
+// SDK IMPORTS - Error types and validation
+import { 
+  ImageLoadingError, 
+  StorageError,
+  isValidUrl,
+  validateStorageConfig
+} from '@ipfsnut/evermark-sdk-core';
+
+// SDK configuration for validation
+import { getEvermarkStorageConfig } from '../config/sdk-config';
 
 export interface MintResult {
   success: boolean;
@@ -49,7 +62,7 @@ export class EvermarkBlockchainService {
   }
 
   /**
-   * Validate contract configuration before any operations
+   * SDK-ENHANCED: Validate contract configuration
    */
   private static validateConfiguration(): { isValid: boolean; error?: string } {
     try {
@@ -73,6 +86,18 @@ export class EvermarkBlockchainService {
         return { isValid: false, error: 'Contract chain configuration is missing' };
       }
 
+      // SDK VALIDATION: Check storage configuration is valid
+      try {
+        const storageConfig = getEvermarkStorageConfig();
+        const storageValidation = validateStorageConfig(storageConfig);
+        if (!storageValidation.valid) {
+          console.warn('Storage configuration issues:', storageValidation.errors);
+          // Don't fail blockchain validation for storage issues, just warn
+        }
+      } catch (error) {
+        console.warn('Storage configuration check failed:', error);
+      }
+
       return { isValid: true };
     } catch (error) {
       return { 
@@ -90,7 +115,7 @@ export class EvermarkBlockchainService {
     const configValidation = this.validateConfiguration();
     if (!configValidation.isValid) {
       console.error('❌ Contract configuration invalid:', configValidation.error);
-      throw new Error(configValidation.error);
+      throw new StorageError(configValidation.error!, 'CONFIG_ERROR');
     }
 
     try {
@@ -119,7 +144,10 @@ export class EvermarkBlockchainService {
       return contractInfo;
     } catch (error) {
       console.error('❌ Failed to get contract info:', error);
-      throw new Error(`Failed to fetch contract information: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new StorageError(
+        `Failed to fetch contract information: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'CONTRACT_ERROR' as any
+      );
     }
   }
 
@@ -129,7 +157,7 @@ export class EvermarkBlockchainService {
   static async getMintingFee(): Promise<bigint> {
     const configValidation = this.validateConfiguration();
     if (!configValidation.isValid) {
-      throw new Error(configValidation.error);
+      throw new StorageError(configValidation.error!, 'CONFIG_ERROR');
     }
 
     try {
@@ -141,7 +169,10 @@ export class EvermarkBlockchainService {
       return result as bigint;
     } catch (error) {
       console.warn('Failed to get minting fee from contract:', error);
-      throw new Error(`Failed to read minting fee: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new StorageError(
+        `Failed to read minting fee: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'CONTRACT_ERROR' as any
+      );
     }
   }
 
@@ -151,7 +182,7 @@ export class EvermarkBlockchainService {
   static async getReferralPercentage(): Promise<number> {
     const configValidation = this.validateConfiguration();
     if (!configValidation.isValid) {
-      throw new Error(configValidation.error);
+      throw new StorageError(configValidation.error!, 'CONFIG_ERROR');
     }
 
     try {
@@ -163,7 +194,10 @@ export class EvermarkBlockchainService {
       return Number(result);
     } catch (error) {
       console.warn('Failed to get referral percentage from contract:', error);
-      throw new Error(`Failed to read referral percentage: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new StorageError(
+        `Failed to read referral percentage: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'CONTRACT_ERROR' as any
+      );
     }
   }
 
@@ -173,7 +207,7 @@ export class EvermarkBlockchainService {
   static async getMaxBatchSize(): Promise<number> {
     const configValidation = this.validateConfiguration();
     if (!configValidation.isValid) {
-      throw new Error(configValidation.error);
+      throw new StorageError(configValidation.error!, 'CONFIG_ERROR');
     }
 
     try {
@@ -185,7 +219,10 @@ export class EvermarkBlockchainService {
       return Number(result);
     } catch (error) {
       console.warn('Failed to get max batch size from contract:', error);
-      throw new Error(`Failed to read max batch size: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new StorageError(
+        `Failed to read max batch size: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'CONTRACT_ERROR' as any
+      );
     }
   }
 
@@ -195,7 +232,7 @@ export class EvermarkBlockchainService {
   static async getIsPaused(): Promise<boolean> {
     const configValidation = this.validateConfiguration();
     if (!configValidation.isValid) {
-      throw new Error(configValidation.error);
+      throw new StorageError(configValidation.error!, 'CONFIG_ERROR');
     }
 
     try {
@@ -207,12 +244,16 @@ export class EvermarkBlockchainService {
       return result as boolean;
     } catch (error) {
       console.warn('Failed to check if contract is paused:', error);
-      throw new Error(`Failed to read pause status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new StorageError(
+        `Failed to read pause status: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'CONTRACT_ERROR' as any
+      );
     }
   }
 
   /**
-   * Mint a new Evermark NFT
+   * ENHANCED: Mint a new Evermark NFT (No MetadataService dependency)
+   * @param metadataURI - Pre-created metadata URI from EvermarkService
    */
   static async mintEvermark(
     account: Account,
@@ -246,6 +287,14 @@ export class EvermarkBlockchainService {
         return {
           success: false,
           error: 'Metadata URI is required'
+        };
+      }
+
+      // SDK VALIDATION: Validate metadata URI format
+      if (!isValidUrl(metadataURI)) {
+        return {
+          success: false,
+          error: 'Invalid metadata URI format'
         };
       }
 
@@ -437,7 +486,7 @@ export class EvermarkBlockchainService {
   static async getTotalSupply(): Promise<number> {
     const configValidation = this.validateConfiguration();
     if (!configValidation.isValid) {
-      throw new Error(configValidation.error);
+      throw new StorageError(configValidation.error!, 'CONFIG_ERROR');
     }
 
     try {
@@ -450,7 +499,10 @@ export class EvermarkBlockchainService {
       return Number(result);
     } catch (error) {
       console.error('Failed to get total supply:', error);
-      throw new Error(`Failed to read total supply: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new StorageError(
+        `Failed to read total supply: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'CONTRACT_ERROR' as any
+      );
     }
   }
 

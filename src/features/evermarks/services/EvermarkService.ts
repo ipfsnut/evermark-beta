@@ -1,3 +1,8 @@
+// =============================================================================
+// File: src/features/evermarks/services/EvermarkService.ts
+// NO METADATASERVICE - Direct SDK integration for all metadata operations
+// =============================================================================
+
 import type { 
   Evermark,
   EvermarkMetadata,
@@ -9,33 +14,59 @@ import type {
   EvermarkFeedResult
 } from '../types';
 
-// SDK imports for enhanced functionality
+// SDK IMPORTS - Complete integration
 import { 
   resolveImageSources, 
   isValidUrl,
   isValidIpfsHash,
   createIpfsUrl,
-  type ImageSourceInput
+  validateStorageConfig,
+  generateStoragePath,
+  type ImageSourceInput,
+  type StorageConfig,
+  ImageLoadingError,
+  StorageError
 } from '@ipfsnut/evermark-sdk-core';
 
 import { 
   StorageOrchestrator,
   ensureImageInSupabase,
-  type StorageFlowResult
+  type StorageFlowResult,
+  type TransferResult
 } from '@ipfsnut/evermark-sdk-storage';
 
-// Keep your existing service imports
+// Keep existing service imports
 import { APIService } from './APIService';
 import { EvermarkBlockchainService } from './BlockchainService';
-import { MetadataService } from './MetadataService';
 import { FarcasterService } from './FarcasterService';
 
 // SDK configuration
 import { getEvermarkStorageConfig } from '../config/sdk-config';
 
 export class EvermarkService {
-  
-  // Keep your existing static methods
+  private static storageOrchestrator: StorageOrchestrator | null = null;
+
+  /**
+   * Get or create storage orchestrator
+   */
+  private static getStorageOrchestrator(): StorageOrchestrator {
+    if (!this.storageOrchestrator) {
+      const storageConfig = getEvermarkStorageConfig();
+      const validation = validateStorageConfig(storageConfig);
+      
+      if (!validation.valid) {
+        throw new StorageError(
+          `Invalid storage configuration: ${validation.errors.join(', ')}`,
+          'CONFIG_ERROR'
+        );
+      }
+      
+      this.storageOrchestrator = new StorageOrchestrator(storageConfig);
+    }
+    return this.storageOrchestrator;
+  }
+
+  // Keep existing static methods
   static getDefaultPagination(): EvermarkPagination {
     return {
       page: 1,
@@ -90,7 +121,7 @@ export class EvermarkService {
   }
 
   /**
-   * NEW: SDK-powered optimal image URL resolution
+   * SDK-POWERED: Optimal image URL resolution
    */
   static async getOptimalImageUrl(evermark: Evermark, preferThumbnail = false): Promise<string | undefined> {
     try {
@@ -113,7 +144,7 @@ export class EvermarkService {
     } catch (error) {
       console.warn('Failed to resolve optimal image URL:', error);
       
-      // Fallback to manual resolution (your existing logic)
+      // Fallback to manual resolution
       if (preferThumbnail && evermark.thumbnailUrl) {
         return evermark.thumbnailUrl;
       }
@@ -125,7 +156,7 @@ export class EvermarkService {
   }
 
   /**
-   * NEW: SDK-powered image source resolution for debugging
+   * SDK-POWERED: Image source resolution for debugging
    */
   static resolveAllImageSources(evermark: Evermark): any[] {
     try {
@@ -145,11 +176,11 @@ export class EvermarkService {
   }
 
   /**
-   * ENHANCED: Create evermark with SDK-powered image processing
+   * ENHANCED: Create evermark with direct SDK metadata handling (NO MetadataService)
    */
   static async createEvermark(input: CreateEvermarkInput, account?: any): Promise<CreateEvermarkResult> {
     try {
-      console.log('🚀 Creating evermark with SDK integration');
+      console.log('🚀 Creating evermark with direct SDK metadata handling');
       
       if (!account) {
         return { success: false, error: 'No wallet account provided' };
@@ -185,18 +216,28 @@ export class EvermarkService {
         dimensions?: string;
       } = {};
 
-      // NEW: SDK-powered image processing
+      // SDK-POWERED: Image processing
       if (input.image) {
         console.log('📸 Processing image with SDK...');
         
         try {
-          const orchestrator = new StorageOrchestrator(getEvermarkStorageConfig());
+          const orchestrator = this.getStorageOrchestrator();
+          
+          // Generate optimal storage path
+          const timestamp = Date.now();
+          const extension = input.image.name.split('.').pop()?.toLowerCase() || 'jpg';
+          const storagePath = `evermarks/${timestamp}.${extension}`;
           
           // Use SDK to upload directly to Supabase
-          const uploadResult = await orchestrator.supabaseClient.uploadFile(
+          const supabaseClient = new (await import('@ipfsnut/evermark-sdk-storage')).SupabaseStorageClient(
+            orchestrator.config.supabase
+          );
+          
+          const uploadResult = await supabaseClient.uploadFile(
             input.image,
-            `uploads/${Date.now()}.${input.image.name.split('.').pop()}`,
+            storagePath,
             {
+              contentType: input.image.type,
               onProgress: (progress) => {
                 console.log(`Upload progress: ${progress.percentage}%`);
               }
@@ -213,7 +254,7 @@ export class EvermarkService {
         }
       }
 
-      // Handle Farcaster cast data (keep your existing logic)
+      // Handle Farcaster cast data
       let castData;
       if (input.metadata.contentType === 'Cast' && input.metadata.castUrl) {
         try {
@@ -223,23 +264,20 @@ export class EvermarkService {
         }
       }
 
-      // Create and upload metadata (keep your existing logic)
-      const metadataResult = await MetadataService.uploadMetadata(
-        input.metadata, 
-        imageUrls.supabaseUrl
-      );
+      // DIRECT METADATA CREATION (NO MetadataService)
+      const metadata = await this.createMetadataDirectly(input.metadata, imageUrls.supabaseUrl);
       
-      if (!metadataResult.success) {
+      if (!metadata.success) {
         return {
           success: false,
-          error: metadataResult.error || 'Failed to create metadata'
+          error: metadata.error || 'Failed to create metadata'
         };
       }
 
-      // Mint to blockchain (keep your existing logic)
+      // Mint to blockchain
       const mintResult = await EvermarkBlockchainService.mintEvermark(
         account,
-        metadataResult.metadataURI!,
+        metadata.metadataURI!,
         input.metadata.title,
         input.metadata.author,
         undefined
@@ -262,7 +300,7 @@ export class EvermarkService {
           author: input.metadata.author,
           description: input.metadata.description || '',
           sourceUrl: input.metadata.sourceUrl,
-          metadataURI: metadataResult.metadataURI!,
+          metadataURI: metadata.metadataURI!,
           txHash: mintResult.txHash!,
           supabaseImageUrl: imageUrls.supabaseUrl,
           thumbnailUrl: imageUrls.thumbnailUrl,
@@ -280,14 +318,14 @@ export class EvermarkService {
         console.warn('Database save failed (non-critical):', dbError);
       }
 
-      console.log('✅ Evermark creation successful with SDK!');
+      console.log('✅ Evermark creation successful with direct SDK metadata handling!');
 
       return {
         success: true,
         message: 'Evermark created successfully',
         tokenId,
         txHash: mintResult.txHash,
-        metadataURI: metadataResult.metadataURI,
+        metadataURI: metadata.metadataURI,
         imageUrl: imageUrls.supabaseUrl,
         castData: castData || undefined
       };
@@ -316,8 +354,115 @@ export class EvermarkService {
   }
 
   /**
-   * NEW: SDK-powered background image transfer
-   * This can be called to transfer existing IPFS images to Supabase
+   * DIRECT METADATA CREATION (Replaces MetadataService.uploadMetadata)
+   */
+  private static async createMetadataDirectly(
+    metadata: EvermarkMetadata, 
+    imageUrl?: string
+  ): Promise<{ success: boolean; metadataURI?: string; error?: string }> {
+    try {
+      console.log('📝 Creating metadata directly with SDK');
+
+      // Build ERC-721 compliant metadata
+      const nftMetadata = {
+        name: metadata.title,
+        description: metadata.description,
+        image: imageUrl,
+        external_url: metadata.sourceUrl,
+        
+        // ERC-721 attributes
+        attributes: [
+          {
+            trait_type: 'Content Type',
+            value: metadata.contentType || 'Custom'
+          },
+          {
+            trait_type: 'Author',
+            value: metadata.author
+          },
+          {
+            trait_type: 'Created At',
+            value: new Date().toISOString(),
+            display_type: 'date'
+          }
+        ],
+
+        // Extended Evermark metadata
+        evermark: {
+          version: '2.0',
+          contentType: metadata.contentType,
+          sourceUrl: metadata.sourceUrl,
+          tags: metadata.tags || [],
+          customFields: metadata.customFields || [],
+          
+          // Content-type specific fields
+          ...(metadata.doi && { doi: metadata.doi }),
+          ...(metadata.isbn && { isbn: metadata.isbn }),
+          ...(metadata.castUrl && { castUrl: metadata.castUrl }),
+          ...(metadata.url && { url: metadata.url }),
+          ...(metadata.publisher && { publisher: metadata.publisher }),
+          ...(metadata.publicationDate && { publicationDate: metadata.publicationDate }),
+          ...(metadata.journal && { journal: metadata.journal }),
+          ...(metadata.volume && { volume: metadata.volume }),
+          ...(metadata.issue && { issue: metadata.issue }),
+          ...(metadata.pages && { pages: metadata.pages })
+        }
+      };
+
+      // Add tags as attributes
+      if (metadata.tags && metadata.tags.length > 0) {
+        metadata.tags.forEach((tag, index) => {
+          nftMetadata.attributes.push({
+            trait_type: `Tag ${index + 1}`,
+            value: tag
+          });
+        });
+      }
+
+      // Upload metadata to Supabase via SDK
+      const { SupabaseStorageClient } = await import('@ipfsnut/evermark-sdk-storage');
+      const supabaseClient = new SupabaseStorageClient(storageConfig.supabase);
+      
+      // Generate metadata path
+      const timestamp = Date.now();
+      const metadataPath = `metadata/${timestamp}.json`;
+      
+      // Convert to blob
+      const metadataBlob = new Blob([JSON.stringify(nftMetadata, null, 2)], {
+        type: 'application/json'
+      });
+
+      const uploadResult = await supabaseClient.uploadFile(
+        metadataBlob,
+        metadataPath,
+        {
+          contentType: 'application/json',
+          cacheControl: '3600'
+        }
+      );
+
+      if (!uploadResult.success) {
+        throw new Error(uploadResult.error || 'Failed to upload metadata');
+      }
+
+      console.log('✅ Metadata uploaded directly via SDK:', uploadResult.supabaseUrl);
+
+      return {
+        success: true,
+        metadataURI: uploadResult.supabaseUrl
+      };
+
+    } catch (error) {
+      console.error('❌ Direct metadata creation failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Metadata creation failed'
+      };
+    }
+  }
+
+  /**
+   * SDK-POWERED: Background image transfer
    */
   static async transferImageToSupabase(
     evermark: Evermark,
@@ -381,7 +526,7 @@ export class EvermarkService {
   }
 
   /**
-   * Keep your existing validation methods
+   * KEEP: Image file validation
    */
   static validateImageFile(file: File): { isValid: boolean; error?: string } {
     const maxSize = 10 * 1024 * 1024; // 10MB
@@ -405,7 +550,7 @@ export class EvermarkService {
   }
 
   /**
-   * Keep your existing metadata validation
+   * ENHANCED: Metadata validation with SDK utilities
    */
   static validateEvermarkMetadata(metadata: EvermarkMetadata): { 
     isValid: boolean; 
@@ -429,6 +574,7 @@ export class EvermarkService {
       errors.push({ field: 'author', message: 'Author is required' });
     }
 
+    // SDK URL VALIDATION
     if (metadata.sourceUrl && !isValidUrl(metadata.sourceUrl)) {
       errors.push({ field: 'sourceUrl', message: 'Invalid URL format' });
     }
@@ -448,18 +594,33 @@ export class EvermarkService {
   }
 
   /**
-   * NEW: Check if SDK is properly configured
+   * Check if SDK is properly configured
    */
   static isSDKConfigured(): boolean {
     try {
-      // Test core functions
-      const coreAvailable = !!(resolveImageSources && isValidUrl && isValidIpfsHash);
+      // Test core functions by calling them
+      const testInput = { supabaseUrl: 'https://test.com/image.jpg' };
+      const coreAvailable = !!(
+        typeof resolveImageSources === 'function' && 
+        typeof isValidUrl === 'function' && 
+        typeof isValidIpfsHash === 'function' &&
+        resolveImageSources(testInput).length >= 0 // Actually call the function
+      );
       
       // Test storage
-      const storageAvailable = !!(StorageOrchestrator && ensureImageInSupabase);
+      const storageAvailable = !!(
+        typeof StorageOrchestrator === 'function' && 
+        typeof ensureImageInSupabase === 'function'
+      );
       
       // Test configuration
-      const configAvailable = !!getEvermarkStorageConfig();
+      let configAvailable = false;
+      try {
+        const config = getEvermarkStorageConfig();
+        configAvailable = !!(config && config.supabase && config.ipfs);
+      } catch {
+        configAvailable = false;
+      }
       
       // Test blockchain
       const blockchainAvailable = EvermarkBlockchainService.isConfigured();
@@ -479,13 +640,13 @@ export class EvermarkService {
   }
 
   /**
-   * NEW: Get SDK status for debugging
+   * Get SDK status for debugging
    */
   static getSDKStatus() {
     return {
       packages: {
-        core: !!(resolveImageSources && isValidUrl),
-        storage: !!(StorageOrchestrator && ensureImageInSupabase),
+        core: !!(typeof resolveImageSources === 'function' && typeof isValidUrl === 'function'),
+        storage: !!(typeof StorageOrchestrator === 'function' && typeof ensureImageInSupabase === 'function'),
         configured: this.isSDKConfigured()
       },
       environment: {

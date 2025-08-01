@@ -1,10 +1,9 @@
 // =============================================================================
 // File: src/features/evermarks/services/APIService.ts
-// COMPLETE VERSION - Handles metadata URLs properly
+// FULLY SDK-INTEGRATED VERSION - Eliminates custom image handling
 // =============================================================================
 
 import { supabase } from '@/lib/supabase';
-import { SupabaseImageService } from './SupabaseImageService';
 import type { 
   Evermark, 
   EvermarkFeedOptions, 
@@ -12,10 +11,40 @@ import type {
   EvermarkDatabaseRow 
 } from '../types';
 
-// FIXED: Import validation types from correct location
+// SDK IMPORTS - Replace all custom utilities
+import { 
+  resolveImageSources,
+  isValidIpfsHash,
+  createIpfsUrl,
+  isValidUrl,
+  generateStoragePath,
+  validateStorageConfig,
+  type ImageSourceInput,
+  type StorageConfig,
+  ImageLoadingError,
+  StorageError
+} from '@ipfsnut/evermark-sdk-core';
+
+import { 
+  StorageOrchestrator,
+  type TransferResult 
+} from '@ipfsnut/evermark-sdk-storage';
+
+import { 
+  PerformanceMonitor,
+  type LoadMetrics 
+} from '@ipfsnut/evermark-sdk-browser';
+
+// Import configuration
+import { getEvermarkStorageConfig } from '../config/sdk-config';
+
+// Import validation types
 import type { ValidationResult, ValidationFieldError } from '@/utils/errors';
 
-// FIXED: Properly typed Supabase response with index signature for compatibility
+// SDK-POWERED PERFORMANCE MONITORING
+const performanceMonitor = new PerformanceMonitor();
+
+// SUPABASE ROW INTERFACE WITH INDEX SIGNATURE
 interface SupabaseEvermarkRow {
   token_id: number;
   title: string | null;
@@ -45,11 +74,10 @@ interface SupabaseEvermarkRow {
   metadata?: Record<string, any> | null;
   metadata_json?: Record<string, any> | null;
   ipfs_metadata?: Record<string, any> | null;
-  // FIXED: Add index signature to make it compatible with Supabase return types
   [key: string]: unknown;
 }
 
-// FIXED: Simple type guard that works with index signatures
+// TYPE GUARD WITH SDK VALIDATION
 function isValidSupabaseRow(data: { [x: string]: unknown }): data is SupabaseEvermarkRow {
   return data !== null &&
          typeof data === 'object' && 
@@ -60,12 +88,36 @@ function isValidSupabaseRow(data: { [x: string]: unknown }): data is SupabaseEve
 }
 
 export class APIService {
+  private static storageOrchestrator: StorageOrchestrator | null = null;
+
   /**
-   * FIXED: Enhanced fetch with proper error handling and type safety
+   * Initialize SDK storage orchestrator
+   */
+  private static getStorageOrchestrator(): StorageOrchestrator {
+    if (!this.storageOrchestrator) {
+      const storageConfig = getEvermarkStorageConfig();
+      const validation = validateStorageConfig(storageConfig);
+      
+      if (!validation.valid) {
+        throw new StorageError(
+          `Invalid storage configuration: ${validation.errors.join(', ')}`,
+          'CONFIG_ERROR'
+        );
+      }
+      
+      this.storageOrchestrator = new StorageOrchestrator(storageConfig);
+    }
+    return this.storageOrchestrator;
+  }
+
+  /**
+   * SDK-ENHANCED: Fetch evermarks with optimal image URLs
    */
   static async fetchEvermarks(options: EvermarkFeedOptions): Promise<EvermarkFeedResult> {
+    const startTime = Date.now();
+    
     try {
-      console.log('🔍 Fetching evermarks with hybrid image support:', options);
+      console.log('🔍 Fetching evermarks with SDK image optimization:', options);
       
       let query = supabase
         .from('evermarks')
@@ -88,18 +140,32 @@ export class APIService {
 
       if (error) {
         console.error('Supabase query error:', error);
-        throw new Error(`Database query failed: ${error.message}`);
+        throw new StorageError(`Database query failed: ${error.message}`, 'SUPABASE_ERROR');
       }
 
       console.log('✅ Successfully fetched', data?.length || 0, 'evermarks');
 
-      // FIXED: Use the simpler type guard approach
+      // VALIDATE AND TRANSFORM WITH SDK
       const validatedData = Array.isArray(data) ? data : [];
-      const evermarks = validatedData
-        .filter(isValidSupabaseRow)
-        .map((item) => this.transformSupabaseToEvermark(item));
+      const evermarks = await Promise.all(
+        validatedData
+          .filter(isValidSupabaseRow)
+          .map(async (item) => await this.transformSupabaseToEvermarkWithSDK(item))
+      );
       
       const totalPages = Math.ceil((count || 0) / validatedPageSize);
+      
+      // RECORD PERFORMANCE METRICS
+      performanceMonitor.recordLoad({
+        url: 'database_query',
+        source: 'supabase',
+        startTime,
+        endTime: Date.now(),
+        loadTime: Date.now() - startTime,
+        fromCache: false,
+        success: true,
+        retryCount: 0
+      });
       
       return {
         evermarks,
@@ -111,6 +177,19 @@ export class APIService {
       };
     } catch (error) {
       console.error('Error fetching evermarks:', error);
+      
+      // RECORD FAILED OPERATION
+      performanceMonitor.recordLoad({
+        url: 'database_query',
+        source: 'supabase',
+        startTime,
+        endTime: Date.now(),
+        loadTime: Date.now() - startTime,
+        fromCache: false,
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        retryCount: 0
+      });
       
       // Return partial result on error rather than complete failure
       return {
@@ -125,11 +204,13 @@ export class APIService {
   }
 
   /**
-   * FIXED: Enhanced single evermark fetch with proper validation
+   * SDK-ENHANCED: Fetch single evermark with optimal image URLs
    */
   static async fetchEvermark(id: string): Promise<Evermark | null> {
+    const startTime = Date.now();
+    
     try {
-      console.log('🔍 Fetching evermark with enhanced images:', id);
+      console.log('🔍 Fetching evermark with SDK image optimization:', id);
       
       // Validate ID format
       const tokenId = this.validateTokenId(id);
@@ -150,7 +231,7 @@ export class APIService {
           return null;
         }
         console.error('Database error:', error);
-        throw new Error(`Database query failed: ${error.message}`);
+        throw new StorageError(`Database query failed: ${error.message}`, 'SUPABASE_ERROR');
       }
 
       if (!data) {
@@ -158,55 +239,96 @@ export class APIService {
         return null;
       }
 
-      // FIXED: Use simple type guard validation
       if (!isValidSupabaseRow(data)) {
         console.error('Invalid data structure returned from database');
         return null;
       }
 
-      return this.transformSupabaseToEvermark(data);
+      // TRANSFORM WITH SDK
+      const evermark = await this.transformSupabaseToEvermarkWithSDK(data);
+      
+      // RECORD PERFORMANCE
+      performanceMonitor.recordLoad({
+        url: `evermark_${id}`,
+        source: 'supabase',
+        startTime,
+        endTime: Date.now(),
+        loadTime: Date.now() - startTime,
+        fromCache: false,
+        success: true,
+        retryCount: 0
+      });
+
+      return evermark;
     } catch (error) {
       console.error('Error fetching evermark:', error);
+      
+      // RECORD FAILED OPERATION
+      performanceMonitor.recordLoad({
+        url: `evermark_${id}`,
+        source: 'supabase',
+        startTime,
+        endTime: Date.now(),
+        loadTime: Date.now() - startTime,
+        fromCache: false,
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        retryCount: 0
+      });
+      
       throw error;
     }
   }
 
   /**
-   * FIXED: Transform Supabase data to Evermark with proper metadata handling
+   * SDK-POWERED: Transform Supabase data with optimal image resolution
    */
-  private static transformSupabaseToEvermark(supabaseData: SupabaseEvermarkRow): Evermark {
+  private static async transformSupabaseToEvermarkWithSDK(supabaseData: SupabaseEvermarkRow): Promise<Evermark> {
     try {
-      // FIXED: Null-safe property access with defaults
+      // SAFE PROPERTY ACCESS WITH DEFAULTS
       const safeTokenId = supabaseData.token_id || 0;
       const safeTitle = supabaseData.title || 'Untitled';
       const safeAuthor = supabaseData.author || 'Unknown Author';
       const safeCreatedAt = supabaseData.created_at || new Date().toISOString();
 
-      // FIXED: Get IPFS hash from multiple sources
+      // SDK-POWERED: Extract and validate IPFS hash
       let ipfsHash: string | undefined;
       
       // Priority 1: Direct ipfs_image_hash field
-      if (supabaseData.ipfs_image_hash) {
+      if (supabaseData.ipfs_image_hash && isValidIpfsHash(supabaseData.ipfs_image_hash)) {
         ipfsHash = supabaseData.ipfs_image_hash;
       }
       // Priority 2: Extract from stored metadata
-      else if (supabaseData.metadata?.image) {
-        ipfsHash = supabaseData.metadata.image.replace('ipfs://', '');
+      else if (supabaseData.metadata?.image && typeof supabaseData.metadata.image === 'string') {
+        const hashFromMetadata = supabaseData.metadata.image.replace('ipfs://', '');
+        if (isValidIpfsHash(hashFromMetadata)) {
+          ipfsHash = hashFromMetadata;
+        }
       }
       // Priority 3: Extract from processed_image_url (old gateway URLs)
       else if (supabaseData.processed_image_url) {
         const extractedHash = this.extractHashFromUrl(supabaseData.processed_image_url);
-        if (extractedHash) {
+        if (extractedHash && isValidIpfsHash(extractedHash)) {
           ipfsHash = extractedHash;
         }
       }
 
-      // FIXED: Get best available image URL using hybrid service
-      const imageUrl = SupabaseImageService.getImageUrl({
-        supabaseImageUrl: supabaseData.supabase_image_url || undefined,
-        processed_image_url: ipfsHash ? `https://gateway.pinata.cloud/ipfs/${ipfsHash}` : undefined,
-        ipfsHash: ipfsHash
+      // SDK-POWERED: Resolve optimal image URL using SDK
+      const imageSourceInput: ImageSourceInput = {
+        supabaseUrl: supabaseData.supabase_image_url || undefined,
+        thumbnailUrl: supabaseData.thumbnail_url || undefined,
+        processedUrl: supabaseData.processed_image_url || undefined,
+        ipfsHash: ipfsHash || undefined
+      };
+
+      // Get optimal image URL using SDK
+      const resolvedSources = resolveImageSources(imageSourceInput, {
+        maxSources: 1, // We just want the best one
+        includeIpfs: !!ipfsHash,
+        mobileOptimization: false
       });
+
+      const imageUrl = resolvedSources.length > 0 ? resolvedSources[0]!.url : undefined;
 
       return {
         id: safeTokenId.toString(),
@@ -228,7 +350,7 @@ export class APIService {
         updatedAt: supabaseData.updated_at || safeCreatedAt,
         lastSyncedAt: supabaseData.last_synced_at || undefined,
         
-        // Enhanced image fields with proper IPFS hash
+        // Enhanced image fields with SDK-resolved URLs
         imageStatus: this.mapImageStatus(supabaseData.image_processing_status),
         supabaseImageUrl: supabaseData.supabase_image_url || undefined,
         thumbnailUrl: supabaseData.thumbnail_url || undefined,
@@ -250,9 +372,9 @@ export class APIService {
         viewCount: 0
       };
     } catch (error) {
-      console.error('Error transforming Supabase data:', error);
+      console.error('Error transforming Supabase data with SDK:', error);
       
-      // FIXED: Return minimal valid object with safe defaults
+      // FALLBACK: Return minimal valid object with safe defaults
       const fallbackTokenId = supabaseData.token_id || 0;
       return {
         id: fallbackTokenId.toString(),
@@ -279,24 +401,26 @@ export class APIService {
   }
 
   /**
-   * Extract IPFS hash from URL (for legacy compatibility)
+   * SDK-POWERED: Extract IPFS hash from URL
    */
   private static extractHashFromUrl(url?: string | null): string | null {
     if (!url || typeof url !== 'string') return null;
     
     // Handle ipfs:// protocol
     if (url.startsWith('ipfs://')) {
-      return url.replace('ipfs://', '');
+      const hash = url.replace('ipfs://', '');
+      return isValidIpfsHash(hash) ? hash : null;
     }
     
     // Handle gateway URLs
     const gatewayMatch = url.match(/\/ipfs\/([^\/\?#]+)/);
-    if (gatewayMatch) {
-      return gatewayMatch[1];
+    if (gatewayMatch && gatewayMatch[1]) {
+      const hash = gatewayMatch[1];
+      return isValidIpfsHash(hash) ? hash : null;
     }
     
     // Direct hash validation
-    if (/^Qm[1-9A-HJ-NP-Za-km-z]{44}$/.test(url)) {
+    if (isValidIpfsHash(url)) {
       return url;
     }
     
@@ -304,17 +428,208 @@ export class APIService {
   }
 
   /**
-   * Enhanced validation with proper return types
+   * SDK-ENHANCED: Create evermark record with optimal storage paths
    */
+  static async createEvermarkRecord(evermarkData: {
+    tokenId: string;
+    title: string;
+    author: string;
+    description: string;
+    sourceUrl?: string;
+    metadataURI: string;
+    txHash: string;
+    supabaseImageUrl?: string;
+    thumbnailUrl?: string;
+    ipfsHash?: string;
+    contentType: string;
+    tags: string[];
+    fileSize?: number;
+    dimensions?: string;
+  }): Promise<{ success: boolean; id?: string; error?: string }> {
+    try {
+      // SDK VALIDATION
+      const validation = this.validateEvermarkData(evermarkData);
+      if (!validation.isValid) {
+        return { success: false, error: validation.error };
+      }
+
+      // SDK-GENERATED STORAGE PATH (if we have IPFS hash)
+      let optimizedStoragePath: string | undefined;
+      if (evermarkData.ipfsHash && isValidIpfsHash(evermarkData.ipfsHash)) {
+        try {
+          optimizedStoragePath = generateStoragePath(evermarkData.ipfsHash, {
+            prefix: 'evermarks',
+            includeHash: true,
+            extension: 'jpg'
+          });
+        } catch (error) {
+          console.warn('Failed to generate storage path:', error);
+        }
+      }
+
+      const insertData = {
+        token_id: parseInt(evermarkData.tokenId),
+        title: evermarkData.title.trim(),
+        author: evermarkData.author.trim(),
+        description: evermarkData.description.trim(),
+        source_url: evermarkData.sourceUrl?.trim(),
+        token_uri: evermarkData.metadataURI,
+        tx_hash: evermarkData.txHash,
+        
+        // SDK-ENHANCED: Optimized image fields
+        supabase_image_url: evermarkData.supabaseImageUrl,
+        thumbnail_url: evermarkData.thumbnailUrl,
+        processed_image_url: evermarkData.supabaseImageUrl, // Primary is Supabase now
+        ipfs_image_hash: evermarkData.ipfsHash,
+        image_file_size: evermarkData.fileSize,
+        image_dimensions: evermarkData.dimensions,
+        
+        content_type: evermarkData.contentType,
+        metadata: {
+          tags: evermarkData.tags || [],
+          contentType: evermarkData.contentType,
+          ipfsHash: evermarkData.ipfsHash,
+          sdkVersion: '1.1.0',
+          storagePath: optimizedStoragePath,
+          createdWith: 'evermark-beta-sdk'
+        },
+        verified: false,
+        metadata_fetched: true,
+        image_processing_status: evermarkData.supabaseImageUrl ? 'completed' : 'pending',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      const { data, error } = await supabase
+        .from('evermarks')
+        .insert([insertData])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Database insert error:', error);
+        
+        // Handle specific database errors
+        if (error.code === '23505') {
+          return { success: false, error: 'This evermark already exists' };
+        } else if (error.code === '23502') {
+          return { success: false, error: 'Missing required field' };
+        } else if (error.code === '22001') {
+          return { success: false, error: 'Content exceeds maximum length' };
+        }
+        
+        throw new StorageError(`Database insert failed: ${error.message}`, 'SUPABASE_ERROR');
+      }
+
+      if (!data || !isValidSupabaseRow(data)) {
+        return { success: false, error: 'Failed to process created record' };
+      }
+
+      console.log('✅ Successfully created evermark record with SDK optimization');
+      
+      return {
+        success: true,
+        id: data.token_id.toString()
+      };
+    } catch (error) {
+      console.error('Error creating evermark record:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to create record'
+      };
+    }
+  }
+
+  /**
+   * SDK-ENHANCED: Transfer IPFS image to Supabase using StorageOrchestrator
+   */
+  static async transferImageToSupabase(
+    ipfsHash: string,
+    onProgress?: (progress: any) => void
+  ): Promise<TransferResult> {
+    try {
+      if (!isValidIpfsHash(ipfsHash)) {
+        throw new ImageLoadingError('Invalid IPFS hash provided', 'INVALID_URL');
+      }
+
+      const orchestrator = this.getStorageOrchestrator();
+      
+      console.log('🔄 Starting SDK-powered IPFS → Supabase transfer:', ipfsHash);
+      
+      const result = await orchestrator.transferIPFSToSupabase(ipfsHash, onProgress);
+      
+      if (result.success) {
+        console.log('✅ SDK transfer completed successfully');
+      } else {
+        console.error('❌ SDK transfer failed:', result.error);
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('Transfer operation failed:', error);
+      return {
+        success: false,
+        ipfsHash,
+        transferTime: 0,
+        error: error instanceof Error ? error.message : 'Transfer failed'
+      };
+    }
+  }
+
+  /**
+   * SDK-ENHANCED: Health check with storage validation
+   */
+  static async healthCheck(): Promise<{ isHealthy: boolean; error?: string; sdkStatus?: any }> {
+    try {
+      // Test database connection
+      const { data, error } = await supabase
+        .from('evermarks')
+        .select('token_id')
+        .limit(1);
+      
+      if (error) {
+        return { isHealthy: false, error: error.message };
+      }
+
+      // Test SDK storage configuration
+      try {
+        const storageConfig = getEvermarkStorageConfig();
+        const validation = validateStorageConfig(storageConfig);
+        
+        return { 
+          isHealthy: true,
+          sdkStatus: {
+            storageConfigValid: validation.valid,
+            storageErrors: validation.errors,
+            performanceStats: performanceMonitor.getStats()
+          }
+        };
+      } catch (sdkError) {
+        return {
+          isHealthy: true, // Database is healthy
+          error: 'SDK configuration issue',
+          sdkStatus: {
+            storageConfigValid: false,
+            error: sdkError instanceof Error ? sdkError.message : 'Unknown SDK error'
+          }
+        };
+      }
+      
+    } catch (error) {
+      return { 
+        isHealthy: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
+
+  // KEEP ALL THE EXISTING HELPER METHODS (unchanged)
   private static validateTokenId(id: string): number | null {
     if (!id || typeof id !== 'string') return null;
     const tokenId = parseInt(id.trim());
     return !isNaN(tokenId) && tokenId > 0 ? tokenId : null;
   }
 
-  /**
-   * All the helper methods with proper null safety
-   */
   private static mapContentType(contentType?: string): Evermark['contentType'] {
     if (!contentType || typeof contentType !== 'string') return 'Custom';
     
@@ -346,14 +661,12 @@ export class APIService {
     try {
       const tags: string[] = [];
       
-      // Extract from metadata
       if (supabaseData.metadata?.tags && Array.isArray(supabaseData.metadata.tags)) {
         tags.push(...supabaseData.metadata.tags.filter(tag => 
           typeof tag === 'string' && tag.trim().length > 0
         ));
       }
       
-      // Extract from description if present
       if (supabaseData.description && typeof supabaseData.description === 'string') {
         const tagMatches = supabaseData.description.match(/Tags:\s*([^|]+)/i);
         if (tagMatches && tagMatches[1]) {
@@ -447,101 +760,6 @@ export class APIService {
     return { validatedPage, validatedPageSize };
   }
 
-  // Keep all the existing CRUD methods...
-  static async createEvermarkRecord(evermarkData: {
-    tokenId: string;
-    title: string;
-    author: string;
-    description: string;
-    sourceUrl?: string;
-    metadataURI: string;
-    txHash: string;
-    supabaseImageUrl?: string;
-    thumbnailUrl?: string;
-    ipfsHash?: string;
-    contentType: string;
-    tags: string[];
-    fileSize?: number;
-    dimensions?: string;
-  }): Promise<{ success: boolean; id?: string; error?: string }> {
-    try {
-      // Validation logic
-      const validation = this.validateEvermarkData(evermarkData);
-      if (!validation.isValid) {
-        return { success: false, error: validation.error };
-      }
-
-      const insertData = {
-        token_id: parseInt(evermarkData.tokenId),
-        title: evermarkData.title.trim(),
-        author: evermarkData.author.trim(),
-        description: evermarkData.description.trim(),
-        source_url: evermarkData.sourceUrl?.trim(),
-        token_uri: evermarkData.metadataURI,
-        tx_hash: evermarkData.txHash,
-        
-        // Hybrid image fields
-        supabase_image_url: evermarkData.supabaseImageUrl,
-        thumbnail_url: evermarkData.thumbnailUrl,
-        processed_image_url: evermarkData.supabaseImageUrl,
-        ipfs_image_hash: evermarkData.ipfsHash,
-        image_file_size: evermarkData.fileSize,
-        image_dimensions: evermarkData.dimensions,
-        
-        content_type: evermarkData.contentType,
-        metadata: {
-          tags: evermarkData.tags || [],
-          contentType: evermarkData.contentType,
-          ipfsHash: evermarkData.ipfsHash,
-          createdWith: 'evermark-beta-v2'
-        },
-        verified: false,
-        metadata_fetched: true,
-        image_processing_status: evermarkData.supabaseImageUrl ? 'completed' : 'pending',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-
-      const { data, error } = await supabase
-        .from('evermarks')
-        .insert([insertData])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Database insert error:', error);
-        
-        // Handle specific database errors
-        if (error.code === '23505') {
-          return { success: false, error: 'This evermark already exists' };
-        } else if (error.code === '23502') {
-          return { success: false, error: 'Missing required field' };
-        } else if (error.code === '22001') {
-          return { success: false, error: 'Content exceeds maximum length' };
-        }
-        
-        throw new Error(`Database insert failed: ${error.message}`);
-      }
-
-      if (!data || !isValidSupabaseRow(data)) {
-        return { success: false, error: 'Failed to process created record' };
-      }
-
-      console.log('✅ Successfully created evermark record');
-      
-      return {
-        success: true,
-        id: data.token_id.toString()
-      };
-    } catch (error) {
-      console.error('Error creating evermark record:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to create record'
-      };
-    }
-  }
-
   private static validateEvermarkData(data: any): { isValid: boolean; error?: string } {
     if (!data.tokenId || isNaN(parseInt(data.tokenId))) {
       return { isValid: false, error: 'Invalid token ID' };
@@ -567,26 +785,19 @@ export class APIService {
       return { isValid: false, error: 'Transaction hash is required' };
     }
     
-    return { isValid: true };
-  }
-
-  static async healthCheck(): Promise<{ isHealthy: boolean; error?: string }> {
-    try {
-      const { data, error } = await supabase
-        .from('evermarks')
-        .select('token_id')
-        .limit(1);
-      
-      if (error) {
-        return { isHealthy: false, error: error.message };
-      }
-      
-      return { isHealthy: true };
-    } catch (error) {
-      return { 
-        isHealthy: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
-      };
+    // SDK VALIDATION for URLs and IPFS hashes
+    if (data.sourceUrl && !isValidUrl(data.sourceUrl)) {
+      return { isValid: false, error: 'Invalid source URL format' };
     }
+    
+    if (data.supabaseImageUrl && !isValidUrl(data.supabaseImageUrl)) {
+      return { isValid: false, error: 'Invalid Supabase image URL format' };
+    }
+    
+    if (data.ipfsHash && !isValidIpfsHash(data.ipfsHash)) {
+      return { isValid: false, error: 'Invalid IPFS hash format' };
+    }
+    
+    return { isValid: true };
   }
 }
