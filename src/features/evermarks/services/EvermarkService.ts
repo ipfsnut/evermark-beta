@@ -9,41 +9,33 @@ import type {
   EvermarkFeedResult
 } from '../types';
 
+// SDK imports for enhanced functionality
 import { 
   resolveImageSources, 
   isValidUrl,
   isValidIpfsHash,
   createIpfsUrl,
-  type ImageSourceInput,
-  type SourceResolutionConfig
+  type ImageSourceInput
 } from '@ipfsnut/evermark-sdk-core';
 
 import { 
   StorageOrchestrator,
-  SupabaseStorageClient,
-  IPFSClient,
-  type TransferResult,
+  ensureImageInSupabase,
   type StorageFlowResult
 } from '@ipfsnut/evermark-sdk-storage';
 
-import { 
-  ImageLoader,
-  CORSHandler,
-  PerformanceMonitor,
-  type LoadImageResult
-} from '@ipfsnut/evermark-sdk-browser';
-
-// Keep existing services
+// Keep your existing service imports
 import { APIService } from './APIService';
 import { EvermarkBlockchainService } from './BlockchainService';
 import { MetadataService } from './MetadataService';
 import { FarcasterService } from './FarcasterService';
 
 // SDK configuration
-import { getEvermarkStorageConfig, getEvermarkStorageOrchestrator } from '../config/sdk-config';
+import { getEvermarkStorageConfig } from '../config/sdk-config';
 
 export class EvermarkService {
   
+  // Keep your existing static methods
   static getDefaultPagination(): EvermarkPagination {
     return {
       page: 1,
@@ -64,33 +56,96 @@ export class EvermarkService {
     };
   }
 
+  /**
+   * ENHANCED: Fetch evermarks with SDK-powered image optimization
+   */
   static async fetchEvermarks(options: EvermarkFeedOptions): Promise<EvermarkFeedResult> {
     const result = await APIService.fetchEvermarks(options);
     
     // Enhance evermarks with optimal image URLs using SDK
     if (result.evermarks) {
-      result.evermarks = result.evermarks.map(evermark => ({
-        ...evermark,
-        image: this.getOptimalImageUrl(evermark) || evermark.image
-      }));
+      result.evermarks = await Promise.all(
+        result.evermarks.map(async (evermark) => ({
+          ...evermark,
+          image: await this.getOptimalImageUrl(evermark) || evermark.image
+        }))
+      );
     }
     
     return result;
   }
 
+  /**
+   * ENHANCED: Fetch single evermark with SDK optimization
+   */
   static async fetchEvermark(id: string): Promise<Evermark | null> {
     const evermark = await APIService.fetchEvermark(id);
     
     if (evermark) {
-      // Enhance with optimal image URL
-      evermark.image = this.getOptimalImageUrl(evermark) || evermark.image;
+      // Enhance with optimal image URL using SDK
+      evermark.image = await this.getOptimalImageUrl(evermark) || evermark.image;
     }
     
     return evermark;
   }
 
   /**
-   * SDK-POWERED: Create evermark with complete hybrid storage
+   * NEW: SDK-powered optimal image URL resolution
+   */
+  static async getOptimalImageUrl(evermark: Evermark, preferThumbnail = false): Promise<string | undefined> {
+    try {
+      const sources: ImageSourceInput = {
+        supabaseUrl: evermark.supabaseImageUrl,
+        thumbnailUrl: evermark.thumbnailUrl,
+        processedUrl: evermark.processed_image_url,
+        ipfsHash: evermark.ipfsHash,
+        preferThumbnail
+      };
+
+      const resolvedSources = resolveImageSources(sources);
+      
+      // Return the highest priority available source
+      if (resolvedSources.length > 0) {
+        return resolvedSources[0]!.url;
+      }
+      
+      return undefined;
+    } catch (error) {
+      console.warn('Failed to resolve optimal image URL:', error);
+      
+      // Fallback to manual resolution (your existing logic)
+      if (preferThumbnail && evermark.thumbnailUrl) {
+        return evermark.thumbnailUrl;
+      }
+      
+      return evermark.supabaseImageUrl || 
+             evermark.processed_image_url || 
+             (evermark.ipfsHash ? createIpfsUrl(evermark.ipfsHash) : undefined);
+    }
+  }
+
+  /**
+   * NEW: SDK-powered image source resolution for debugging
+   */
+  static resolveAllImageSources(evermark: Evermark): any[] {
+    try {
+      const sources: ImageSourceInput = {
+        supabaseUrl: evermark.supabaseImageUrl,
+        thumbnailUrl: evermark.thumbnailUrl,
+        processedUrl: evermark.processed_image_url,
+        ipfsHash: evermark.ipfsHash,
+        preferThumbnail: false
+      };
+
+      return resolveImageSources(sources);
+    } catch (error) {
+      console.warn('Failed to resolve image sources:', error);
+      return [];
+    }
+  }
+
+  /**
+   * ENHANCED: Create evermark with SDK-powered image processing
    */
   static async createEvermark(input: CreateEvermarkInput, account?: any): Promise<CreateEvermarkResult> {
     try {
@@ -122,7 +177,6 @@ export class EvermarkService {
         };
       }
 
-      let storageResult: StorageFlowResult | null = null;
       let imageUrls: {
         supabaseUrl?: string;
         thumbnailUrl?: string;
@@ -131,41 +185,35 @@ export class EvermarkService {
         dimensions?: string;
       } = {};
 
-      // Process image with SDK if provided
+      // NEW: SDK-powered image processing
       if (input.image) {
         console.log('📸 Processing image with SDK...');
         
-        const orchestrator = getEvermarkStorageOrchestrator();
-        
-        // Create ImageSourceInput for the upload
-        const uploadInput: ImageSourceInput = {
-          supabaseUrl: undefined, // Will be set after upload
-          preferThumbnail: false
-        };
-
         try {
-          // Use the SDK's storage flow
-          storageResult = await orchestrator.ensureImageInSupabase(uploadInput, (progress) => {
-            console.log(`Upload progress: ${progress.percentage}% - ${progress.message}`);
-          });
-
-          if (storageResult && storageResult.finalUrl) {
-            imageUrls.supabaseUrl = storageResult.finalUrl;
-            
-            // Extract additional details from transfer result
-            if (storageResult.transferResult) {
-              imageUrls.fileSize = storageResult.transferResult.fileSize;
-              imageUrls.ipfsHash = storageResult.transferResult.ipfsHash;
+          const orchestrator = new StorageOrchestrator(getEvermarkStorageConfig());
+          
+          // Use SDK to upload directly to Supabase
+          const uploadResult = await orchestrator.supabaseClient.uploadFile(
+            input.image,
+            `uploads/${Date.now()}.${input.image.name.split('.').pop()}`,
+            {
+              onProgress: (progress) => {
+                console.log(`Upload progress: ${progress.percentage}%`);
+              }
             }
+          );
 
-            console.log('✅ Image processing completed:', imageUrls);
+          if (uploadResult.success && uploadResult.supabaseUrl) {
+            imageUrls.supabaseUrl = uploadResult.supabaseUrl;
+            imageUrls.fileSize = input.image.size;
+            console.log('✅ SDK image upload completed:', imageUrls);
           }
         } catch (uploadError) {
-          console.warn('Image upload failed, continuing without image:', uploadError);
+          console.warn('SDK image upload failed, continuing without image:', uploadError);
         }
       }
 
-      // Handle Farcaster cast data
+      // Handle Farcaster cast data (keep your existing logic)
       let castData;
       if (input.metadata.contentType === 'Cast' && input.metadata.castUrl) {
         try {
@@ -175,7 +223,7 @@ export class EvermarkService {
         }
       }
 
-      // Create and upload metadata
+      // Create and upload metadata (keep your existing logic)
       const metadataResult = await MetadataService.uploadMetadata(
         input.metadata, 
         imageUrls.supabaseUrl
@@ -188,7 +236,7 @@ export class EvermarkService {
         };
       }
 
-      // Mint to blockchain
+      // Mint to blockchain (keep your existing logic)
       const mintResult = await EvermarkBlockchainService.mintEvermark(
         account,
         metadataResult.metadataURI!,
@@ -206,7 +254,7 @@ export class EvermarkService {
 
       const tokenId = mintResult.tokenId!;
 
-      // Save to database with hybrid storage data
+      // Save to database with SDK image data
       try {
         const dbResult = await APIService.createEvermarkRecord({
           tokenId,
@@ -268,87 +316,72 @@ export class EvermarkService {
   }
 
   /**
-   * SDK-POWERED: Get optimal image URL with intelligent fallback
+   * NEW: SDK-powered background image transfer
+   * This can be called to transfer existing IPFS images to Supabase
    */
-  static getOptimalImageUrl(evermark: Evermark, preferThumbnail = false): string | undefined {
+  static async transferImageToSupabase(
+    evermark: Evermark,
+    onProgress?: (progress: any) => void
+  ): Promise<{ success: boolean; supabaseUrl?: string; error?: string }> {
     try {
-      const sources: ImageSourceInput = {
-        supabaseUrl: evermark.supabaseImageUrl,
-        thumbnailUrl: evermark.thumbnailUrl,
-        processedUrl: evermark.processed_image_url,
-        ipfsHash: evermark.ipfsHash,
-        preferThumbnail
-      };
-
-      const resolvedSources = resolveImageSources(sources);
-      
-      // Return the highest priority available source
-      return resolvedSources.length > 0 ? resolvedSources[0]!.url : undefined;
-    } catch (error) {
-      console.warn('Failed to resolve optimal image URL:', error);
-      
-      // Fallback to manual resolution
-      if (preferThumbnail && evermark.thumbnailUrl) {
-        return evermark.thumbnailUrl;
+      if (!evermark.ipfsHash) {
+        return { success: false, error: 'No IPFS hash available for transfer' };
       }
+
+      console.log(`🔄 Starting SDK transfer for evermark #${evermark.tokenId}`);
+
+      const storageConfig = getEvermarkStorageConfig();
       
-      return evermark.supabaseImageUrl || 
-             evermark.processed_image_url || 
-             (evermark.ipfsHash ? createIpfsUrl(evermark.ipfsHash) : undefined);
-    }
-  }
+      const result: StorageFlowResult = await ensureImageInSupabase(
+        { ipfsHash: evermark.ipfsHash },
+        storageConfig,
+        onProgress
+      );
 
-  /**
-   * SDK-POWERED: Resolve all available image sources
-   */
-  static resolveImageSources(evermark: Evermark): any[] {
-    try {
-      const sources: ImageSourceInput = {
-        supabaseUrl: evermark.supabaseImageUrl,
-        thumbnailUrl: evermark.thumbnailUrl,
-        processedUrl: evermark.processed_image_url,
-        ipfsHash: evermark.ipfsHash,
-        preferThumbnail: false
-      };
-
-      return resolveImageSources(sources);
-    } catch (error) {
-      console.warn('Failed to resolve image sources:', error);
-      return [];
-    }
-  }
-
-  /**
-   * SDK-POWERED: Test image loading with fallbacks
-   */
-  static async testImageLoading(evermark: Evermark): Promise<LoadImageResult> {
-    try {
-      const sources = this.resolveImageSources(evermark);
-      
-      if (sources.length === 0) {
+      if (result.transferPerformed && result.transferResult?.supabaseUrl) {
+        console.log(`✅ Transfer completed for evermark #${evermark.tokenId}`);
         return {
-          success: false,
-          error: 'No image sources available'
+          success: true,
+          supabaseUrl: result.transferResult.supabaseUrl
+        };
+      } else {
+        return {
+          success: true,
+          supabaseUrl: result.finalUrl
         };
       }
 
-      const imageLoader = new ImageLoader({
-        debug: process.env.NODE_ENV === 'development',
-        timeout: 8000,
-        maxRetries: 2
-      });
-
-      return await imageLoader.loadImage(sources);
     } catch (error) {
+      console.error(`❌ Transfer failed for evermark #${evermark.tokenId}:`, error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Image loading test failed'
+        error: error instanceof Error ? error.message : 'Transfer failed'
       };
     }
   }
 
   /**
-   * Validate image file
+   * Enhanced search with SDK optimization
+   */
+  static async searchEvermarks(
+    query: string, 
+    options: Partial<EvermarkFeedOptions> = {}
+  ): Promise<EvermarkFeedResult> {
+    const searchOptions: EvermarkFeedOptions = {
+      ...this.getDefaultPagination(),
+      ...options,
+      filters: {
+        ...this.getDefaultFilters(),
+        ...options.filters,
+        search: query
+      }
+    };
+    
+    return this.fetchEvermarks(searchOptions);
+  }
+
+  /**
+   * Keep your existing validation methods
    */
   static validateImageFile(file: File): { isValid: boolean; error?: string } {
     const maxSize = 10 * 1024 * 1024; // 10MB
@@ -372,27 +405,7 @@ export class EvermarkService {
   }
 
   /**
-   * Enhanced search with image optimization
-   */
-  static async searchEvermarks(
-    query: string, 
-    options: Partial<EvermarkFeedOptions> = {}
-  ): Promise<EvermarkFeedResult> {
-    const searchOptions: EvermarkFeedOptions = {
-      ...this.getDefaultPagination(),
-      ...options,
-      filters: {
-        ...this.getDefaultFilters(),
-        ...options.filters,
-        search: query
-      }
-    };
-    
-    return this.fetchEvermarks(searchOptions);
-  }
-
-  /**
-   * Validate evermark metadata
+   * Keep your existing metadata validation
    */
   static validateEvermarkMetadata(metadata: EvermarkMetadata): { 
     isValid: boolean; 
@@ -435,7 +448,7 @@ export class EvermarkService {
   }
 
   /**
-   * Check if SDK is properly configured
+   * NEW: Check if SDK is properly configured
    */
   static isSDKConfigured(): boolean {
     try {
@@ -443,10 +456,7 @@ export class EvermarkService {
       const coreAvailable = !!(resolveImageSources && isValidUrl && isValidIpfsHash);
       
       // Test storage
-      const storageAvailable = !!(StorageOrchestrator && SupabaseStorageClient);
-      
-      // Test browser
-      const browserAvailable = !!(ImageLoader && CORSHandler);
+      const storageAvailable = !!(StorageOrchestrator && ensureImageInSupabase);
       
       // Test configuration
       const configAvailable = !!getEvermarkStorageConfig();
@@ -457,12 +467,11 @@ export class EvermarkService {
       console.log('🔧 SDK Configuration Status:', {
         core: coreAvailable,
         storage: storageAvailable,
-        browser: browserAvailable,
         config: configAvailable,
         blockchain: blockchainAvailable
       });
       
-      return coreAvailable && storageAvailable && browserAvailable && configAvailable && blockchainAvailable;
+      return coreAvailable && storageAvailable && configAvailable && blockchainAvailable;
     } catch (error) {
       console.error('SDK configuration check failed:', error);
       return false;
@@ -470,45 +479,21 @@ export class EvermarkService {
   }
 
   /**
-   * Get detailed SDK status for debugging
+   * NEW: Get SDK status for debugging
    */
   static getSDKStatus() {
     return {
       packages: {
-        core: {
-          available: !!(resolveImageSources && isValidUrl),
-          functions: ['resolveImageSources', 'isValidUrl', 'isValidIpfsHash', 'createIpfsUrl']
-        },
-        storage: {
-          available: !!(StorageOrchestrator && SupabaseStorageClient),
-          classes: ['StorageOrchestrator', 'SupabaseStorageClient', 'IPFSClient']
-        },
-        browser: {
-          available: !!(ImageLoader && CORSHandler),
-          classes: ['ImageLoader', 'CORSHandler', 'PerformanceMonitor']
-        }
+        core: !!(resolveImageSources && isValidUrl),
+        storage: !!(StorageOrchestrator && ensureImageInSupabase),
+        configured: this.isSDKConfigured()
       },
       environment: {
         supabase: {
           url: !!import.meta.env.VITE_SUPABASE_URL,
           key: !!import.meta.env.VITE_SUPABASE_ANON_KEY
         },
-        pinata: !!import.meta.env.VITE_PINATA_JWT,
         blockchain: EvermarkBlockchainService.isConfigured()
-      },
-      configuration: {
-        storageConfig: (() => {
-          try {
-            const config = getEvermarkStorageConfig();
-            return {
-              available: true,
-              bucketName: config.supabase.bucketName,
-              ipfsGateway: config.ipfs.gateway
-            };
-          } catch {
-            return { available: false };
-          }
-        })()
       }
     };
   }
