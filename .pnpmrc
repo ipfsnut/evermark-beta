@@ -1,0 +1,19 @@
+# .pnpmrc for evermark-beta main app
+# Place this in the root of the main app directory
+
+# Peer dependency handling - Allow React 18 compatibility
+strict-peer-dependencies=false
+auto-install-peers=true
+
+# Performance
+store-dir=~/.pnpm-store
+cache-dir=~/.pnpm-cache
+
+# Security
+verify-store-integrity=true
+
+# Development experience
+save-prefix=""
+
+# Registry
+registry=https://registry.npmjs.org/

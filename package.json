@@ -23,10 +23,10 @@
   "dependencies": {
     "@farcaster/frame-sdk": "^0.0.53",
     "@farcaster/frame-wagmi-connector": "^0.0.42",
-    "@ipfsnut/evermark-sdk-browser": "^1.1.0",
-    "@ipfsnut/evermark-sdk-core": "^1.1.0",
-    "@ipfsnut/evermark-sdk-react": "^1.1.0",
-    "@ipfsnut/evermark-sdk-storage": "^1.1.0",
+    "@ipfsnut/evermark-sdk-browser": "1.1.1",
+    "@ipfsnut/evermark-sdk-core": "1.1.1",
+    "@ipfsnut/evermark-sdk-react": "1.1.1",
+    "@ipfsnut/evermark-sdk-storage": "1.1.1",
     "@supabase/storage-js": "^2.5.5",
     "@supabase/supabase-js": "^2.52.1",
     "@tanstack/react-query": "^5.59.20",
@@ -34,8 +34,8 @@
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.1",
     "lucide-react": "^0.460.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "react-router-dom": "^7.6.2",
     "thirdweb": "^5.101.1",
     "viem": "^2.21.54",
@@ -45,8 +45,8 @@
     "@eslint/js": "^9.15.0",
     "@netlify/functions": "^2.8.0",
     "@types/node": "^22.15.21",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
+    "@types/react": "^18.2.79",
+    "@types/react-dom": "^18.2.25",
     "@typescript-eslint/eslint-plugin": "^8.15.0",
     "@typescript-eslint/parser": "^8.15.0",
     "@vitejs/plugin-react": "^4.3.4",
@@ -69,17 +69,19 @@
     "node": ">=18.0.0"
   },
   "overrides": {
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
+    "@types/react": "^18.2.79",
+    "@types/react-dom": "^18.2.25",
     "use-sync-external-store": "^1.2.2"
   },
   "resolutions": {
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
+    "@types/react": "^18.2.79",
+    "@types/react-dom": "^18.2.25",
     "use-sync-external-store": "^1.2.2"
   },
   "pnpm": {
     "overrides": {
+      "@types/react": "^18.2.79",
+      "@types/react-dom": "^18.2.25",
       "use-sync-external-store": "^1.2.2"
     }
   }

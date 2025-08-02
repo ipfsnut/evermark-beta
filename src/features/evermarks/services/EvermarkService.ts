@@ -1,7 +1,3 @@
-// =============================================================================
-// File: src/features/evermarks/services/EvermarkService.ts
-// NO METADATASERVICE - Direct SDK integration for all metadata operations
-// =============================================================================
 
 import type { 
   Evermark,
@@ -221,7 +217,8 @@ export class EvermarkService {
         console.log('📸 Processing image with SDK...');
         
         try {
-          const orchestrator = this.getStorageOrchestrator();
+          // FIXED: Get storage config directly instead of accessing private property
+          const storageConfig = getEvermarkStorageConfig();
           
           // Generate optimal storage path
           const timestamp = Date.now();
@@ -229,9 +226,8 @@ export class EvermarkService {
           const storagePath = `evermarks/${timestamp}.${extension}`;
           
           // Use SDK to upload directly to Supabase
-          const supabaseClient = new (await import('@ipfsnut/evermark-sdk-storage')).SupabaseStorageClient(
-            orchestrator.config.supabase
-          );
+          const { SupabaseStorageClient } = await import('@ipfsnut/evermark-sdk-storage');
+          const supabaseClient = new SupabaseStorageClient(storageConfig.supabase);
           
           const uploadResult = await supabaseClient.uploadFile(
             input.image,
@@ -355,6 +351,7 @@ export class EvermarkService {
 
   /**
    * DIRECT METADATA CREATION (Replaces MetadataService.uploadMetadata)
+   * FIXED: Added missing storageConfig declaration
    */
   private static async createMetadataDirectly(
     metadata: EvermarkMetadata, 
@@ -419,6 +416,9 @@ export class EvermarkService {
         });
       }
 
+      // FIXED: Get storage config at the right scope
+      const storageConfig = getEvermarkStorageConfig();
+      
       // Upload metadata to Supabase via SDK
       const { SupabaseStorageClient } = await import('@ipfsnut/evermark-sdk-storage');
       const supabaseClient = new SupabaseStorageClient(storageConfig.supabase);
