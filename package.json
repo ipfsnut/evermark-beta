@@ -17,8 +17,8 @@
     "test:coverage": "vitest --coverage",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
-    "migrate:legacy": "node migrate-legacy-evermarks.js",
-    "migrate:dry": "DRY_RUN=true node migrate-legacy-evermarks.js"
+    "migrate:legacy": "npx tsx fix-legacy-evermarks.ts",
+    "migrate:dry": "DRY_RUN=true npx tsx fix-legacy-evermarks.ts"
   },
   "dependencies": {
     "@farcaster/frame-sdk": "^0.0.53",
