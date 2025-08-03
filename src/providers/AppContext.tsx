@@ -1,8 +1,9 @@
 // src/providers/AppContext.tsx
-// Enhanced App Context with better error handling and UI state
+// Enhanced App Context that consumes IntegratedUserProvider
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useActiveAccount, useActiveWallet } from 'thirdweb/react';
+import { useIntegratedUser } from './IntegratedUserProvider'; // NEW: Import integrated user
 
 interface User {
   address?: string;
@@ -11,6 +12,11 @@ interface User {
   avatar?: string;
   pfpUrl?: string;
   ensName?: string;
+  // NEW: Enhanced user fields
+  farcasterFid?: number;
+  farcasterUsername?: string;
+  identityScore?: number;
+  authType?: 'farcaster' | 'ens' | 'wallet' | 'hybrid';
 }
 
 interface Notification {
@@ -25,9 +31,14 @@ interface Notification {
 type Theme = 'dark' | 'light' | 'system';
 
 interface AppContextType {
-  // Authentication state
+  // Authentication state - ENHANCED with integrated user
   isAuthenticated: boolean;
   user: User | null;
+  
+  // NEW: Identity information
+  identityScore: number;
+  primaryIdentity: 'farcaster' | 'ens' | 'wallet' | null;
+  hasMultipleIdentities: boolean;
   
   // Wallet state
   isConnecting: boolean;
@@ -83,6 +94,21 @@ interface AppProviderProps {
 export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const account = useActiveAccount();
   const wallet = useActiveWallet();
+  
+  // NEW: Get integrated user data
+  const {
+    user: integratedUser,
+    isLoading: integratedUserLoading,
+    hasWallet,
+    hasFarcaster,
+    hasENS,
+    isFullyAuthenticated,
+    getPrimaryIdentity,
+    getIdentityScore,
+    getDisplayName,
+    getAvatar,
+    getPrimaryAddress
+  } = useIntegratedUser();
   
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
@@ -159,25 +185,48 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     return
   }, [theme]);
 
-  // Update user when account changes
+  // NEW: Update user from integrated user provider
   useEffect(() => {
-    if (account?.address) {
-      console.log('👤 Account connected:', account.address);
+    if (integratedUser) {
+      console.log('👤 Integrated user updated:', {
+        displayName: getDisplayName(),
+        source: integratedUser.source,
+        identityScore: getIdentityScore()
+      });
+      
+      setUser({
+        address: getPrimaryAddress(),
+        displayName: getDisplayName(),
+        username: integratedUser.farcaster?.username,
+        avatar: getAvatar(),
+        pfpUrl: getAvatar(), // Alias for backward compatibility
+        ensName: integratedUser.ens?.name,
+        // Enhanced fields
+        farcasterFid: integratedUser.farcaster?.fid,
+        farcasterUsername: integratedUser.farcaster?.username,
+        identityScore: getIdentityScore(),
+        authType: integratedUser.source
+      });
+      
+      setConnectionError(null);
+    } else if (account?.address && !integratedUserLoading) {
+      // Fallback to basic wallet user if integrated user isn't available
+      console.log('👤 Fallback to basic wallet user:', account.address);
       
       setUser({
         address: account.address,
         displayName: account.address.slice(0, 6) + '...' + account.address.slice(-4),
         username: account.address.slice(0, 8),
         avatar: `https://api.dicebear.com/7.x/shapes/svg?seed=${account.address}`,
-        pfpUrl: `https://api.dicebear.com/7.x/shapes/svg?seed=${account.address}`, // Same as avatar for now
+        pfpUrl: `https://api.dicebear.com/7.x/shapes/svg?seed=${account.address}`,
+        identityScore: 10, // Low score for wallet-only
+        authType: 'wallet'
       });
-      
-      setConnectionError(null);
-    } else {
-      console.log('👤 No account connected');
+    } else if (!integratedUserLoading) {
+      console.log('👤 No user available');
       setUser(null);
     }
-  }, [account]);
+  }, [integratedUser, account, integratedUserLoading, getDisplayName, getAvatar, getPrimaryAddress, getIdentityScore]);
 
   // Monitor wallet connection state
   useEffect(() => {
@@ -189,7 +238,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   }, [wallet]);
 
   const requireAuth = async (): Promise<boolean> => {
-    if (account?.address) {
+    // NEW: Use integrated authentication check
+    if (isFullyAuthenticated) {
       return true;
     }
 
@@ -206,7 +256,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       // Wait a bit to see if account becomes available
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      if (account?.address) {
+      if (isFullyAuthenticated) {
         return true;
       }
       
@@ -311,13 +361,23 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   // Calculate unread count
   const unreadCount = notifications.filter(n => !n.read).length;
 
+  // NEW: Enhanced identity information
+  const identityScore = getIdentityScore();
+  const primaryIdentity = getPrimaryIdentity();
+  const hasMultipleIdentities = (hasWallet && hasFarcaster) || (hasWallet && hasENS) || (hasFarcaster && hasENS);
+
   const value: AppContextType = {
-    // Authentication state
-    isAuthenticated: !!account?.address,
+    // Authentication state - ENHANCED
+    isAuthenticated: isFullyAuthenticated,
     user,
     
+    // NEW: Identity information
+    identityScore,
+    primaryIdentity,
+    hasMultipleIdentities,
+    
     // Wallet state  
-    isConnecting,
+    isConnecting: isConnecting || integratedUserLoading,
     connectionError,
     
     // UI state

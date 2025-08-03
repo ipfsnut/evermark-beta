@@ -3,8 +3,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThirdwebProvider } from 'thirdweb/react';
 
 import { FarcasterProvider } from '../lib/farcaster';
-  import { WalletProvider } from './WalletProvider';
+import { WalletProvider } from './WalletProvider';
 import { BlockchainProvider } from './BlockchainProvider';
+import { IntegratedUserProvider } from './IntegratedUserProvider'; // NOW INCLUDED
 import { AppContextProvider } from './AppContext';
 
 interface AppProvidersProps {
@@ -35,13 +36,14 @@ const queryClient = new QueryClient({
 });
 
 /**
- * AppProviders - Combines all global providers with proper order:
+ * AppProviders - UPDATED ORDER with IntegratedUserProvider:
  * 1. React Query (data management)
  * 2. Thirdweb Provider (blockchain SDK)
  * 3. Farcaster Provider (authentication & context detection)
  * 4. Wallet Provider (wallet connection management)
  * 5. Blockchain Provider (contract interactions)
- * 6. App Context (unified state management)
+ * 6. IntegratedUserProvider (UNIFIED USER MANAGEMENT) ← NEW
+ * 7. App Context (app-level state) ← RECEIVES INTEGRATED USER
  */
 export function AppProviders({ children }: AppProvidersProps) {
   return (
@@ -50,9 +52,11 @@ export function AppProviders({ children }: AppProvidersProps) {
         <FarcasterProvider>
           <WalletProvider>
             <BlockchainProvider>
-              <AppContextProvider>
-                {children}
-              </AppContextProvider>
+              <IntegratedUserProvider>
+                <AppContextProvider>
+                  {children}
+                </AppContextProvider>
+              </IntegratedUserProvider>
             </BlockchainProvider>
           </WalletProvider>
         </FarcasterProvider>

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useActiveAccount } from 'thirdweb/react';
 import { useFarcasterUser } from '../lib/farcaster';
-import { EnhancedUserService, type EnhancedUser } from '../services/';
+import { EnhancedUserService, type EnhancedUser } from '../services';
 
 interface IntegratedUserContextType {
   // Current user (unified profile)
