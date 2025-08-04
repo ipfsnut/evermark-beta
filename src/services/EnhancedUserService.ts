@@ -1,6 +1,3 @@
-// src/services/EnhancedUserService.ts
-// Complete user service with ENS resolution
-
 import { farcasterUserService, type AppFarcasterUser } from './FarcasterUserService';
 
 // Export the service as both named and default for compatibility
