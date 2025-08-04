@@ -3,6 +3,9 @@ import {
   type StorageConfig 
 } from '@ipfsnut/evermark-sdk-core';
 
+// IMPORT OUR EXISTING SINGLETON
+import { supabase } from '@/lib/supabase';
+
 import {
   CacheManager,
   PerformanceMonitor,
@@ -46,12 +49,12 @@ export const corsHandler = new CORSHandler({
 });
 
 // =================
-// CONFIGURATION FUNCTIONS
+// CONFIGURATION FUNCTIONS - FIXED
 // =================
 
 /**
- * Create storage configuration from environment variables
- * This replaces the existing getEvermarkStorageConfig function
+ * FIXED: Create storage configuration using our existing Supabase client
+ * This prevents creating duplicate clients
  */
 export function createEvermarkStorageConfig(): StorageConfig {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -61,12 +64,24 @@ export function createEvermarkStorageConfig(): StorageConfig {
     throw new Error('Missing required environment variables: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY');
   }
 
-  return createDefaultStorageConfig(supabaseUrl, supabaseKey, 'evermark-images');
+  // FIXED: Return config that uses our existing client instead of creating new ones
+  return {
+    supabase: {
+      url: supabaseUrl,
+      anonKey: supabaseKey,
+      // CRITICAL: Pass our existing client instance
+      client: supabase,
+    },
+    ipfs: {
+      gateway: 'https://gateway.pinata.cloud',
+    },
+    bucket: 'evermark-images'
+  };
 }
 
 /**
- * Enhanced version of your existing getEvermarkStorageConfig
- * Maintains the same interface for backward compatibility
+ * Enhanced version with performance monitoring integration
+ * FIXED: Uses existing client
  */
 export function getEvermarkStorageConfig(): StorageConfig {
   return createEvermarkStorageConfig();
@@ -90,7 +105,9 @@ export function getDefaultImageLoaderOptions() {
     },
     supabase: {
       url: import.meta.env.VITE_SUPABASE_URL || '',
-      anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+      anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+      // FIXED: Use our existing client
+      client: supabase
     },
     // NEW: Performance monitoring integration
     onLoad: (metrics: LoadMetrics) => {
@@ -204,7 +221,7 @@ export function getAdaptiveImageLoaderOptions() {
 }
 
 /**
- * Upload configuration for the SDK
+ * Upload configuration for the SDK - FIXED: Uses existing client
  */
 export function getUploadOptions() {
   return {
@@ -212,6 +229,8 @@ export function getUploadOptions() {
     allowedTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
     maxFileSize: 10 * 1024 * 1024, // 10MB
     debug: import.meta.env.NODE_ENV === 'development',
+    // FIXED: Use our existing Supabase client
+    supabaseClient: supabase,
     // NEW: Progress tracking
     onProgress: (progress: any) => {
       if (import.meta.env.NODE_ENV === 'development') {
