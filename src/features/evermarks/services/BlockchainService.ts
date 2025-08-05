@@ -14,8 +14,7 @@ import {
   StorageError,
   isValidUrl,
   validateStorageConfig
-} from '@ipfsnut/evermark-sdk-core';
-
+} from 'evermark-sdk/core';
 // SDK configuration for validation
 import { getEvermarkStorageConfig } from '../config/sdk-config';
 

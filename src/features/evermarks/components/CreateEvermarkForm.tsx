@@ -12,9 +12,8 @@ import {
   ZapIcon
 } from 'lucide-react';
 
-// SDK imports
-import { ImageUpload } from '@ipfsnut/evermark-sdk-react';
-import type { StorageConfig } from '@ipfsnut/evermark-sdk-core';
+import { ImageUpload } from 'evermark-sdk/react';
+import type { StorageConfig } from 'evermark-sdk/core';
 
 import { useEvermarksState } from '../hooks/useEvermarkState';
 import { type CreateEvermarkInput, type EvermarkMetadata } from '../types';

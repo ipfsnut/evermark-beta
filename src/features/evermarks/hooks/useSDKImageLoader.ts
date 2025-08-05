@@ -1,10 +1,16 @@
-// src/features/evermarks/hooks/useSDKImageLoader.ts
-// Custom hook that wraps the SDK React hook with your specific needs
+import { 
+  useImageLoader, 
+  type UseImageLoaderOptions, 
+  type UseImageLoaderResult 
+} from 'evermark-sdk/react';
 
-import { useImageLoader, type UseImageLoaderOptions, type UseImageLoaderResult } from '@ipfsnut/evermark-sdk-react';
-import { getDefaultImageLoaderOptions, getMobileImageLoaderOptions } from '../config/sdk-config';
+import { 
+  getDefaultImageLoaderOptions, 
+  getMobileImageLoaderOptions 
+} from '../config/sdk-config';
+
 import type { Evermark } from '../types';
-import type { ImageSourceInput } from '@ipfsnut/evermark-sdk-core';
+import type { ImageSourceInput } from 'evermark-sdk/core';
 
 interface UseSDKImageLoaderOptions {
   evermark: Evermark;
@@ -16,7 +22,6 @@ interface UseSDKImageLoaderOptions {
 }
 
 interface UseSDKImageLoaderResult extends UseImageLoaderResult {
-  // Additional methods specific to evermarks
   reload: () => void;
   getDebugInfo: () => {
     sources: any[];
@@ -46,7 +51,8 @@ export function useSDKImageLoader({
     preferThumbnail: variant === 'compact' || variant === 'list'
   };
 
-  // Get appropriate options based on variant
+  // MOBILE-FIRST: Use mobile options for compact/list, default for others
+  // The app is telling us it wants this optimization
   const baseOptions = variant === 'compact' || variant === 'list' 
     ? getMobileImageLoaderOptions() 
     : getDefaultImageLoaderOptions();
@@ -55,7 +61,7 @@ export function useSDKImageLoader({
   const options: UseImageLoaderOptions = {
     ...baseOptions,
     autoLoad,
-    debug: debug || process.env.NODE_ENV === 'development',
+    debug: debug || import.meta.env.DEV, // FIXED: Use import.meta.env
     resolution: {
       ...baseOptions.resolution,
       preferThumbnail: variant === 'compact' || variant === 'list',
@@ -91,7 +97,7 @@ export function useSDKImageLoader({
   // Log progress if handler provided
   if (onProgress && result.isLoading) {
     const phase = result.currentSource ? `Loading from ${result.currentSource}` : 'Preparing';
-    const percentage = result.attempts.length * 25; // Rough progress estimate
+    const percentage = result.attempts.length * 25;
     onProgress({ phase, percentage });
   }
 

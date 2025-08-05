@@ -17,8 +17,13 @@ import { formatDistanceToNow } from 'date-fns';
 import { EvermarkImage } from '@ipfsnut/evermark-sdk-react';
 import { type Evermark } from '../types';
 
-// NEW: Import performance monitoring
-import { performanceMonitor, cacheManager, getDebugImageLoaderOptions } from '../config/sdk-config';
+// FIXED: Import performance monitoring
+import { 
+  performanceMonitor, 
+  cacheManager, 
+  getDebugImageLoaderOptions,
+  getEvermarkStorageConfig 
+} from '../config/sdk-config';
 
 interface EvermarkCardProps {
   evermark: Evermark;
@@ -28,8 +33,8 @@ interface EvermarkCardProps {
   showViews?: boolean;
   showDescription?: boolean;
   showImage?: boolean;
-  showPerformanceInfo?: boolean; // NEW: Show performance metrics in debug mode
-  enableRetry?: boolean; // NEW: Show retry button on image load failures
+  showPerformanceInfo?: boolean;
+  enableRetry?: boolean;
   className?: string;
 }
 
@@ -102,35 +107,7 @@ export function EvermarkCard({
     }
   };
 
-  // Enhanced SDK configuration with performance monitoring
-  const getSDKConfig = () => {
-    const baseConfig = {
-      resolution: {
-        preferThumbnail: variant === 'compact' || variant === 'list',
-        maxSources: 3,
-        includeIpfs: true,
-        mobileOptimization: variant === 'compact' || variant === 'list'
-      },
-      loaderOptions: showPerformanceInfo ? 
-        getDebugImageLoaderOptions() : 
-        {
-          debug: import.meta.env.NODE_ENV === 'development',
-          timeout: variant === 'list' ? 5000 : 8000,
-          maxRetries: 2,
-          useCORS: true,
-          // NEW: Performance tracking
-          onLoad: (url: string, fromCache: boolean) => {
-            if (showPerformanceInfo) {
-              console.log(`🖼️ Card image loaded: ${fromCache ? 'CACHE' : 'NETWORK'} - ${url.substring(0, 50)}...`);
-            }
-          }
-        }
-    };
-
-    return baseConfig;
-  };
-
-  // NEW: Check if image is cached for performance indicator
+  // FIXED: Check if image is cached for performance indicator
   const isImageCached = () => {
     if (!evermark.supabaseImageUrl && !evermark.thumbnailUrl) return false;
     
@@ -141,7 +118,7 @@ export function EvermarkCard({
     return primaryUrl ? cacheManager.has(primaryUrl) : false;
   };
 
-  // NEW: Get performance stats for this specific image
+  // FIXED: Get performance stats for this specific image
   const getImagePerformanceInfo = () => {
     if (!showPerformanceInfo) return null;
     
@@ -152,13 +129,13 @@ export function EvermarkCard({
     
     return {
       cached: isImageCached(),
-      totalLoads: stats.totalLoads,
-      cacheHitRate: stats.cacheHitRate,
-      averageLoadTime: stats.averageLoadTime
+      totalLoads: stats?.totalLoads || 0,
+      cacheHitRate: stats?.cacheHitRate || 0,
+      averageLoadTime: stats?.averageLoadTime || 0
     };
   };
 
-  // NEW: Performance indicator component
+  // FIXED: Performance indicator component
   const PerformanceIndicator = () => {
     const perfInfo = getImagePerformanceInfo();
     if (!perfInfo || !showPerformanceInfo) return null;
@@ -186,7 +163,7 @@ export function EvermarkCard({
     );
   };
 
-  // NEW: Enhanced error placeholder with retry functionality
+  // Enhanced error placeholder with retry functionality
   const EnhancedErrorPlaceholder = ({ onRetry }: { onRetry?: () => void }) => (
     <div className="absolute inset-0 bg-gradient-to-br from-red-500/20 to-red-700/20 flex flex-col items-center justify-center cursor-pointer group">
       <div className="text-center" onClick={onRetry}>
@@ -208,7 +185,7 @@ export function EvermarkCard({
     </div>
   );
 
-  // NEW: Progressive loading placeholder
+  // Progressive loading placeholder
   const ProgressiveLoadingPlaceholder = ({ progress }: { progress?: number }) => (
     <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex flex-col items-center justify-center">
       <div className="text-center">
@@ -228,13 +205,26 @@ export function EvermarkCard({
         className={`${getVariantClasses()} ${className}`}
         onClick={handleClick}
       >
-        {/* Enhanced SDK Image Component */}
+        {/* FIXED: SDK Image Component */}
         {showImage && (
           <div className="relative">
             <EvermarkImage
-              evermark={evermark}
+              evermark={{
+                id: evermark.id,
+                tokenId: evermark.tokenId,
+                title: evermark.title,
+                contentType: evermark.contentType,
+                supabaseImageUrl: evermark.supabaseImageUrl,
+                thumbnailUrl: evermark.thumbnailUrl,
+                processed_image_url: evermark.processed_image_url,
+                ipfsHash: evermark.ipfsHash,
+                imageStatus: evermark.imageStatus
+              }}
               variant="list"
               showPlaceholder={true}
+              enableAutoTransfer={true}
+              showTransferStatus={false}
+              storageConfig={getEvermarkStorageConfig()}
               onImageLoad={() => {
                 if (showPerformanceInfo) {
                   console.log(`✅ List image loaded for evermark #${evermark.tokenId}`);
@@ -243,7 +233,7 @@ export function EvermarkCard({
               onImageError={(error) => {
                 console.warn(`❌ List image error for #${evermark.tokenId}:`, error);
               }}
-              {...getSDKConfig()}
+              className="w-24 h-24 sm:w-32 sm:h-32 flex-shrink-0"
             />
             <PerformanceIndicator />
           </div>
@@ -314,13 +304,26 @@ export function EvermarkCard({
       className={`${getVariantClasses()} ${className} flex flex-col h-full`}
       onClick={handleClick}
     >
-      {/* Enhanced SDK Image Component */}
+      {/* FIXED: SDK Image Component */}
       {showImage && (
         <div className="relative">
           <EvermarkImage
-            evermark={evermark}
+            evermark={{
+              id: evermark.id,
+              tokenId: evermark.tokenId,
+              title: evermark.title,
+              contentType: evermark.contentType,
+              supabaseImageUrl: evermark.supabaseImageUrl,
+              thumbnailUrl: evermark.thumbnailUrl,
+              processed_image_url: evermark.processed_image_url,
+              ipfsHash: evermark.ipfsHash,
+              imageStatus: evermark.imageStatus
+            }}
             variant={variant}
             showPlaceholder={true}
+            enableAutoTransfer={true}
+            showTransferStatus={false}
+            storageConfig={getEvermarkStorageConfig()}
             onImageLoad={() => {
               if (showPerformanceInfo) {
                 console.log(`✅ Card image loaded for evermark #${evermark.tokenId}`);
@@ -329,7 +332,7 @@ export function EvermarkCard({
             onImageError={(error) => {
               console.warn(`❌ Card image error for #${evermark.tokenId}:`, error);
             }}
-            {...getSDKConfig()}
+            className={variant === 'hero' ? 'h-64 sm:h-80' : 'h-48 sm:h-56'}
           />
           <PerformanceIndicator />
         </div>
@@ -392,7 +395,7 @@ export function EvermarkCard({
                 {formatCount(evermark.votes)}
               </span>
             )}
-            {/* NEW: Performance indicator in footer */}
+            {/* FIXED: Performance indicator in footer */}
             {showPerformanceInfo && isImageCached() && (
               <span className="flex items-center text-green-400" title="Image cached for fast loading">
                 <Zap className="h-3 w-3 mr-1" />

@@ -1,6 +1,6 @@
 // =============================================================================
 // File: src/features/evermarks/services/APIService.ts
-// FULLY SDK-INTEGRATED VERSION - Eliminates custom image handling
+// UPDATED: Using unified evermark-sdk imports
 // =============================================================================
 
 import { supabase } from '@/lib/supabase';
@@ -11,29 +11,31 @@ import type {
   EvermarkDatabaseRow 
 } from '../types';
 
-// SDK IMPORTS - Replace all custom utilities
+// UPDATED: SDK IMPORTS - unified package
 import { 
   resolveImageSources,
+  isValidUrl,
   isValidIpfsHash,
   createIpfsUrl,
-  isValidUrl,
   generateStoragePath,
   validateStorageConfig,
   type ImageSourceInput,
   type StorageConfig,
   ImageLoadingError,
   StorageError
-} from '@ipfsnut/evermark-sdk-core';
+} from 'evermark-sdk/core';
 
 import { 
   StorageOrchestrator,
+  ensureImageInSupabase,
+  type StorageFlowResult,
   type TransferResult 
-} from '@ipfsnut/evermark-sdk-storage';
+} from 'evermark-sdk/storage';
 
 import { 
   PerformanceMonitor,
   type LoadMetrics 
-} from '@ipfsnut/evermark-sdk-browser';
+} from 'evermark-sdk/browser';
 
 // Import configuration
 import { getEvermarkStorageConfig } from '../config/sdk-config';
@@ -541,7 +543,7 @@ export class APIService {
   }
 
   /**
-   * SDK-ENHANCED: Transfer IPFS image to Supabase using StorageOrchestrator
+   * SDK-ENHANCED: Transfer IPFS image to Supabase using ensureImageInSupabase
    */
   static async transferImageToSupabase(
     ipfsHash: string,
@@ -552,19 +554,27 @@ export class APIService {
         throw new ImageLoadingError('Invalid IPFS hash provided', 'INVALID_URL');
       }
 
-      const orchestrator = this.getStorageOrchestrator();
+      const storageConfig = getEvermarkStorageConfig();
       
       console.log('🔄 Starting SDK-powered IPFS → Supabase transfer:', ipfsHash);
       
-      const result = await orchestrator.transferIPFSToSupabase(ipfsHash, onProgress);
+      // Use the standalone function from our new exports
+      const result = await ensureImageInSupabase({ ipfsHash }, storageConfig, onProgress);
       
-      if (result.success) {
+      if (result.transferPerformed && result.transferResult) {
         console.log('✅ SDK transfer completed successfully');
+        return result.transferResult;
       } else {
-        console.error('❌ SDK transfer failed:', result.error);
+        console.log('📁 Image already available in Supabase');
+        return {
+          success: true,
+          supabaseUrl: result.finalUrl,
+          ipfsHash,
+          transferTime: result.totalTime,
+          alreadyExists: true
+        };
       }
       
-      return result;
     } catch (error) {
       console.error('Transfer operation failed:', error);
       return {
