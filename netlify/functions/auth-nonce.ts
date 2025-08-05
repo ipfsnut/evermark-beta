@@ -1,7 +1,7 @@
 import { Handler } from '@netlify/functions';
+import { getStore } from '@netlify/blobs';
 import crypto from 'crypto';
 
-const nonceStore = new Map<string, { nonce: string; timestamp: number }>();
 const NONCE_EXPIRY = 5 * 60 * 1000; // 5 minutes
 
 export const handler: Handler = async (event) => {
@@ -39,15 +39,26 @@ export const handler: Handler = async (event) => {
     const nonce = crypto.randomBytes(32).toString('hex');
     const timestamp = Date.now();
 
-    // Store nonce
-    nonceStore.set(address.toLowerCase(), { nonce, timestamp });
+    // Store nonce in Netlify Blobs with automatic expiry
+    const nonceStore = getStore('auth-nonces');
+    const nonceData = {
+      nonce,
+      timestamp,
+      address: address.toLowerCase()
+    };
 
-    // Clean expired nonces
-    for (const [addr, data] of nonceStore.entries()) {
-      if (timestamp - data.timestamp > NONCE_EXPIRY) {
-        nonceStore.delete(addr);
-      }
+    try {
+      await nonceStore.set(address.toLowerCase(), JSON.stringify(nonceData));
+    } catch (blobError) {
+      console.error('Failed to store nonce in Netlify Blobs:', blobError);
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({ error: 'Failed to generate secure nonce' }),
+      };
     }
+
+    console.log('✅ Nonce generated and stored for:', address);
 
     return {
       statusCode: 200,
@@ -56,6 +67,7 @@ export const handler: Handler = async (event) => {
     };
 
   } catch (error) {
+    console.error('Nonce generation error:', error);
     return {
       statusCode: 500,
       headers,

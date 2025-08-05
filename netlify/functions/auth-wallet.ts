@@ -1,10 +1,9 @@
 import { Handler } from '@netlify/functions';
 import { verifyMessage } from 'viem';
+import { getStore } from '@netlify/blobs';
 import { createClient } from '@supabase/supabase-js';
 
-const nonceStore = new Map<string, { nonce: string; timestamp: number }>();
 const NONCE_EXPIRY = 5 * 60 * 1000;
-
 const DOMAIN = process.env.URL || 'https://evermarks.net';
 
 // Create Supabase client with service key for admin operations
@@ -59,9 +58,23 @@ export const handler: Handler = async (event) => {
       };
     }
 
-    // Verify nonce
-    const storedNonce = nonceStore.get(address.toLowerCase());
-    if (!storedNonce || storedNonce.nonce !== nonce) {
+    // Verify nonce using Netlify Blobs
+    const nonceStore = getStore('auth-nonces');
+    let storedNonceData;
+    
+    try {
+      const storedNonceString = await nonceStore.get(address.toLowerCase());
+      if (!storedNonceString) {
+        return {
+          statusCode: 401,
+          headers,
+          body: JSON.stringify({ error: 'Invalid or expired nonce' }),
+        };
+      }
+      
+      storedNonceData = JSON.parse(storedNonceString);
+    } catch (blobError) {
+      console.error('Failed to retrieve nonce from Netlify Blobs:', blobError);
       return {
         statusCode: 401,
         headers,
@@ -69,8 +82,18 @@ export const handler: Handler = async (event) => {
       };
     }
 
-    if (Date.now() - storedNonce.timestamp > NONCE_EXPIRY) {
-      nonceStore.delete(address.toLowerCase());
+    // Verify nonce matches and isn't expired
+    if (!storedNonceData || storedNonceData.nonce !== nonce) {
+      return {
+        statusCode: 401,
+        headers,
+        body: JSON.stringify({ error: 'Invalid or expired nonce' }),
+      };
+    }
+
+    if (Date.now() - storedNonceData.timestamp > NONCE_EXPIRY) {
+      // Clean up expired nonce
+      await nonceStore.delete(address.toLowerCase());
       return {
         statusCode: 401,
         headers,
@@ -78,8 +101,8 @@ export const handler: Handler = async (event) => {
       };
     }
 
-    // Remove used nonce
-    nonceStore.delete(address.toLowerCase());
+    // Remove used nonce (one-time use)
+    await nonceStore.delete(address.toLowerCase());
 
     // Verify message format
     const expectedStart = `${new URL(DOMAIN).hostname} wants you to sign in with your Ethereum account:\n${address}`;
