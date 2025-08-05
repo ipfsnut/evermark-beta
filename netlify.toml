@@ -260,6 +260,4 @@
   # Configure if you need large file support later
 
 # Build image selection (optional)
-[build.environment]
-  # Use Ubuntu 20.04 build image
-  NETLIFY_BUILD_IMAGE = "focal"
+# Using default build image (focal/Ubuntu 20.04)
