@@ -1,7 +1,6 @@
 import { Handler } from '@netlify/functions';
 import crypto from 'crypto';
 
-// Simple in-memory store (upgrade to Redis for production)
 const nonceStore = new Map<string, { nonce: string; timestamp: number }>();
 const NONCE_EXPIRY = 5 * 60 * 1000; // 5 minutes
 
@@ -36,14 +35,14 @@ export const handler: Handler = async (event) => {
       };
     }
 
-    // Generate cryptographically secure nonce
+    // Generate secure nonce
     const nonce = crypto.randomBytes(32).toString('hex');
     const timestamp = Date.now();
 
-    // Store nonce with expiry
+    // Store nonce
     nonceStore.set(address.toLowerCase(), { nonce, timestamp });
 
-    // Clean up expired nonces
+    // Clean expired nonces
     for (const [addr, data] of nonceStore.entries()) {
       if (timestamp - data.timestamp > NONCE_EXPIRY) {
         nonceStore.delete(addr);
@@ -60,7 +59,10 @@ export const handler: Handler = async (event) => {
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: 'Failed to generate nonce' }),
+      body: JSON.stringify({ 
+        error: 'Failed to generate nonce',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }),
     };
   }
 };
