@@ -1,13 +1,38 @@
+# netlify.toml - Complete Evermark Beta deployment configuration
+
 [build]
-  command = "corepack enable && corepack use pnpm@latest && pnpm install && pnpm run build"
+  # Fixed build command to force pnpm usage and avoid dependency conflicts
+  command = "npm install -g pnpm@latest && pnpm install --no-frozen-lockfile && pnpm run build"
   publish = "dist"
-  environment = { NODE_VERSION = "20" }
   functions = "netlify/functions"
+  
+  # Environment configuration
+  environment = { 
+    NODE_VERSION = "20",
+    NPM_FLAGS = "--legacy-peer-deps",
+    PNPM_VERSION = "latest"
+  }
+
+# Build processing configuration
+[build.processing]
+  skip_processing = false
+
+[build.processing.css]
+  bundle = true
+  minify = true
+
+[build.processing.js]
+  bundle = true
+  minify = true
+
+[build.processing.html]
+  pretty_urls = true
 
 # Scheduled function for blockchain sync (every hour)
 [functions."sync-blockchain"]
   schedule = "0 * * * *"
 
+# API redirects for backend functions
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
@@ -33,7 +58,23 @@
   to = "/.netlify/functions/shares"
   status = 200
 
-# Thirdweb webhook for real-time updates
+[[redirects]]
+  from = "/api/shares/*"
+  to = "/.netlify/functions/shares"
+  status = 200
+
+# Authentication endpoints
+[[redirects]]
+  from = "/api/auth/nonce"
+  to = "/.netlify/functions/auth-nonce"
+  status = 200
+
+[[redirects]]
+  from = "/api/auth/wallet"
+  to = "/.netlify/functions/auth-wallet"
+  status = 200
+
+# Webhook endpoints
 [[redirects]]
   from = "/webhook/thirdweb"
   to = "/.netlify/functions/thirdweb-webhook"
@@ -49,12 +90,7 @@
   to = "/.netlify/functions/webhook"
   status = 200
 
-[[redirects]]
-  from = "/api/shares/*"
-  to = "/.netlify/functions/shares"
-  status = 200
-
-# Dev dashboard for manual sync
+# Development utilities (only in non-production)
 [[redirects]]
   from = "/dev"
   to = "/.netlify/functions/dev-dashboard"
@@ -65,42 +101,74 @@
   to = "/.netlify/functions/sync-now"
   status = 200
 
+# SPA fallback - must be last
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
 
+# Security headers for all pages
 [[headers]]
   for = "/*"
   [headers.values]
     Strict-Transport-Security = "max-age=31536000; includeSubDomains"
     X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "SAMEORIGIN"
     X-XSS-Protection = "1; mode=block"
     Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()"
+    
+    # CORS headers for API access
     Access-Control-Allow-Origin = "*"
     Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
     Access-Control-Allow-Headers = "Content-Type, Authorization, X-Requested-With"
+    Access-Control-Max-Age = "86400"
+    
+    # Performance headers
     X-UA-Compatible = "IE=edge"
     Vary = "Accept-Encoding, User-Agent"
+    
+    # Content Security Policy for Web3 compatibility
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://*.supabase.co https://*.thirdweb.com https://*.rpc.thirdweb.com https://rpc.ankr.com https://mainnet.base.org https://base-mainnet.g.alchemy.com wss://*.thirdweb.com wss://*.alchemy.com; worker-src 'self' blob:; child-src 'self' blob:; frame-src 'self' https://verify.walletconnect.com https://verify.walletconnect.org; object-src 'none'; base-uri 'self';"
 
+# Farcaster Frame specific headers
 [[headers]]
   for = "/evermark/*"
   [headers.values]
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co https://farcaster.xyz https://client.farcaster.xyz https://warpcast.com https://client.warpcast.com https://wrpcd.net https://*.wrpcd.net https://*.thirdweb.com https://*.rpc.thirdweb.com https://c.thirdweb.com https://social.thirdweb.com; frame-ancestors *;"
+    # Less restrictive CSP for Farcaster frames
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; connect-src 'self' https://*.supabase.co https://farcaster.xyz https://client.farcaster.xyz https://warpcast.com https://client.warpcast.com https://wrpcd.net https://*.wrpcd.net https://*.thirdweb.com https://*.rpc.thirdweb.com https://c.thirdweb.com https://social.thirdweb.com; frame-ancestors *; frame-src *;"
+    
+    # Farcaster Frame meta tags
+    X-Frame-Options = "ALLOWALL"
 
+# Frame endpoint headers
+[[headers]]
+  for = "/frame/*"
+  [headers.values]
+    Content-Type = "text/html; charset=utf-8"
+    Cache-Control = "public, max-age=300"
+    X-Frame-Options = "ALLOWALL"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; frame-ancestors *;"
+
+# Static asset caching
 [[headers]]
   for = "/assets/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
+    X-Content-Type-Options = "nosniff"
 
+# API function headers
 [[headers]]
   for = "/.netlify/functions/*"
   [headers.values]
     Access-Control-Allow-Origin = "*"
     Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
-    Access-Control-Allow-Headers = "Content-Type, Authorization, X-Requested-With, x-farcaster-signature"
-    Cache-Control = "no-cache"
+    Access-Control-Allow-Headers = "Content-Type, Authorization, X-Requested-With, x-farcaster-signature, x-webhook-signature"
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Pragma = "no-cache"
+    Expires = "0"
 
+# Well-known files for protocols
 [[headers]]
   for = "/.well-known/*"
   [headers.values]
@@ -114,3 +182,85 @@
     Content-Type = "application/json"
     Access-Control-Allow-Origin = "*"
     Cache-Control = "public, max-age=300"
+
+# Manifest and service worker
+[[headers]]
+  for = "/manifest.json"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Content-Type = "application/javascript"
+    Cache-Control = "no-cache"
+
+# Image optimization
+[[headers]]
+  for = "*.png"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+    Content-Type = "image/png"
+
+[[headers]]
+  for = "*.jpg"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+    Content-Type = "image/jpeg"
+
+[[headers]]
+  for = "*.svg"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+    Content-Type = "image/svg+xml"
+
+[[headers]]
+  for = "*.ico"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+    Content-Type = "image/x-icon"
+
+# Environment-specific configurations
+[context.production.environment]
+  NODE_ENV = "production"
+  VITE_DEBUG_MODE = "false"
+  VITE_ENABLE_DEVTOOLS = "false"
+
+[context.deploy-preview.environment]
+  NODE_ENV = "staging"
+  VITE_DEBUG_MODE = "true"
+  VITE_ENABLE_DEVTOOLS = "true"
+
+[context.branch-deploy.environment]
+  NODE_ENV = "development"
+  VITE_DEBUG_MODE = "true"
+  VITE_ENABLE_DEVTOOLS = "true"
+
+# Edge Functions (if needed in future)
+[[edge_functions]]
+  function = "geo-location"
+  path = "/api/geo"
+
+# Build plugins (optional optimizations)
+[[plugins]]
+  package = "@netlify/plugin-lighthouse"
+  
+  [plugins.inputs.audits]
+    performance = true
+    accessibility = true
+    best-practices = true
+    seo = true
+
+# Form handling (if you add contact forms)
+[forms]
+  settings = { autoReply = false }
+
+# Large Media (for future asset optimization)
+[lfs]
+  # Configure if you need large file support later
+
+# Build image selection (optional)
+[build.environment]
+  # Use Ubuntu 20.04 build image
+  NETLIFY_BUILD_IMAGE = "focal"
