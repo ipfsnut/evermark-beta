@@ -100,6 +100,25 @@
   to = "/.netlify/functions/sync-now"
   status = 200
 
+# Exclude static files from SPA fallback
+[[redirects]]
+  from = "/manifest.json"
+  to = "/manifest.json"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/icon.png"
+  to = "/icon.png" 
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/favicon.ico"
+  to = "/favicon.ico"
+  status = 200
+  force = true
+
 # SPA fallback - must be last
 [[redirects]]
   from = "/*"
@@ -128,7 +147,7 @@
     Vary = "Accept-Encoding, User-Agent"
     
     # Content Security Policy for Web3 compatibility
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://*.supabase.co https://*.thirdweb.com https://*.rpc.thirdweb.com https://rpc.ankr.com https://mainnet.base.org https://base-mainnet.g.alchemy.com wss://*.thirdweb.com wss://*.alchemy.com; worker-src 'self' blob:; child-src 'self' blob:; frame-src 'self' https://verify.walletconnect.com https://verify.walletconnect.org; object-src 'none'; base-uri 'self';"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://*.supabase.co https://*.thirdweb.com https://*.rpc.thirdweb.com https://rpc.ankr.com https://mainnet.base.org https://base-mainnet.g.alchemy.com https://api.ensideas.com wss://*.thirdweb.com wss://*.alchemy.com; worker-src 'self' blob:; child-src 'self' blob:; frame-src 'self' https://verify.walletconnect.com https://verify.walletconnect.org; object-src 'none'; base-uri 'self';"
 
 # Farcaster Frame specific headers
 [[headers]]
