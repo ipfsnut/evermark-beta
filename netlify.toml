@@ -7,11 +7,10 @@
   functions = "netlify/functions"
   
   # Environment configuration
-  environment = { 
-    NODE_VERSION = "20",
-    NPM_FLAGS = "--legacy-peer-deps",
+  [build.environment]
+    NODE_VERSION = "20"
+    NPM_FLAGS = "--legacy-peer-deps"
     PNPM_VERSION = "latest"
-  }
 
 # Build processing configuration
 [build.processing]
