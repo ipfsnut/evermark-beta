@@ -1,291 +1,205 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import { 
-  ImageDisplay, 
-  ImageTransferStatus,
-  useImageLoader 
-} from '@ipfsnut/evermark-sdk-react';
-import type { 
-  ImageSourceInput, 
-  StorageConfig 
-} from '@ipfsnut/evermark-sdk-core';
+  useImageLoader,
+  EvermarkImage as SDKEvermarkImage,
+  type UseImageLoaderOptions,
+  type UseImageLoaderResult
+} from 'evermark-sdk/react';
 
-import { getEvermarkStorageConfig, getDefaultImageLoaderOptions, getMobileImageLoaderOptions } from '../config/sdk-config';
+import { 
+  resolveImageSources,
+  type ImageSourceInput 
+} from 'evermark-sdk/core';
 
-interface EvermarkImageProps {
-  /** Evermark data - same interface as your existing component */
-  evermark: {
-    id: string;
-    tokenId: number;
-    title: string;
-    contentType: string;
-    supabaseImageUrl?: string;
-    thumbnailUrl?: string;
-    processed_image_url?: string;
-    ipfsHash?: string;
-    imageStatus?: 'processed' | 'processing' | 'failed' | 'none';
-  };
-  /** Display variant - same as your existing component */
-  variant?: 'hero' | 'standard' | 'compact' | 'list';
-  /** Show placeholder when no image */
-  showPlaceholder?: boolean;
-  /** Enable automatic IPFS→Supabase transfer */
-  enableAutoTransfer?: boolean;
-  /** Show transfer status overlay */
-  showTransferStatus?: boolean;
-  /** Show debug information */
-  showDebugInfo?: boolean;
-  /** Additional CSS classes */
-  className?: string;
-  /** Callback when image loads */
-  onImageLoad?: () => void;
-  /** Callback when image fails */
-  onImageError?: (error: string) => void;
-  /** Callback when transfer completes */
-  onTransferComplete?: (result: { supabaseUrl: string }) => void;
+import { 
+  getDefaultImageLoaderOptions,
+  getDebugImageLoaderOptions 
+} from '../config/sdk-config';
+
+import type { Evermark } from '../types';
+
+// ADDED: Define ImageTransferStatus since it's missing from SDK exports
+export interface ImageTransferStatus {
+  phase: 'idle' | 'transferring' | 'completed' | 'failed';
+  progress: number;
+  message: string;
+  error?: string;
 }
 
-/**
- * Enhanced version of your existing EvermarkImage component
- * Now powered by the SDK for better performance and reliability
- */
-export const EvermarkImage: React.FC<EvermarkImageProps> = ({
+interface EvermarkImageProps {
+  evermark: Evermark;
+  variant?: 'hero' | 'standard' | 'compact' | 'list';
+  className?: string;
+  alt?: string;
+  enableAutoTransfer?: boolean;
+  debug?: boolean;
+  onLoad?: () => void;
+  onError?: (error: string) => void;
+  onTransferProgress?: (status: ImageTransferStatus) => void;
+}
+
+export function EvermarkImage({
   evermark,
   variant = 'standard',
-  showPlaceholder = true,
-  enableAutoTransfer = true,
-  showTransferStatus = false,
-  showDebugInfo = false,
   className = '',
-  onImageLoad,
-  onImageError,
-  onTransferComplete
-}) => {
-  const [currentSupabaseUrl, setCurrentSupabaseUrl] = useState(evermark.supabaseImageUrl);
-  const [transferInProgress, setTransferInProgress] = useState(false);
-
-  // Convert evermark data to SDK ImageSourceInput format
+  alt,
+  enableAutoTransfer = true,
+  debug = false,
+  onLoad,
+  onError,
+  onTransferProgress
+}: EvermarkImageProps) {
+  
+  // Convert evermark to ImageSourceInput
   const sources: ImageSourceInput = {
-    supabaseUrl: currentSupabaseUrl,
+    supabaseUrl: evermark.supabaseImageUrl,
     thumbnailUrl: evermark.thumbnailUrl,
     processedUrl: evermark.processed_image_url,
     ipfsHash: evermark.ipfsHash,
     preferThumbnail: variant === 'compact' || variant === 'list'
   };
 
-  // Get appropriate loader options based on variant
-  const loaderOptions = variant === 'compact' || variant === 'list' ? 
-    getMobileImageLoaderOptions() : 
-    getDefaultImageLoaderOptions();
-
-  // Use SDK image loader hook for enhanced functionality
-  const {
-    imageUrl,
-    isLoading,
-    hasError,
-    error,
-    fromCache,
-    loadTime,
-    retry,
-    attempts
-  } = useImageLoader(sources, loaderOptions);
-
-  // Handle transfer completion
-  const handleTransferComplete = useCallback((result: { supabaseUrl: string }) => {
-    setCurrentSupabaseUrl(result.supabaseUrl);
-    setTransferInProgress(false);
-    onTransferComplete?.(result);
-  }, [onTransferComplete]);
-
-  // Trigger callbacks when image loads/fails
-  useEffect(() => {
-    if (imageUrl && onImageLoad) {
-      onImageLoad();
+  // Get loader options based on variant and debug mode
+  const baseOptions = debug ? getDebugImageLoaderOptions() : getDefaultImageLoaderOptions();
+  
+  const options: UseImageLoaderOptions = {
+    ...baseOptions,
+    autoLoad: true,
+    debug: debug || import.meta.env.DEV,
+    resolution: {
+      ...baseOptions.resolution,
+      preferThumbnail: variant === 'compact' || variant === 'list',
+      maxSources: variant === 'list' ? 2 : 3,
+      includeIpfs: enableAutoTransfer
     }
-  }, [imageUrl, onImageLoad]);
+    // REMOVED: onLoad and onError - these don't exist in UseImageLoaderOptions
+  };
 
-  useEffect(() => {
-    if (hasError && error && onImageError) {
-      onImageError(error);
+  // Use the SDK hook
+  const { 
+    imageUrl, 
+    isLoading, 
+    hasError, 
+    attempts, 
+    currentSource,
+    load 
+  } = useImageLoader(sources, options);
+
+  // Handle callbacks through useEffect since they're not part of options
+  React.useEffect(() => {
+    if (imageUrl && onLoad) {
+      onLoad();
     }
-  }, [hasError, error, onImageError]);
+  }, [imageUrl, onLoad]);
 
-  // Variant-specific styles (keeping your existing styling approach)
-  const getVariantStyles = () => {
-    const baseStyles = 'relative overflow-hidden bg-gray-800 border border-gray-700 rounded-lg';
+  React.useEffect(() => {
+    if (hasError && onError) {
+      onError('Image failed to load');
+    }
+  }, [hasError, onError]);
+
+  // Handle transfer progress reporting
+  React.useEffect(() => {
+    if (onTransferProgress) {
+      if (isLoading && currentSource) {
+        onTransferProgress({
+          phase: 'transferring',
+          progress: Math.min(attempts.length * 25, 75),
+          message: `Loading from ${currentSource}...`
+        });
+      } else if (imageUrl) {
+        onTransferProgress({
+          phase: 'completed',
+          progress: 100,
+          message: 'Image loaded successfully'
+        });
+      } else if (hasError) {
+        onTransferProgress({
+          phase: 'failed',
+          progress: 0,
+          message: 'Failed to load image',
+          error: 'All image sources failed'
+        });
+      }
+    }
+  }, [isLoading, imageUrl, hasError, currentSource, attempts.length, onTransferProgress]);
+
+  // Generate appropriate CSS classes based on variant
+  const getImageClasses = () => {
+    const baseClasses = 'object-cover transition-opacity duration-200';
     
     switch (variant) {
       case 'hero':
-        return `${baseStyles} h-64 sm:h-80`;
+        return `${baseClasses} w-full h-64 md:h-96 rounded-xl`;
       case 'compact':
-        return `${baseStyles} h-32 sm:h-40`;
+        return `${baseClasses} w-16 h-16 rounded-lg`;
       case 'list':
-        return `${baseStyles} w-24 h-24 sm:w-32 sm:h-32 flex-shrink-0`;
+        return `${baseClasses} w-12 h-12 rounded-md`;
+      case 'standard':
       default:
-        return `${baseStyles} h-48 sm:h-56`;
+        return `${baseClasses} w-full h-48 rounded-lg`;
     }
   };
 
-  // Content type styling (keeping your existing approach)
-  const getContentTypeStyle = (contentType: string) => {
-    const styles = {
-      'Cast': { gradient: 'from-purple-500 to-pink-500', icon: '💬' },
-      'DOI': { gradient: 'from-blue-500 to-cyan-500', icon: '📄' },
-      'ISBN': { gradient: 'from-green-500 to-teal-500', icon: '📚' },
-      'URL': { gradient: 'from-orange-500 to-red-500', icon: '🌐' },
-      'Custom': { gradient: 'from-gray-500 to-gray-700', icon: '✨' }
-    };
+  const getPlaceholderClasses = () => {
+    const baseClasses = 'bg-gray-800 flex items-center justify-center';
     
-    return styles[contentType as keyof typeof styles] || styles.Custom;
+    switch (variant) {
+      case 'hero':
+        return `${baseClasses} w-full h-64 md:h-96 rounded-xl`;
+      case 'compact':
+        return `${baseClasses} w-16 h-16 rounded-lg`;
+      case 'list':
+        return `${baseClasses} w-12 h-12 rounded-md`;
+      case 'standard':
+      default:
+        return `${baseClasses} w-full h-48 rounded-lg`;
+    }
   };
 
-  const contentStyle = getContentTypeStyle(evermark.contentType);
-
-  // Enhanced placeholder (keeping your existing design but with SDK loading state)
-  const placeholder = showPlaceholder ? (
-    <div className={`absolute inset-0 bg-gradient-to-br ${contentStyle.gradient} flex flex-col items-center justify-center`}>
-      <div className="text-center">
-        <div className="text-4xl mb-2">{contentStyle.icon}</div>
-        <div className="text-white/80 text-sm font-medium">#{evermark.tokenId}</div>
-        {variant !== 'compact' && variant !== 'list' && (
-          <div className="text-white/60 text-xs mt-1 px-2 max-w-[120px] truncate">
-            {evermark.title}
-          </div>
-        )}
+  // Render loading state
+  if (isLoading) {
+    return (
+      <div className={`${getPlaceholderClasses()} ${className}`}>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyber-primary"></div>
       </div>
-      
-      {/* Enhanced loading indicator */}
-      {isLoading && (
-        <div className="absolute bottom-3 right-3">
-          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-        </div>
-      )}
-    </div>
-  ) : undefined;
+    );
+  }
 
-  // Enhanced error placeholder with retry functionality
-  const errorPlaceholder = (
-    <div className={`absolute inset-0 bg-gradient-to-br ${contentStyle.gradient} flex flex-col items-center justify-center cursor-pointer`}>
-      <div className="text-center" onClick={retry}>
-        <div className="text-2xl mb-2">⚠️</div>
-        <div className="text-white/80 text-xs font-medium">#{evermark.tokenId}</div>
-        <div className="text-white/60 text-xs mt-1">Click to retry</div>
-        
-        {/* Show retry count if applicable */}
-        {attempts.length > 1 && (
-          <div className="text-white/40 text-xs mt-1">
-            Tried {attempts.length} sources
+  // Render error state with retry option
+  if (hasError || !imageUrl) {
+    return (
+      <div className={`${getPlaceholderClasses()} ${className} border-2 border-dashed border-gray-600`}>
+        <div className="text-center p-4">
+          <div className="text-gray-400 mb-2">
+            {variant === 'compact' || variant === 'list' ? '📷' : '🖼️'}
           </div>
-        )}
-      </div>
-    </div>
-  );
-
-  // Determine if transfer should be shown
-  const shouldShowTransfer = enableAutoTransfer && 
-    showTransferStatus &&
-    !currentSupabaseUrl && 
-    evermark.ipfsHash &&
-    !transferInProgress;
-
-  return (
-    <div className={`evermark-image-wrapper ${getVariantStyles()} ${className} group cursor-pointer hover:scale-105 transition-transform`}>
-      {/* SDK-powered image display */}
-      <ImageDisplay
-        sources={sources}
-        alt={evermark.title}
-        className="w-full h-full object-cover"
-        loadingPlaceholder={placeholder}
-        errorPlaceholder={errorPlaceholder}
-        onLoad={onImageLoad ? ((url: string, fromCache: boolean) => {
-          console.log(`SDK: Image loaded from ${fromCache ? 'cache' : 'network'}: ${url}`);
-          onImageLoad();
-        }) : undefined}
-        onError={onImageError}
-        showDebugInfo={showDebugInfo}
-        resolution={{
-          preferThumbnail: variant === 'compact' || variant === 'list',
-          maxSources: 3,
-          includeIpfs: enableAutoTransfer
-        }}
-        loaderOptions={loaderOptions}
-      />
-
-      {/* Transfer Status Overlay - Only shows when needed */}
-      {shouldShowTransfer && (
-        <div className="absolute top-2 left-2 bg-black/80 text-white text-xs p-2 rounded backdrop-blur-sm">
-          <ImageTransferStatus
-            ipfsHash={evermark.ipfsHash!}
-            storageConfig={getEvermarkStorageConfig()}
-            onTransferComplete={handleTransferComplete}
-            onTransferError={onImageError}
-            autoStart={enableAutoTransfer}
-          />
-        </div>
-      )}
-
-      {/* Status indicators (keeping your existing approach) */}
-      {evermark.imageStatus === 'processing' && (
-        <div className="absolute bottom-2 left-2 bg-black/80 text-xs px-2 py-1 rounded backdrop-blur-sm">
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
-            <span className="text-blue-400">Processing</span>
-          </div>
-        </div>
-      )}
-
-      {evermark.imageStatus === 'failed' && !showDebugInfo && (
-        <div className="absolute bottom-2 left-2 bg-red-900/80 text-xs px-2 py-1 rounded backdrop-blur-sm">
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 bg-red-400 rounded-full"></div>
-            <span className="text-red-400">Failed</span>
-          </div>
-        </div>
-      )}
-
-      {/* Transfer Status Badge */}
-      {transferInProgress && (
-        <div className="absolute top-2 right-2 bg-blue-500/90 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-            <span>Transferring</span>
-          </div>
-        </div>
-      )}
-
-      {/* Performance indicator (from cache) */}
-      {fromCache && showDebugInfo && (
-        <div className="absolute top-2 left-2 bg-green-500/90 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">
-          ⚡ Cached
-        </div>
-      )}
-
-      {/* Load time indicator */}
-      {loadTime && showDebugInfo && (
-        <div className="absolute top-8 left-2 bg-black/80 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">
-          {loadTime}ms
-        </div>
-      )}
-
-      {/* Token ID badge (keeping your existing approach) */}
-      <div className="absolute bottom-2 right-2 bg-black/80 text-white px-2 py-1 rounded text-xs font-mono backdrop-blur-sm">
-        #{evermark.tokenId}
-      </div>
-      
-      {/* Debug info overlay */}
-      {showDebugInfo && (
-        <div className="absolute top-2 left-2 bg-black/90 text-white text-xs p-2 rounded max-w-xs backdrop-blur-sm">
-          <div>Status: {evermark.imageStatus}</div>
-          <div>Sources: {Object.keys(sources).filter(k => sources[k as keyof typeof sources]).length}</div>
-          <div>Variant: {variant}</div>
-          <div>Current: {imageUrl ? 'Loaded' : hasError ? 'Error' : 'Loading'}</div>
-          {attempts.length > 0 && (
-            <div>Attempts: {attempts.length}</div>
+          {variant !== 'compact' && variant !== 'list' && (
+            <>
+              <p className="text-xs text-gray-500 mb-2">Image failed to load</p>
+              <button
+                onClick={() => load()}
+                className="text-xs bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded transition-colors"
+              >
+                Retry
+              </button>
+            </>
           )}
-          {evermark.supabaseImageUrl && <div>✅ Supabase</div>}
-          {evermark.ipfsHash && <div>🌐 IPFS</div>}
-          {evermark.thumbnailUrl && <div>🖼️ Thumbnail</div>}
         </div>
-      )}
-    </div>
+      </div>
+    );
+  }
+
+  // Render successful image
+  return (
+    <img
+      src={imageUrl}
+      alt={alt || evermark.title || 'Evermark image'}
+      className={`${getImageClasses()} ${className}`}
+      onLoad={onLoad}
+      onError={() => onError?.('Image failed to load')}
+      loading="lazy"
+    />
   );
-};
+}
+

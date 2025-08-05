@@ -1,4 +1,3 @@
-
 import type { 
   Evermark,
   EvermarkMetadata,
@@ -10,7 +9,7 @@ import type {
   EvermarkFeedResult
 } from '../types';
 
-// SDK IMPORTS - Complete integration
+// FIXED: Updated SDK imports to use unified package
 import { 
   resolveImageSources, 
   isValidUrl,
@@ -22,14 +21,15 @@ import {
   type StorageConfig,
   ImageLoadingError,
   StorageError
-} from '@ipfsnut/evermark-sdk-core';
+} from 'evermark-sdk/core';
 
 import { 
   StorageOrchestrator,
   ensureImageInSupabase,
+  SupabaseStorageClient,
   type StorageFlowResult,
   type TransferResult
-} from '@ipfsnut/evermark-sdk-storage';
+} from 'evermark-sdk/storage';
 
 // Keep existing service imports
 import { APIService } from './APIService';
@@ -225,8 +225,7 @@ export class EvermarkService {
           const extension = input.image.name.split('.').pop()?.toLowerCase() || 'jpg';
           const storagePath = `evermarks/${timestamp}.${extension}`;
           
-          // Use SDK to upload directly to Supabase
-          const { SupabaseStorageClient } = await import('@ipfsnut/evermark-sdk-storage');
+          // FIXED: Use unified SDK import
           const supabaseClient = new SupabaseStorageClient(storageConfig.supabase);
           
           const uploadResult = await supabaseClient.uploadFile(
@@ -351,7 +350,6 @@ export class EvermarkService {
 
   /**
    * DIRECT METADATA CREATION (Replaces MetadataService.uploadMetadata)
-   * FIXED: Added missing storageConfig declaration
    */
   private static async createMetadataDirectly(
     metadata: EvermarkMetadata, 
@@ -416,11 +414,10 @@ export class EvermarkService {
         });
       }
 
-      // FIXED: Get storage config at the right scope
+      // Get storage config
       const storageConfig = getEvermarkStorageConfig();
       
       // Upload metadata to Supabase via SDK
-      const { SupabaseStorageClient } = await import('@ipfsnut/evermark-sdk-storage');
       const supabaseClient = new SupabaseStorageClient(storageConfig.supabase);
       
       // Generate metadata path

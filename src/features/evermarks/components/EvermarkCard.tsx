@@ -14,10 +14,12 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { EvermarkImage } from '@ipfsnut/evermark-sdk-react';
+
+// FIXED: Updated to use unified SDK package
+import { EvermarkImage } from 'evermark-sdk/react';
 import { type Evermark } from '../types';
 
-// FIXED: Import performance monitoring
+// FIXED: Import performance monitoring from updated config
 import { 
   performanceMonitor, 
   cacheManager, 

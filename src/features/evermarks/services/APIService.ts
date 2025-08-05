@@ -11,7 +11,7 @@ import type {
   EvermarkDatabaseRow 
 } from '../types';
 
-// UPDATED: SDK IMPORTS - unified package
+// FIXED: SDK IMPORTS - unified package
 import { 
   resolveImageSources,
   isValidUrl,

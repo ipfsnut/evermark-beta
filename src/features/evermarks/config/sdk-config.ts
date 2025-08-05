@@ -67,6 +67,7 @@ export function getEvermarkStorageConfig(): StorageConfig {
   return createEvermarkStorageConfig();
 }
 
+// FIXED: Renamed function to match what EvermarkCard is trying to import
 export function getDefaultImageLoaderOptions() {
   return {
     autoLoad: true,
@@ -93,6 +94,27 @@ export function getDefaultImageLoaderOptions() {
     },
     onError: (error: string, source: string) => {
       console.warn(`❌ Image load failed from ${source}:`, error);
+    }
+  };
+}
+
+// ADDED: Add the function that EvermarkCard is trying to import
+export function getDebugImageLoaderOptions() {
+  return {
+    ...getDefaultImageLoaderOptions(),
+    debug: true,
+    resolution: {
+      maxSources: 5,
+      defaultTimeout: 10000,
+      includeIpfs: true,
+      mobileOptimization: false
+    },
+    onLoad: (metrics: LoadMetrics) => {
+      console.log('🐛 DEBUG Image Load Metrics:', metrics);
+      performanceMonitor.recordLoad(metrics);
+    },
+    onError: (error: string, source: string) => {
+      console.error(`🐛 DEBUG Image load failed from ${source}:`, error);
     }
   };
 }
@@ -147,3 +169,4 @@ export function getUploadOptions() {
     }
   };
 }
+

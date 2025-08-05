@@ -12,6 +12,7 @@ import {
   ZapIcon
 } from 'lucide-react';
 
+// FIXED: Updated SDK imports to use unified package
 import { ImageUpload } from 'evermark-sdk/react';
 import type { StorageConfig } from 'evermark-sdk/core';
 
@@ -112,10 +113,13 @@ export function CreateEvermarkForm({
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   
-  // SDK upload state
+  // FIXED: Store both File and URL data for SDK compatibility
   const [uploadedImageData, setUploadedImageData] = useState<{
+    file?: File;  // Store the actual File for createEvermark
     originalUrl: string;
     thumbnailUrl?: string;
+    fileSize?: number;
+    dimensions?: string;
   } | null>(null);
 
   const getAuthor = useCallback(() => {
@@ -186,17 +190,28 @@ export function CreateEvermarkForm({
            formData.description.trim().length > 0;
   }, [formData.title, formData.description]);
 
-  // Handle SDK upload completion
-  const handleUploadComplete = useCallback((result: { originalUrl: string; thumbnailUrl?: string }) => {
+  // FIXED: Handle SDK upload completion with File reference
+  const handleUploadComplete = useCallback((result: any) => {
     console.log('✅ SDK upload completed:', result);
-    setUploadedImageData(result);
+    
+    // Extract the relevant data from the SDK upload result
+    const uploadData = {
+      file: result.file,  // Store the File object for createEvermark
+      originalUrl: result.supabaseUrl || result.url || result.originalUrl,
+      thumbnailUrl: result.thumbnailUrl,
+      fileSize: result.fileSize,
+      dimensions: result.dimensions
+    };
+    
+    setUploadedImageData(uploadData);
   }, []);
 
   const handleUploadError = useCallback((error: string) => {
     console.error('❌ SDK upload failed:', error);
+    // You could add an error state here if needed
   }, []);
 
-  // Form submission
+  // Form submission - FIXED for new SDK structure
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -216,13 +231,11 @@ export function CreateEvermarkForm({
         customFields: []
       };
 
+      // FIXED: Create input for new SDK structure with actual File
       const createInput: CreateEvermarkInput = {
         metadata: evermarkMetadata,
-        // Note: Image is now handled by SDK upload, passed via uploadedImageData
-        ...(uploadedImageData && { 
-          imageUrl: uploadedImageData.originalUrl,
-          thumbnailUrl: uploadedImageData.thumbnailUrl 
-        })
+        // Pass the actual File object if available
+        image: uploadedImageData?.file
       };
       
       const result = await createEvermark(createInput);
@@ -240,7 +253,6 @@ export function CreateEvermarkForm({
     requireAuth, 
     formData, 
     getAuthor, 
-    uploadedImageData, 
     tags, 
     createEvermark, 
     onSuccess, 
@@ -259,9 +271,25 @@ export function CreateEvermarkForm({
     );
   }
 
-  // Get storage config and upload options for SDK
-  const storageConfig: StorageConfig = getEvermarkStorageConfig();
-  const uploadOptions = getUploadOptions();
+  // FIXED: Ensure we get the config properly
+  let storageConfig: StorageConfig;
+  let uploadOptions: any;
+  
+  try {
+    storageConfig = getEvermarkStorageConfig();
+    uploadOptions = getUploadOptions();
+  } catch (error) {
+    console.error('Failed to get SDK configuration:', error);
+    return (
+      <div className="bg-red-900/30 border border-red-500/50 rounded-lg p-6 text-center">
+        <AlertCircleIcon className="mx-auto h-12 w-12 text-red-400 mb-4" />
+        <h3 className="text-xl font-medium text-red-300 mb-2">Configuration Error</h3>
+        <p className="text-red-400">
+          SDK configuration is invalid. Please check your environment variables.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className={cn("min-h-screen bg-black text-white", className)}>
@@ -490,7 +518,7 @@ export function CreateEvermarkForm({
                   </p>
                 </div>
 
-                {/* SDK Image Upload */}
+                {/* FIXED: SDK Image Upload with proper error handling */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="font-medium text-cyan-400">Cover Image (Optional)</h3>
@@ -499,15 +527,17 @@ export function CreateEvermarkForm({
                     </span>
                   </div>
                   
-                  <ImageUpload
-                    storageConfig={storageConfig}
-                    onUploadComplete={handleUploadComplete}
-                    onUploadError={handleUploadError}
-                    generateThumbnails={uploadOptions.generateThumbnails}
-                    allowedTypes={uploadOptions.allowedTypes}
-                    maxFileSize={uploadOptions.maxFileSize}
-                    className="w-full"
-                  />
+                  <div className="border border-gray-600 rounded-lg p-4">
+                    <ImageUpload
+                      storageConfig={storageConfig}
+                      onUploadComplete={handleUploadComplete}
+                      onUploadError={handleUploadError}
+                      generateThumbnails={uploadOptions.generateThumbnails}
+                      allowedTypes={uploadOptions.allowedTypes}
+                      maxFileSize={uploadOptions.maxFileSize}
+                      className="w-full"
+                    />
+                  </div>
 
                   {uploadedImageData && (
                     <div className="bg-green-900/20 border border-green-500/30 p-3 rounded-lg">
@@ -515,10 +545,13 @@ export function CreateEvermarkForm({
                         <CheckCircleIcon className="h-4 w-4 text-green-400" />
                         <span className="text-sm text-green-300">Image Uploaded Successfully</span>
                       </div>
-                      <div className="text-xs text-green-400">
+                      <div className="text-xs text-green-400 space-y-1">
                         <div>Primary URL: {uploadedImageData.originalUrl.substring(0, 50)}...</div>
                         {uploadedImageData.thumbnailUrl && (
                           <div>Thumbnail: {uploadedImageData.thumbnailUrl.substring(0, 50)}...</div>
+                        )}
+                        {uploadedImageData.fileSize && (
+                          <div>Size: {Math.round(uploadedImageData.fileSize / 1024)} KB</div>
                         )}
                       </div>
                     </div>
@@ -566,7 +599,7 @@ export function CreateEvermarkForm({
             </div>
           </div>
 
-          {/* Right Column - Preview (Updated with SDK info) */}
+          {/* Right Column - Preview */}
           <div className="space-y-6">
             <div className="bg-gray-800/50 border border-gray-700 rounded-lg shadow-lg p-6 sticky top-6">
               <div className="flex items-center justify-between mb-6">
