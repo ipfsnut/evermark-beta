@@ -1,6 +1,6 @@
 {
   "name": "evermark-beta",
-  "private": true,
+  "packageManager": "pnpm@9.15.0",
   "version": "1.0.0",
   "type": "module",
   "description": "Evermark Beta - Content curation & collective memory",
