@@ -1,8 +1,8 @@
 # netlify.toml - Complete Evermark Beta deployment configuration
 
 [build]
-  # Fixed build command to force pnpm usage and avoid dependency conflicts
-  command = "npm install -g pnpm@latest && pnpm install --no-frozen-lockfile && pnpm run build"
+  # Use existing pnpm with frozen lockfile for consistent builds
+  command = "pnpm install --frozen-lockfile && pnpm run build"
   publish = "dist"
   functions = "netlify/functions"
   
