@@ -1,15 +1,15 @@
 import { Handler } from '@netlify/functions';
 import { verifyMessage } from 'viem';
-import { getStore } from '@netlify/blobs';
 import { createClient } from '@supabase/supabase-js';
+import crypto from 'crypto';
 
-const NONCE_EXPIRY = 5 * 60 * 1000;
+const NONCE_WINDOW_MINUTES = 5;
 const DOMAIN = process.env.URL || 'https://evermarks.net';
 
 // Create Supabase client with service key for admin operations
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!, // Use service key for admin operations
+  process.env.SUPABASE_SERVICE_KEY!,
   {
     auth: {
       autoRefreshToken: false,
@@ -17,6 +17,36 @@ const supabase = createClient(
     },
   }
 );
+
+// Generate the same deterministic nonce as auth-nonce.ts
+function generateDeterministicNonce(address: string): string {
+  const timeWindow = Math.floor(Date.now() / (NONCE_WINDOW_MINUTES * 60 * 1000));
+  
+  return crypto
+    .createHash('sha256')
+    .update(`${address.toLowerCase()}-${timeWindow}-evermark-auth`)
+    .digest('hex');
+}
+
+// Also check previous time window in case user is near boundary
+function isValidNonce(address: string, providedNonce: string): boolean {
+  const currentWindow = Math.floor(Date.now() / (NONCE_WINDOW_MINUTES * 60 * 1000));
+  
+  // Check current and previous time windows (allows for clock skew)
+  for (let i = 0; i <= 1; i++) {
+    const timeWindow = currentWindow - i;
+    const expectedNonce = crypto
+      .createHash('sha256')
+      .update(`${address.toLowerCase()}-${timeWindow}-evermark-auth`)
+      .digest('hex');
+      
+    if (expectedNonce === providedNonce) {
+      return true;
+    }
+  }
+  
+  return false;
+}
 
 export const handler: Handler = async (event) => {
   const headers = {
@@ -58,51 +88,14 @@ export const handler: Handler = async (event) => {
       };
     }
 
-    // Verify nonce using Netlify Blobs
-    const nonceStore = getStore('auth-nonces');
-    let storedNonceData;
-    
-    try {
-      const storedNonceString = await nonceStore.get(address.toLowerCase());
-      if (!storedNonceString) {
-        return {
-          statusCode: 401,
-          headers,
-          body: JSON.stringify({ error: 'Invalid or expired nonce' }),
-        };
-      }
-      
-      storedNonceData = JSON.parse(storedNonceString);
-    } catch (blobError) {
-      console.error('Failed to retrieve nonce from Netlify Blobs:', blobError);
+    // Verify nonce using deterministic validation
+    if (!isValidNonce(address, nonce)) {
       return {
         statusCode: 401,
         headers,
         body: JSON.stringify({ error: 'Invalid or expired nonce' }),
       };
     }
-
-    // Verify nonce matches and isn't expired
-    if (!storedNonceData || storedNonceData.nonce !== nonce) {
-      return {
-        statusCode: 401,
-        headers,
-        body: JSON.stringify({ error: 'Invalid or expired nonce' }),
-      };
-    }
-
-    if (Date.now() - storedNonceData.timestamp > NONCE_EXPIRY) {
-      // Clean up expired nonce
-      await nonceStore.delete(address.toLowerCase());
-      return {
-        statusCode: 401,
-        headers,
-        body: JSON.stringify({ error: 'Nonce expired' }),
-      };
-    }
-
-    // Remove used nonce (one-time use)
-    await nonceStore.delete(address.toLowerCase());
 
     // Verify message format
     const expectedStart = `${new URL(DOMAIN).hostname} wants you to sign in with your Ethereum account:\n${address}`;
@@ -139,11 +132,11 @@ export const handler: Handler = async (event) => {
       };
     }
 
-    // Use Supabase's modern auth system instead of manual JWT creation
+    // Use Supabase's modern auth system
     const userId = address.toLowerCase();
     
     try {
-      // Method 1: Create user with signInAnonymously and verified metadata
+      // Create authenticated session with verified wallet
       const { data: authData, error: authError } = await supabase.auth.signInAnonymously({
         options: {
           data: {

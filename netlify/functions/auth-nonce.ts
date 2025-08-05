@@ -1,8 +1,21 @@
 import { Handler } from '@netlify/functions';
-import { getStore } from '@netlify/blobs';
 import crypto from 'crypto';
 
-const NONCE_EXPIRY = 5 * 60 * 1000; // 5 minutes
+const NONCE_WINDOW_MINUTES = 5; // 5-minute time windows
+
+// Generate deterministic nonce based on address and current time window
+function generateDeterministicNonce(address: string): string {
+  // Create 5-minute time windows
+  const timeWindow = Math.floor(Date.now() / (NONCE_WINDOW_MINUTES * 60 * 1000));
+  
+  // Create deterministic nonce from address + time window
+  const nonce = crypto
+    .createHash('sha256')
+    .update(`${address.toLowerCase()}-${timeWindow}-evermark-auth`)
+    .digest('hex');
+    
+  return nonce;
+}
 
 export const handler: Handler = async (event) => {
   const headers = {
@@ -35,30 +48,10 @@ export const handler: Handler = async (event) => {
       };
     }
 
-    // Generate secure nonce
-    const nonce = crypto.randomBytes(32).toString('hex');
-    const timestamp = Date.now();
+    // Generate deterministic nonce (no storage needed!)
+    const nonce = generateDeterministicNonce(address);
 
-    // Store nonce in Netlify Blobs with automatic expiry
-    const nonceStore = getStore('auth-nonces');
-    const nonceData = {
-      nonce,
-      timestamp,
-      address: address.toLowerCase()
-    };
-
-    try {
-      await nonceStore.set(address.toLowerCase(), JSON.stringify(nonceData));
-    } catch (blobError) {
-      console.error('Failed to store nonce in Netlify Blobs:', blobError);
-      return {
-        statusCode: 500,
-        headers,
-        body: JSON.stringify({ error: 'Failed to generate secure nonce' }),
-      };
-    }
-
-    console.log('✅ Nonce generated and stored for:', address);
+    console.log('✅ Deterministic nonce generated for:', address);
 
     return {
       statusCode: 200,
