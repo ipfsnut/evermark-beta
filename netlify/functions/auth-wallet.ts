@@ -6,14 +6,36 @@ import crypto from 'crypto';
 const NONCE_WINDOW_MINUTES = 5;
 const DOMAIN = process.env.URL || 'https://evermarks.net';
 
-// Create Supabase client with service key for admin operations
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!,
+// Supabase setup
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const secretKey = process.env.SUPABASE_SECRET_KEY; // New format: sb_secret_...
+const serviceKey = process.env.SUPABASE_SERVICE_KEY; // Legacy format: eyJhbGciO...
+const jwtSecret = process.env.SUPABASE_JWT_SECRET; // Your project's JWT secret
+
+console.log('Environment check:', {
+  SUPABASE_URL: supabaseUrl ? '✅ Set' : '❌ Missing',
+  SECRET_KEY: secretKey ? '✅ Set (New Format)' : '❌ Missing',
+  SERVICE_KEY: serviceKey ? '✅ Set (Legacy Format)' : '❌ Missing',
+  JWT_SECRET: jwtSecret ? '✅ Set' : '❌ Missing',
+  DOMAIN: DOMAIN
+});
+
+// Use the new secret key if available, fallback to legacy service key
+const adminKey = secretKey || serviceKey;
+
+if (!supabaseUrl || !adminKey || !jwtSecret) {
+  throw new Error(`Missing Supabase configuration: URL=${!!supabaseUrl}, ADMIN_KEY=${!!adminKey}, JWT_SECRET=${!!jwtSecret}`);
+}
+
+// Admin client for user management
+const supabaseAdmin = createClient(
+  supabaseUrl,
+  adminKey,
   {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
+      detectSessionInUrl: false,
     },
   }
 );
@@ -28,11 +50,10 @@ function generateDeterministicNonce(address: string): string {
     .digest('hex');
 }
 
-// Also check previous time window in case user is near boundary
+// Check if nonce is valid (current or previous time window)
 function isValidNonce(address: string, providedNonce: string): boolean {
   const currentWindow = Math.floor(Date.now() / (NONCE_WINDOW_MINUTES * 60 * 1000));
   
-  // Check current and previous time windows (allows for clock skew)
   for (let i = 0; i <= 1; i++) {
     const timeWindow = currentWindow - i;
     const expectedNonce = crypto
@@ -46,6 +67,48 @@ function isValidNonce(address: string, providedNonce: string): boolean {
   }
   
   return false;
+}
+
+// Create Supabase-compatible JWT for wallet user
+function createSupabaseJWT(address: string, userId: string): string {
+  const now = Math.floor(Date.now() / 1000);
+  const exp = now + (24 * 60 * 60); // 24 hours
+  
+  const payload = {
+    iss: 'supabase',
+    ref: supabaseUrl?.split('//')[1]?.split('.')[0], // Extract project ref
+    aud: 'authenticated',
+    exp: exp,
+    iat: now,
+    sub: userId, // Use the actual Supabase user ID
+    email: `${address.toLowerCase()}@wallet.evermark`,
+    phone: '',
+    app_metadata: {
+      provider: 'wallet',
+      providers: ['wallet'],
+      wallet_verified: true,
+    },
+    user_metadata: {
+      wallet_address: address,
+      auth_method: 'wallet_signature',
+      display_name: `${address.slice(0, 6)}...${address.slice(-4)}`,
+    },
+    role: 'authenticated',
+    aal: 'aal1',
+    amr: [{ method: 'wallet', timestamp: now }],
+    session_id: crypto.randomUUID(),
+  };
+
+  // Create JWT manually (basic version - use jsonwebtoken library for production)
+  const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
+  const payloadStr = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  
+  const signature = crypto
+    .createHmac('sha256', jwtSecret!)
+    .update(`${header}.${payloadStr}`)
+    .digest('base64url');
+
+  return `${header}.${payloadStr}.${signature}`;
 }
 
 export const handler: Handler = async (event) => {
@@ -132,33 +195,130 @@ export const handler: Handler = async (event) => {
       };
     }
 
-    // Use Supabase's modern auth system
+    // Create or update user in auth.users table using admin client
     const userId = address.toLowerCase();
+    const displayName = `${address.slice(0, 6)}...${address.slice(-4)}`;
     
     try {
-      // Create authenticated session with verified wallet
-      const { data: authData, error: authError } = await supabase.auth.signInAnonymously({
-        options: {
-          data: {
-            wallet_address: address,
-            verified_signature: true,
-            auth_method: 'wallet_signature',
-            verified_at: new Date().toISOString(),
-            display_name: `${address.slice(0, 6)}...${address.slice(-4)}`,
-          }
+      // Use Supabase Auth Admin API to create/update user
+      const { data: userData, error: userError } = await supabaseAdmin.auth.admin.createUser({
+        email: `${userId}@wallet.evermark`, // Fake email format
+        email_confirm: true,
+        user_metadata: {
+          wallet_address: address,
+          display_name: displayName,
+          auth_method: 'wallet_signature',
+          verified_at: new Date().toISOString(),
+        },
+        app_metadata: {
+          provider: 'wallet',
+          wallet_verified: true,
         }
       });
 
-      if (authError) {
-        console.error('Supabase auth error:', authError);
+      // If user already exists, find them and update
+      if (userError && userError.message.includes('already registered')) {
+        // Get existing user by email (since we can't set custom user_id)
+        const { data: existingUsers, error: getUserError } = await supabaseAdmin.auth.admin.listUsers({
+          page: 1,
+          perPage: 1000 // Adjust as needed
+        });
+
+        if (getUserError) {
+          console.error('Failed to list users:', getUserError);
+          return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify({ 
+              error: 'Failed to find existing user',
+              details: getUserError.message
+            }),
+          };
+        }
+
+        // Find user by wallet address in metadata
+        const existingUser = existingUsers?.users?.find(u => 
+          u.user_metadata?.wallet_address?.toLowerCase() === address.toLowerCase()
+        );
+
+        if (!existingUser) {
+          return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify({ 
+              error: 'User exists but could not be found',
+            }),
+          };
+        }
+
+        // Update existing user
+        const { data: updatedUser, error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+          existingUser.id,
+          {
+            user_metadata: {
+              ...existingUser.user_metadata,
+              wallet_address: address,
+              display_name: displayName,
+              auth_method: 'wallet_signature',
+              last_login: new Date().toISOString(),
+            }
+          }
+        );
+
+        if (updateError) {
+          console.error('User update error:', updateError);
+          return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify({ 
+              error: 'Failed to update user',
+              details: updateError.message
+            }),
+          };
+        }
+        
+        // Use the existing user's ID for JWT
+        const accessToken = createSupabaseJWT(address, existingUser.id);
+        
+        console.log('✅ Existing wallet user updated:', address);
+        
         return {
-          statusCode: 500,
+          statusCode: 200,
           headers,
-          body: JSON.stringify({ error: 'Failed to create authenticated session' }),
+          body: JSON.stringify({
+            success: true,
+            session: {
+              access_token: accessToken,
+              token_type: 'bearer',
+              expires_in: 86400,
+              expires_at: Math.floor(Date.now() / 1000) + 86400,
+              refresh_token: null,
+            },
+            user: {
+              id: existingUser.id,
+              wallet_address: address,
+              display_name: displayName,
+              verified_signature: true,
+              email: existingUser.email,
+              user_metadata: updatedUser?.user?.user_metadata || existingUser.user_metadata,
+            }
+          }),
         };
       }
 
-      console.log('✅ Wallet signature verified and Supabase session created for:', address);
+      // New user created successfully
+      const newUserId = userData?.user?.id;
+      if (!newUserId) {
+        return {
+          statusCode: 500,
+          headers,
+          body: JSON.stringify({ error: 'User created but ID not returned' }),
+        };
+      }
+
+      const accessToken = createSupabaseJWT(address, newUserId);
+      
+      console.log('✅ New wallet user created:', address);
 
       return {
         statusCode: 200,
@@ -166,27 +326,31 @@ export const handler: Handler = async (event) => {
         body: JSON.stringify({
           success: true,
           session: {
-            access_token: authData.session?.access_token,
-            refresh_token: authData.session?.refresh_token,
-            expires_at: authData.session?.expires_at,
+            access_token: accessToken,
+            token_type: 'bearer',
+            expires_in: 86400,
+            expires_at: Math.floor(Date.now() / 1000) + 86400,
+            refresh_token: null,
           },
           user: {
-            id: authData.user?.id,
+            id: newUserId,
             wallet_address: address,
-            display_name: `${address.slice(0, 6)}...${address.slice(-4)}`,
+            display_name: displayName,
             verified_signature: true,
+            email: userData.user?.email,
+            user_metadata: userData.user?.user_metadata,
           }
         }),
       };
 
-    } catch (supabaseError) {
-      console.error('Supabase operation failed:', supabaseError);
+    } catch (error) {
+      console.error('Auth processing error:', error);
       return {
         statusCode: 500,
         headers,
         body: JSON.stringify({ 
-          error: 'Authentication service error',
-          details: supabaseError instanceof Error ? supabaseError.message : 'Unknown error'
+          error: 'Authentication processing failed',
+          details: error instanceof Error ? error.message : 'Unknown error'
         }),
       };
     }
