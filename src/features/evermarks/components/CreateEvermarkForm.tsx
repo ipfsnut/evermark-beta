@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   PlusIcon, 
@@ -9,7 +9,8 @@ import {
   HelpCircleIcon,
   TagIcon,
   FileTextIcon,
-  ZapIcon
+  ZapIcon,
+  UploadIcon
 } from 'lucide-react';
 
 // FIXED: Updated SDK imports to use unified package
@@ -19,8 +20,30 @@ import type { StorageConfig } from 'evermark-sdk/core';
 import { useEvermarksState } from '../hooks/useEvermarkState';
 import { type CreateEvermarkInput, type EvermarkMetadata } from '../types';
 import { useAppAuth } from '@/providers/AppContext';
-import { cn, useIsMobile } from '@/utils/responsive';
+import { useUserForEvermarks } from '@/providers/IntegratedUserProvider';
 import { getEvermarkStorageConfig, getUploadOptions } from '../config/sdk-config';
+
+// Utility function for responsive classes
+function cn(...classes: (string | undefined | null | false)[]): string {
+  return classes.filter(Boolean).join(' ');
+}
+
+// Simple mobile detection hook
+function useIsMobile(): boolean {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  return isMobile;
+}
 
 // Content types configuration
 const CONTENT_TYPES = [
@@ -90,6 +113,14 @@ export function CreateEvermarkForm({
   const isMobile = useIsMobile();
   const { isAuthenticated, user, requireAuth } = useAppAuth();
   
+  // ADDED: Supabase auth integration
+  const { 
+    isSupabaseAuthenticated, 
+    ensureSupabaseAuth, 
+    authError,
+    canCreate 
+  } = useUserForEvermarks();
+  
   const { 
     createEvermark, 
     isCreating, 
@@ -115,7 +146,7 @@ export function CreateEvermarkForm({
   
   // FIXED: Store both File and URL data for SDK compatibility
   const [uploadedImageData, setUploadedImageData] = useState<{
-    file?: File;  // Store the actual File for createEvermark
+    file?: File;
     originalUrl: string;
     thumbnailUrl?: string;
     fileSize?: number;
@@ -190,9 +221,19 @@ export function CreateEvermarkForm({
            formData.description.trim().length > 0;
   }, [formData.title, formData.description]);
 
-  // FIXED: Handle SDK upload completion with File reference
-  const handleUploadComplete = useCallback((result: any) => {
+  // FIXED: Handle SDK upload completion with auth check
+  const handleUploadComplete = useCallback(async (result: any) => {
     console.log('✅ SDK upload completed:', result);
+    
+    // Check if we have Supabase auth before proceeding
+    if (!isSupabaseAuthenticated) {
+      console.log('🔐 Ensuring Supabase authentication before processing upload...');
+      const authSuccess = await ensureSupabaseAuth();
+      if (!authSuccess) {
+        console.error('❌ Failed to authenticate with Supabase');
+        return;
+      }
+    }
     
     // Extract the relevant data from the SDK upload result
     const uploadData = {
@@ -204,18 +245,37 @@ export function CreateEvermarkForm({
     };
     
     setUploadedImageData(uploadData);
-  }, []);
+  }, [isSupabaseAuthenticated, ensureSupabaseAuth]);
 
   const handleUploadError = useCallback((error: string) => {
     console.error('❌ SDK upload failed:', error);
-    // You could add an error state here if needed
-  }, []);
+    
+    // Check if it's an auth-related error
+    if (error.includes('row-level security') || error.includes('unauthorized')) {
+      console.log('🔐 Upload failed due to auth - attempting to fix...');
+      ensureSupabaseAuth().then(success => {
+        if (success) {
+          console.log('✅ Auth fixed - you can try uploading again');
+        }
+      });
+    }
+  }, [ensureSupabaseAuth]);
 
-  // Form submission - FIXED for new SDK structure
+  // UPDATED: Form submission with comprehensive auth checks
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (isCreating || !isFormValid()) return;
+
+    // ADDED: Check Supabase auth before proceeding
+    if (!canCreate) {
+      console.log('🔐 Ensuring authentication before creating evermark...');
+      const authSuccess = await ensureSupabaseAuth();
+      if (!authSuccess) {
+        console.error('❌ Cannot create evermark without Supabase authentication');
+        return;
+      }
+    }
 
     const canProceed = await requireAuth();
     if (!canProceed) return;
@@ -231,10 +291,8 @@ export function CreateEvermarkForm({
         customFields: []
       };
 
-      // FIXED: Create input for new SDK structure with actual File
       const createInput: CreateEvermarkInput = {
         metadata: evermarkMetadata,
-        // Pass the actual File object if available
         image: uploadedImageData?.file
       };
       
@@ -250,15 +308,19 @@ export function CreateEvermarkForm({
   }, [
     isCreating, 
     isFormValid, 
+    canCreate,
+    ensureSupabaseAuth,
     requireAuth, 
     formData, 
     getAuthor, 
     tags, 
+    uploadedImageData?.file,
     createEvermark, 
     onSuccess, 
     navigate
   ]);
 
+  // Show authentication prompt if not connected
   if (!isAuthenticated) {
     return (
       <div className={cn("bg-gray-800/30 border border-gray-700 rounded-lg p-12 text-center", className)}>
@@ -271,7 +333,7 @@ export function CreateEvermarkForm({
     );
   }
 
-  // FIXED: Ensure we get the config properly
+  // Get SDK configuration with error handling
   let storageConfig: StorageConfig;
   let uploadOptions: any;
   
@@ -336,6 +398,45 @@ export function CreateEvermarkForm({
             >
               <XIcon className="h-4 w-4" />
             </button>
+          </div>
+        )}
+
+        {/* ADDED: Supabase Auth Status */}
+        {authError && (
+          <div className="mb-6 p-4 bg-yellow-900/30 border border-yellow-500/50 rounded-lg flex items-start">
+            <AlertCircleIcon className="h-5 w-5 text-yellow-400 mr-3 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-yellow-300 font-medium">Authentication Issue</p>
+              <p className="text-yellow-400 text-sm">{authError}</p>
+              <button
+                onClick={() => ensureSupabaseAuth()}
+                className="mt-2 text-sm bg-yellow-600 hover:bg-yellow-700 px-3 py-1 rounded transition-colors"
+              >
+                Retry Authentication
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ADDED: Auth Status Indicator */}
+        {isAuthenticated && (
+          <div className="mb-6 p-4 bg-gray-800/50 border border-gray-600 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`w-3 h-3 rounded-full ${isSupabaseAuthenticated ? 'bg-green-400' : 'bg-yellow-400'}`} />
+                <span className="text-sm text-gray-300">
+                  {isSupabaseAuthenticated ? '✅ Ready to create' : '⏳ Setting up authentication...'}
+                </span>
+              </div>
+              {!isSupabaseAuthenticated && (
+                <button
+                  onClick={() => ensureSupabaseAuth()}
+                  className="text-sm bg-cyan-600 hover:bg-cyan-700 px-3 py-1 rounded transition-colors"
+                >
+                  Complete Setup
+                </button>
+              )}
+            </div>
           </div>
         )}
 
@@ -522,9 +623,20 @@ export function CreateEvermarkForm({
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="font-medium text-cyan-400">Cover Image (Optional)</h3>
-                    <span className="text-xs text-gray-500 bg-green-900/20 px-2 py-1 rounded">
-                      SDK Enhanced
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500 bg-green-900/20 px-2 py-1 rounded">
+                        SDK Enhanced
+                      </span>
+                      {isSupabaseAuthenticated ? (
+                        <span className="text-xs text-green-400 bg-green-900/20 px-2 py-1 rounded">
+                          ✅ Auth Ready
+                        </span>
+                      ) : (
+                        <span className="text-xs text-yellow-400 bg-yellow-900/20 px-2 py-1 rounded">
+                          ⏳ Auth Pending
+                        </span>
+                      )}
+                    </div>
                   </div>
                   
                   <div className="border border-gray-600 rounded-lg p-4">
@@ -557,6 +669,22 @@ export function CreateEvermarkForm({
                     </div>
                   )}
 
+                  {/* ADDED: Auth troubleshooting info */}
+                  {!isSupabaseAuthenticated && (
+                    <div className="bg-yellow-900/20 border border-yellow-500/30 p-3 rounded-lg">
+                      <p className="text-yellow-300 text-sm mb-2">
+                        ⚠️ Supabase authentication required for image uploads
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => ensureSupabaseAuth()}
+                        className="text-sm bg-yellow-600 hover:bg-yellow-700 px-3 py-1 rounded transition-colors"
+                      >
+                        Authenticate Now
+                      </button>
+                    </div>
+                  )}
+
                   <div className="bg-green-900/20 border border-green-500/30 p-3 rounded-lg">
                     <p className="text-green-300 text-sm">
                       ✅ Advanced SDK upload: Direct to Supabase with automatic optimization and thumbnails
@@ -578,13 +706,19 @@ export function CreateEvermarkForm({
                     )}
                     <button
                       type="submit"
-                      disabled={isCreating || !isFormValid()}
+                      disabled={isCreating || !isFormValid() || !canCreate}
                       className="flex-1 flex items-center justify-center px-6 py-4 bg-gradient-to-r from-green-400 to-green-600 text-black font-bold rounded-lg hover:from-green-300 hover:to-green-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-green-500/30"
+                      title={!canCreate ? 'Authentication required' : undefined}
                     >
                       {isCreating ? (
                         <>
                           <LoaderIcon className="animate-spin h-5 w-5 mr-2" />
                           Creating with SDK...
+                        </>
+                      ) : !canCreate ? (
+                        <>
+                          <AlertCircleIcon className="h-5 w-5 mr-2" />
+                          Auth Required
                         </>
                       ) : (
                         <>
@@ -696,6 +830,19 @@ export function CreateEvermarkForm({
                     <div>
                       <div className="text-xs font-medium text-purple-400">Smart Loading</div>
                       <div className="text-xs text-gray-500">Intelligent source fallbacks</div>
+                    </div>
+                  </div>
+                  
+                  {/* ADDED: Auth status in architecture */}
+                  <div className="flex items-center gap-3">
+                    <div className={`w-3 h-3 rounded-full ${isSupabaseAuthenticated ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
+                    <div>
+                      <div className={`text-xs font-medium ${isSupabaseAuthenticated ? 'text-green-400' : 'text-yellow-400'}`}>
+                        {isSupabaseAuthenticated ? 'Authenticated' : 'Auth Pending'}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {isSupabaseAuthenticated ? 'Ready for uploads' : 'Setting up permissions'}
+                      </div>
                     </div>
                   </div>
                 </div>
