@@ -1,32 +1,23 @@
 import { Handler } from '@netlify/functions';
 import { verifyMessage } from 'viem';
-import crypto from 'crypto';
+import { createClient } from '@supabase/supabase-js';
 
 const nonceStore = new Map<string, { nonce: string; timestamp: number }>();
 const NONCE_EXPIRY = 5 * 60 * 1000;
 
-const JWT_SECRET = process.env.SUPABASE_JWT_SECRET!;
 const DOMAIN = process.env.URL || 'https://evermarks.net';
 
-if (!JWT_SECRET) {
-  throw new Error('SUPABASE_JWT_SECRET environment variable is required');
-}
-
-// Manual JWT creation using Node.js built-in crypto
-function createJWT(payload: any, secret: string): string {
-  const header = { alg: 'HS256', typ: 'JWT' };
-  
-  const encodedHeader = Buffer.from(JSON.stringify(header)).toString('base64url');
-  const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url');
-  
-  const data = `${encodedHeader}.${encodedPayload}`;
-  const signature = crypto
-    .createHmac('sha256', secret)
-    .update(data)
-    .digest('base64url');
-
-  return `${data}.${signature}`;
-}
+// Create Supabase client with service key for admin operations
+const supabase = createClient(
+  process.env.VITE_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_KEY!, // Use service key for admin operations
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  }
+);
 
 export const handler: Handler = async (event) => {
   const headers = {
@@ -125,47 +116,64 @@ export const handler: Handler = async (event) => {
       };
     }
 
-    // Create JWT with verified claims
+    // Use Supabase's modern auth system instead of manual JWT creation
     const userId = address.toLowerCase();
-    const now_seconds = Math.floor(Date.now() / 1000);
     
-    const payload = {
-      iss: `${DOMAIN}/auth/v1`,
-      sub: userId,
-      aud: 'authenticated',
-      exp: now_seconds + (24 * 60 * 60),
-      iat: now_seconds,
-      role: 'authenticated',
-      aal: 'aal1',
-      user_metadata: {
-        wallet_address: address,
-        verified_signature: true,
-        auth_method: 'wallet_signature',
-        verified_at: new Date().toISOString(),
-      },
-      app_metadata: {
-        provider: 'wallet',
-        wallet_verified: true,
-      }
-    };
-
-    const token = createJWT(payload, JWT_SECRET);
-
-    console.log('✅ Wallet signature verified and JWT issued for:', address);
-
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({
-        success: true,
-        jwt: token,
-        user: {
-          id: userId,
-          wallet_address: address,
-          display_name: `${address.slice(0, 6)}...${address.slice(-4)}`,
+    try {
+      // Method 1: Create user with signInAnonymously and verified metadata
+      const { data: authData, error: authError } = await supabase.auth.signInAnonymously({
+        options: {
+          data: {
+            wallet_address: address,
+            verified_signature: true,
+            auth_method: 'wallet_signature',
+            verified_at: new Date().toISOString(),
+            display_name: `${address.slice(0, 6)}...${address.slice(-4)}`,
+          }
         }
-      }),
-    };
+      });
+
+      if (authError) {
+        console.error('Supabase auth error:', authError);
+        return {
+          statusCode: 500,
+          headers,
+          body: JSON.stringify({ error: 'Failed to create authenticated session' }),
+        };
+      }
+
+      console.log('✅ Wallet signature verified and Supabase session created for:', address);
+
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+          success: true,
+          session: {
+            access_token: authData.session?.access_token,
+            refresh_token: authData.session?.refresh_token,
+            expires_at: authData.session?.expires_at,
+          },
+          user: {
+            id: authData.user?.id,
+            wallet_address: address,
+            display_name: `${address.slice(0, 6)}...${address.slice(-4)}`,
+            verified_signature: true,
+          }
+        }),
+      };
+
+    } catch (supabaseError) {
+      console.error('Supabase operation failed:', supabaseError);
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({ 
+          error: 'Authentication service error',
+          details: supabaseError instanceof Error ? supabaseError.message : 'Unknown error'
+        }),
+      };
+    }
 
   } catch (error) {
     console.error('Auth endpoint error:', error);
