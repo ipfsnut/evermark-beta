@@ -3,8 +3,8 @@ import { useActiveAccount } from 'thirdweb/react';
 import { useFarcasterUser } from '../lib/farcaster';
 import { EnhancedUserService, type EnhancedUser } from '../services';
 
-// ADDED: Import Supabase auth functions
-import { signInWithWallet, getAuthState } from '../lib/supabase';
+// UPDATED: Import the new secure auth function
+import { authenticateWithWallet, getAuthState } from '../lib/supabase';
 
 interface IntegratedUserContextType {
   // Current user (unified profile)
@@ -18,7 +18,7 @@ interface IntegratedUserContextType {
   hasENS: boolean;
   isFullyAuthenticated: boolean;
   
-  // ADDED: Supabase auth state
+  // Supabase auth state
   isSupabaseAuthenticated: boolean;
   supabaseAuthError: string | null;
   
@@ -27,7 +27,7 @@ interface IntegratedUserContextType {
   switchUserView: (source: 'farcaster' | 'ens' | 'wallet') => void;
   clearError: () => void;
   
-  // ADDED: Auth actions
+  // Auth actions
   ensureSupabaseAuth: () => Promise<boolean>;
   
   // Data for evermarks integration
@@ -64,7 +64,7 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
   const [error, setError] = useState<string | null>(null);
   const [preferredSource, setPreferredSource] = useState<'farcaster' | 'ens' | 'wallet'>('farcaster');
   
-  // ADDED: Supabase auth state
+  // Supabase auth state
   const [isSupabaseAuthenticated, setIsSupabaseAuthenticated] = useState(false);
   const [supabaseAuthError, setSupabaseAuthError] = useState<string | null>(null);
 
@@ -73,19 +73,18 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
     loadUserProfile();
   }, [account?.address, farcaster.user?.fid, farcaster.isAuthenticated]);
 
-  // ADDED: Check Supabase auth state on mount
+  // Check Supabase auth state on mount
   useEffect(() => {
     checkSupabaseAuthState();
   }, []);
 
-  // ADDED: Function to check current Supabase auth state
+  // Function to check current Supabase auth state
   const checkSupabaseAuthState = useCallback(async () => {
     try {
       const authState = await getAuthState();
-      setIsSupabaseAuthenticated(authState.isAuthenticated);
+      setIsSupabaseAuthenticated(authState.isAuthenticated && authState.isVerified);
       
       if (authState.error) {
-        // FIXED: Handle both string and AuthError types
         const errorMessage = typeof authState.error === 'string' 
           ? authState.error 
           : authState.error.message;
@@ -96,6 +95,7 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
       
       console.log('🔍 Supabase auth state:', {
         isAuthenticated: authState.isAuthenticated,
+        isVerified: authState.isVerified,
         hasUser: !!authState.user,
         hasSession: !!authState.session
       });
@@ -105,43 +105,59 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
     }
   }, []);
 
-  // ADDED: Ensure Supabase authentication
+  // ========================================
+  // 🔑 THE KEY CHANGE: Secure Authentication
+  // ========================================
+  
+  // UPDATED: Use secure signature-based authentication
   const ensureSupabaseAuth = useCallback(async (): Promise<boolean> => {
     try {
-      // If already authenticated, return true
-      if (isSupabaseAuthenticated) {
+      // Check if already authenticated with verified signature
+      const authState = await getAuthState();
+      const hasVerifiedAuth = !!(
+        authState.isAuthenticated && 
+        authState.isVerified &&
+        authState.user?.user_metadata?.verified_signature
+      );
+
+      if (hasVerifiedAuth) {
+        setIsSupabaseAuthenticated(true);
+        setSupabaseAuthError(null);
         return true;
       }
 
-      // Need a wallet address to authenticate
-      const walletAddress = account?.address || user?.primaryAddress;
-      if (!walletAddress) {
-        setSupabaseAuthError('No wallet address available for authentication');
+      // Need a wallet to authenticate
+      if (!account?.address) {
+        setSupabaseAuthError('No wallet connected for authentication');
         return false;
       }
 
-      console.log('🔐 Creating Supabase session for wallet:', walletAddress);
+      console.log('🔐 Starting secure wallet authentication...');
       
-      const authResult = await signInWithWallet(walletAddress);
+      // 🔑 THE CRITICAL CHANGE: Use secure authentication instead of anonymous
+      const authResult = await authenticateWithWallet(account);
       
       if (authResult.success) {
-        console.log('✅ Supabase authentication successful');
+        console.log('✅ Secure authentication successful');
         setIsSupabaseAuthenticated(true);
         setSupabaseAuthError(null);
         return true;
       } else {
-        console.error('❌ Supabase authentication failed:', authResult.error);
-        // FIXED: Ensure error is always a string
-        const errorMessage = authResult.error || 'Authentication failed';
-        setSupabaseAuthError(errorMessage);
+        console.error('❌ Authentication failed:', authResult.error);
+        setSupabaseAuthError(authResult.error || 'Authentication failed');
         return false;
       }
     } catch (error) {
-      console.error('❌ Supabase auth error:', error);
-      setSupabaseAuthError(error instanceof Error ? error.message : 'Authentication failed');
+      console.error('❌ Authentication error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
+      setSupabaseAuthError(errorMessage);
       return false;
     }
-  }, [isSupabaseAuthenticated, account?.address, user?.primaryAddress]);
+  }, [account?.address]);
+
+  // ========================================
+  // ALL OTHER FUNCTIONS STAY EXACTLY THE SAME
+  // ========================================
 
   const loadUserProfile = useCallback(async () => {
     if (!account?.address && !farcaster.user) {
@@ -178,10 +194,10 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
           hasWallet: !!enhancedUser.wallet
         });
 
-        // ADDED: Automatically create Supabase session after user is loaded
+        // Automatically ensure Supabase auth after user is loaded
         const walletAddress = enhancedUser.primaryAddress || account?.address;
         if (walletAddress && !isSupabaseAuthenticated) {
-          console.log('🔐 Auto-creating Supabase session for user...');
+          console.log('🔐 Auto-ensuring Supabase authentication for user...');
           await ensureSupabaseAuth();
         }
       } else {
@@ -198,14 +214,12 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
   }, [account?.address, farcaster.user, farcaster.isAuthenticated, isSupabaseAuthenticated, ensureSupabaseAuth]);
 
   const refreshUser = useCallback(async () => {
-    // Clear cache and reload
     EnhancedUserService.clearCache();
     await loadUserProfile();
   }, [loadUserProfile]);
 
   const switchUserView = useCallback((source: 'farcaster' | 'ens' | 'wallet') => {
     setPreferredSource(source);
-    // Could trigger a re-render with different display preferences
   }, []);
 
   const clearError = useCallback(() => {
@@ -217,7 +231,6 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
   const getEvermarkAuthorData = useCallback(() => {
     if (!user) return null;
 
-    // Determine the best author representation
     let author: string;
     let displayName: string;
     let createdVia: string;
@@ -249,7 +262,7 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
     };
   }, [user, preferredSource]);
 
-  // Utility functions
+  // Utility functions (unchanged)
   const getPrimaryIdentity = useCallback((): 'farcaster' | 'ens' | 'wallet' | null => {
     if (!user) return null;
     
@@ -267,7 +280,6 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
   const getDisplayName = useCallback((): string => {
     if (!user) return 'Anonymous';
     
-    // Priority based on verification and completeness
     if (user.farcaster?.isVerified) return user.farcaster.displayName;
     if (user.ens?.name) return user.ens.name;
     if (user.farcaster?.displayName) return user.farcaster.displayName;
@@ -278,7 +290,6 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
   const getAvatar = useCallback((): string | undefined => {
     if (!user) return undefined;
     
-    // Priority: ENS avatar (usually higher quality) > Farcaster PFP > undefined
     if (user.ens?.avatar) return user.ens.avatar;
     if (user.farcaster?.pfpUrl) return user.farcaster.pfpUrl;
     
@@ -307,7 +318,7 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
     hasENS,
     isFullyAuthenticated,
     
-    // ADDED: Supabase auth state
+    // Supabase auth state
     isSupabaseAuthenticated,
     supabaseAuthError,
     
@@ -316,8 +327,8 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
     switchUserView,
     clearError,
     
-    // ADDED: Auth actions
-    ensureSupabaseAuth,
+    // Auth actions
+    ensureSupabaseAuth, // ← This is the only function that changed!
     
     // Integration helpers
     getEvermarkAuthorData,
@@ -337,6 +348,7 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
   );
 }
 
+// All the existing hook exports stay exactly the same
 export function useIntegratedUser(): IntegratedUserContextType {
   const context = useContext(IntegratedUserContext);
   if (!context) {
@@ -345,7 +357,6 @@ export function useIntegratedUser(): IntegratedUserContextType {
   return context;
 }
 
-// UPDATED: Enhanced hooks with Supabase auth awareness
 export function useUserForEvermarks() {
   const { 
     getEvermarkAuthorData, 
@@ -372,7 +383,6 @@ export function useUserForEvermarks() {
   };
 }
 
-// Keep existing convenience hooks...
 export function useUserIdentity() {
   const { 
     user, 
