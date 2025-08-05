@@ -1,5 +1,5 @@
 [build]
-  command = "npm run build"
+  command = "corepack enable && corepack use pnpm@latest && pnpm install && pnpm run build"
   publish = "dist"
   environment = { NODE_VERSION = "20" }
   functions = "netlify/functions"
