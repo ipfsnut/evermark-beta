@@ -5,7 +5,7 @@
 
 // src/lib/supabase.ts - Fixed Supabase client with authentication support
 import { createClient } from '@supabase/supabase-js';
-import type { Account } from 'thirdweb/wallets'; // ADDED: For new auth function
+import type { Account } from 'thirdweb/wallets';
 
 // Ensure we only create one instance
 let supabaseInstance: ReturnType<typeof createClient> | null = null;
