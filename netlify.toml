@@ -62,17 +62,6 @@
   to = "/.netlify/functions/shares"
   status = 200
 
-# Authentication endpoints
-[[redirects]]
-  from = "/api/auth/nonce"
-  to = "/.netlify/functions/auth-nonce"
-  status = 200
-
-[[redirects]]
-  from = "/api/auth/wallet"
-  to = "/.netlify/functions/auth-wallet"
-  status = 200
-
 # Webhook endpoints
 [[redirects]]
   from = "/webhook/thirdweb"
@@ -139,7 +128,7 @@
     # CORS headers for API access
     Access-Control-Allow-Origin = "*"
     Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
-    Access-Control-Allow-Headers = "Content-Type, Authorization, X-Requested-With"
+    Access-Control-Allow-Headers = "Content-Type, Authorization, X-Requested-With, X-Wallet-Address"
     Access-Control-Max-Age = "86400"
     
     # Performance headers
@@ -181,7 +170,7 @@
   [headers.values]
     Access-Control-Allow-Origin = "*"
     Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
-    Access-Control-Allow-Headers = "Content-Type, Authorization, X-Requested-With, x-farcaster-signature, x-webhook-signature"
+    Access-Control-Allow-Headers = "Content-Type, Authorization, X-Requested-With, x-farcaster-signature, x-webhook-signature, X-Wallet-Address"
     Cache-Control = "no-cache, no-store, must-revalidate"
     Pragma = "no-cache"
     Expires = "0"

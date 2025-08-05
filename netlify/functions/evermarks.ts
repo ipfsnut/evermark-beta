@@ -1,4 +1,3 @@
-// netlify/functions/evermarks.ts - Main evermarks API endpoint
 import { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
 
@@ -36,10 +35,39 @@ interface EvermarkRecord {
 
 const headers = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Wallet-Address',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Content-Type': 'application/json',
 };
+
+// Simple wallet address validation
+function isValidWalletAddress(address: string): boolean {
+  return /^0x[a-fA-F0-9]{40}$/i.test(address);
+}
+
+// Get wallet address from headers or body
+function getWalletAddress(event: HandlerEvent): string | null {
+  // Try header first
+  const headerAddress = event.headers['x-wallet-address'] || event.headers['X-Wallet-Address'];
+  if (headerAddress && isValidWalletAddress(headerAddress)) {
+    return headerAddress.toLowerCase();
+  }
+
+  // Try body
+  try {
+    const body = JSON.parse(event.body || '{}');
+    if (body.wallet_address && isValidWalletAddress(body.wallet_address)) {
+      return body.wallet_address.toLowerCase();
+    }
+    if (body.owner && isValidWalletAddress(body.owner)) {
+      return body.owner.toLowerCase();
+    }
+  } catch {
+    // Invalid JSON, continue
+  }
+
+  return null;
+}
 
 export const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
   // Handle CORS preflight
@@ -142,20 +170,40 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
         }
 
       case 'POST':
+        // Validate wallet address for creating evermarks
+        const walletAddress = getWalletAddress(event);
+        if (!walletAddress) {
+          console.log('❌ No valid wallet address provided');
+          return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({ 
+              error: 'Valid wallet address required to create evermarks',
+              details: 'Include wallet address in X-Wallet-Address header or request body'
+            }),
+          };
+        }
+
+        console.log('✅ Creating evermark for wallet:', walletAddress);
+
         // Create new evermark
         const evermarkData = JSON.parse(body || '{}');
         
         // Validate required fields
-        if (!evermarkData.title || !evermarkData.author || !evermarkData.owner || !evermarkData.content_type) {
+        if (!evermarkData.title || !evermarkData.content_type) {
           return {
             statusCode: 400,
             headers,
-            body: JSON.stringify({ error: 'Missing required fields: title, author, owner, content_type' }),
+            body: JSON.stringify({ error: 'Missing required fields: title, content_type' }),
           };
         }
 
+        // Auto-populate user data from wallet address
         const newEvermark: Partial<EvermarkRecord> = {
           ...evermarkData,
+          author: evermarkData.author || `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`,
+          owner: walletAddress, // Always use provided wallet address
+          user_id: walletAddress, // Store wallet address as user_id
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           metadata_fetched: false,
@@ -173,9 +221,14 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
           return {
             statusCode: 500,
             headers,
-            body: JSON.stringify({ error: 'Failed to create evermark' }),
+            body: JSON.stringify({ 
+              error: 'Failed to create evermark',
+              details: createError.message 
+            }),
           };
         }
+
+        console.log('✅ Evermark created:', createdData.token_id);
 
         return {
           statusCode: 201,
@@ -184,6 +237,16 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
         };
 
       case 'PUT':
+        // Validate wallet address for updating evermarks
+        const updateWalletAddress = getWalletAddress(event);
+        if (!updateWalletAddress) {
+          return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({ error: 'Valid wallet address required to update evermarks' }),
+          };
+        }
+
         // Update evermark
         if (!tokenId) {
           return {
@@ -193,7 +256,39 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
           };
         }
 
+        // First, check if the wallet owns this evermark
+        const { data: existingEvermark, error: fetchError } = await supabase
+          .from('evermarks')
+          .select('owner, user_id')
+          .eq('token_id', parseInt(tokenId))
+          .single();
+
+        if (fetchError || !existingEvermark) {
+          return {
+            statusCode: 404,
+            headers,
+            body: JSON.stringify({ error: 'Evermark not found' }),
+          };
+        }
+
+        // Check ownership
+        const isOwner = existingEvermark.owner?.toLowerCase() === updateWalletAddress ||
+                       existingEvermark.user_id?.toLowerCase() === updateWalletAddress;
+
+        if (!isOwner) {
+          return {
+            statusCode: 403,
+            headers,
+            body: JSON.stringify({ error: 'You can only update your own evermarks' }),
+          };
+        }
+
         const updateData = JSON.parse(body || '{}');
+        
+        // Don't allow changing ownership
+        delete updateData.owner;
+        delete updateData.user_id;
+        
         updateData.updated_at = new Date().toISOString();
 
         const { data: updatedData, error: updateError } = await supabase
@@ -212,10 +307,79 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
           };
         }
 
+        console.log('✅ Evermark updated by owner:', updateWalletAddress);
+
         return {
           statusCode: 200,
           headers,
           body: JSON.stringify(updatedData),
+        };
+
+      case 'DELETE':
+        // Validate wallet address for deleting evermarks
+        const deleteWalletAddress = getWalletAddress(event);
+        if (!deleteWalletAddress) {
+          return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({ error: 'Valid wallet address required to delete evermarks' }),
+          };
+        }
+
+        if (!tokenId) {
+          return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({ error: 'Token ID required for deletion' }),
+          };
+        }
+
+        // Check ownership before deletion
+        const { data: deleteEvermark, error: deleteFetchError } = await supabase
+          .from('evermarks')
+          .select('owner, user_id, title')
+          .eq('token_id', parseInt(tokenId))
+          .single();
+
+        if (deleteFetchError || !deleteEvermark) {
+          return {
+            statusCode: 404,
+            headers,
+            body: JSON.stringify({ error: 'Evermark not found' }),
+          };
+        }
+
+        const isDeleteOwner = deleteEvermark.owner?.toLowerCase() === deleteWalletAddress ||
+                             deleteEvermark.user_id?.toLowerCase() === deleteWalletAddress;
+
+        if (!isDeleteOwner) {
+          return {
+            statusCode: 403,
+            headers,
+            body: JSON.stringify({ error: 'You can only delete your own evermarks' }),
+          };
+        }
+
+        const { error: deleteError } = await supabase
+          .from('evermarks')
+          .delete()
+          .eq('token_id', parseInt(tokenId));
+
+        if (deleteError) {
+          console.error('Delete error:', deleteError);
+          return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify({ error: 'Failed to delete evermark' }),
+          };
+        }
+
+        console.log('✅ Evermark deleted by owner:', deleteWalletAddress);
+
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({ success: true, message: 'Evermark deleted successfully' }),
         };
 
       default:

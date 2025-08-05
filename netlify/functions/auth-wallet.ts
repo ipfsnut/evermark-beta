@@ -1,44 +1,16 @@
 import { Handler } from '@netlify/functions';
 import { verifyMessage } from 'viem';
-import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 
 const NONCE_WINDOW_MINUTES = 5;
 const DOMAIN = process.env.URL || 'https://evermarks.net';
 
-// Supabase setup
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const secretKey = process.env.SUPABASE_SECRET_KEY; // New format: sb_secret_...
-const serviceKey = process.env.SUPABASE_SERVICE_KEY; // Legacy format: eyJhbGciO...
-const jwtSecret = process.env.SUPABASE_JWT_SECRET; // Your project's JWT secret
-
-console.log('Environment check:', {
-  SUPABASE_URL: supabaseUrl ? '✅ Set' : '❌ Missing',
-  SECRET_KEY: secretKey ? '✅ Set (New Format)' : '❌ Missing',
-  SERVICE_KEY: serviceKey ? '✅ Set (Legacy Format)' : '❌ Missing',
-  JWT_SECRET: jwtSecret ? '✅ Set' : '❌ Missing',
-  DOMAIN: DOMAIN
+console.log('🔍 Auth function environment check:', {
+  DOMAIN,
+  NODE_ENV: process.env.NODE_ENV,
+  hasSupabaseUrl: !!process.env.VITE_SUPABASE_URL,
+  hasJwtSecret: !!process.env.SUPABASE_JWT_SECRET,
 });
-
-// Use the new secret key if available, fallback to legacy service key
-const adminKey = secretKey || serviceKey;
-
-if (!supabaseUrl || !adminKey || !jwtSecret) {
-  throw new Error(`Missing Supabase configuration: URL=${!!supabaseUrl}, ADMIN_KEY=${!!adminKey}, JWT_SECRET=${!!jwtSecret}`);
-}
-
-// Admin client for user management
-const supabaseAdmin = createClient(
-  supabaseUrl,
-  adminKey,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-      detectSessionInUrl: false,
-    },
-  }
-);
 
 // Generate the same deterministic nonce as auth-nonce.ts
 function generateDeterministicNonce(address: string): string {
@@ -69,46 +41,29 @@ function isValidNonce(address: string, providedNonce: string): boolean {
   return false;
 }
 
-// Create Supabase-compatible JWT for wallet user
-function createSupabaseJWT(address: string, userId: string): string {
+// Create simple session token (Thirdweb-compatible)
+function createSessionToken(address: string): string {
   const now = Math.floor(Date.now() / 1000);
   const exp = now + (24 * 60 * 60); // 24 hours
   
   const payload = {
-    iss: 'supabase',
-    ref: supabaseUrl?.split('//')[1]?.split('.')[0], // Extract project ref
-    aud: 'authenticated',
-    exp: exp,
+    sub: address.toLowerCase(),
     iat: now,
-    sub: userId, // Use the actual Supabase user ID
-    email: `${address.toLowerCase()}@wallet.evermark`,
-    phone: '',
-    app_metadata: {
-      provider: 'wallet',
-      providers: ['wallet'],
-      wallet_verified: true,
-    },
-    user_metadata: {
-      wallet_address: address,
-      auth_method: 'wallet_signature',
-      display_name: `${address.slice(0, 6)}...${address.slice(-4)}`,
-    },
-    role: 'authenticated',
-    aal: 'aal1',
-    amr: [{ method: 'wallet', timestamp: now }],
-    session_id: crypto.randomUUID(),
+    exp: exp,
+    wallet_address: address,
+    display_name: `${address.slice(0, 6)}...${address.slice(-4)}`,
+    auth_method: 'wallet_signature',
+    verified_at: new Date().toISOString(),
   };
 
-  // Create JWT manually (basic version - use jsonwebtoken library for production)
-  const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
-  const payloadStr = Buffer.from(JSON.stringify(payload)).toString('base64url');
-  
+  // Simple signed token 
+  const tokenData = Buffer.from(JSON.stringify(payload)).toString('base64');
   const signature = crypto
-    .createHmac('sha256', jwtSecret!)
-    .update(`${header}.${payloadStr}`)
-    .digest('base64url');
+    .createHmac('sha256', process.env.SUPABASE_JWT_SECRET || 'evermark-fallback-secret')
+    .update(tokenData)
+    .digest('hex');
 
-  return `${header}.${payloadStr}.${signature}`;
+  return `${tokenData}.${signature}`;
 }
 
 export const handler: Handler = async (event) => {
@@ -132,10 +87,21 @@ export const handler: Handler = async (event) => {
   }
 
   try {
+    console.log('🔐 Processing wallet authentication request...');
+    
     const { address, message, signature, nonce } = JSON.parse(event.body || '{}');
+
+    console.log('📋 Request data:', {
+      hasAddress: !!address,
+      hasMessage: !!message,
+      hasSignature: !!signature,
+      hasNonce: !!nonce,
+      addressFormat: address ? (address.length === 42 ? 'valid' : 'invalid') : 'missing'
+    });
 
     // Validate inputs
     if (!address || !message || !signature || !nonce) {
+      console.log('❌ Missing required fields');
       return {
         statusCode: 400,
         headers,
@@ -143,7 +109,8 @@ export const handler: Handler = async (event) => {
       };
     }
 
-    if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
+    if (!/^0x[a-fA-F0-9]{40}$/i.test(address)) {
+      console.log('❌ Invalid address format:', address);
       return {
         statusCode: 400,
         headers,
@@ -153,6 +120,7 @@ export const handler: Handler = async (event) => {
 
     // Verify nonce using deterministic validation
     if (!isValidNonce(address, nonce)) {
+      console.log('❌ Invalid nonce for address:', address);
       return {
         statusCode: 401,
         headers,
@@ -160,15 +128,20 @@ export const handler: Handler = async (event) => {
       };
     }
 
+    console.log('✅ Nonce validated');
+
     // Verify message format
     const expectedStart = `${new URL(DOMAIN).hostname} wants you to sign in with your Ethereum account:\n${address}`;
     if (!message.startsWith(expectedStart)) {
+      console.log('❌ Invalid message format. Expected start:', expectedStart);
       return {
         statusCode: 400,
         headers,
         body: JSON.stringify({ error: 'Invalid message format' }),
       };
     }
+
+    console.log('✅ Message format validated');
 
     // Cryptographic signature verification
     let isValidSignature = false;
@@ -179,15 +152,19 @@ export const handler: Handler = async (event) => {
         signature: signature as `0x${string}`,
       });
     } catch (error) {
-      console.error('Signature verification failed:', error);
+      console.error('❌ Signature verification failed:', error);
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ error: 'Signature verification failed' }),
+        body: JSON.stringify({ 
+          error: 'Signature verification failed',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        }),
       };
     }
 
     if (!isValidSignature) {
+      console.log('❌ Invalid signature');
       return {
         statusCode: 401,
         headers,
@@ -195,168 +172,45 @@ export const handler: Handler = async (event) => {
       };
     }
 
-    // Create or update user in auth.users table using admin client
-    const userId = address.toLowerCase();
+    console.log('✅ Signature verified successfully');
+
+    // Generate session token (no Supabase Auth needed!)
+    const sessionToken = createSessionToken(address);
     const displayName = `${address.slice(0, 6)}...${address.slice(-4)}`;
-    
-    try {
-      // Use Supabase Auth Admin API to create/update user
-      const { data: userData, error: userError } = await supabaseAdmin.auth.admin.createUser({
-        email: `${userId}@wallet.evermark`, // Fake email format
-        email_confirm: true,
-        user_metadata: {
+    const userId = address.toLowerCase();
+
+    console.log('✅ Session token generated for:', address);
+
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        success: true,
+        session: {
+          access_token: sessionToken,
+          token_type: 'bearer',
+          expires_in: 86400,
+          expires_at: Math.floor(Date.now() / 1000) + 86400,
+          refresh_token: null,
+        },
+        user: {
+          id: userId,
           wallet_address: address,
           display_name: displayName,
-          auth_method: 'wallet_signature',
-          verified_at: new Date().toISOString(),
-        },
-        app_metadata: {
-          provider: 'wallet',
-          wallet_verified: true,
-        }
-      });
-
-      // If user already exists, find them and update
-      if (userError && userError.message.includes('already registered')) {
-        // Get existing user by email (since we can't set custom user_id)
-        const { data: existingUsers, error: getUserError } = await supabaseAdmin.auth.admin.listUsers({
-          page: 1,
-          perPage: 1000 // Adjust as needed
-        });
-
-        if (getUserError) {
-          console.error('Failed to list users:', getUserError);
-          return {
-            statusCode: 500,
-            headers,
-            body: JSON.stringify({ 
-              error: 'Failed to find existing user',
-              details: getUserError.message
-            }),
-          };
-        }
-
-        // Find user by wallet address in metadata
-        const existingUser = existingUsers?.users?.find(u => 
-          u.user_metadata?.wallet_address?.toLowerCase() === address.toLowerCase()
-        );
-
-        if (!existingUser) {
-          return {
-            statusCode: 500,
-            headers,
-            body: JSON.stringify({ 
-              error: 'User exists but could not be found',
-            }),
-          };
-        }
-
-        // Update existing user
-        const { data: updatedUser, error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-          existingUser.id,
-          {
-            user_metadata: {
-              ...existingUser.user_metadata,
-              wallet_address: address,
-              display_name: displayName,
-              auth_method: 'wallet_signature',
-              last_login: new Date().toISOString(),
-            }
-          }
-        );
-
-        if (updateError) {
-          console.error('User update error:', updateError);
-          return {
-            statusCode: 500,
-            headers,
-            body: JSON.stringify({ 
-              error: 'Failed to update user',
-              details: updateError.message
-            }),
-          };
-        }
-        
-        // Use the existing user's ID for JWT
-        const accessToken = createSupabaseJWT(address, existingUser.id);
-        
-        console.log('✅ Existing wallet user updated:', address);
-        
-        return {
-          statusCode: 200,
-          headers,
-          body: JSON.stringify({
-            success: true,
-            session: {
-              access_token: accessToken,
-              token_type: 'bearer',
-              expires_in: 86400,
-              expires_at: Math.floor(Date.now() / 1000) + 86400,
-              refresh_token: null,
-            },
-            user: {
-              id: existingUser.id,
-              wallet_address: address,
-              display_name: displayName,
-              verified_signature: true,
-              email: existingUser.email,
-              user_metadata: updatedUser?.user?.user_metadata || existingUser.user_metadata,
-            }
-          }),
-        };
-      }
-
-      // New user created successfully
-      const newUserId = userData?.user?.id;
-      if (!newUserId) {
-        return {
-          statusCode: 500,
-          headers,
-          body: JSON.stringify({ error: 'User created but ID not returned' }),
-        };
-      }
-
-      const accessToken = createSupabaseJWT(address, newUserId);
-      
-      console.log('✅ New wallet user created:', address);
-
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({
-          success: true,
-          session: {
-            access_token: accessToken,
-            token_type: 'bearer',
-            expires_in: 86400,
-            expires_at: Math.floor(Date.now() / 1000) + 86400,
-            refresh_token: null,
-          },
-          user: {
-            id: newUserId,
+          verified_signature: true,
+          authenticated_at: new Date().toISOString(),
+          email: `${userId}@wallet.evermark`,
+          user_metadata: {
             wallet_address: address,
             display_name: displayName,
-            verified_signature: true,
-            email: userData.user?.email,
-            user_metadata: userData.user?.user_metadata,
+            auth_method: 'wallet_signature',
           }
-        }),
-      };
-
-    } catch (error) {
-      console.error('Auth processing error:', error);
-      return {
-        statusCode: 500,
-        headers,
-        body: JSON.stringify({ 
-          error: 'Authentication processing failed',
-          details: error instanceof Error ? error.message : 'Unknown error'
-        }),
-      };
-    }
+        }
+      }),
+    };
 
   } catch (error) {
-    console.error('Auth endpoint error:', error);
+    console.error('💥 Auth endpoint critical error:', error);
     return {
       statusCode: 500,
       headers,

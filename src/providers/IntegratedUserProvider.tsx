@@ -3,9 +3,6 @@ import { useActiveAccount } from 'thirdweb/react';
 import { useFarcasterUser } from '../lib/farcaster';
 import { EnhancedUserService, type EnhancedUser } from '../services';
 
-// UPDATED: Import the new secure auth function
-import { authenticateWithWallet, getAuthState } from '../lib/supabase';
-
 interface IntegratedUserContextType {
   // Current user (unified profile)
   user: EnhancedUser | null;
@@ -73,96 +70,37 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
     loadUserProfile();
   }, [account?.address, farcaster.user?.fid, farcaster.isAuthenticated]);
 
-  // Check Supabase auth state on mount
+  // Auto-set Supabase auth when wallet is connected
   useEffect(() => {
-    checkSupabaseAuthState();
-  }, []);
-
-  // Function to check current Supabase auth state
-  const checkSupabaseAuthState = useCallback(async () => {
-    try {
-      const authState = await getAuthState();
-      setIsSupabaseAuthenticated(authState.isAuthenticated && authState.isVerified);
-      
-      if (authState.error) {
-        const errorMessage = typeof authState.error === 'string' 
-          ? authState.error 
-          : authState.error.message;
-        setSupabaseAuthError(errorMessage);
-      } else {
-        setSupabaseAuthError(null);
-      }
-      
-      console.log('🔍 Supabase auth state:', {
-        isAuthenticated: authState.isAuthenticated,
-        isVerified: authState.isVerified,
-        hasUser: !!authState.user,
-        hasSession: !!authState.session
-      });
-    } catch (error) {
-      console.error('Failed to check Supabase auth state:', error);
-      setSupabaseAuthError('Failed to check authentication');
-    }
-  }, []);
-
-  // ========================================
-  // 🔑 THE KEY CHANGE: Secure Authentication
-  // ========================================
-  
-  // UPDATED: Use secure signature-based authentication
-  const ensureSupabaseAuth = useCallback(async (): Promise<boolean> => {
-    try {
-      // Check if already authenticated with verified signature
-      const authState = await getAuthState();
-      const hasVerifiedAuth = !!(
-        authState.isAuthenticated && 
-        authState.isVerified &&
-        authState.user?.user_metadata?.verified_signature
-      );
-
-      if (hasVerifiedAuth) {
-        setIsSupabaseAuthenticated(true);
-        setSupabaseAuthError(null);
-        return true;
-      }
-
-      // Need a wallet to authenticate
-      if (!account?.address) {
-        setSupabaseAuthError('No wallet connected for authentication');
-        return false;
-      }
-
-      console.log('🔐 Starting secure wallet authentication...');
-      
-      // 🔑 THE CRITICAL CHANGE: Use secure authentication instead of anonymous
-      const authResult = await authenticateWithWallet(account);
-      
-      if (authResult.success) {
-        console.log('✅ Secure authentication successful');
-        setIsSupabaseAuthenticated(true);
-        setSupabaseAuthError(null);
-        return true;
-      } else {
-        console.error('❌ Authentication failed:', authResult.error);
-        setSupabaseAuthError(authResult.error || 'Authentication failed');
-        return false;
-      }
-    } catch (error) {
-      console.error('❌ Authentication error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
-      setSupabaseAuthError(errorMessage);
-      return false;
+    if (account?.address) {
+      setIsSupabaseAuthenticated(true);
+      setSupabaseAuthError(null);
+    } else {
+      setIsSupabaseAuthenticated(false);
     }
   }, [account?.address]);
 
   // ========================================
-  // ALL OTHER FUNCTIONS STAY EXACTLY THE SAME
+  // 🔑 SIMPLIFIED: Just check wallet connection
   // ========================================
+  const ensureSupabaseAuth = useCallback(async (): Promise<boolean> => {
+    // For our app, "auth" just means having a connected wallet
+    if (!account?.address) {
+      setSupabaseAuthError('Please connect your wallet to create evermarks');
+      setIsSupabaseAuthenticated(false);
+      return false;
+    }
+    
+    // That's it! No signatures, no Supabase auth, no sessions
+    // The blockchain transaction will be the real verification
+    setIsSupabaseAuthenticated(true);
+    setSupabaseAuthError(null);
+    return true;
+  }, [account?.address]);
 
   const loadUserProfile = useCallback(async () => {
     if (!account?.address && !farcaster.user) {
       setUser(null);
-      setIsSupabaseAuthenticated(false);
       return;
     }
 
@@ -193,13 +131,6 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
           hasENS: !!enhancedUser.ens,
           hasWallet: !!enhancedUser.wallet
         });
-
-        // Automatically ensure Supabase auth after user is loaded
-        const walletAddress = enhancedUser.primaryAddress || account?.address;
-        if (walletAddress && !isSupabaseAuthenticated) {
-          console.log('🔐 Auto-ensuring Supabase authentication for user...');
-          await ensureSupabaseAuth();
-        }
       } else {
         console.warn('⚠️ No enhanced profile found');
         setUser(null);
@@ -211,7 +142,7 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
     } finally {
       setIsLoading(false);
     }
-  }, [account?.address, farcaster.user, farcaster.isAuthenticated, isSupabaseAuthenticated, ensureSupabaseAuth]);
+  }, [account?.address, farcaster.user, farcaster.isAuthenticated]);
 
   const refreshUser = useCallback(async () => {
     EnhancedUserService.clearCache();
@@ -262,7 +193,7 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
     };
   }, [user, preferredSource]);
 
-  // Utility functions (unchanged)
+  // Utility functions
   const getPrimaryIdentity = useCallback((): 'farcaster' | 'ens' | 'wallet' | null => {
     if (!user) return null;
     
@@ -328,7 +259,7 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
     clearError,
     
     // Auth actions
-    ensureSupabaseAuth, // ← This is the only function that changed!
+    ensureSupabaseAuth,
     
     // Integration helpers
     getEvermarkAuthorData,
@@ -348,7 +279,6 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
   );
 }
 
-// All the existing hook exports stay exactly the same
 export function useIntegratedUser(): IntegratedUserContextType {
   const context = useContext(IntegratedUserContext);
   if (!context) {
