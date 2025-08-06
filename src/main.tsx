@@ -1,4 +1,4 @@
-// src/main.tsx - Application entry point
+// src/main.tsx - Temporarily remove StrictMode to test GoTrueClient issue
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
@@ -14,14 +14,14 @@ if (!rootElement) {
 // Create React 18 root with concurrent features enabled
 const root = ReactDOM.createRoot(rootElement);
 
-// Render app with error handling
+// TEMPORARY FIX: Remove StrictMode to test if it's causing the GoTrueClient issue
+// StrictMode causes components to render twice in development, which can create multiple instances
 try {
   root.render(
-    <React.StrictMode>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </React.StrictMode>
+    // Remove React.StrictMode temporarily to test
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
   );
 } catch (error) {
   console.error('Failed to render app:', error);
@@ -51,5 +51,10 @@ if (import.meta.env.DEV) {
   console.log('Build info:', {
     version: import.meta.env.VITE_APP_VERSION || 'development',
     buildTime: new Date().toISOString(),
+  });
+  
+  // Import debug function to check Supabase instances
+  import('./lib/supabase').then(({ getSupabaseDebugInfo }) => {
+    console.log('🔍 Supabase Debug Info:', getSupabaseDebugInfo());
   });
 }
