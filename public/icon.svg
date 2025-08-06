@@ -1,0 +1,33 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background with gradient -->
+  <rect width="512" height="512" rx="64" fill="url(#gradient)" />
+  
+  <!-- Main evermark symbol -->
+  <circle cx="256" cy="256" r="180" fill="white" fill-opacity="0.1" stroke="white" stroke-width="4"/>
+  <circle cx="256" cy="256" r="140" fill="none" stroke="#00ff41" stroke-width="6"/>
+  
+  <!-- Central diamond/mark -->
+  <path d="M256 180L300 220L256 260L212 220Z" fill="#00ff41"/>
+  <path d="M256 260L300 300L256 340L212 300Z" fill="#0080ff"/>
+  
+  <!-- Connecting lines representing blockchain -->
+  <line x1="140" y1="256" x2="180" y2="256" stroke="#00ff41" stroke-width="4" stroke-linecap="round"/>
+  <line x1="332" y1="256" x2="372" y2="256" stroke="#00ff41" stroke-width="4" stroke-linecap="round"/>
+  <line x1="256" y1="140" x2="256" y2="180" stroke="#0080ff" stroke-width="4" stroke-linecap="round"/>
+  <line x1="256" y1="332" x2="256" y2="372" stroke="#0080ff" stroke-width="4" stroke-linecap="round"/>
+  
+  <!-- Corner dots representing permanence -->
+  <circle cx="140" cy="140" r="8" fill="#ff0080"/>
+  <circle cx="372" cy="140" r="8" fill="#ff0080"/>
+  <circle cx="140" cy="372" r="8" fill="#ff0080"/>
+  <circle cx="372" cy="372" r="8" fill="#ff0080"/>
+  
+  <!-- Gradient definition -->
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#000000;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#1a1a1a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#000000;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+</svg>
