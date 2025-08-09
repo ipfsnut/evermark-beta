@@ -9,7 +9,6 @@ import type {
   EvermarkFeedResult
 } from '../types';
 
-// FIXED: Updated SDK imports to use unified package
 import { 
   resolveImageSources, 
   isValidUrl,

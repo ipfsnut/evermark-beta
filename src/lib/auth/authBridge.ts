@@ -1,7 +1,7 @@
-// src/lib/auth/authBridge.ts - FID-based authentication bridge
+// src/lib/auth/authBridge.ts - FIXED: Handle null supabase client
 // Integrates Farcaster auth with existing Thirdweb/Supabase setup
 
-import { supabase } from '../supabase';
+import { supabase, isSupabaseConfigured } from '../supabase';
 import type { AppFarcasterUser } from '../neynar/neynarTypes';
 
 interface AuthSession {
@@ -264,13 +264,19 @@ export class FarcasterAuthBridge {
   }
 
   /**
-   * Private: Create/update Farcaster user in database
+   * Private: Create/update Farcaster user in database - FIXED
    */
   private static async upsertFarcasterUser(
     farcasterUser: AppFarcasterUser,
     walletAddress?: string
   ): Promise<void> {
     try {
+      // FIXED: Check if Supabase is configured before using
+      if (!isSupabaseConfigured() || !supabase) {
+        console.warn('Supabase not configured - skipping user upsert');
+        return;
+      }
+
       const userData = {
         farcaster_fid: farcasterUser.fid,
         farcaster_username: farcasterUser.username,
@@ -303,10 +309,16 @@ export class FarcasterAuthBridge {
   }
 
   /**
-   * Private: Set Supabase auth context
+   * Private: Set Supabase auth context - FIXED
    */
   private static async setSupabaseAuthContext(session: AuthSession): Promise<void> {
     try {
+      // FIXED: Check if Supabase is available before using it
+      if (!isSupabaseConfigured() || !supabase) {
+        console.warn('Supabase not configured - skipping auth context setup');
+        return;
+      }
+
       // This is where you'd set custom JWT or auth context in Supabase
       // For now, we'll use RLS policies based on user_id
       

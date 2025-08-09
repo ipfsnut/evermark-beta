@@ -1,12 +1,17 @@
+// src/features/evermarks/config/sdk-config.ts
+// FIXED: Using correct evermark-sdk imports from the existing package
+
 import { 
   createDefaultStorageConfig,
+  type StorageConfig,
+  type LoadMetrics
+} from 'evermark-sdk/core';
+
+import {
   CacheManager,
   PerformanceMonitor, 
-  CORSHandler,
-  type StorageConfig,
-  type CacheConfig,
-  type LoadMetrics
-} from 'evermark-sdk';
+  CORSHandler
+} from 'evermark-sdk/browser';
 
 import { supabase } from '../../../lib/supabase';
 
