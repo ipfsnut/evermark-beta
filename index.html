@@ -39,6 +39,27 @@
   <!-- Fixed manifest.json reference -->
   <link rel="manifest" href="/manifest.json" />
 
+  <!-- FIXED: Node.js Polyfill for Thirdweb v5 compatibility -->
+  <script>
+    // Minimal polyfill for Thirdweb's Node.js dependencies
+    // This fixes "process is not defined" error in browser
+    if (typeof process === 'undefined') {
+      window.process = { 
+        env: { 
+          NODE_ENV: 'production',
+          // Add any other env vars that Thirdweb might need
+        },
+        browser: true,
+        version: 'v18.0.0'
+      };
+    }
+    
+    // Also ensure global is available for some libraries
+    if (typeof global === 'undefined') {
+      window.global = window;
+    }
+  </script>
+
   <!-- Farcaster Detection Script -->
   <script>
     // Enhanced Farcaster detection for frame/mini-app context
