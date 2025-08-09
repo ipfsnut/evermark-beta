@@ -255,12 +255,6 @@
   [headers.values]
     Cross-Origin-Opener-Policy = "same-origin-allow-popups"
     Cross-Origin-Embedder-Policy = "credentialless"
-  
-  [plugins.inputs.audits]
-    performance = true
-    accessibility = true
-    best-practices = true
-    seo = true
 
 # Form handling (if you add contact forms)
 [forms]
