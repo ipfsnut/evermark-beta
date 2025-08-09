@@ -1,4 +1,4 @@
-# netlify.toml - Complete Evermark Beta deployment configuration
+# netlify.toml - Fixed CSP and CORS configuration for Evermark Beta
 
 [build]
   # Use existing pnpm with frozen lockfile for consistent builds
@@ -135,15 +135,15 @@
     X-UA-Compatible = "IE=edge"
     Vary = "Accept-Encoding, User-Agent"
     
-    # Content Security Policy for Web3 compatibility
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://*.supabase.co https://*.thirdweb.com https://*.rpc.thirdweb.com https://rpc.ankr.com https://mainnet.base.org https://base-mainnet.g.alchemy.com https://api.ensideas.com wss://*.thirdweb.com wss://*.alchemy.com; worker-src 'self' blob:; child-src 'self' blob:; frame-src 'self' https://verify.walletconnect.com https://verify.walletconnect.org; object-src 'none'; base-uri 'self';"
+    # COMPREHENSIVE CSP: Fixed to allow all necessary domains for Web3 + Farcaster + Image services
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://*.supabase.co https://*.thirdweb.com https://*.rpc.thirdweb.com https://rpc.ankr.com https://mainnet.base.org https://base-mainnet.g.alchemy.com https://api.ensideas.com https://imagedelivery.net https://*.imagedelivery.net https://gateway.pinata.cloud https://ipfs.io https://cloudflare-ipfs.com https://gateway.ipfs.io https://c.thirdweb.com https://api.dicebear.com https://*.dicebear.com wss://*.thirdweb.com wss://*.alchemy.com; worker-src 'self' blob:; child-src 'self' blob:; frame-src 'self' https://verify.walletconnect.com https://verify.walletconnect.org; object-src 'none'; base-uri 'self';"
 
 # Farcaster Frame specific headers
 [[headers]]
   for = "/evermark/*"
   [headers.values]
     # Less restrictive CSP for Farcaster frames
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; connect-src 'self' https://*.supabase.co https://farcaster.xyz https://client.farcaster.xyz https://warpcast.com https://client.warpcast.com https://wrpcd.net https://*.wrpcd.net https://*.thirdweb.com https://*.rpc.thirdweb.com https://c.thirdweb.com https://social.thirdweb.com; frame-ancestors *; frame-src *;"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; connect-src 'self' https://*.supabase.co https://farcaster.xyz https://client.farcaster.xyz https://warpcast.com https://client.warpcast.com https://wrpcd.net https://*.wrpcd.net https://*.thirdweb.com https://*.rpc.thirdweb.com https://c.thirdweb.com https://social.thirdweb.com https://imagedelivery.net https://*.imagedelivery.net https://gateway.pinata.cloud https://ipfs.io https://cloudflare-ipfs.com https://gateway.ipfs.io; frame-ancestors *; frame-src *;"
     
     # Farcaster Frame meta tags
     X-Frame-Options = "ALLOWALL"
@@ -249,9 +249,12 @@
   function = "geo-location"
   path = "/api/geo"
 
-# Build plugins (optional optimizations)
-[[plugins]]
-  package = "@netlify/plugin-lighthouse"
+# Add Coinbase Wallet COOP fix for better wallet compatibility
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cross-Origin-Opener-Policy = "same-origin-allow-popups"
+    Cross-Origin-Embedder-Policy = "credentialless"
   
   [plugins.inputs.audits]
     performance = true
