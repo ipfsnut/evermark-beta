@@ -1,89 +1,87 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
-import { resolve } from 'path'
+import path from 'path'
 
 // https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [
-    react({
-      // Use automatic JSX runtime for React 19
-      jsxRuntime: 'automatic',
-      // Ensure proper JSX handling
-      jsxImportSource: 'react'
-    })
-  ],
-  
-  // Path resolution for clean imports
-  resolve: {
-    alias: {
-      '@': resolve(__dirname, 'src'),
-      '@/core': resolve(__dirname, 'src/core'),
-      '@/features': resolve(__dirname, 'src/features'),
-      '@/components': resolve(__dirname, 'src/components'),
-      '@/providers': resolve(__dirname, 'src/providers'),
-      '@/hooks': resolve(__dirname, 'src/hooks'),
-      '@/lib': resolve(__dirname, 'src/lib'),
-      '@/pages': resolve(__dirname, 'src/pages'),
-      '@/utils': resolve(__dirname, 'src/utils')
-    }
-  },
+export default defineConfig(({ mode }) => {
+  // Load env files: .env.local for development, then fallback to .env
+  // Vite automatically loads .env.local, .env.development, .env.production
+  const env = loadEnv(mode, process.cwd(), '')
 
-  // Development server configuration
-  server: {
-    port: 3000,
-    host: true,
-    open: true
-  },
-
-  // Build optimization
-  build: {
-    target: 'esnext',
-    outDir: 'dist',
-    sourcemap: true,
+  return {
+    plugins: [react()],
     
-    // Bundle optimization
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          // Vendor chunks for better caching
-          vendor: ['react', 'react-dom'],
-          blockchain: ['thirdweb', 'viem', 'wagmi'],
-          farcaster: ['@farcaster/frame-sdk', '@farcaster/frame-wagmi-connector'],
-          ui: ['lucide-react', 'classnames', 'date-fns']
-        }
+    // Fix for "process is not defined" error
+    define: {
+      // Define global for libraries that need it
+      global: 'globalThis',
+      
+      // Define process.env for libraries that use it
+      'process.env': {
+        NODE_ENV: JSON.stringify(mode),
+        
+        // For local development (.env.local) and production (Netlify env vars)
+        // Vite will automatically pick up VITE_ prefixed variables
+        VITE_SUPABASE_URL: JSON.stringify(env.VITE_SUPABASE_URL || ''),
+        VITE_SUPABASE_ANON_KEY: JSON.stringify(env.VITE_SUPABASE_ANON_KEY || ''),
+        VITE_THIRDWEB_CLIENT_ID: JSON.stringify(env.VITE_THIRDWEB_CLIENT_ID || ''),
+        VITE_THIRDWEB_SECRET_KEY: JSON.stringify(env.VITE_THIRDWEB_SECRET_KEY || ''),
+        VITE_NEYNAR_API_KEY: JSON.stringify(env.VITE_NEYNAR_API_KEY || ''),
+        
+        // Contract addresses
+        VITE_EMARK_TOKEN_ADDRESS: JSON.stringify(env.VITE_EMARK_TOKEN_ADDRESS || ''),
+        VITE_CARD_CATALOG_ADDRESS: JSON.stringify(env.VITE_CARD_CATALOG_ADDRESS || ''),
+        VITE_EVERMARK_NFT_ADDRESS: JSON.stringify(env.VITE_EVERMARK_NFT_ADDRESS || ''),
+        VITE_EVERMARK_VOTING_ADDRESS: JSON.stringify(env.VITE_EVERMARK_VOTING_ADDRESS || ''),
+        VITE_EVERMARK_LEADERBOARD_ADDRESS: JSON.stringify(env.VITE_EVERMARK_LEADERBOARD_ADDRESS || ''),
+        VITE_EVERMARK_REWARDS_ADDRESS: JSON.stringify(env.VITE_EVERMARK_REWARDS_ADDRESS || ''),
+        VITE_FEE_COLLECTOR_ADDRESS: JSON.stringify(env.VITE_FEE_COLLECTOR_ADDRESS || ''),
+        
+        // Debug flags
+        VITE_DEBUG_MODE: JSON.stringify(env.VITE_DEBUG_MODE || (mode === 'development' ? 'true' : 'false')),
+        VITE_ENABLE_DEVTOOLS: JSON.stringify(env.VITE_ENABLE_DEVTOOLS || (mode === 'development' ? 'true' : 'false')),
       }
     },
-    
-    // Performance optimization
-    chunkSizeWarningLimit: 1000
-  },
 
-  // Environment variables
-  define: {
-    global: 'globalThis'
-  },
+    // Path resolution
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, './src'),
+        '~': path.resolve(__dirname, './src'),
+      },
+    },
 
-  // Optimizations for dependencies
-  optimizeDeps: {
-    include: [
-      'react',
-      'react-dom',
-      'react-router-dom',
-      '@tanstack/react-query',
-      'thirdweb',
-      'viem',
-      'wagmi'
-    ],
-    // Exclude problematic packages from pre-bundling
-    exclude: [
-      '@farcaster/frame-sdk',
-      '@farcaster/frame-wagmi-connector'
-    ]
-  },
+    // Server configuration
+    server: {
+      port: 3000,
+      open: true,
+      cors: true,
+    },
 
-  // ESBuild configuration for JSX
-  esbuild: {
-    jsx: 'automatic',
-    jsxImportSource: 'react'
+    // Build configuration
+    build: {
+      target: 'esnext',
+      sourcemap: mode === 'development',
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            vendor: ['react', 'react-dom'],
+            thirdweb: ['thirdweb'],
+            tanstack: ['@tanstack/react-query'],
+          },
+        },
+      },
+    },
+
+    // Optimize dependencies
+    optimizeDeps: {
+      include: [
+        'react',
+        'react-dom',
+        'thirdweb',
+        '@tanstack/react-query',
+        'react-router-dom',
+      ],
+    },
   }
 })
