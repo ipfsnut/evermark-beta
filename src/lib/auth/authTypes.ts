@@ -360,13 +360,13 @@ export type AuthEventHandler = (event: AuthEvent) => void;
 // ==============================================
 
 /**
- * Default auth bridge configuration
+ * Default auth bridge configuration - FIXED: Use import.meta.env
  */
 export const DEFAULT_AUTH_CONFIG: AuthBridgeConfig = {
   autoCreateSession: true,
   sessionTimeout: 24 * 60 * 60 * 1000, // 24 hours
   persistSession: true,
-  debug: process.env.NODE_ENV === 'development'
+  debug: import.meta.env.DEV // Use Vite's built-in development flag
 };
 
 /**
