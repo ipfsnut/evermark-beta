@@ -2,6 +2,8 @@
 import { CreateEvermarkForm } from '@/features/evermarks';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeftIcon } from 'lucide-react';
+import { AuthStatusComponent } from '@/components/AuthStatusComponent';
+
 
 export default function CreatePage() {
   const navigate = useNavigate();
@@ -26,6 +28,8 @@ export default function CreatePage() {
           Back
         </button>
       </div>
+<AuthStatusComponent showDebugInfo={true} />
+
 
       {/* Creation form */}
       <CreateEvermarkForm

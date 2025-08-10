@@ -1,7 +1,12 @@
+// src/providers/IntegratedUserProvider.tsx
+// FIXED: Now uses your existing JWT authentication infrastructure
+
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useActiveAccount } from 'thirdweb/react';
 import { useFarcasterUser } from '../lib/farcaster';
 import { EnhancedUserService, type EnhancedUser } from '../services';
+import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabase';
+import { WalletAuthService, type WalletAuthResult } from '../services/WalletAuthService';
 
 interface IntegratedUserContextType {
   // Current user (unified profile)
@@ -15,17 +20,21 @@ interface IntegratedUserContextType {
   hasENS: boolean;
   isFullyAuthenticated: boolean;
   
-  // Supabase auth state
+  // Supabase auth state - FIXED with real JWT
   isSupabaseAuthenticated: boolean;
   supabaseAuthError: string | null;
+  supabaseSession: any;
+  isAuthenticating: boolean;
   
   // User actions
   refreshUser: () => Promise<void>;
   switchUserView: (source: 'farcaster' | 'ens' | 'wallet') => void;
   clearError: () => void;
   
-  // Auth actions
+  // Auth actions - ENHANCED with real JWT
   ensureSupabaseAuth: () => Promise<boolean>;
+  authenticateWallet: () => Promise<boolean>;
+  signOut: () => Promise<void>;
   
   // Data for evermarks integration
   getEvermarkAuthorData: () => {
@@ -61,42 +70,168 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
   const [error, setError] = useState<string | null>(null);
   const [preferredSource, setPreferredSource] = useState<'farcaster' | 'ens' | 'wallet'>('farcaster');
   
-  // Supabase auth state
+  // FIXED: Real JWT authentication state
   const [isSupabaseAuthenticated, setIsSupabaseAuthenticated] = useState(false);
   const [supabaseAuthError, setSupabaseAuthError] = useState<string | null>(null);
+  const [supabaseSession, setSupabaseSession] = useState<any>(null);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
 
   // Load user profile when authentication state changes
   useEffect(() => {
     loadUserProfile();
   }, [account?.address, farcaster.user?.fid, farcaster.isAuthenticated]);
 
-  // Auto-set Supabase auth when wallet is connected
+  // Check existing session on mount
   useEffect(() => {
-    if (account?.address) {
-      setIsSupabaseAuthenticated(true);
-      setSupabaseAuthError(null);
-    } else {
-      setIsSupabaseAuthenticated(false);
+    checkExistingSession();
+  }, []);
+
+  // Auto-authenticate when wallet connects (optional - you can disable this)
+  useEffect(() => {
+    if (account?.address && !isSupabaseAuthenticated && !isAuthenticating) {
+      // Auto-authenticate on wallet connection
+      // Comment this out if you prefer manual authentication
+      authenticateWallet();
     }
   }, [account?.address]);
 
-  // ========================================
-  // 🔑 SIMPLIFIED: Just check wallet connection
-  // ========================================
-  const ensureSupabaseAuth = useCallback(async (): Promise<boolean> => {
-    // For our app, "auth" just means having a connected wallet
-    if (!account?.address) {
-      setSupabaseAuthError('Please connect your wallet to create evermarks');
-      setIsSupabaseAuthenticated(false);
+  /**
+   * Check if there's an existing valid Supabase session
+   */
+  const checkExistingSession = useCallback(async () => {
+    if (!isSupabaseConfigured()) return;
+
+    try {
+      const supabase = getSupabaseClient();
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (session && !error) {
+        console.log('✅ Found existing Supabase session');
+        setSupabaseSession(session);
+        setIsSupabaseAuthenticated(true);
+        setSupabaseAuthError(null);
+      } else if (error) {
+        console.log('⚠️ Existing session invalid:', error.message);
+        setIsSupabaseAuthenticated(false);
+        setSupabaseSession(null);
+      }
+    } catch (error) {
+      console.error('Failed to check existing session:', error);
+    }
+  }, []);
+
+  /**
+   * FIXED: Real wallet authentication using your JWT infrastructure
+   */
+  const authenticateWallet = useCallback(async (): Promise<boolean> => {
+    if (!account) {
+      setSupabaseAuthError('No wallet connected');
       return false;
     }
-    
-    // That's it! No signatures, no Supabase auth, no sessions
-    // The blockchain transaction will be the real verification
-    setIsSupabaseAuthenticated(true);
+
+    if (!isSupabaseConfigured()) {
+      setSupabaseAuthError('Supabase not configured');
+      return false;
+    }
+
+    setIsAuthenticating(true);
     setSupabaseAuthError(null);
-    return true;
-  }, [account?.address]);
+    
+    try {
+      console.log('🔐 Starting wallet authentication flow...');
+      
+      // Use your existing JWT authentication service
+      const authResult: WalletAuthResult = await WalletAuthService.authenticateWallet(account);
+      
+      if (!authResult.success) {
+        const friendlyError = WalletAuthService.getErrorMessage(authResult.error || 'Authentication failed');
+        setSupabaseAuthError(friendlyError);
+        return false;
+      }
+
+      if (!authResult.session) {
+        setSupabaseAuthError('No session received from authentication');
+        return false;
+      }
+
+      // Set the JWT session in Supabase client
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase.auth.setSession({
+        access_token: authResult.session.access_token,
+        refresh_token: authResult.session.refresh_token,
+      });
+
+      if (error) {
+        console.error('❌ Failed to set Supabase session:', error);
+        setSupabaseAuthError('Failed to establish session');
+        return false;
+      }
+
+      // Success!
+      setSupabaseSession(data.session);
+      setIsSupabaseAuthenticated(true);
+      setSupabaseAuthError(null);
+      
+      console.log('✅ Wallet authentication complete! Session established.');
+      
+      return true;
+
+    } catch (error) {
+      console.error('❌ Wallet authentication failed:', error);
+      const friendlyError = WalletAuthService.getErrorMessage(
+        error instanceof Error ? error.message : 'Authentication failed'
+      );
+      setSupabaseAuthError(friendlyError);
+      return false;
+    } finally {
+      setIsAuthenticating(false);
+    }
+  }, [account]);
+
+  /**
+   * Ensure authentication - calls authenticateWallet if needed
+   */
+  const ensureSupabaseAuth = useCallback(async (): Promise<boolean> => {
+    // Check if already authenticated
+    if (isSupabaseAuthenticated && supabaseSession) {
+      // Verify session is still valid
+      if (WalletAuthService.isSessionValid(supabaseSession)) {
+        return true;
+      } else {
+        console.log('🔄 Session expired, re-authenticating...');
+        setIsSupabaseAuthenticated(false);
+        setSupabaseSession(null);
+      }
+    }
+
+    if (!account?.address) {
+      setSupabaseAuthError('Please connect your wallet first');
+      return false;
+    }
+
+    console.log('🔄 Ensuring Supabase authentication...');
+    return await authenticateWallet();
+  }, [isSupabaseAuthenticated, supabaseSession, account?.address, authenticateWallet]);
+
+  /**
+   * Sign out and clear session
+   */
+  const signOut = useCallback(async () => {
+    try {
+      if (isSupabaseConfigured()) {
+        const supabase = getSupabaseClient();
+        await supabase.auth.signOut();
+      }
+      
+      setSupabaseSession(null);
+      setIsSupabaseAuthenticated(false);
+      setSupabaseAuthError(null);
+      
+      console.log('✅ Signed out successfully');
+    } catch (error) {
+      console.error('❌ Sign out failed:', error);
+    }
+  }, []);
 
   const loadUserProfile = useCallback(async () => {
     if (!account?.address && !farcaster.user) {
@@ -249,17 +384,21 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
     hasENS,
     isFullyAuthenticated,
     
-    // Supabase auth state
+    // Supabase auth state - FIXED with real JWT
     isSupabaseAuthenticated,
     supabaseAuthError,
+    supabaseSession,
+    isAuthenticating,
     
     // Actions
     refreshUser,
     switchUserView,
     clearError,
     
-    // Auth actions
+    // Auth actions - ENHANCED with real JWT
     ensureSupabaseAuth,
+    authenticateWallet,
+    signOut,
     
     // Integration helpers
     getEvermarkAuthorData,
@@ -279,6 +418,7 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
   );
 }
 
+// Export hooks with enhanced authentication
 export function useIntegratedUser(): IntegratedUserContextType {
   const context = useContext(IntegratedUserContext);
   if (!context) {
@@ -293,10 +433,12 @@ export function useUserForEvermarks() {
     isFullyAuthenticated, 
     isSupabaseAuthenticated,
     ensureSupabaseAuth,
+    authenticateWallet,
     user,
     hasWallet,
     hasFarcaster,
-    supabaseAuthError
+    supabaseAuthError,
+    isAuthenticating
   } = useIntegratedUser();
   
   return {
@@ -305,11 +447,13 @@ export function useUserForEvermarks() {
     isSupabaseAuthenticated,
     canCreate: isFullyAuthenticated && isSupabaseAuthenticated,
     ensureSupabaseAuth,
+    authenticateWallet,
     user,
     hasWallet,
     hasFarcaster,
     shouldShowFarcasterFeatures: hasFarcaster,
-    authError: supabaseAuthError
+    authError: supabaseAuthError,
+    isAuthenticating
   };
 }
 
@@ -341,7 +485,8 @@ export function useAuthenticationState() {
     isFullyAuthenticated,
     isSupabaseAuthenticated,
     getPrimaryIdentity,
-    getIdentityScore 
+    getIdentityScore,
+    isAuthenticating
   } = useIntegratedUser();
   
   return {
@@ -353,6 +498,7 @@ export function useAuthenticationState() {
     canUpload: isFullyAuthenticated && isSupabaseAuthenticated,
     primaryIdentity: getPrimaryIdentity(),
     identityScore: getIdentityScore(),
-    isHybridUser: (hasWallet && hasFarcaster) || (hasWallet && hasENS) || (hasFarcaster && hasENS)
+    isHybridUser: (hasWallet && hasFarcaster) || (hasWallet && hasENS) || (hasFarcaster && hasENS),
+    isAuthenticating
   };
 }
