@@ -16,14 +16,18 @@ export const chain = defineChain({
     symbol: 'ETH',
     decimals: 18,
   },
-  rpc: [`https://8453.rpc.thirdweb.com/${import.meta.env.VITE_THIRDWEB_CLIENT_ID}`],
-  blockExplorers: [
-    {
+  rpcUrls: {
+    default: {
+      http: [`https://8453.rpc.thirdweb.com/${import.meta.env.VITE_THIRDWEB_CLIENT_ID}`],
+    },
+  },
+  blockExplorers: {
+    default: {
       name: 'BaseScan',
       url: 'https://basescan.org',
       apiUrl: 'https://api.basescan.org',
     },
-  ],
+  },
   testnet: false,
 });
 

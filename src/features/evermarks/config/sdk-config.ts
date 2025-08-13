@@ -102,20 +102,22 @@ export function createEvermarkStorageConfig(): StorageConfig {
         'https://ipfs.io/ipfs',
         'https://cloudflare-ipfs.com/ipfs'
       ],
-      timeout: 10000,
-      uploadEndpoint: 'https://api.pinata.cloud/pinning/pinFileToIPFS',
-      apiKey: import.meta.env.VITE_PINATA_JWT || import.meta.env.VITE_PINATA_API_KEY || '',
-      service: 'pinata' as const
-    } as any; // Cast to any since SDK expects upload properties
+      timeout: 10000
+    };
+    
+    // Add upload properties separately to avoid TypeScript issues
+    (config.ipfs as any).uploadEndpoint = 'https://api.pinata.cloud/pinning/pinFileToIPFS';
+    (config.ipfs as any).apiKey = import.meta.env.VITE_PINATA_JWT || import.meta.env.VITE_PINATA_API_KEY || '';
+    (config.ipfs as any).service = 'pinata';
 
     storageConfigInstance = config;
     
     console.log('✅ Storage config created successfully');
     console.log('🔧 IPFS config:', {
-      hasUploadEndpoint: !!config.ipfs.uploadEndpoint,
-      hasApiKey: !!config.ipfs.apiKey,
-      service: config.ipfs.service,
-      apiKeyLength: config.ipfs.apiKey?.length || 0
+      hasUploadEndpoint: !!(config.ipfs as any).uploadEndpoint,
+      hasApiKey: !!(config.ipfs as any).apiKey,
+      service: (config.ipfs as any).service,
+      apiKeyLength: (config.ipfs as any).apiKey?.length || 0
     });
     return config;
 
