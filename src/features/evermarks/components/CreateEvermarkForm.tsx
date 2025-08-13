@@ -113,10 +113,10 @@ export function CreateEvermarkForm({
   const isMobile = useIsMobile();
   const { isAuthenticated, user, requireAuth } = useAppAuth();
   
-  // ADDED: Supabase auth integration
+  // ADDED: Wallet auth integration
   const { 
-    isSupabaseAuthenticated, 
-    ensureSupabaseAuth, 
+    isWalletAuthenticated, 
+    ensureWalletAuth, 
     authError,
     canCreate 
   } = useUserForEvermarks();
@@ -226,9 +226,9 @@ export function CreateEvermarkForm({
     console.log('✅ SDK upload completed:', result);
     
     // Check if we have Supabase auth before proceeding
-    if (!isSupabaseAuthenticated) {
+    if (!isWalletAuthenticated) {
       console.log('🔐 Ensuring Supabase authentication before processing upload...');
-      const authSuccess = await ensureSupabaseAuth();
+      const authSuccess = await ensureWalletAuth();
       if (!authSuccess) {
         console.error('❌ Failed to authenticate with Supabase');
         return;
@@ -245,7 +245,7 @@ export function CreateEvermarkForm({
     };
     
     setUploadedImageData(uploadData);
-  }, [isSupabaseAuthenticated, ensureSupabaseAuth]);
+  }, [isWalletAuthenticated, ensureWalletAuth]);
 
   const handleUploadError = useCallback((error: string) => {
     console.error('❌ SDK upload failed:', error);
@@ -253,13 +253,13 @@ export function CreateEvermarkForm({
     // Check if it's an auth-related error
     if (error.includes('row-level security') || error.includes('unauthorized')) {
       console.log('🔐 Upload failed due to auth - attempting to fix...');
-      ensureSupabaseAuth().then(success => {
+      ensureWalletAuth().then(success => {
         if (success) {
           console.log('✅ Auth fixed - you can try uploading again');
         }
       });
     }
-  }, [ensureSupabaseAuth]);
+  }, [ensureWalletAuth]);
 
   // UPDATED: Form submission with comprehensive auth checks
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
@@ -270,7 +270,7 @@ export function CreateEvermarkForm({
     // ADDED: Check Supabase auth before proceeding
     if (!canCreate) {
       console.log('🔐 Ensuring authentication before creating evermark...');
-      const authSuccess = await ensureSupabaseAuth();
+      const authSuccess = await ensureWalletAuth();
       if (!authSuccess) {
         console.error('❌ Cannot create evermark without Supabase authentication');
         return;
@@ -309,7 +309,7 @@ export function CreateEvermarkForm({
     isCreating, 
     isFormValid, 
     canCreate,
-    ensureSupabaseAuth,
+    ensureWalletAuth,
     requireAuth, 
     formData, 
     getAuthor, 
@@ -409,7 +409,7 @@ export function CreateEvermarkForm({
               <p className="text-yellow-300 font-medium">Authentication Issue</p>
               <p className="text-yellow-400 text-sm">{authError}</p>
               <button
-                onClick={() => ensureSupabaseAuth()}
+                onClick={() => ensureWalletAuth()}
                 className="mt-2 text-sm bg-yellow-600 hover:bg-yellow-700 px-3 py-1 rounded transition-colors"
               >
                 Retry Authentication
@@ -423,14 +423,14 @@ export function CreateEvermarkForm({
           <div className="mb-6 p-4 bg-gray-800/50 border border-gray-600 rounded-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className={`w-3 h-3 rounded-full ${isSupabaseAuthenticated ? 'bg-green-400' : 'bg-yellow-400'}`} />
+                <div className={`w-3 h-3 rounded-full ${isWalletAuthenticated ? 'bg-green-400' : 'bg-yellow-400'}`} />
                 <span className="text-sm text-gray-300">
-                  {isSupabaseAuthenticated ? '✅ Ready to create' : '⏳ Setting up authentication...'}
+                  {isWalletAuthenticated ? '✅ Ready to create' : '⏳ Setting up authentication...'}
                 </span>
               </div>
-              {!isSupabaseAuthenticated && (
+              {!isWalletAuthenticated && (
                 <button
-                  onClick={() => ensureSupabaseAuth()}
+                  onClick={() => ensureWalletAuth()}
                   className="text-sm bg-cyan-600 hover:bg-cyan-700 px-3 py-1 rounded transition-colors"
                 >
                   Complete Setup
@@ -627,7 +627,7 @@ export function CreateEvermarkForm({
                       <span className="text-xs text-gray-500 bg-green-900/20 px-2 py-1 rounded">
                         SDK Enhanced
                       </span>
-                      {isSupabaseAuthenticated ? (
+                      {isWalletAuthenticated ? (
                         <span className="text-xs text-green-400 bg-green-900/20 px-2 py-1 rounded">
                           ✅ Auth Ready
                         </span>
@@ -670,14 +670,14 @@ export function CreateEvermarkForm({
                   )}
 
                   {/* ADDED: Auth troubleshooting info */}
-                  {!isSupabaseAuthenticated && (
+                  {!isWalletAuthenticated && (
                     <div className="bg-yellow-900/20 border border-yellow-500/30 p-3 rounded-lg">
                       <p className="text-yellow-300 text-sm mb-2">
                         ⚠️ Supabase authentication required for image uploads
                       </p>
                       <button
                         type="button"
-                        onClick={() => ensureSupabaseAuth()}
+                        onClick={() => ensureWalletAuth()}
                         className="text-sm bg-yellow-600 hover:bg-yellow-700 px-3 py-1 rounded transition-colors"
                       >
                         Authenticate Now
@@ -835,13 +835,13 @@ export function CreateEvermarkForm({
                   
                   {/* ADDED: Auth status in architecture */}
                   <div className="flex items-center gap-3">
-                    <div className={`w-3 h-3 rounded-full ${isSupabaseAuthenticated ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
+                    <div className={`w-3 h-3 rounded-full ${isWalletAuthenticated ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
                     <div>
-                      <div className={`text-xs font-medium ${isSupabaseAuthenticated ? 'text-green-400' : 'text-yellow-400'}`}>
-                        {isSupabaseAuthenticated ? 'Authenticated' : 'Auth Pending'}
+                      <div className={`text-xs font-medium ${isWalletAuthenticated ? 'text-green-400' : 'text-yellow-400'}`}>
+                        {isWalletAuthenticated ? 'Authenticated' : 'Auth Pending'}
                       </div>
                       <div className="text-xs text-gray-500">
-                        {isSupabaseAuthenticated ? 'Ready for uploads' : 'Setting up permissions'}
+                        {isWalletAuthenticated ? 'Ready for uploads' : 'Setting up permissions'}
                       </div>
                     </div>
                   </div>
