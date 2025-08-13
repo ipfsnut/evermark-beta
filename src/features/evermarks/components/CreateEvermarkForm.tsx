@@ -142,10 +142,20 @@ export function CreateEvermarkForm({
   // FIXED: Store both File and URL data for SDK compatibility
   // Simple image upload state for IPFS-first approach
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const getAuthor = useCallback(() => {
     return user?.displayName || user?.username || 'Unknown Author';
   }, [user]);
+
+  // Cleanup preview URL on unmount
+  useEffect(() => {
+    return () => {
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
 
   const handleFieldChange = useCallback((field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -212,7 +222,7 @@ export function CreateEvermarkForm({
   }, [formData.title, formData.description]);
 
   // FIXED: Handle SDK upload completion with auth check
-  // Simple file selection handler - no upload until form submission
+  // Simple file selection handler with preview - no upload until form submission
   const handleImageSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -230,16 +240,42 @@ export function CreateEvermarkForm({
         return;
       }
       
+      // Clean up previous preview URL to prevent memory leaks
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
+      }
+      
+      // Create new preview URL
+      const previewUrl = URL.createObjectURL(file);
+      
       setSelectedImage(file);
-      console.log('✅ Image selected:', file.name, file.size, 'bytes');
+      setImagePreview(previewUrl);
+      console.log('✅ Image selected with preview:', file.name, file.size, 'bytes');
     }
-  }, []);
+  }, [imagePreview]);
+
+  // Remove selected image and cleanup preview
+  const handleRemoveImage = useCallback(() => {
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+    }
+    setSelectedImage(null);
+    setImagePreview(null);
+    
+    // Reset file input
+    const fileInput = document.getElementById('image-input') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = '';
+    }
+  }, [imagePreview]);
 
   // UPDATED: Form submission with comprehensive auth checks
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (isCreating || !isFormValid()) return;
+    if (isCreating || !isFormValid()) {
+      return;
+    }
 
     // SIMPLIFIED: Just check wallet connection
     if (!canCreate) {
@@ -301,6 +337,8 @@ export function CreateEvermarkForm({
       </div>
     );
   }
+
+  // Debug logging removed for cleaner console
 
   // No longer need SDK configuration - using IPFS-first approach in EvermarkService
 
@@ -585,11 +623,32 @@ export function CreateEvermarkForm({
                   </div>
 
                   {selectedImage && (
-                    <div className="bg-blue-900/20 border border-blue-500/30 p-3 rounded-lg">
-                      <div className="flex items-center gap-2 mb-2">
-                        <CheckCircleIcon className="h-4 w-4 text-blue-400" />
-                        <span className="text-sm text-blue-300">Image Selected (will upload to IPFS on submit)</span>
+                    <div className="bg-blue-900/20 border border-blue-500/30 p-4 rounded-lg">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <CheckCircleIcon className="h-4 w-4 text-blue-400" />
+                          <span className="text-sm text-blue-300">Image Selected (will upload to IPFS on submit)</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleRemoveImage}
+                          className="text-red-400 hover:text-red-300 transition-colors"
+                        >
+                          <XIcon className="h-4 w-4" />
+                        </button>
                       </div>
+                      
+                      {/* Image Preview */}
+                      {imagePreview && (
+                        <div className="mb-3">
+                          <img 
+                            src={imagePreview} 
+                            alt="Selected image preview"
+                            className="max-w-full max-h-48 rounded-lg border border-blue-500/30 object-contain bg-gray-800/50"
+                          />
+                        </div>
+                      )}
+                      
                       <div className="text-xs text-blue-400 space-y-1">
                         <div>File: {selectedImage.name}</div>
                         <div>Size: {Math.round(selectedImage.size / 1024)} KB</div>
@@ -713,6 +772,18 @@ export function CreateEvermarkForm({
                         <CheckCircleIcon className="h-4 w-4 text-blue-400" />
                         <span className="text-sm text-blue-300">Image Selected for IPFS Upload</span>
                       </div>
+                      
+                      {/* Image Preview in Sidebar */}
+                      {imagePreview && (
+                        <div className="mb-2">
+                          <img 
+                            src={imagePreview} 
+                            alt="Selected image preview"
+                            className="w-full max-h-32 rounded border border-blue-500/30 object-cover bg-gray-800/50"
+                          />
+                        </div>
+                      )}
+                      
                       <div className="text-xs text-blue-400">
                         Will upload to IPFS when you submit the form
                       </div>

@@ -1,25 +1,11 @@
 // src/lib/contracts.ts - Fixed with proper v5 imports and contract getters
-import { defineChain, getContract } from 'thirdweb';
+import { getContract } from 'thirdweb';
 import type { Abi } from 'abitype';
-import { client } from './thirdweb';
+import { client, chain as CHAIN } from './thirdweb';
+import EvermarkNFTABI from '../features/evermarks/abis/EvermarkNFT.json';
 
-// Define Base chain with proper v5 syntax and export it
-export const CHAIN = defineChain({
-  id: 8453,
-  name: 'Base',
-  nativeCurrency: {
-    name: 'Ethereum',
-    symbol: 'ETH',
-    decimals: 18,
-  },
-  rpc: 'https://mainnet.base.org',
-  blockExplorers: [
-    {
-      name: 'BaseScan',
-      url: 'https://basescan.org',
-    },
-  ],
-});
+// Export the chain from thirdweb.tsx so we use the same Thirdweb RPC everywhere
+export { CHAIN };
 
 // Contract addresses with validation
 export const CONTRACTS = {
@@ -76,7 +62,7 @@ export function getEvermarkNFTContract() {
     client,
     chain: CHAIN,
     address: CONTRACTS.EVERMARK_NFT,
-    abi: PLACEHOLDER_ABI, // Will be replaced with actual ABI from features
+    abi: EvermarkNFTABI as Abi,
   });
 }
 

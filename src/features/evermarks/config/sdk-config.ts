@@ -94,10 +94,29 @@ export function createEvermarkStorageConfig(): StorageConfig {
       'evermark-images',
       clientToUse
     );
+    
+    // Override IPFS configuration with proper upload settings
+    config.ipfs = {
+      gateway: import.meta.env.VITE_PINATA_GATEWAY || 'https://gateway.pinata.cloud/ipfs',
+      fallbackGateways: [
+        'https://ipfs.io/ipfs',
+        'https://cloudflare-ipfs.com/ipfs'
+      ],
+      timeout: 10000,
+      uploadEndpoint: 'https://api.pinata.cloud/pinning/pinFileToIPFS',
+      apiKey: import.meta.env.VITE_PINATA_JWT || import.meta.env.VITE_PINATA_API_KEY || '',
+      service: 'pinata' as const
+    } as any; // Cast to any since SDK expects upload properties
 
     storageConfigInstance = config;
     
     console.log('✅ Storage config created successfully');
+    console.log('🔧 IPFS config:', {
+      hasUploadEndpoint: !!config.ipfs.uploadEndpoint,
+      hasApiKey: !!config.ipfs.apiKey,
+      service: config.ipfs.service,
+      apiKeyLength: config.ipfs.apiKey?.length || 0
+    });
     return config;
 
   } catch (error) {
@@ -111,12 +130,16 @@ export function createEvermarkStorageConfig(): StorageConfig {
         bucketName: 'evermark-images'
       },
       ipfs: {
-        gateway: 'https://gateway.pinata.cloud/ipfs',
+        gateway: import.meta.env.VITE_PINATA_GATEWAY || 'https://gateway.pinata.cloud/ipfs',
         fallbackGateways: [
           'https://ipfs.io/ipfs',
           'https://cloudflare-ipfs.com/ipfs'
         ],
-        timeout: 10000
+        timeout: 10000,
+        // Upload configuration for Pinata
+        uploadEndpoint: 'https://api.pinata.cloud/pinning/pinFileToIPFS',
+        apiKey: import.meta.env.VITE_PINATA_JWT || import.meta.env.VITE_PINATA_API_KEY || '',
+        service: 'pinata' as const
       },
       upload: {
         maxFileSize: 10 * 1024 * 1024,

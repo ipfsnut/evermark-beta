@@ -1,5 +1,4 @@
-import { createThirdwebClient } from 'thirdweb';
-import { base } from 'thirdweb/chains';
+import { createThirdwebClient, defineChain } from 'thirdweb';
 
 export const client = createThirdwebClient({
   clientId: import.meta.env.VITE_THIRDWEB_CLIENT_ID || "your_client_id_here",
@@ -8,7 +7,25 @@ export const client = createThirdwebClient({
   })
 });
 
-export const chain = base;
+// Use Thirdweb's RPC for Base instead of public RPC
+export const chain = defineChain({
+  id: 8453,
+  name: 'Base',
+  nativeCurrency: {
+    name: 'Ethereum',
+    symbol: 'ETH',
+    decimals: 18,
+  },
+  rpc: [`https://8453.rpc.thirdweb.com/${import.meta.env.VITE_THIRDWEB_CLIENT_ID}`],
+  blockExplorers: [
+    {
+      name: 'BaseScan',
+      url: 'https://basescan.org',
+      apiUrl: 'https://api.basescan.org',
+    },
+  ],
+  testnet: false,
+});
 
 export const thirdwebConfig = {
   client,
