@@ -13,15 +13,12 @@ import {
   UploadIcon
 } from 'lucide-react';
 
-// FIXED: Updated SDK imports to use unified package
-import { ImageUpload } from 'evermark-sdk/react';
-import type { StorageConfig } from 'evermark-sdk/core';
+// Removed ImageUpload component - using simple file input with IPFS-first approach in EvermarkService
 
 import { useEvermarksState } from '../hooks/useEvermarkState';
 import { type CreateEvermarkInput, type EvermarkMetadata } from '../types';
 import { useAppAuth } from '@/providers/AppContext';
 import { useUserForEvermarks } from '@/providers/IntegratedUserProvider';
-import { getEvermarkStorageConfig, getUploadOptions } from '../config/sdk-config';
 
 // Utility function for responsive classes
 function cn(...classes: (string | undefined | null | false)[]): string {
@@ -113,11 +110,9 @@ export function CreateEvermarkForm({
   const isMobile = useIsMobile();
   const { isAuthenticated, user, requireAuth } = useAppAuth();
   
-  // ADDED: Wallet auth integration
+  // SIMPLIFIED: Just check wallet connection
   const { 
-    isWalletAuthenticated, 
-    ensureWalletAuth, 
-    authError,
+    hasWallet,
     canCreate 
   } = useUserForEvermarks();
   
@@ -145,13 +140,8 @@ export function CreateEvermarkForm({
   const [tagInput, setTagInput] = useState('');
   
   // FIXED: Store both File and URL data for SDK compatibility
-  const [uploadedImageData, setUploadedImageData] = useState<{
-    file?: File;
-    originalUrl: string;
-    thumbnailUrl?: string;
-    fileSize?: number;
-    dimensions?: string;
-  } | null>(null);
+  // Simple image upload state for IPFS-first approach
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
 
   const getAuthor = useCallback(() => {
     return user?.displayName || user?.username || 'Unknown Author';
@@ -222,44 +212,28 @@ export function CreateEvermarkForm({
   }, [formData.title, formData.description]);
 
   // FIXED: Handle SDK upload completion with auth check
-  const handleUploadComplete = useCallback(async (result: any) => {
-    console.log('✅ SDK upload completed:', result);
-    
-    // Check if we have Supabase auth before proceeding
-    if (!isWalletAuthenticated) {
-      console.log('🔐 Ensuring Supabase authentication before processing upload...');
-      const authSuccess = await ensureWalletAuth();
-      if (!authSuccess) {
-        console.error('❌ Failed to authenticate with Supabase');
+  // Simple file selection handler - no upload until form submission
+  const handleImageSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validate file type and size
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      
+      if (!allowedTypes.includes(file.type)) {
+        console.error('Invalid file type. Please use JPEG, PNG, GIF, or WebP.');
         return;
       }
+      
+      if (file.size > maxSize) {
+        console.error('File too large. Maximum size is 10MB.');
+        return;
+      }
+      
+      setSelectedImage(file);
+      console.log('✅ Image selected:', file.name, file.size, 'bytes');
     }
-    
-    // Extract the relevant data from the SDK upload result
-    const uploadData = {
-      file: result.file,  // Store the File object for createEvermark
-      originalUrl: result.supabaseUrl || result.url || result.originalUrl,
-      thumbnailUrl: result.thumbnailUrl,
-      fileSize: result.fileSize,
-      dimensions: result.dimensions
-    };
-    
-    setUploadedImageData(uploadData);
-  }, [isWalletAuthenticated, ensureWalletAuth]);
-
-  const handleUploadError = useCallback((error: string) => {
-    console.error('❌ SDK upload failed:', error);
-    
-    // Check if it's an auth-related error
-    if (error.includes('row-level security') || error.includes('unauthorized')) {
-      console.log('🔐 Upload failed due to auth - attempting to fix...');
-      ensureWalletAuth().then(success => {
-        if (success) {
-          console.log('✅ Auth fixed - you can try uploading again');
-        }
-      });
-    }
-  }, [ensureWalletAuth]);
+  }, []);
 
   // UPDATED: Form submission with comprehensive auth checks
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
@@ -267,14 +241,10 @@ export function CreateEvermarkForm({
     
     if (isCreating || !isFormValid()) return;
 
-    // ADDED: Check Supabase auth before proceeding
+    // SIMPLIFIED: Just check wallet connection
     if (!canCreate) {
-      console.log('🔐 Ensuring authentication before creating evermark...');
-      const authSuccess = await ensureWalletAuth();
-      if (!authSuccess) {
-        console.error('❌ Cannot create evermark without Supabase authentication');
-        return;
-      }
+      console.error('❌ Cannot create evermark without wallet connection');
+      return;
     }
 
     const canProceed = await requireAuth();
@@ -293,7 +263,7 @@ export function CreateEvermarkForm({
 
       const createInput: CreateEvermarkInput = {
         metadata: evermarkMetadata,
-        image: uploadedImageData?.file
+        image: selectedImage || undefined
       };
       
       const result = await createEvermark(createInput);
@@ -309,12 +279,11 @@ export function CreateEvermarkForm({
     isCreating, 
     isFormValid, 
     canCreate,
-    ensureWalletAuth,
     requireAuth, 
     formData, 
     getAuthor, 
     tags, 
-    uploadedImageData?.file,
+    selectedImage,
     createEvermark, 
     onSuccess, 
     navigate
@@ -333,25 +302,7 @@ export function CreateEvermarkForm({
     );
   }
 
-  // Get SDK configuration with error handling
-  let storageConfig: StorageConfig;
-  let uploadOptions: any;
-  
-  try {
-    storageConfig = getEvermarkStorageConfig();
-    uploadOptions = getUploadOptions();
-  } catch (error) {
-    console.error('Failed to get SDK configuration:', error);
-    return (
-      <div className="bg-red-900/30 border border-red-500/50 rounded-lg p-6 text-center">
-        <AlertCircleIcon className="mx-auto h-12 w-12 text-red-400 mb-4" />
-        <h3 className="text-xl font-medium text-red-300 mb-2">Configuration Error</h3>
-        <p className="text-red-400">
-          SDK configuration is invalid. Please check your environment variables.
-        </p>
-      </div>
-    );
-  }
+  // No longer need SDK configuration - using IPFS-first approach in EvermarkService
 
   return (
     <div className={cn("min-h-screen bg-black text-white", className)}>
@@ -401,41 +352,17 @@ export function CreateEvermarkForm({
           </div>
         )}
 
-        {/* ADDED: Supabase Auth Status */}
-        {authError && (
-          <div className="mb-6 p-4 bg-yellow-900/30 border border-yellow-500/50 rounded-lg flex items-start">
-            <AlertCircleIcon className="h-5 w-5 text-yellow-400 mr-3 mt-0.5 flex-shrink-0" />
-            <div className="flex-1">
-              <p className="text-yellow-300 font-medium">Authentication Issue</p>
-              <p className="text-yellow-400 text-sm">{authError}</p>
-              <button
-                onClick={() => ensureWalletAuth()}
-                className="mt-2 text-sm bg-yellow-600 hover:bg-yellow-700 px-3 py-1 rounded transition-colors"
-              >
-                Retry Authentication
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* ADDED: Auth Status Indicator */}
         {isAuthenticated && (
           <div className="mb-6 p-4 bg-gray-800/50 border border-gray-600 rounded-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className={`w-3 h-3 rounded-full ${isWalletAuthenticated ? 'bg-green-400' : 'bg-yellow-400'}`} />
+                <div className="w-3 h-3 rounded-full bg-green-400" />
                 <span className="text-sm text-gray-300">
-                  {isWalletAuthenticated ? '✅ Ready to create' : '⏳ Setting up authentication...'}
+                  ✅ Wallet connected - Ready to create
                 </span>
               </div>
-              {!isWalletAuthenticated && (
-                <button
-                  onClick={() => ensureWalletAuth()}
-                  className="text-sm bg-cyan-600 hover:bg-cyan-700 px-3 py-1 rounded transition-colors"
-                >
-                  Complete Setup
-                </button>
-              )}
             </div>
           </div>
         )}
@@ -627,63 +554,50 @@ export function CreateEvermarkForm({
                       <span className="text-xs text-gray-500 bg-green-900/20 px-2 py-1 rounded">
                         SDK Enhanced
                       </span>
-                      {isWalletAuthenticated ? (
-                        <span className="text-xs text-green-400 bg-green-900/20 px-2 py-1 rounded">
-                          ✅ Auth Ready
-                        </span>
-                      ) : (
-                        <span className="text-xs text-yellow-400 bg-yellow-900/20 px-2 py-1 rounded">
-                          ⏳ Auth Pending
-                        </span>
-                      )}
+                      <span className="text-xs text-green-400 bg-green-900/20 px-2 py-1 rounded">
+                        ✅ Wallet Ready
+                      </span>
                     </div>
                   </div>
                   
                   <div className="border border-gray-600 rounded-lg p-4">
-                    <ImageUpload
-                      storageConfig={storageConfig}
-                      onUploadComplete={handleUploadComplete}
-                      onUploadError={handleUploadError}
-                      generateThumbnails={uploadOptions.generateThumbnails}
-                      allowedTypes={uploadOptions.allowedTypes}
-                      maxFileSize={uploadOptions.maxFileSize}
-                      className="w-full"
-                    />
+                    <div className="text-center">
+                      <input
+                        type="file"
+                        id="image-input"
+                        accept=".jpg,.jpeg,.png,.gif,.webp"
+                        onChange={handleImageSelect}
+                        className="hidden"
+                      />
+                      <label
+                        htmlFor="image-input"
+                        className="cursor-pointer flex flex-col items-center justify-center p-8 border-2 border-dashed border-gray-500 rounded-lg hover:border-gray-400 transition-colors"
+                      >
+                        <UploadIcon className="h-12 w-12 text-gray-400 mb-4" />
+                        <span className="text-gray-300 mb-2">
+                          {selectedImage ? selectedImage.name : 'Drag and drop or click to select'}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          Max 10MB • image/jpeg, image/png, image/gif, image/webp
+                        </span>
+                      </label>
+                    </div>
                   </div>
 
-                  {uploadedImageData && (
-                    <div className="bg-green-900/20 border border-green-500/30 p-3 rounded-lg">
+                  {selectedImage && (
+                    <div className="bg-blue-900/20 border border-blue-500/30 p-3 rounded-lg">
                       <div className="flex items-center gap-2 mb-2">
-                        <CheckCircleIcon className="h-4 w-4 text-green-400" />
-                        <span className="text-sm text-green-300">Image Uploaded Successfully</span>
+                        <CheckCircleIcon className="h-4 w-4 text-blue-400" />
+                        <span className="text-sm text-blue-300">Image Selected (will upload to IPFS on submit)</span>
                       </div>
-                      <div className="text-xs text-green-400 space-y-1">
-                        <div>Primary URL: {uploadedImageData.originalUrl.substring(0, 50)}...</div>
-                        {uploadedImageData.thumbnailUrl && (
-                          <div>Thumbnail: {uploadedImageData.thumbnailUrl.substring(0, 50)}...</div>
-                        )}
-                        {uploadedImageData.fileSize && (
-                          <div>Size: {Math.round(uploadedImageData.fileSize / 1024)} KB</div>
-                        )}
+                      <div className="text-xs text-blue-400 space-y-1">
+                        <div>File: {selectedImage.name}</div>
+                        <div>Size: {Math.round(selectedImage.size / 1024)} KB</div>
+                        <div>Type: {selectedImage.type}</div>
                       </div>
                     </div>
                   )}
 
-                  {/* ADDED: Auth troubleshooting info */}
-                  {!isWalletAuthenticated && (
-                    <div className="bg-yellow-900/20 border border-yellow-500/30 p-3 rounded-lg">
-                      <p className="text-yellow-300 text-sm mb-2">
-                        ⚠️ Supabase authentication required for image uploads
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => ensureWalletAuth()}
-                        className="text-sm bg-yellow-600 hover:bg-yellow-700 px-3 py-1 rounded transition-colors"
-                      >
-                        Authenticate Now
-                      </button>
-                    </div>
-                  )}
 
                   <div className="bg-green-900/20 border border-green-500/30 p-3 rounded-lg">
                     <p className="text-green-300 text-sm">
@@ -793,14 +707,14 @@ export function CreateEvermarkForm({
                   )}
 
                   {/* Upload Status Preview */}
-                  {uploadedImageData && (
-                    <div className="bg-green-900/30 border border-green-500/30 rounded-lg p-3">
+                  {selectedImage && (
+                    <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-3">
                       <div className="flex items-center gap-2 mb-2">
-                        <CheckCircleIcon className="h-4 w-4 text-green-400" />
-                        <span className="text-sm text-green-300">Image Uploaded via SDK</span>
+                        <CheckCircleIcon className="h-4 w-4 text-blue-400" />
+                        <span className="text-sm text-blue-300">Image Selected for IPFS Upload</span>
                       </div>
-                      <div className="text-xs text-green-400">
-                        Ready for minting with optimized storage
+                      <div className="text-xs text-blue-400">
+                        Will upload to IPFS when you submit the form
                       </div>
                     </div>
                   )}
@@ -833,15 +747,14 @@ export function CreateEvermarkForm({
                     </div>
                   </div>
                   
-                  {/* ADDED: Auth status in architecture */}
                   <div className="flex items-center gap-3">
-                    <div className={`w-3 h-3 rounded-full ${isWalletAuthenticated ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
+                    <div className="w-3 h-3 rounded-full bg-green-400"></div>
                     <div>
-                      <div className={`text-xs font-medium ${isWalletAuthenticated ? 'text-green-400' : 'text-yellow-400'}`}>
-                        {isWalletAuthenticated ? 'Authenticated' : 'Auth Pending'}
+                      <div className="text-xs font-medium text-green-400">
+                        Wallet Connected
                       </div>
                       <div className="text-xs text-gray-500">
-                        {isWalletAuthenticated ? 'Ready for uploads' : 'Setting up permissions'}
+                        Ready for uploads
                       </div>
                     </div>
                   </div>

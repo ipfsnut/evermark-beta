@@ -102,7 +102,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     hasWallet,
     hasFarcaster,
     hasENS,
-    isFullyAuthenticated,
+    isConnected,
     getPrimaryIdentity,
     getIdentityScore,
     getDisplayName,
@@ -239,7 +239,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   const requireAuth = async (): Promise<boolean> => {
     // NEW: Use integrated authentication check
-    if (isFullyAuthenticated) {
+    if (isConnected) {
       return true;
     }
 
@@ -256,7 +256,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       // Wait a bit to see if account becomes available
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      if (isFullyAuthenticated) {
+      if (isConnected) {
         return true;
       }
       
@@ -368,7 +368,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   const value: AppContextType = {
     // Authentication state - ENHANCED
-    isAuthenticated: isFullyAuthenticated,
+    isAuthenticated: isConnected,
     user,
     
     // NEW: Identity information

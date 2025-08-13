@@ -1,12 +1,10 @@
 // src/providers/IntegratedUserProvider.tsx
-// FIXED: Now uses your existing JWT authentication infrastructure
+// SIMPLIFIED: Just wallet connection and ENS resolution, no complex auth
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useActiveAccount } from 'thirdweb/react';
 import { useFarcasterUser } from '../lib/farcaster';
 import { EnhancedUserService, type EnhancedUser } from '../services';
-import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabase';
-import { WalletAuthService, type WalletAuthResult } from '../services/WalletAuthService';
 
 interface IntegratedUserContextType {
   // Current user (unified profile)
@@ -14,26 +12,15 @@ interface IntegratedUserContextType {
   isLoading: boolean;
   error: string | null;
   
-  // Authentication states
+  // Simple connection states
   hasWallet: boolean;
   hasFarcaster: boolean;
   hasENS: boolean;
-  isFullyAuthenticated: boolean;
-  
-  // Wallet auth state - simplified
-  isWalletAuthenticated: boolean;
-  walletAuthError: string | null;
-  isAuthenticating: boolean;
+  isConnected: boolean;
   
   // User actions
   refreshUser: () => Promise<void>;
-  switchUserView: (source: 'farcaster' | 'ens' | 'wallet') => void;
   clearError: () => void;
-  
-  // Auth actions - simplified wallet auth
-  ensureWalletAuth: () => Promise<boolean>;
-  authenticateWallet: () => Promise<boolean>;
-  signOut: () => void;
   
   // Data for evermarks integration
   getEvermarkAuthorData: () => {
@@ -67,159 +54,11 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
   const [user, setUser] = useState<EnhancedUser | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [preferredSource, setPreferredSource] = useState<'farcaster' | 'ens' | 'wallet'>('farcaster');
-  
-  // Simplified wallet authentication state
-  const [isWalletAuthenticated, setIsWalletAuthenticated] = useState(false);
-  const [walletAuthError, setWalletAuthError] = useState<string | null>(null);
-  const [isAuthenticating, setIsAuthenticating] = useState(false);
-  const [authToken, setAuthToken] = useState<string | null>(null);
 
-  // Load user profile when authentication state changes
+  // Load user profile when wallet or Farcaster changes
   useEffect(() => {
     loadUserProfile();
   }, [account?.address, farcaster.user?.fid, farcaster.isAuthenticated]);
-
-  // Check existing wallet auth on mount
-  useEffect(() => {
-    checkExistingWalletAuth();
-  }, []);
-
-  // Auto-authenticate when wallet connects (optional - you can disable this)
-  useEffect(() => {
-    if (account?.address && !isWalletAuthenticated && !isAuthenticating) {
-      // Auto-authenticate on wallet connection
-      // Comment this out if you prefer manual authentication
-      authenticateWallet();
-    }
-  }, [account?.address]);
-
-  /**
-   * Check if there's an existing valid wallet auth
-   */
-  const checkExistingWalletAuth = useCallback(() => {
-    try {
-      const storedAuth = localStorage.getItem('evermark-wallet-auth');
-      if (storedAuth) {
-        const authData = JSON.parse(storedAuth);
-        if (authData.expires_at && new Date(authData.expires_at) > new Date()) {
-          console.log('✅ Found existing wallet auth');
-          setAuthToken(authData.auth_token);
-          setIsWalletAuthenticated(true);
-          setWalletAuthError(null);
-        } else {
-          console.log('⚠️ Wallet auth expired');
-          localStorage.removeItem('evermark-wallet-auth');
-        }
-      }
-    } catch (error) {
-      console.error('Failed to check existing wallet auth:', error);
-      localStorage.removeItem('evermark-wallet-auth');
-    }
-  }, []);
-
-  /**
-   * Simplified wallet authentication for NFT creation
-   */
-  const authenticateWallet = useCallback(async (): Promise<boolean> => {
-    if (!account) {
-      setWalletAuthError('No wallet connected');
-      return false;
-    }
-
-    setIsAuthenticating(true);
-    setWalletAuthError(null);
-    
-    try {
-      console.log('🔐 Starting wallet authentication flow...');
-      
-      // Use the simplified wallet authentication service
-      const authResult: WalletAuthResult = await WalletAuthService.authenticateWallet(account);
-      
-      if (!authResult.success) {
-        const friendlyError = WalletAuthService.getErrorMessage(authResult.error || 'Authentication failed');
-        setWalletAuthError(friendlyError);
-        return false;
-      }
-
-      if (!authResult.user || !authResult.auth_token) {
-        setWalletAuthError('No auth token received from authentication');
-        return false;
-      }
-
-      // Store auth data locally
-      const authData = {
-        auth_token: authResult.auth_token,
-        expires_at: authResult.expires_at,
-        wallet_address: authResult.user.wallet_address
-      };
-      localStorage.setItem('evermark-wallet-auth', JSON.stringify(authData));
-
-      // Success!
-      setAuthToken(authResult.auth_token);
-      setIsWalletAuthenticated(true);
-      setWalletAuthError(null);
-      
-      console.log('✅ Wallet authentication complete! Ready for NFT creation.');
-      
-      return true;
-
-    } catch (error) {
-      console.error('❌ Wallet authentication failed:', error);
-      const friendlyError = WalletAuthService.getErrorMessage(
-        error instanceof Error ? error.message : 'Authentication failed'
-      );
-      setWalletAuthError(friendlyError);
-      return false;
-    } finally {
-      setIsAuthenticating(false);
-    }
-  }, [account]);
-
-  /**
-   * Ensure authentication - calls authenticateWallet if needed
-   */
-  const ensureWalletAuth = useCallback(async (): Promise<boolean> => {
-    // Check if already authenticated and token is valid
-    if (isWalletAuthenticated && authToken) {
-      const storedAuth = localStorage.getItem('evermark-wallet-auth');
-      if (storedAuth) {
-        const authData = JSON.parse(storedAuth);
-        if (authData.expires_at && new Date(authData.expires_at) > new Date()) {
-          return true;
-        }
-      }
-      // Token expired, clear state
-      console.log('🔄 Auth token expired, re-authenticating...');
-      setIsWalletAuthenticated(false);
-      setAuthToken(null);
-      localStorage.removeItem('evermark-wallet-auth');
-    }
-
-    if (!account?.address) {
-      setWalletAuthError('Please connect your wallet first');
-      return false;
-    }
-
-    console.log('🔄 Ensuring wallet authentication...');
-    return await authenticateWallet();
-  }, [isWalletAuthenticated, authToken, account?.address, authenticateWallet]);
-
-  /**
-   * Sign out and clear wallet auth
-   */
-  const signOut = useCallback(() => {
-    try {
-      localStorage.removeItem('evermark-wallet-auth');
-      setAuthToken(null);
-      setIsWalletAuthenticated(false);
-      setWalletAuthError(null);
-      
-      console.log('✅ Signed out successfully');
-    } catch (error) {
-      console.error('❌ Sign out failed:', error);
-    }
-  }, []);
 
   const loadUserProfile = useCallback(async () => {
     if (!account?.address && !farcaster.user) {
@@ -272,13 +111,8 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
     await loadUserProfile();
   }, [loadUserProfile]);
 
-  const switchUserView = useCallback((source: 'farcaster' | 'ens' | 'wallet') => {
-    setPreferredSource(source);
-  }, []);
-
   const clearError = useCallback(() => {
     setError(null);
-    setWalletAuthError(null);
   }, []);
 
   // Get data formatted for evermarks creation
@@ -289,11 +123,11 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
     let displayName: string;
     let createdVia: string;
 
-    if (user.farcaster && preferredSource !== 'wallet') {
+    if (user.farcaster) {
       author = `@${user.farcaster.username}`;
       displayName = user.farcaster.displayName;
       createdVia = 'farcaster';
-    } else if (user.ens && preferredSource !== 'wallet') {
+    } else if (user.ens) {
       author = user.ens.name;
       displayName = user.ens.name;
       createdVia = 'ens';
@@ -314,7 +148,7 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
       walletAddress: user.primaryAddress,
       createdVia
     };
-  }, [user, preferredSource]);
+  }, [user]);
 
   // Utility functions
   const getPrimaryIdentity = useCallback((): 'farcaster' | 'ens' | 'wallet' | null => {
@@ -354,11 +188,11 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
     return user?.primaryAddress || account?.address;
   }, [user, account]);
 
-  // Calculate authentication states
+  // Calculate simple connection states
   const hasWallet = !!account?.address;
   const hasFarcaster = !!user?.farcaster;
   const hasENS = !!user?.ens;
-  const isFullyAuthenticated = hasWallet || hasFarcaster;
+  const isConnected = hasWallet || hasFarcaster;
 
   const value: IntegratedUserContextType = {
     // Current user
@@ -366,26 +200,15 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
     isLoading,
     error,
     
-    // Authentication states
+    // Simple connection states
     hasWallet,
     hasFarcaster,
     hasENS,
-    isFullyAuthenticated,
-    
-    // Wallet auth state - simplified
-    isWalletAuthenticated,
-    walletAuthError,
-    isAuthenticating,
+    isConnected,
     
     // Actions
     refreshUser,
-    switchUserView,
     clearError,
-    
-    // Auth actions - simplified wallet auth
-    ensureWalletAuth,
-    authenticateWallet,
-    signOut,
     
     // Integration helpers
     getEvermarkAuthorData,
@@ -405,7 +228,7 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
   );
 }
 
-// Export hooks with enhanced authentication
+// Export simplified hooks
 export function useIntegratedUser(): IntegratedUserContextType {
   const context = useContext(IntegratedUserContext);
   if (!context) {
@@ -417,30 +240,24 @@ export function useIntegratedUser(): IntegratedUserContextType {
 export function useUserForEvermarks() {
   const { 
     getEvermarkAuthorData, 
-    isFullyAuthenticated, 
-    isWalletAuthenticated,
-    ensureWalletAuth,
-    authenticateWallet,
-    user,
+    isConnected,
     hasWallet,
-    hasFarcaster,
-    walletAuthError,
-    isAuthenticating
+    user,
+    hasFarcaster
   } = useIntegratedUser();
   
   return {
     authorData: getEvermarkAuthorData(),
-    isAuthenticated: isFullyAuthenticated,
-    isWalletAuthenticated,
-    canCreate: isFullyAuthenticated && isWalletAuthenticated,
-    ensureWalletAuth,
-    authenticateWallet,
+    isAuthenticated: isConnected,
+    isWalletAuthenticated: hasWallet, // Simple: just check wallet connection
+    canCreate: hasWallet, // Can create if wallet is connected
+    ensureWalletAuth: async () => hasWallet, // No-op, just return wallet status
     user,
     hasWallet,
     hasFarcaster,
     shouldShowFarcasterFeatures: hasFarcaster,
-    authError: walletAuthError,
-    isAuthenticating
+    authError: null,
+    isAuthenticating: false
   };
 }
 
@@ -469,23 +286,21 @@ export function useAuthenticationState() {
     hasWallet, 
     hasFarcaster, 
     hasENS, 
-    isFullyAuthenticated,
-    isWalletAuthenticated,
+    isConnected,
     getPrimaryIdentity,
-    getIdentityScore,
-    isAuthenticating
+    getIdentityScore
   } = useIntegratedUser();
   
   return {
     hasWallet,
     hasFarcaster,
     hasENS,
-    isAuthenticated: isFullyAuthenticated,
-    isWalletAuthenticated,
-    canUpload: isFullyAuthenticated && isWalletAuthenticated,
+    isAuthenticated: isConnected,
+    isWalletAuthenticated: hasWallet,
+    canUpload: hasWallet, // Simple: can upload if wallet connected
     primaryIdentity: getPrimaryIdentity(),
     identityScore: getIdentityScore(),
     isHybridUser: (hasWallet && hasFarcaster) || (hasWallet && hasENS) || (hasFarcaster && hasENS),
-    isAuthenticating
+    isAuthenticating: false
   };
 }

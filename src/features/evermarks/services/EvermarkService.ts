@@ -26,6 +26,7 @@ import {
   StorageOrchestrator,
   ensureImageInSupabase,
   SupabaseStorageClient,
+  IPFSClient,
   type StorageFlowResult,
   type TransferResult
 } from 'evermark-sdk/storage';
@@ -211,40 +212,36 @@ export class EvermarkService {
         dimensions?: string;
       } = {};
 
-      // SDK-POWERED: Image processing
+      // IPFS-FIRST: Image processing
       if (input.image) {
-        console.log('📸 Processing image with SDK...');
+        console.log('📸 Processing image with IPFS-first approach...');
         
         try {
-          // FIXED: Get storage config directly instead of accessing private property
+          // Get storage config for IPFS
           const storageConfig = getEvermarkStorageConfig();
           
-          // Generate optimal storage path
-          const timestamp = Date.now();
-          const extension = input.image.name.split('.').pop()?.toLowerCase() || 'jpg';
-          const storagePath = `evermarks/${timestamp}.${extension}`;
+          // Create IPFS client directly
+          const ipfsClient = new IPFSClient(storageConfig.ipfs);
           
-          // FIXED: Use unified SDK import
-          const supabaseClient = new SupabaseStorageClient(storageConfig.supabase);
+          // Upload directly to IPFS first
+          console.log('🌐 Uploading to IPFS...');
           
-          const uploadResult = await supabaseClient.uploadFile(
-            input.image,
-            storagePath,
-            {
-              contentType: input.image.type,
-              onProgress: (progress) => {
-                console.log(`Upload progress: ${progress.percentage}%`);
-              }
+          const ipfsResult = await ipfsClient.uploadFile(input.image, {
+            onProgress: (progress) => {
+              console.log(`IPFS upload progress: ${progress.percentage}%`);
             }
-          );
+          });
 
-          if (uploadResult.success && uploadResult.supabaseUrl) {
-            imageUrls.supabaseUrl = uploadResult.supabaseUrl;
+          if (ipfsResult.success && ipfsResult.ipfsHash) {
+            imageUrls.ipfsHash = ipfsResult.ipfsHash;
             imageUrls.fileSize = input.image.size;
-            console.log('✅ SDK image upload completed:', imageUrls);
+            console.log('✅ IPFS upload completed:', imageUrls.ipfsHash);
+            
+            // Skip Supabase upload for now - let it be cached later via background process
+            console.log('⏭️ Skipping Supabase upload - will be cached later');
           }
         } catch (uploadError) {
-          console.warn('SDK image upload failed, continuing without image:', uploadError);
+          console.warn('IPFS image upload failed, continuing without image:', uploadError);
         }
       }
 
@@ -258,8 +255,9 @@ export class EvermarkService {
         }
       }
 
-      // DIRECT METADATA CREATION (NO MetadataService)
-      const metadata = await this.createMetadataDirectly(input.metadata, imageUrls.supabaseUrl);
+      // DIRECT METADATA CREATION with IPFS image
+      const imageForMetadata = imageUrls.ipfsHash ? `ipfs://${imageUrls.ipfsHash}` : imageUrls.supabaseUrl;
+      const metadata = await this.createMetadataDirectly(input.metadata, imageForMetadata);
       
       if (!metadata.success) {
         return {
@@ -413,39 +411,31 @@ export class EvermarkService {
         });
       }
 
-      // Get storage config
+      // Upload metadata to IPFS first
       const storageConfig = getEvermarkStorageConfig();
-      
-      // Upload metadata to Supabase via SDK
-      const supabaseClient = new SupabaseStorageClient(storageConfig.supabase);
-      
-      // Generate metadata path
-      const timestamp = Date.now();
-      const metadataPath = `metadata/${timestamp}.json`;
+      const ipfsClient = new IPFSClient(storageConfig.ipfs);
       
       // Convert to blob
       const metadataBlob = new Blob([JSON.stringify(nftMetadata, null, 2)], {
         type: 'application/json'
       });
 
-      const uploadResult = await supabaseClient.uploadFile(
-        metadataBlob,
-        metadataPath,
-        {
-          contentType: 'application/json',
-          cacheControl: '3600'
-        }
-      );
+      const metadataFile = new File([metadataBlob], 'metadata.json', {
+        type: 'application/json'
+      });
 
-      if (!uploadResult.success) {
-        throw new Error(uploadResult.error || 'Failed to upload metadata');
+      const uploadResult = await ipfsClient.uploadFile(metadataFile);
+
+      if (!uploadResult.success || !uploadResult.ipfsHash) {
+        throw new Error(uploadResult.error || 'Failed to upload metadata to IPFS');
       }
 
-      console.log('✅ Metadata uploaded directly via SDK:', uploadResult.supabaseUrl);
+      const metadataURI = `ipfs://${uploadResult.ipfsHash}`;
+      console.log('✅ Metadata uploaded to IPFS:', metadataURI);
 
       return {
         success: true,
-        metadataURI: uploadResult.supabaseUrl
+        metadataURI
       };
 
     } catch (error) {

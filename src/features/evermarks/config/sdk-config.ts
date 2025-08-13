@@ -84,16 +84,15 @@ export function createEvermarkStorageConfig(): StorageConfig {
       throw new Error('Missing required environment variables: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY');
     }
 
-    // FIXED: Check if supabase client is available
-    if (!supabase) {
-      console.warn('⚠️ Supabase client not available, creating config without existing client');
-    }
+    // Use regular supabase client for metadata and caching only
+    // IPFS uploads don't need Supabase authentication
+    const clientToUse = supabase;
 
     const config = createDefaultStorageConfig(
       supabaseUrl,
       supabaseKey,
       'evermark-images',
-      supabase // This might be undefined - SDK should handle it
+      clientToUse
     );
 
     storageConfigInstance = config;

@@ -77,3 +77,10 @@ export function getSupabaseConfig() {
 export function getSupabaseDebugInfo() {
   return getSupabaseConfig();
 }
+
+// Export service role client getter (for backend/caching operations only)
+export function getSupabaseServiceClient(): SupabaseClient {
+  // This function exists for backend compatibility but shouldn't be used in frontend uploads
+  console.warn('⚠️ Service role client should not be used for frontend uploads. Use IPFS-first approach.');
+  return getSupabaseClient();
+}
