@@ -1,6 +1,6 @@
 # Evermark Beta
 
-> Content curation on the blockchain - A complete rewrite focused on maintainability and clean architecture.
+> Decentralized content preservation with IPFS-first architecture - Built for permanence, optimized for performance.
 
 ## 🚀 Quick Start
 
@@ -8,11 +8,17 @@
 # Install dependencies
 npm install
 
-# Start development server
+# Start development server with Netlify Functions
+npx netlify dev
+
+# Start Vite only (limited functionality)
 npm run dev
 
 # Build for production
 npm run build
+
+# Type check
+npm run type-check
 ```
 
 ## 🏗️ Architecture
@@ -31,11 +37,13 @@ src/
 
 ### Core Principles
 
+- **IPFS-First Storage**: Content uploads directly to IPFS for true decentralization
 - **Feature Isolation**: Each feature is independently testable and maintainable
 - **Pure Functions**: All business logic as testable pure functions
 - **Single State Hook**: One hook per feature for centralized state management
 - **Type Safety**: Comprehensive TypeScript coverage with strict mode
 - **Clean Separation**: UI components contain no business logic
+- **SDK-Powered**: Core functionality provided by the evermark-sdk
 
 ## 🎯 Features
 
@@ -47,20 +55,34 @@ src/
 - **Tokens**: Manage $EMARK balances and transactions
 
 ### Technical Features
+- **IPFS Storage**: Direct uploads to IPFS with Pinata/Web3.Storage integration
+- **Hybrid Caching**: Supabase caching layer for optimal performance
 - **Farcaster Integration**: Native Frame/Mini-app support
-- **Blockchain**: Thirdweb SDK with Base network
-- **Real-time Data**: React Query with smart caching
+- **Blockchain**: Thirdweb SDK with Base network (Chain ID: 8453)
+- **Real-time Data**: React Query with 30s stale time
 - **Responsive Design**: Mobile-first with cyber theme
-- **Error Handling**: Comprehensive error boundaries
+- **SDK Integration**: Powered by evermark-sdk for robust image/metadata handling
+- **Error Handling**: Comprehensive error boundaries and validation
 
 ## 🛠️ Tech Stack
 
 - **Frontend**: React 18 + TypeScript + Vite
 - **Styling**: Tailwind CSS with custom cyber theme
 - **State Management**: React Query + React Context
-- **Blockchain**: Thirdweb SDK + Wagmi + Viem
+- **Storage**: IPFS (Pinata) + Supabase caching + evermark-sdk
+- **Blockchain**: Thirdweb SDK + Wagmi + Viem (Base Network)
 - **Backend**: Netlify Functions + Supabase
 - **Testing**: Vitest + React Testing Library
+
+### Storage Architecture
+
+```
+User Upload → IPFS (Primary) → Blockchain (Metadata URI)
+                ↓
+            Supabase (Cache) ← Background Sync
+```
+
+**IPFS-First Approach**: All content uploads directly to IPFS for permanent decentralized storage, with Supabase providing fast caching for optimal user experience.
 
 ## 📚 Development
 
@@ -103,31 +125,75 @@ Built for Netlify with:
 ## 🔧 Environment Variables
 
 ```bash
-# Blockchain
+# Blockchain (Required)
 VITE_THIRDWEB_CLIENT_ID=your_thirdweb_client_id
 VITE_CHAIN_ID=8453  # Base mainnet
 
-# Database
+# Database (Required)
 VITE_SUPABASE_URL=your_supabase_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_KEY=your_service_key  # Backend only
 
-# Farcaster (optional)
+# IPFS Storage (Required)
+VITE_PINATA_API_KEY=your_pinata_api_key
+VITE_PINATA_SECRET_KEY=your_pinata_secret
+VITE_PINATA_JWT=your_pinata_jwt
+VITE_PINATA_GATEWAY=your_gateway_url
+
+# Smart Contracts (Required)
+VITE_EMARK_TOKEN_ADDRESS=0x...
+VITE_CARD_CATALOG_ADDRESS=0x...
+VITE_EVERMARK_NFT_ADDRESS=0x...
+VITE_EVERMARK_VOTING_ADDRESS=0x...
+VITE_EVERMARK_LEADERBOARD_ADDRESS=0x...
+VITE_EVERMARK_REWARDS_ADDRESS=0x...
+VITE_FEE_COLLECTOR_ADDRESS=0x...
+
+# Farcaster Integration (Optional)
 VITE_FARCASTER_DEVELOPER_FID=your_developer_fid
+VITE_NEYNAR_API_KEY=your_neynar_key
+VITE_FARCASTER_MINI_APP_ID=your_mini_app_id
 ```
 
-## 📖 Documentation
+### Local Development Setup
 
-- [Development Guide](./devguide) - Detailed architecture principles
-- [Feature Guide](./docs/features.md) - How to build features
-- [Deployment Guide](./docs/deployment.md) - Production setup
+1. Copy environment variables from `.env.local.example`
+2. Configure Pinata for IPFS uploads
+3. Set up Supabase database and storage
+4. Deploy smart contracts to Base network
+5. Run `npx netlify dev` for full functionality
+
+## 📖 Key Documentation
+
+- **[CLAUDE.md](./CLAUDE.md)** - Complete development guide for Claude Code
+- **[Architecture Overview](#-architecture)** - Feature-first design principles  
+- **[Storage Architecture](#storage-architecture)** - IPFS-first approach
+- **[Environment Setup](#local-development-setup)** - Local development guide
+
+### SDK Integration
+
+The project uses **evermark-sdk** for core functionality:
+
+- **IPFS Uploads**: `IPFSClient.uploadFile()` for direct IPFS storage
+- **Image Resolution**: Smart fallback between IPFS gateways and Supabase cache
+- **Validation**: URL, IPFS hash, and metadata validation utilities
+- **Storage Orchestration**: Intelligent content delivery optimization
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Follow the development guide for architecture patterns
-4. Ensure tests pass: `npm test`
-5. Submit a pull request
+2. Create a feature branch: `git checkout -b feature/amazing-feature`  
+3. Follow the feature-first architecture patterns
+4. Ensure type safety: `npm run type-check`
+5. Test locally: `npx netlify dev`
+6. Submit a pull request
+
+### Development Workflow
+
+- **Feature Development**: Each feature is self-contained in `src/features/[name]/`
+- **Code Quality**: ESLint + Prettier with strict TypeScript
+- **Testing**: Vitest for business logic, React Testing Library for components
+- **Documentation**: Update CLAUDE.md for architectural changes
 
 ## 📄 License
 
@@ -135,4 +201,6 @@ MIT License - see [LICENSE](./LICENSE) for details.
 
 ---
 
-**Evermark Beta** - Built for the future of content curation 🚀
+**Evermark Beta** - Decentralized content preservation, built for permanence 🚀
+
+*Powered by IPFS, secured by blockchain, optimized for performance.*
