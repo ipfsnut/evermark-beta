@@ -9,35 +9,25 @@ export interface AuthNonceResponse {
 
 export interface AuthWalletResponse {
   success: boolean;
-  session: {
-    access_token: string;
-    refresh_token: string;
-    token_type: string;
-    expires_in: number;
-    expires_at: number;
-    user: {
-      id: string;
-      email: string;
-      wallet_address: string;
-      display_name: string;
-      [key: string]: any;
-    };
-  };
+  authenticated: boolean;
   user: {
-    id: string;
     wallet_address: string;
     display_name: string;
-    email: string;
     verified_signature: boolean;
     authenticated_at: string;
-    session_method: string;
+    can_create_nft: boolean;
+    chain_id: number;
+    auth_method: string;
   };
+  auth_token: string;
+  expires_at: string;
 }
 
 export interface WalletAuthResult {
   success: boolean;
-  session?: AuthWalletResponse['session'];
   user?: AuthWalletResponse['user'];
+  auth_token?: string;
+  expires_at?: string;
   error?: string;
 }
 
@@ -77,8 +67,9 @@ export class WalletAuthService {
         console.log('✅ Wallet authentication successful!');
         return {
           success: true,
-          session: authResult.session,
-          user: authResult.user
+          user: authResult.user,
+          auth_token: authResult.auth_token,
+          expires_at: authResult.expires_at
         };
       } else {
         return { success: false, error: 'Signature verification failed' };
@@ -192,7 +183,7 @@ By signing this message, you confirm ownership of this wallet and authorize acce
       }
 
       const data: AuthWalletResponse = await response.json();
-      console.log('✅ Signature verified and JWT session created');
+      console.log('✅ Signature verified and auth token created');
       return data;
 
     } catch (error) {
@@ -202,15 +193,16 @@ By signing this message, you confirm ownership of this wallet and authorize acce
   }
 
   /**
-   * Validate if session is still valid
+   * Validate if auth token is still valid
    */
-  static isSessionValid(session: AuthWalletResponse['session']): boolean {
-    if (!session || !session.expires_at) {
+  static isAuthTokenValid(expiresAt: string): boolean {
+    if (!expiresAt) {
       return false;
     }
 
-    const now = Math.floor(Date.now() / 1000);
-    return session.expires_at > now;
+    const now = new Date();
+    const expiry = new Date(expiresAt);
+    return expiry > now;
   }
 
   /**

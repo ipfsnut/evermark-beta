@@ -17,9 +17,9 @@ export function AuthStatusComponent({
   const account = useActiveAccount();
   const {
     isAuthenticated,
-    isSupabaseAuthenticated,
+    isWalletAuthenticated,
     canCreate,
-    ensureSupabaseAuth,
+    ensureWalletAuth,
     authenticateWallet,
     authError,
     isAuthenticating,
@@ -39,7 +39,7 @@ export function AuthStatusComponent({
 
   const handleEnsureAuth = async () => {
     try {
-      const success = await ensureSupabaseAuth();
+      const success = await ensureWalletAuth();
       if (success) {
         console.log('✅ Auth ensured successfully');
       }
@@ -78,9 +78,9 @@ export function AuthStatusComponent({
         
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <div className={`w-3 h-3 rounded-full ${isSupabaseAuthenticated ? 'bg-green-400' : 'bg-yellow-400'}`} />
+            <div className={`w-3 h-3 rounded-full ${isWalletAuthenticated ? 'bg-green-400' : 'bg-yellow-400'}`} />
             <span className="text-sm text-gray-300">
-              Supabase: {isSupabaseAuthenticated ? 'Authenticated' : 'Not Authenticated'}
+              Wallet Auth: {isWalletAuthenticated ? 'Authenticated' : 'Not Authenticated'}
             </span>
           </div>
           
@@ -102,7 +102,7 @@ export function AuthStatusComponent({
 
       {/* Action Buttons */}
       <div className="flex gap-2 mb-4">
-        {account?.address && !isSupabaseAuthenticated && (
+        {account?.address && !isWalletAuthenticated && (
           <button
             onClick={handleAuthenticate}
             disabled={isAuthenticating}

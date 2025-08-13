@@ -20,10 +20,9 @@ interface IntegratedUserContextType {
   hasENS: boolean;
   isFullyAuthenticated: boolean;
   
-  // Supabase auth state - FIXED with real JWT
-  isSupabaseAuthenticated: boolean;
-  supabaseAuthError: string | null;
-  supabaseSession: any;
+  // Wallet auth state - simplified
+  isWalletAuthenticated: boolean;
+  walletAuthError: string | null;
   isAuthenticating: boolean;
   
   // User actions
@@ -31,10 +30,10 @@ interface IntegratedUserContextType {
   switchUserView: (source: 'farcaster' | 'ens' | 'wallet') => void;
   clearError: () => void;
   
-  // Auth actions - ENHANCED with real JWT
-  ensureSupabaseAuth: () => Promise<boolean>;
+  // Auth actions - simplified wallet auth
+  ensureWalletAuth: () => Promise<boolean>;
   authenticateWallet: () => Promise<boolean>;
-  signOut: () => Promise<void>;
+  signOut: () => void;
   
   // Data for evermarks integration
   getEvermarkAuthorData: () => {
@@ -70,25 +69,25 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
   const [error, setError] = useState<string | null>(null);
   const [preferredSource, setPreferredSource] = useState<'farcaster' | 'ens' | 'wallet'>('farcaster');
   
-  // FIXED: Real JWT authentication state
-  const [isSupabaseAuthenticated, setIsSupabaseAuthenticated] = useState(false);
-  const [supabaseAuthError, setSupabaseAuthError] = useState<string | null>(null);
-  const [supabaseSession, setSupabaseSession] = useState<any>(null);
+  // Simplified wallet authentication state
+  const [isWalletAuthenticated, setIsWalletAuthenticated] = useState(false);
+  const [walletAuthError, setWalletAuthError] = useState<string | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [authToken, setAuthToken] = useState<string | null>(null);
 
   // Load user profile when authentication state changes
   useEffect(() => {
     loadUserProfile();
   }, [account?.address, farcaster.user?.fid, farcaster.isAuthenticated]);
 
-  // Check existing session on mount
+  // Check existing wallet auth on mount
   useEffect(() => {
-    checkExistingSession();
+    checkExistingWalletAuth();
   }, []);
 
   // Auto-authenticate when wallet connects (optional - you can disable this)
   useEffect(() => {
-    if (account?.address && !isSupabaseAuthenticated && !isAuthenticating) {
+    if (account?.address && !isWalletAuthenticated && !isAuthenticating) {
       // Auto-authenticate on wallet connection
       // Comment this out if you prefer manual authentication
       authenticateWallet();
@@ -96,83 +95,72 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
   }, [account?.address]);
 
   /**
-   * Check if there's an existing valid Supabase session
+   * Check if there's an existing valid wallet auth
    */
-  const checkExistingSession = useCallback(async () => {
-    if (!isSupabaseConfigured()) return;
-
+  const checkExistingWalletAuth = useCallback(() => {
     try {
-      const supabase = getSupabaseClient();
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (session && !error) {
-        console.log('✅ Found existing Supabase session');
-        setSupabaseSession(session);
-        setIsSupabaseAuthenticated(true);
-        setSupabaseAuthError(null);
-      } else if (error) {
-        console.log('⚠️ Existing session invalid:', error.message);
-        setIsSupabaseAuthenticated(false);
-        setSupabaseSession(null);
+      const storedAuth = localStorage.getItem('evermark-wallet-auth');
+      if (storedAuth) {
+        const authData = JSON.parse(storedAuth);
+        if (authData.expires_at && new Date(authData.expires_at) > new Date()) {
+          console.log('✅ Found existing wallet auth');
+          setAuthToken(authData.auth_token);
+          setIsWalletAuthenticated(true);
+          setWalletAuthError(null);
+        } else {
+          console.log('⚠️ Wallet auth expired');
+          localStorage.removeItem('evermark-wallet-auth');
+        }
       }
     } catch (error) {
-      console.error('Failed to check existing session:', error);
+      console.error('Failed to check existing wallet auth:', error);
+      localStorage.removeItem('evermark-wallet-auth');
     }
   }, []);
 
   /**
-   * FIXED: Real wallet authentication using your JWT infrastructure
+   * Simplified wallet authentication for NFT creation
    */
   const authenticateWallet = useCallback(async (): Promise<boolean> => {
     if (!account) {
-      setSupabaseAuthError('No wallet connected');
-      return false;
-    }
-
-    if (!isSupabaseConfigured()) {
-      setSupabaseAuthError('Supabase not configured');
+      setWalletAuthError('No wallet connected');
       return false;
     }
 
     setIsAuthenticating(true);
-    setSupabaseAuthError(null);
+    setWalletAuthError(null);
     
     try {
       console.log('🔐 Starting wallet authentication flow...');
       
-      // Use your existing JWT authentication service
+      // Use the simplified wallet authentication service
       const authResult: WalletAuthResult = await WalletAuthService.authenticateWallet(account);
       
       if (!authResult.success) {
         const friendlyError = WalletAuthService.getErrorMessage(authResult.error || 'Authentication failed');
-        setSupabaseAuthError(friendlyError);
+        setWalletAuthError(friendlyError);
         return false;
       }
 
-      if (!authResult.session) {
-        setSupabaseAuthError('No session received from authentication');
+      if (!authResult.user || !authResult.auth_token) {
+        setWalletAuthError('No auth token received from authentication');
         return false;
       }
 
-      // Set the JWT session in Supabase client
-      const supabase = getSupabaseClient();
-      const { data, error } = await supabase.auth.setSession({
-        access_token: authResult.session.access_token,
-        refresh_token: authResult.session.refresh_token,
-      });
-
-      if (error) {
-        console.error('❌ Failed to set Supabase session:', error);
-        setSupabaseAuthError('Failed to establish session');
-        return false;
-      }
+      // Store auth data locally
+      const authData = {
+        auth_token: authResult.auth_token,
+        expires_at: authResult.expires_at,
+        wallet_address: authResult.user.wallet_address
+      };
+      localStorage.setItem('evermark-wallet-auth', JSON.stringify(authData));
 
       // Success!
-      setSupabaseSession(data.session);
-      setIsSupabaseAuthenticated(true);
-      setSupabaseAuthError(null);
+      setAuthToken(authResult.auth_token);
+      setIsWalletAuthenticated(true);
+      setWalletAuthError(null);
       
-      console.log('✅ Wallet authentication complete! Session established.');
+      console.log('✅ Wallet authentication complete! Ready for NFT creation.');
       
       return true;
 
@@ -181,7 +169,7 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
       const friendlyError = WalletAuthService.getErrorMessage(
         error instanceof Error ? error.message : 'Authentication failed'
       );
-      setSupabaseAuthError(friendlyError);
+      setWalletAuthError(friendlyError);
       return false;
     } finally {
       setIsAuthenticating(false);
@@ -191,41 +179,41 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
   /**
    * Ensure authentication - calls authenticateWallet if needed
    */
-  const ensureSupabaseAuth = useCallback(async (): Promise<boolean> => {
-    // Check if already authenticated
-    if (isSupabaseAuthenticated && supabaseSession) {
-      // Verify session is still valid
-      if (WalletAuthService.isSessionValid(supabaseSession)) {
-        return true;
-      } else {
-        console.log('🔄 Session expired, re-authenticating...');
-        setIsSupabaseAuthenticated(false);
-        setSupabaseSession(null);
+  const ensureWalletAuth = useCallback(async (): Promise<boolean> => {
+    // Check if already authenticated and token is valid
+    if (isWalletAuthenticated && authToken) {
+      const storedAuth = localStorage.getItem('evermark-wallet-auth');
+      if (storedAuth) {
+        const authData = JSON.parse(storedAuth);
+        if (authData.expires_at && new Date(authData.expires_at) > new Date()) {
+          return true;
+        }
       }
+      // Token expired, clear state
+      console.log('🔄 Auth token expired, re-authenticating...');
+      setIsWalletAuthenticated(false);
+      setAuthToken(null);
+      localStorage.removeItem('evermark-wallet-auth');
     }
 
     if (!account?.address) {
-      setSupabaseAuthError('Please connect your wallet first');
+      setWalletAuthError('Please connect your wallet first');
       return false;
     }
 
-    console.log('🔄 Ensuring Supabase authentication...');
+    console.log('🔄 Ensuring wallet authentication...');
     return await authenticateWallet();
-  }, [isSupabaseAuthenticated, supabaseSession, account?.address, authenticateWallet]);
+  }, [isWalletAuthenticated, authToken, account?.address, authenticateWallet]);
 
   /**
-   * Sign out and clear session
+   * Sign out and clear wallet auth
    */
-  const signOut = useCallback(async () => {
+  const signOut = useCallback(() => {
     try {
-      if (isSupabaseConfigured()) {
-        const supabase = getSupabaseClient();
-        await supabase.auth.signOut();
-      }
-      
-      setSupabaseSession(null);
-      setIsSupabaseAuthenticated(false);
-      setSupabaseAuthError(null);
+      localStorage.removeItem('evermark-wallet-auth');
+      setAuthToken(null);
+      setIsWalletAuthenticated(false);
+      setWalletAuthError(null);
       
       console.log('✅ Signed out successfully');
     } catch (error) {
@@ -290,7 +278,7 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
 
   const clearError = useCallback(() => {
     setError(null);
-    setSupabaseAuthError(null);
+    setWalletAuthError(null);
   }, []);
 
   // Get data formatted for evermarks creation
@@ -384,10 +372,9 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
     hasENS,
     isFullyAuthenticated,
     
-    // Supabase auth state - FIXED with real JWT
-    isSupabaseAuthenticated,
-    supabaseAuthError,
-    supabaseSession,
+    // Wallet auth state - simplified
+    isWalletAuthenticated,
+    walletAuthError,
     isAuthenticating,
     
     // Actions
@@ -395,8 +382,8 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
     switchUserView,
     clearError,
     
-    // Auth actions - ENHANCED with real JWT
-    ensureSupabaseAuth,
+    // Auth actions - simplified wallet auth
+    ensureWalletAuth,
     authenticateWallet,
     signOut,
     
@@ -431,28 +418,28 @@ export function useUserForEvermarks() {
   const { 
     getEvermarkAuthorData, 
     isFullyAuthenticated, 
-    isSupabaseAuthenticated,
-    ensureSupabaseAuth,
+    isWalletAuthenticated,
+    ensureWalletAuth,
     authenticateWallet,
     user,
     hasWallet,
     hasFarcaster,
-    supabaseAuthError,
+    walletAuthError,
     isAuthenticating
   } = useIntegratedUser();
   
   return {
     authorData: getEvermarkAuthorData(),
     isAuthenticated: isFullyAuthenticated,
-    isSupabaseAuthenticated,
-    canCreate: isFullyAuthenticated && isSupabaseAuthenticated,
-    ensureSupabaseAuth,
+    isWalletAuthenticated,
+    canCreate: isFullyAuthenticated && isWalletAuthenticated,
+    ensureWalletAuth,
     authenticateWallet,
     user,
     hasWallet,
     hasFarcaster,
     shouldShowFarcasterFeatures: hasFarcaster,
-    authError: supabaseAuthError,
+    authError: walletAuthError,
     isAuthenticating
   };
 }
@@ -483,7 +470,7 @@ export function useAuthenticationState() {
     hasFarcaster, 
     hasENS, 
     isFullyAuthenticated,
-    isSupabaseAuthenticated,
+    isWalletAuthenticated,
     getPrimaryIdentity,
     getIdentityScore,
     isAuthenticating
@@ -494,8 +481,8 @@ export function useAuthenticationState() {
     hasFarcaster,
     hasENS,
     isAuthenticated: isFullyAuthenticated,
-    isSupabaseAuthenticated,
-    canUpload: isFullyAuthenticated && isSupabaseAuthenticated,
+    isWalletAuthenticated,
+    canUpload: isFullyAuthenticated && isWalletAuthenticated,
     primaryIdentity: getPrimaryIdentity(),
     identityScore: getIdentityScore(),
     isHybridUser: (hasWallet && hasFarcaster) || (hasWallet && hasENS) || (hasFarcaster && hasENS),

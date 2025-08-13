@@ -1,5 +1,13 @@
 # netlify.toml - Fixed CSP and CORS configuration for Evermark Beta
 
+[dev]
+  command = "npm run dev"
+  targetPort = 3000
+  port = 8888
+  functionsPort = 9999
+  autoLaunch = false
+  framework = "#custom"
+
 [build]
   # Use existing pnpm with frozen lockfile for consistent builds
   command = "pnpm install --frozen-lockfile && pnpm run build"
@@ -135,8 +143,8 @@
     X-UA-Compatible = "IE=edge"
     Vary = "Accept-Encoding, User-Agent"
     
-    # COMPREHENSIVE CSP: Fixed to allow all necessary domains for Web3 + Farcaster + Image services
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://*.supabase.co https://*.thirdweb.com https://*.rpc.thirdweb.com https://rpc.ankr.com https://mainnet.base.org https://base-mainnet.g.alchemy.com https://api.ensideas.com https://imagedelivery.net https://*.imagedelivery.net https://gateway.pinata.cloud https://ipfs.io https://cloudflare-ipfs.com https://gateway.ipfs.io https://c.thirdweb.com https://api.dicebear.com https://*.dicebear.com wss://*.thirdweb.com wss://*.alchemy.com; worker-src 'self' blob:; child-src 'self' blob:; frame-src 'self' https://verify.walletconnect.com https://verify.walletconnect.org; object-src 'none'; base-uri 'self';"
+    # COMPREHENSIVE CSP: Fixed to allow all necessary domains for Web3 + Farcaster + Image services + Dev WebSockets
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' ws://localhost:* wss://localhost:* https://*.supabase.co https://*.thirdweb.com https://*.rpc.thirdweb.com https://rpc.ankr.com https://mainnet.base.org https://base-mainnet.g.alchemy.com https://api.ensideas.com https://imagedelivery.net https://*.imagedelivery.net https://gateway.pinata.cloud https://ipfs.io https://cloudflare-ipfs.com https://gateway.ipfs.io https://c.thirdweb.com https://api.dicebear.com https://*.dicebear.com wss://*.thirdweb.com wss://*.alchemy.com; worker-src 'self' blob:; child-src 'self' blob:; frame-src 'self' https://verify.walletconnect.com https://verify.walletconnect.org; object-src 'none'; base-uri 'self';"
 
 # Farcaster Frame specific headers
 [[headers]]
