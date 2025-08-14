@@ -3,7 +3,7 @@
 // NO METADATASERVICE DEPENDENCIES - Enhanced with SDK error types
 // =============================================================================
 
-import { prepareContractCall, readContract, getRpcClient } from 'thirdweb';
+import { prepareContractCall, readContract, getRpcClient, sendTransaction, waitForReceipt } from 'thirdweb';
 import type { Account } from 'thirdweb/wallets';
 import { client } from '@/lib/thirdweb';
 import { CONTRACTS, getEvermarkNFTContract } from '@/lib/contracts';
@@ -366,10 +366,14 @@ export class EvermarkBlockchainService {
       console.log('📝 Transaction prepared with Thirdweb');
       console.log('🚀 Sending transaction through Thirdweb...');
 
-      // FIXED: Use proper Thirdweb v5 approach with waitForReceipt
-      const { sendTransaction, waitForReceipt } = await import('thirdweb');
-      
+      // FIXED: Use static import to avoid any dynamic import issues
       console.log('🚀 Sending transaction with Thirdweb...');
+      console.log('📋 Transaction details:', {
+        method: 'mintEvermark',
+        value: mintingFee.toString(),
+        address: account.address,
+        contractAddress: contract.address
+      });
       
       // Send transaction using Thirdweb
       const txHash = await sendTransaction({

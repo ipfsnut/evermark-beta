@@ -62,7 +62,7 @@ export function useEvermarksState(): UseEvermarksResult {
     retry: 2
   });
 
-  // Create evermark mutation
+  // Create evermark mutation with reentrancy protection
   const createMutation = useMutation({
     mutationFn: async (input: CreateEvermarkInput) => {
       // Check if we have an account before starting creation
