@@ -2,15 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Base styles for cyber theme */
+/* Base styles for cyber theme - Mobile First */
 @layer base {
   html {
     color-scheme: dark;
+    -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile */
+    -webkit-touch-callout: none; /* Disable callout on long press */
   }
 
   body {
     @apply bg-black text-white antialiased;
     @apply selection:bg-cyber-primary selection:bg-opacity-30 selection:text-white;
+    
+    /* Prevent overscroll bounce on iOS */
+    overscroll-behavior: none;
+    
+    /* Smooth scrolling on mobile */
+    -webkit-overflow-scrolling: touch;
+    
+    /* Prevent text selection on UI elements */
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  
+  /* Allow text selection in content areas */
+  .content-selectable {
+    user-select: text;
+    -webkit-user-select: text;
   }
 
   /* Custom scrollbar for webkit browsers */
@@ -307,6 +325,90 @@
 
     .mobile-center {
       @apply text-center items-center justify-center;
+    }
+    
+    .mobile-hidden {
+      @apply hidden;
+    }
+    
+    .mobile-compact {
+      @apply text-sm px-3 py-2;
+    }
+  }
+  
+  /* Touch gestures and interactions */
+  .swipeable {
+    touch-action: pan-y;
+  }
+  
+  .swipeable-x {
+    touch-action: pan-x;
+  }
+  
+  .no-swipe {
+    touch-action: none;
+  }
+  
+  /* PWA specific styles */
+  @media (display-mode: standalone) {
+    .pwa-hidden {
+      display: none !important;
+    }
+    
+    /* Adjust for missing browser chrome */
+    .pwa-header {
+      padding-top: env(safe-area-inset-top, 0);
+    }
+  }
+  
+  /* iOS safe area support */
+  .safe-area-inset-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  
+  .pb-safe {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  
+  /* Slide up animation for mobile navigation */
+  .animate-slide-up {
+    animation: slideUpMobile 0.3s ease-out;
+  }
+  
+  @keyframes slideUpMobile {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  
+  /* Farcaster frame optimizations */
+  .frame-optimized {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+  
+  .frame-content {
+    padding: 0.5rem;
+    font-size: 0.875rem;
+  }
+  
+  @media (max-width: 420px) {
+    /* iPhone SE and small phones */
+    .text-mobile {
+      font-size: 0.875rem;
+    }
+    
+    .btn-mobile {
+      @apply px-3 py-2 text-sm;
+    }
+    
+    .card-mobile {
+      @apply p-3;
     }
   }
 }

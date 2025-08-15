@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import { AppProviders } from '../src/providers/AppProviders';
 import { Layout } from '../src/components/layout';
 import { ErrorBoundary } from '../src/components/ui';
+import { PWAInstallPrompt } from '../src/components/PWAInstallPrompt';
 
 // Lazy load pages for better performance
 const HomePage = React.lazy(() => import('../src/pages/HomePage'));
@@ -28,24 +29,29 @@ function PageLoader() {
 // App content with routing (separated for clean provider structure)
 function AppContent() {
   return (
-    <Layout>
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
-          {/* Core feature routes */}
-          <Route path="/" element={<HomePage />} />
-          <Route path="/explore" element={<ExplorePage />} />
-          <Route path="/leaderboard" element={<LeaderboardPage />} />
-          <Route path="/staking" element={<StakingPage />} />
-          
-          {/* Evermark-specific routes */}
-          <Route path="/create" element={<CreatePage />} />
-          <Route path="/evermark/:id" element={<EvermarkDetailPage />} />
-          
-          {/* Catch-all route */}
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-      </Suspense>
-    </Layout>
+    <>
+      <Layout>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {/* Core feature routes */}
+            <Route path="/" element={<HomePage />} />
+            <Route path="/explore" element={<ExplorePage />} />
+            <Route path="/leaderboard" element={<LeaderboardPage />} />
+            <Route path="/staking" element={<StakingPage />} />
+            
+            {/* Evermark-specific routes */}
+            <Route path="/create" element={<CreatePage />} />
+            <Route path="/evermark/:id" element={<EvermarkDetailPage />} />
+            
+            {/* Catch-all route */}
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </Suspense>
+      </Layout>
+      
+      {/* PWA Install Prompt - shown outside layout */}
+      <PWAInstallPrompt />
+    </>
   );
 }
 

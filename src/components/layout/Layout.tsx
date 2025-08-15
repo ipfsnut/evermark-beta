@@ -1,62 +1,80 @@
-// src/components/layout/Layout.tsx - Main layout structure
+// src/components/layout/Layout.tsx - Mobile-first responsive layout
 import React from 'react';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
+import { MobileNavigation } from './MobileNavigation';
 import { useAppUI } from '../../providers/AppContext';
 import { useFarcasterUser } from '../../lib/farcaster';
-import { cn } from '../../utils/responsive';
+import { cn, useIsMobile } from '../../utils/responsive';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
 export function Layout({ children }: LayoutProps) {
-  const { sidebarOpen, theme } = useAppUI();
+  const { sidebarOpen, theme, toggleSidebar } = useAppUI();
   const { isInFarcaster } = useFarcasterUser();
+  const isMobile = useIsMobile();
+
+  // Mobile-first: Use bottom nav on mobile, sidebar on desktop
+  const showMobileNav = isMobile || isInFarcaster;
+  const showSidebar = !showMobileNav;
 
   return (
     <div className={cn(
       'min-h-screen bg-black text-white transition-colors duration-200',
       theme === 'light' && 'bg-gray-50 text-gray-900'
     )}>
-      {/* Header - always visible */}
+      {/* Header - optimized for mobile */}
       <Header />
       
-      <div className="flex">
-        {/* Sidebar - hidden in Farcaster mini-app for space optimization */}
-        {!isInFarcaster && (
+      <div className="flex relative">
+        {/* Desktop Sidebar */}
+        {showSidebar && (
           <Sidebar 
             isOpen={sidebarOpen}
             className={cn(
-              'fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0',
+              'fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out',
+              'lg:relative lg:translate-x-0',
               sidebarOpen ? 'translate-x-0' : '-translate-x-full'
             )}
           />
         )}
         
-        {/* Main content area */}
+        {/* Main content area - adjusted for mobile nav */}
         <main className={cn(
           'flex-1 transition-all duration-300',
-          !isInFarcaster && sidebarOpen && 'lg:ml-0', // Adjust for sidebar
-          'safe-top safe-bottom' // Safe area support for mobile
+          'min-h-[calc(100vh-64px)]', // Account for header
+          showSidebar && sidebarOpen && 'lg:ml-0',
+          showMobileNav && 'pb-20' // Space for bottom nav
         )}>
-          {/* Page content with proper spacing */}
+          {/* Safe area padding for notches/home indicators */}
           <div className={cn(
-            'container mx-auto px-4 py-6',
-            isInFarcaster ? 'max-w-none' : 'max-w-7xl' // Full width in mini-app
+            'h-full',
+            'safe-top safe-bottom',
+            isInFarcaster && 'px-0' // No padding in frames
           )}>
-            {children}
+            {/* Page content */}
+            <div className={cn(
+              'container mx-auto px-4 py-4',
+              isInFarcaster ? 'max-w-none px-2' : 'max-w-7xl',
+              isMobile && 'px-3' // Tighter padding on mobile
+            )}>
+              {children}
+            </div>
           </div>
         </main>
       </div>
       
-      {/* Sidebar backdrop for mobile */}
-      {!isInFarcaster && sidebarOpen && (
+      {/* Mobile Bottom Navigation */}
+      {showMobileNav && <MobileNavigation />}
+      
+      {/* Sidebar backdrop for mobile (tablets) */}
+      {showSidebar && sidebarOpen && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={() => {
-            // This will be connected to toggleSidebar via context
-          }}
+          onClick={toggleSidebar}
+          aria-label="Close sidebar"
         />
       )}
     </div>

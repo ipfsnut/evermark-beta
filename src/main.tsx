@@ -1,9 +1,45 @@
-// src/main.tsx - Temporarily remove StrictMode to test GoTrueClient issue
+// src/main.tsx - Mobile-first app with PWA support
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import '../index.css';
+
+// Register service worker for PWA functionality
+async function registerServiceWorker() {
+  if ('serviceWorker' in navigator && import.meta.env.PROD) {
+    try {
+      const registration = await navigator.serviceWorker.register('/service-worker.js');
+      console.log('✅ Service Worker registered:', registration.scope);
+      
+      // Check for updates periodically
+      setInterval(() => {
+        registration.update();
+      }, 60000); // Check every minute
+      
+      // Handle updates
+      registration.addEventListener('updatefound', () => {
+        const newWorker = registration.installing;
+        if (newWorker) {
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              // New version available
+              if (confirm('New version available! Refresh to update?')) {
+                newWorker.postMessage({ type: 'SKIP_WAITING' });
+                window.location.reload();
+              }
+            }
+          });
+        }
+      });
+    } catch (error) {
+      console.error('Service Worker registration failed:', error);
+    }
+  }
+}
+
+// Register SW after app loads
+window.addEventListener('load', registerServiceWorker);
 
 // Ensure we have a root element
 const rootElement = document.getElementById('root');
