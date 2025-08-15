@@ -5,7 +5,8 @@ import { Sidebar } from './Sidebar';
 import { MobileNavigation } from './MobileNavigation';
 import { useAppUI } from '../../providers/AppContext';
 import { useFarcasterUser } from '../../lib/farcaster';
-import { cn, useIsMobile } from '../../utils/responsive';
+import { cn } from '../../utils/responsive';
+import { useIsMobileDevice } from '../../utils/device-detection';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -14,7 +15,7 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   const { sidebarOpen, theme, toggleSidebar } = useAppUI();
   const { isInFarcaster } = useFarcasterUser();
-  const isMobile = useIsMobile();
+  const isMobile = useIsMobileDevice();
 
   // Mobile-first: Use bottom nav on mobile, sidebar on desktop
   const showMobileNav = isMobile || isInFarcaster;

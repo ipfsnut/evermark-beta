@@ -1,0 +1,107 @@
+/* Mobile-first CSS for immediate mobile detection */
+
+/* Immediate mobile styles based on JS detection */
+.mobile-device .desktop-only {
+  display: none !important;
+}
+
+.desktop-device .mobile-only {
+  display: none !important;
+}
+
+/* Default mobile styles - apply immediately */
+@media screen and (max-width: 768px) {
+  /* Hide desktop elements on mobile immediately */
+  .desktop-only {
+    display: none !important;
+  }
+  
+  /* Ensure mobile navigation is visible */
+  .mobile-nav {
+    display: block !important;
+  }
+  
+  /* Optimize touch targets */
+  button, a, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Prevent horizontal scroll */
+  body, html {
+    overflow-x: hidden;
+    width: 100%;
+  }
+  
+  /* Ensure proper viewport sizing */
+  #root {
+    width: 100vw;
+    min-height: 100vh;
+    position: relative;
+  }
+}
+
+/* Tablet styles */
+@media screen and (min-width: 769px) and (max-width: 1024px) {
+  .tablet-hide {
+    display: none !important;
+  }
+}
+
+/* Desktop styles */
+@media screen and (min-width: 1025px) {
+  .mobile-only {
+    display: none !important;
+  }
+  
+  .desktop-nav {
+    display: block !important;
+  }
+}
+
+/* Safe area support for modern devices */
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.safe-area-inset-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* Improve mobile performance */
+@media (hover: none) and (pointer: coarse) {
+  /* This targets touch devices */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Disable hover effects on touch devices */
+  button:hover, a:hover {
+    background-color: inherit;
+  }
+}
+
+/* PWA specific styles */
+@media (display-mode: standalone) {
+  /* Styles for when app is installed as PWA */
+  body {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+}
+
+/* Prevent desktop view flash on mobile load */
+@supports (-webkit-touch-callout: none) {
+  /* iOS specific */
+  body {
+    -webkit-text-size-adjust: 100%;
+  }
+}

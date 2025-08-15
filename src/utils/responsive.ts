@@ -13,14 +13,21 @@ export function cn(...classes: (string | undefined | null | false)[]): string {
  * Hook to detect mobile screen size
  */
 export function useIsMobile(breakpoint = 768): boolean {
-  const [isMobile, setIsMobile] = useState(false);
+  // Initialize with actual window width on first render to prevent flash
+  const [isMobile, setIsMobile] = useState(() => {
+    // SSR-safe: Check if window exists
+    if (typeof window === 'undefined') {
+      return false; // Default to false during SSR
+    }
+    return window.innerWidth < breakpoint;
+  });
 
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < breakpoint);
     };
 
-    // Check on mount
+    // Check on mount (in case initial state was wrong)
     checkMobile();
 
     // Listen for resize events
