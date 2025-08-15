@@ -12,8 +12,9 @@ import {
   type EvermarkFeedResult,
   type CreateEvermarkResult
 } from '../types';
-// TODO: Fix TempEvermarkService SDK imports
-// import { TempEvermarkService } from '../services/TempEvermarkService';
+// Production services for blockchain-first evermark creation
+import { EvermarkBlockchainService } from '../services/BlockchainService';
+import { pinataService } from '@/services/PinataService';
 
 // Temporary service replacement until SDK issues are fixed
 const TempEvermarkService = {
@@ -51,16 +52,36 @@ const TempEvermarkService = {
       const currentPage = options.page || 1;
       
       // Transform database fields to frontend format
-      const transformedEvermarks = (data.evermarks || []).map((item: any) => ({
-        ...item,
-        id: item.token_id,
-        createdAt: item.created_at || new Date().toISOString(),
-        updatedAt: item.updated_at || item.created_at || new Date().toISOString(),
-        contentType: item.content_type,
-        sourceUrl: item.source_url,
-        tokenUri: item.token_uri,
-        verificationStatus: item.verified ? 'verified' : 'unverified'
-      }));
+      const transformedEvermarks = (data.evermarks || []).map((item: any) => {
+        // Parse tags from metadata if available
+        let tags: string[] = [];
+        try {
+          if (item.metadata) {
+            const metadata = typeof item.metadata === 'string' ? JSON.parse(item.metadata) : item.metadata;
+            tags = metadata.tags || [];
+          }
+        } catch (e) {
+          // Failed to parse metadata, use empty tags
+        }
+        
+        return {
+          ...item,
+          id: item.token_id,
+          tokenId: item.token_id, // Add tokenId for components
+          tags: tags, // Ensure tags is always an array
+          ipfsHash: item.ipfs_image_hash, // Map IPFS hash
+          processed_image_url: item.processed_image_url, // Map processed image URL
+          image: item.ipfs_image_hash ? `ipfs://${item.ipfs_image_hash}` : item.processed_image_url, // Add image field
+          createdAt: item.created_at || new Date().toISOString(),
+          updatedAt: item.updated_at || item.created_at || new Date().toISOString(),
+          contentType: item.content_type,
+          sourceUrl: item.source_url,
+          tokenUri: item.token_uri,
+          verificationStatus: item.verified ? 'verified' : 'unverified',
+          creator: item.owner || item.author, // Add creator field
+          extendedMetadata: { tags } // Add extendedMetadata for compatibility
+        };
+      });
       
       return {
         evermarks: transformedEvermarks,
@@ -103,11 +124,181 @@ const TempEvermarkService = {
     }
   },
   createEvermark: async (input: CreateEvermarkInput, account: any): Promise<CreateEvermarkResult> => {
-    // TODO: Replace with actual API call
-    return {
-      success: false,
-      message: 'TempEvermarkService temporarily disabled'
-    };
+    try {
+      console.log('🚀 Starting blockchain-first evermark creation...');
+      
+      // Step 1: Validate inputs
+      if (!account?.address) {
+        throw new Error('No wallet connected. Please connect your wallet to create an Evermark.');
+      }
+
+      if (!input.metadata?.title) {
+        throw new Error('Title is required');
+      }
+
+      if (!input.image) {
+        throw new Error('Image is required for evermark creation');
+      }
+
+      // Check Pinata configuration
+      if (!pinataService.isConfigured()) {
+        throw new Error('IPFS service not configured. Please check Pinata credentials.');
+      }
+
+      // Check blockchain service configuration
+      if (!EvermarkBlockchainService.isConfigured()) {
+        throw new Error('Blockchain service not configured. Please check contract addresses.');
+      }
+
+      const { metadata } = input;
+      
+      console.log('📡 Step 1: Uploading image to IPFS...');
+      
+      // Step 1: Upload image to IPFS
+      const imageUploadResult = await pinataService.uploadImage(input.image);
+      if (!imageUploadResult.success || !imageUploadResult.hash) {
+        throw new Error(`Image upload failed: ${imageUploadResult.error}`);
+      }
+      
+      console.log('✅ Image uploaded to IPFS:', imageUploadResult.hash);
+      
+      console.log('📡 Step 2: Creating and uploading metadata...');
+      
+      // Step 2: Create NFT metadata
+      const nftMetadata = {
+        name: metadata.title,
+        description: metadata.description || '',
+        image: `ipfs://${imageUploadResult.hash}`,
+        external_url: metadata.sourceUrl || metadata.url || metadata.castUrl,
+        attributes: [
+          {
+            trait_type: 'Content Type',
+            value: metadata.contentType || 'Custom'
+          },
+          {
+            trait_type: 'Creator',
+            value: metadata.author || `${account.address.slice(0, 6)}...${account.address.slice(-4)}`
+          },
+          {
+            trait_type: 'Creation Date',
+            value: new Date().toISOString(),
+            display_type: 'date'
+          },
+          ...(metadata.tags || []).map(tag => ({
+            trait_type: 'Tag',
+            value: tag
+          }))
+        ],
+        evermark: {
+          version: '1.0',
+          contentType: metadata.contentType || 'Custom',
+          sourceUrl: metadata.sourceUrl || metadata.url || metadata.castUrl,
+          tags: metadata.tags || [],
+          customFields: metadata.customFields || [],
+          // Type-specific fields
+          doi: metadata.doi,
+          isbn: metadata.isbn,
+          journal: metadata.journal,
+          publisher: metadata.publisher,
+          publicationDate: metadata.publicationDate,
+          volume: metadata.volume,
+          issue: metadata.issue,
+          pages: metadata.pages
+        }
+      };
+      
+      // Step 3: Upload metadata to IPFS
+      console.log('📡 Step 3: Uploading metadata to IPFS...');
+      
+      const metadataUploadResult = await pinataService.uploadMetadata(nftMetadata);
+      if (!metadataUploadResult.success || !metadataUploadResult.url) {
+        throw new Error(`Metadata upload failed: ${metadataUploadResult.error}`);
+      }
+      
+      console.log('✅ Metadata uploaded to IPFS:', metadataUploadResult.hash);
+      
+      // Step 4: Call blockchain minting
+      console.log('📡 Step 4: Minting Evermark NFT on blockchain...');
+      
+      const mintResult = await EvermarkBlockchainService.mintEvermark(
+        account,
+        metadataUploadResult.url,
+        metadata.title,
+        metadata.author || `${account.address.slice(0, 6)}...${account.address.slice(-4)}`
+      );
+      
+      if (!mintResult.success) {
+        throw new Error(`Blockchain minting failed: ${mintResult.error}`);
+      }
+      
+      console.log('✅ Evermark minted successfully!');
+      console.log('Transaction Hash:', mintResult.txHash);
+      console.log('Token ID:', mintResult.tokenId);
+      
+      // Step 5: Sync to database after successful blockchain mint
+      console.log('📡 Step 5: Syncing to database...');
+      
+      if (mintResult.tokenId && mintResult.txHash) {
+        try {
+          const dbSyncResponse = await fetch('/.netlify/functions/evermarks', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Wallet-Address': account.address
+            },
+            body: JSON.stringify({
+              token_id: parseInt(mintResult.tokenId),
+              tx_hash: mintResult.txHash,
+              title: metadata.title,
+              description: metadata.description || '',
+              content_type: metadata.contentType || 'Custom',
+              source_url: metadata.sourceUrl || metadata.url || metadata.castUrl,
+              token_uri: metadataUploadResult.url,
+              author: metadata.author || `${account.address.slice(0, 6)}...${account.address.slice(-4)}`,
+              metadata: JSON.stringify({
+                tags: metadata.tags || [],
+                customFields: metadata.customFields || [],
+                doi: metadata.doi,
+                isbn: metadata.isbn,
+                journal: metadata.journal,
+                publisher: metadata.publisher,
+                publicationDate: metadata.publicationDate,
+                volume: metadata.volume,
+                issue: metadata.issue,
+                pages: metadata.pages
+              }),
+              ipfs_image_hash: imageUploadResult.hash
+            })
+          });
+          
+          if (dbSyncResponse.ok) {
+            console.log('✅ Database sync completed');
+          } else {
+            console.warn('⚠️ Database sync failed, but blockchain mint succeeded');
+          }
+        } catch (dbError) {
+          console.warn('⚠️ Database sync error:', dbError);
+          // Don't fail the whole operation if database sync fails
+        }
+      }
+      
+      return {
+        success: true,
+        txHash: mintResult.txHash,
+        tokenId: mintResult.tokenId,
+        metadataURI: metadataUploadResult.url,
+        imageUrl: imageUploadResult.url,
+        message: 'Evermark created successfully on blockchain!'
+      };
+      
+    } catch (error) {
+      console.error('❌ Evermark creation failed:', error);
+      
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to create evermark'
+      };
+    }
   }
 };
 
@@ -161,7 +352,7 @@ export function useEvermarksState(): UseEvermarksResult {
     retry: 2
   });
 
-  // Create evermark mutation with reentrancy protection
+  // Create evermark mutation with blockchain-first approach
   const createMutation = useMutation({
     mutationFn: async (input: CreateEvermarkInput) => {
       // Check if we have an account before starting creation
@@ -170,9 +361,9 @@ export function useEvermarksState(): UseEvermarksResult {
       }
 
       setCreateProgress(0);
-      setCreateStep('Validating metadata...');
+      setCreateStep('Validating inputs...');
       
-      // Pass the account to the service
+      // Call the blockchain-first creation service
       const result = await TempEvermarkService.createEvermark(input, account);
       
       if (result.success) {
@@ -181,6 +372,9 @@ export function useEvermarksState(): UseEvermarksResult {
         
         // Invalidate queries to refetch data
         await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.all() });
+      } else {
+        // Throw error if service returns failure - this triggers React Query's onError
+        throw new Error(result.message || 'Evermark creation failed');
       }
       
       return result;

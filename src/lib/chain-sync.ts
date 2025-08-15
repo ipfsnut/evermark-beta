@@ -59,7 +59,6 @@ export async function syncRecentEvermarks(count: number = 10) {
           creator: extractFromAttributes(metadata.attributes as any[], 'creator') || 'Unknown',
           content_type: extractFromAttributes(metadata.attributes as any[], 'content_type') || 'Custom',
           source_url: extractFromAttributes(metadata.attributes as any[], 'source_url'),
-          processed_image_url: metadata.image,
           ipfs_image_hash: extractIpfsHash(metadata.image),
           image_processing_status: metadata.image ? 'pending' : 'none',
           verified: false,
@@ -87,9 +86,9 @@ export async function syncRecentEvermarks(count: number = 10) {
 export async function getEvermarksNeedingCache() {
   const { data, error } = await supabase!
     .from('evermarks')
-    .select('token_id, processed_image_url, ipfs_image_hash')
+    .select('token_id, ipfs_image_hash')
     .eq('image_processing_status', 'pending')
-    .not('processed_image_url', 'is', null)
+    .not('ipfs_image_hash', 'is', null)
     .limit(20);
 
   if (error) return [];

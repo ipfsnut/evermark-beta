@@ -2,8 +2,8 @@ import { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.VITE_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_ANON_KEY!
 );
 
 // Based on your actual schema
@@ -198,16 +198,34 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
           };
         }
 
+        // PRODUCTION: This endpoint is now called AFTER successful blockchain minting
+        // Validate that we have the required blockchain data
+        if (!evermarkData.token_id || !evermarkData.tx_hash) {
+          return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({ 
+              error: 'Missing blockchain data',
+              message: 'token_id and tx_hash are required for database sync after minting'
+            }),
+          };
+        }
+        
+        console.log('✅ Creating evermark database record after blockchain mint:', {
+          tokenId: evermarkData.token_id,
+          txHash: evermarkData.tx_hash,
+          wallet: walletAddress
+        });
+        
         // Auto-populate user data from wallet address
         const newEvermark: Partial<EvermarkRecord> = {
           ...evermarkData,
           author: evermarkData.author || `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`,
-          owner: walletAddress, // Always use provided wallet address
-          user_id: walletAddress, // Store wallet address as user_id
+          owner: walletAddress,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          metadata_fetched: false,
-          verified: false,
+          metadata_fetched: true, // We have the metadata from IPFS
+          verified: false, // Will be verified later
         };
 
         const { data: createdData, error: createError } = await supabase
@@ -271,9 +289,8 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
           };
         }
 
-        // Check ownership
-        const isOwner = existingEvermark.owner?.toLowerCase() === updateWalletAddress ||
-                       existingEvermark.user_id?.toLowerCase() === updateWalletAddress;
+        // Check ownership - only check owner field since user_id is UUID
+        const isOwner = existingEvermark.owner?.toLowerCase() === updateWalletAddress;
 
         if (!isOwner) {
           return {
@@ -287,7 +304,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
         
         // Don't allow changing ownership
         delete updateData.owner;
-        delete updateData.user_id;
+        delete updateData.user_id; // Keep this to prevent any attempts to set it
         
         updateData.updated_at = new Date().toISOString();
 
@@ -349,8 +366,8 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
           };
         }
 
-        const isDeleteOwner = deleteEvermark.owner?.toLowerCase() === deleteWalletAddress ||
-                             deleteEvermark.user_id?.toLowerCase() === deleteWalletAddress;
+        // Check ownership - only check owner field since user_id is UUID
+        const isDeleteOwner = deleteEvermark.owner?.toLowerCase() === deleteWalletAddress;
 
         if (!isDeleteOwner) {
           return {

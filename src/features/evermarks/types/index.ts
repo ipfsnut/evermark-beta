@@ -31,7 +31,6 @@ export interface Evermark {
   imageStatus: 'processed' | 'processing' | 'failed' | 'none';
   supabaseImageUrl?: string;    // NEW: Primary image source
   thumbnailUrl?: string;        // NEW: Thumbnail for performance
-  processed_image_url?: string; // FIXED: Added this field for legacy support
   ipfsHash?: string;           // NEW: IPFS backup hash
   imageFileSize?: number;      // NEW: File size tracking
   imageDimensions?: string;    // NEW: Dimensions as "width,height"
@@ -45,7 +44,6 @@ export interface Evermark {
     castData?: FarcasterCastData;
     tags?: string[];
     customFields?: Array<{ key: string; value: string }>;
-    processedImageUrl?: string;
   };
   
   // Optional analytics

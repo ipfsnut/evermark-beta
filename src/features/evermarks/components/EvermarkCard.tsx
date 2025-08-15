@@ -341,7 +341,7 @@ export function EvermarkCard({
           </p>
         )}
 
-        {evermark.tags.length > 0 && (
+        {evermark.tags && evermark.tags.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-4">
             {evermark.tags.slice(0, variant === 'compact' ? 2 : 3).map((tag, index) => (
               <span

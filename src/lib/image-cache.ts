@@ -89,7 +89,6 @@ export async function cacheImage(tokenId: number, originalUrl: string) {
 export function getImageUrl(evermark: {
   token_id: number;
   supabase_image_url?: string;
-  processed_image_url?: string;
   ipfs_image_hash?: string;
 }): string {
   // 1. Try Supabase first
@@ -97,9 +96,9 @@ export function getImageUrl(evermark: {
     return evermark.supabase_image_url;
   }
 
-  // 2. Fall back to original (hopefully it works)
-  if (evermark.processed_image_url) {
-    return evermark.processed_image_url;
+  // 2. Fall back to IPFS via Pinata gateway
+  if (evermark.ipfs_image_hash) {
+    return `https://gateway.pinata.cloud/ipfs/${evermark.ipfs_image_hash}`;
   }
 
   // 3. Last resort: placeholder

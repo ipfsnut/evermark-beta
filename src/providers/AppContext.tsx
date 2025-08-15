@@ -209,22 +209,16 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       });
       
       setConnectionError(null);
-    } else if (account?.address && !integratedUserLoading) {
-      // Fallback to basic wallet user if integrated user isn't available
-      console.log('👤 Fallback to basic wallet user:', account.address);
-      
-      setUser({
-        address: account.address,
-        displayName: account.address.slice(0, 6) + '...' + account.address.slice(-4),
-        username: account.address.slice(0, 8),
-        avatar: `https://api.dicebear.com/7.x/shapes/svg?seed=${account.address}`,
-        pfpUrl: `https://api.dicebear.com/7.x/shapes/svg?seed=${account.address}`,
-        identityScore: 10, // Low score for wallet-only
-        authType: 'wallet'
-      });
     } else if (!integratedUserLoading) {
-      console.log('👤 No user available');
+      // Don't fallback to any wallet automatically - require explicit connection
+      console.log('👤 No authenticated user - wallet connection required');
       setUser(null);
+      
+      // If there's a connected account but no integrated user, it means auth failed
+      if (account?.address) {
+        console.warn('⚠️ Account detected but authentication failed. User must reconnect wallet.');
+        setConnectionError('Wallet connection failed. Please connect your wallet to continue.');
+      }
     }
   }, [integratedUser, account, integratedUserLoading, getDisplayName, getAvatar, getPrimaryAddress, getIdentityScore]);
 
@@ -238,8 +232,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   }, [wallet]);
 
   const requireAuth = async (): Promise<boolean> => {
-    // NEW: Use integrated authentication check
-    if (isConnected) {
+    // Check if user is properly authenticated through IntegratedUserProvider
+    if (isConnected && user) {
       return true;
     }
 
@@ -247,23 +241,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setConnectionError(null);
 
     try {
-      // If no wallet is connected, user needs to connect manually
-      if (!wallet) {
-        setConnectionError('Please connect your wallet to continue');
-        return false;
-      }
-
-      // Wait a bit to see if account becomes available
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      if (isConnected) {
-        return true;
-      }
-      
-      setConnectionError('Failed to connect wallet. Please try again.');
+      // Clear error message - user must connect wallet explicitly
+      setConnectionError('Please connect your wallet to continue. Click the "Connect Wallet" button.');
       return false;
     } catch (error) {
-      console.error('Authentication failed:', error);
+      console.error('Authentication check failed:', error);
       setConnectionError(
         error instanceof Error ? error.message : 'Authentication failed'
       );

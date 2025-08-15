@@ -1,8 +1,12 @@
 // Background job for caching evermark images (simple download and store)
 import { Handler } from '@netlify/functions';
-import { getEvermarksNeedingCache } from '../../src/lib/chain-sync';
-import { cacheImage } from '../../src/lib/image-cache';
-import { supabase } from '../../src/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase for serverless function with secret key for storage access
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SECRET_KEY!
+);
 
 export const handler: Handler = async (event, context) => {
   console.log('🔄 Image caching job started');
@@ -45,7 +49,9 @@ export const handler: Handler = async (event, context) => {
       try {
         console.log(`📥 Caching tokenId ${evermark.token_id}`);
 
-        const result = await cacheImage(evermark.token_id, evermark.processed_image_url);
+        // Build IPFS URL from hash for caching
+        const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${evermark.ipfs_image_hash}`;
+        const result = await cacheImage(evermark.token_id, ipfsUrl);
         
         if (result.success) {
           cached++;
@@ -96,19 +102,115 @@ export const handler: Handler = async (event, context) => {
 };
 
 /**
+ * Get evermarks that need image caching
+ */
+async function getEvermarksNeedingCache() {
+  const { data, error } = await supabase
+    .from('evermarks')
+    .select('token_id, ipfs_image_hash')
+    .is('supabase_image_url', null) // Need caching if no Supabase URL
+    .not('ipfs_image_hash', 'is', null) // But have IPFS hash
+    .limit(20);
+
+  if (error) return [];
+  return data || [];
+}
+
+/**
  * Get specific evermarks for manual caching
  */
 async function getSpecificEvermarksForCache(tokenIds: number[]) {
-  const { data, error } = await supabase!
+  console.log('🔍 Looking for token IDs:', tokenIds);
+  
+  const { data, error } = await supabase
     .from('evermarks')
-    .select('token_id, processed_image_url, ipfs_image_hash')
+    .select('token_id, ipfs_image_hash, supabase_image_url')
     .in('token_id', tokenIds)
-    .not('processed_image_url', 'is', null);
+    .not('ipfs_image_hash', 'is', null);
 
   if (error) {
     console.error('Failed to get specific evermarks:', error);
     return [];
   }
   
-  return data || [];
+  console.log('🔍 Found evermarks:', data);
+  
+  // Filter out ones that already have supabase URLs
+  const needsCaching = (data || []).filter(item => !item.supabase_image_url);
+  console.log('🔍 Need caching:', needsCaching);
+  
+  return needsCaching;
+}
+
+/**
+ * Cache image from IPFS/Pinata to Supabase storage
+ */
+async function cacheImage(tokenId: number, originalUrl: string) {
+  try {
+    // Try multiple gateways for download
+    const downloadUrls = [
+      originalUrl,
+      originalUrl.replace('gateway.pinata.cloud', 'ipfs.io'),
+      originalUrl.replace('gateway.pinata.cloud', 'cloudflare-ipfs.com')
+    ];
+
+    let imageBuffer: ArrayBuffer | null = null;
+    
+    // Try each gateway
+    for (const url of downloadUrls) {
+      try {
+        const response = await fetch(url, { 
+          signal: AbortSignal.timeout(10000) // 10s timeout
+        });
+        
+        if (response.ok) {
+          imageBuffer = await response.arrayBuffer();
+          break;
+        }
+      } catch (error) {
+        console.warn(`Failed to download from ${url}:`, error);
+        continue;
+      }
+    }
+
+    if (!imageBuffer) {
+      throw new Error('Failed to download from all gateways');
+    }
+
+    // Store in Supabase (keep original filename/format)
+    const fileName = `evermarks/${tokenId}.jpg`; // Simple naming
+    const { data, error } = await supabase.storage
+      .from('evermark-images')
+      .upload(fileName, imageBuffer, {
+        contentType: 'image/jpeg',
+        upsert: true
+      });
+
+    if (error) {
+      throw new Error(`Upload failed: ${error.message}`);
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('evermark-images')
+      .getPublicUrl(fileName);
+
+    // Update database with cached image URL
+    await supabase
+      .from('evermarks')
+      .update({
+        supabase_image_url: urlData.publicUrl,
+        updated_at: new Date().toISOString()
+      })
+      .eq('token_id', tokenId);
+
+    return { success: true, url: urlData.publicUrl };
+
+  } catch (error) {
+    // Don't mark as failed - just return error for retry later
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
 }

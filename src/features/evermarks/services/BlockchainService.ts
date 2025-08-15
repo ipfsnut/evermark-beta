@@ -8,11 +8,23 @@ import type { Account } from 'thirdweb/wallets';
 import { client } from '@/lib/thirdweb';
 import { CONTRACTS, getEvermarkNFTContract } from '@/lib/contracts';
 
-// SDK IMPORTS - Error types and validation
-import { 
-  StorageError,
-  isValidUrl
-} from 'evermark-sdk/core';
+// Simple error class for blockchain operations
+class StorageError extends Error {
+  constructor(message: string, public code: string) {
+    super(message);
+    this.name = 'StorageError';
+  }
+}
+
+// Simple URL validation
+function isValidUrl(url: string): boolean {
+  try {
+    new URL(url);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export interface MintResult {
   success: boolean;

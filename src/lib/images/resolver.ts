@@ -20,7 +20,7 @@ export async function resolveImageUrl(
     // Get evermark data from database
     const { data: evermark } = await supabase!
       .from('evermarks')
-      .select('token_id, supabase_image_url, processed_image_url, ipfs_image_hash')
+      .select('token_id, supabase_image_url, ipfs_image_hash')
       .eq('token_id', tokenId)
       .single();
 
@@ -29,7 +29,6 @@ export async function resolveImageUrl(
       const url = getImageUrl({
         token_id: evermark.token_id,
         supabase_image_url: evermark.supabase_image_url,
-        processed_image_url: evermark.processed_image_url,
         ipfs_image_hash: evermark.ipfs_image_hash
       });
 
@@ -40,8 +39,8 @@ export async function resolveImageUrl(
       if (evermark.supabase_image_url && url === evermark.supabase_image_url) {
         source = 'supabase';
         cached = true;
-      } else if (evermark.processed_image_url && url === evermark.processed_image_url) {
-        if (evermark.processed_image_url.includes('gateway.pinata.cloud')) {
+      } else if (evermark.ipfs_image_hash && url.includes(evermark.ipfs_image_hash)) {
+        if (url.includes('gateway.pinata.cloud')) {
           source = 'pinata';
         } else {
           source = 'ipfs';

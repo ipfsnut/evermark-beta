@@ -134,13 +134,13 @@ const ProtocolStats: React.FC = () => {
   const { totalCount, evermarks, isLoading } = useEvermarksState();
   
   // Calculate stats from real data with null checks
-  const safeEvermarks = evermarks || [];
+  const safeEvermarks = Array.isArray(evermarks) ? evermarks : [];
   const stats = {
     totalEvermarks: totalCount || 0,
-    withImages: safeEvermarks.filter(e => e?.image).length,
-    activeCreators: new Set(safeEvermarks.map(e => e?.author).filter(Boolean)).size,
+    withImages: safeEvermarks.filter(e => e && e.image).length,
+    activeCreators: new Set(safeEvermarks.filter(e => e && e.author).map(e => e.author)).size,
     thisWeek: safeEvermarks.filter(e => {
-      if (!e?.createdAt) return false;
+      if (!e || !e.createdAt) return false;
       try {
         const weekAgo = new Date();
         weekAgo.setDate(weekAgo.getDate() - 7);
