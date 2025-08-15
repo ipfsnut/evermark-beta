@@ -222,8 +222,8 @@ export function EvermarkImage({
       alt={alt || evermark.title || 'Evermark image'}
       className={`${getImageClasses()} ${className}`}
       style={style} // Added style prop
-      onLoad={onLoad}
-      onError={() => onError?.('Image failed to load')}
+      // Removed onLoad and onError from img tag to prevent infinite loops
+      // These are already handled by the useEffect hooks above
       loading="lazy"
     />
   );
