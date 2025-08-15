@@ -133,15 +133,21 @@ const ProtocolStats: React.FC = () => {
   const isMobile = useIsMobile();
   const { totalCount, evermarks, isLoading } = useEvermarksState();
   
-  // Calculate stats from real data
+  // Calculate stats from real data with null checks
+  const safeEvermarks = evermarks || [];
   const stats = {
-    totalEvermarks: totalCount,
-    withImages: evermarks.filter(e => e.image).length,
-    activeCreators: new Set(evermarks.map(e => e.author)).size,
-    thisWeek: evermarks.filter(e => {
-      const weekAgo = new Date();
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      return new Date(e.createdAt) > weekAgo;
+    totalEvermarks: totalCount || 0,
+    withImages: safeEvermarks.filter(e => e?.image).length,
+    activeCreators: new Set(safeEvermarks.map(e => e?.author).filter(Boolean)).size,
+    thisWeek: safeEvermarks.filter(e => {
+      if (!e?.createdAt) return false;
+      try {
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        return new Date(e.createdAt) > weekAgo;
+      } catch {
+        return false;
+      }
     }).length
   };
 
