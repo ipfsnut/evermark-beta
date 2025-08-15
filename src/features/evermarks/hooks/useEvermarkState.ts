@@ -46,13 +46,29 @@ const TempEvermarkService = {
       const data = await response.json();
       
       // Transform the response to match our expected format
+      const totalCount = data.pagination?.total || data.total || 0;
+      const pageSize = options.pageSize || 12;
+      const currentPage = options.page || 1;
+      
+      // Transform database fields to frontend format
+      const transformedEvermarks = (data.evermarks || []).map((item: any) => ({
+        ...item,
+        id: item.token_id,
+        createdAt: item.created_at || new Date().toISOString(),
+        updatedAt: item.updated_at || item.created_at || new Date().toISOString(),
+        contentType: item.content_type,
+        sourceUrl: item.source_url,
+        tokenUri: item.token_uri,
+        verificationStatus: item.verified ? 'verified' : 'unverified'
+      }));
+      
       return {
-        evermarks: data.evermarks || [],
-        totalCount: data.total || 0,
-        page: options.page || 1,
-        totalPages: Math.ceil((data.total || 0) / (options.pageSize || 12)),
-        hasNextPage: (options.page || 1) * (options.pageSize || 12) < (data.total || 0),
-        hasPreviousPage: (options.page || 1) > 1
+        evermarks: transformedEvermarks,
+        totalCount,
+        page: currentPage,
+        totalPages: Math.ceil(totalCount / pageSize),
+        hasNextPage: currentPage * pageSize < totalCount,
+        hasPreviousPage: currentPage > 1
       };
     } catch (error) {
       console.error('Failed to fetch evermarks:', error);

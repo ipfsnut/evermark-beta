@@ -23,7 +23,7 @@ import {
   Globe,
   Hash
 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { Formatters } from '../../../utils/formatters';
 
 import useLeaderboardState from '../hooks/useLeaderboardState';
 import { LeaderboardService } from '../services/LeaderboardService';
@@ -193,7 +193,7 @@ export function LeaderboardTable({
           <div className="flex items-center space-x-4 text-sm text-gray-400">
             <span>Period: {currentPeriod.label}</span>
             {lastUpdated && (
-              <span>Updated {formatDistanceToNow(lastUpdated, { addSuffix: true })}</span>
+              <span>Updated {Formatters.formatRelativeTime(lastUpdated)}</span>
             )}
           </div>
         </div>
@@ -379,7 +379,7 @@ export function LeaderboardTable({
                         
                         <div className="flex items-center">
                           <Calendar className="h-3 w-3 mr-1" />
-                          <span>{formatDistanceToNow(new Date(entry.createdAt), { addSuffix: true })}</span>
+                          <span>{Formatters.formatRelativeTime(entry.createdAt)}</span>
                         </div>
                         
                         {entry.verified && (

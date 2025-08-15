@@ -22,11 +22,22 @@ export class Formatters {
   }
 
   /**
-   * Format relative time
+   * Format relative time with validation
    */
   static formatRelativeTime(date: string | Date): string {
-    const dateObj = typeof date === 'string' ? parseISO(date) : date;
-    return formatDistanceToNow(dateObj, { addSuffix: true });
+    try {
+      const dateObj = typeof date === 'string' ? parseISO(date) : date;
+      
+      // Validate the date object
+      if (!dateObj || isNaN(dateObj.getTime())) {
+        return 'Unknown time';
+      }
+      
+      return formatDistanceToNow(dateObj, { addSuffix: true });
+    } catch (error) {
+      console.warn('Invalid date value:', date, error);
+      return 'Unknown time';
+    }
   }
 
   /**

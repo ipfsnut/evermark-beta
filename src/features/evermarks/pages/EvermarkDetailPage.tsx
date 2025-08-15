@@ -18,7 +18,7 @@ import {
   Image,
   Zap
 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { Formatters } from '../../../utils/formatters';
 
 // Feature imports
 import { useEvermarksState, type Evermark } from '@/features/evermarks';
@@ -329,7 +329,7 @@ export default function EvermarkDetailPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
-                  <span>{formatDistanceToNow(new Date(evermark.createdAt), { addSuffix: true })}</span>
+                  <span>{Formatters.formatRelativeTime(evermark.createdAt)}</span>
                 </div>
                 {evermark.viewCount !== undefined && (
                   <div className="flex items-center gap-2">

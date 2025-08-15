@@ -13,7 +13,7 @@ import {
   Zap,
   RotateCcw
 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { Formatters } from '../../../utils/formatters';
 
 // Use SimpleEvermarkImage instead of the old SDK-based component
 import { SimpleEvermarkImage } from '../../../components/images/SimpleEvermarkImage';
@@ -269,7 +269,7 @@ export function EvermarkCard({
 
           <div className="flex items-center justify-between text-xs text-gray-500">
             <div className="flex items-center gap-3">
-              <span>{formatDistanceToNow(new Date(evermark.createdAt), { addSuffix: true })}</span>
+              <span>{Formatters.formatRelativeTime(evermark.createdAt)}</span>
               {showViews && evermark.viewCount !== undefined && (
                 <span className="flex items-center text-cyan-400">
                   <Eye className="h-3 w-3 mr-1" />
@@ -330,7 +330,7 @@ export function EvermarkCard({
           <div className="flex items-center flex-shrink-0 ml-2">
             <Calendar className="h-4 w-4 mr-1" />
             <span className="text-xs">
-              {formatDistanceToNow(new Date(evermark.createdAt), { addSuffix: true })}
+              {Formatters.formatRelativeTime(evermark.createdAt)}
             </span>
           </div>
         </div>

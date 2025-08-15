@@ -8,7 +8,7 @@ import {
   LinkIcon,
   VoteIcon
 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { Formatters } from '../../../utils/formatters';
 import type { Evermark } from '../types';
 import { SimpleEvermarkImage } from '../../../components/images/SimpleEvermarkImage';
 
@@ -107,7 +107,7 @@ export function EvermarkModal({
             </div>
             <div className="flex items-center text-gray-300">
               <CalendarIcon className="h-4 w-4 mr-2 text-gray-400" />
-              <span>{formatDistanceToNow(new Date(evermark.createdAt), { addSuffix: true })}</span>
+              <span>{Formatters.formatRelativeTime(evermark.createdAt)}</span>
             </div>
           </div>
 
@@ -221,7 +221,7 @@ export function EvermarkModal({
         {/* Footer Actions */}
         <div className="flex justify-between items-center p-6 border-t border-gray-700">
           <div className="text-sm text-gray-400">
-            Created {formatDistanceToNow(new Date(evermark.createdAt), { addSuffix: true })}
+            Created {Formatters.formatRelativeTime(evermark.createdAt)}
           </div>
           
           <div className="flex gap-3">
