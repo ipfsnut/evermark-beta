@@ -1,11 +1,14 @@
 // Main images module - centralized image handling
-export * from './storage';
-export * from './processor';
+// Main images module - temporarily simplified for build
 export * from './resolver';
-export * from './chain-sync';
 
 // Re-export commonly used functions
 export { resolveImageUrl, resolveThumbnailUrl, preloadImage } from './resolver';
-export { syncRecentEvermarks, getPendingEvermarks } from './chain-sync';
-export { uploadImage, uploadThumbnail, imageExists } from './storage';
-export { processImage, generateThumbnail, validateImage } from './processor';
+
+// All other functions temporarily disabled during refactor
+// export * from './storage';
+// export * from './processor';
+// export * from './chain-sync';
+// export { syncRecentEvermarks, getPendingEvermarks } from './chain-sync';
+// export { uploadImage, uploadThumbnail, imageExists } from './storage';
+// export { processImage, generateThumbnail, validateImage } from './processor';

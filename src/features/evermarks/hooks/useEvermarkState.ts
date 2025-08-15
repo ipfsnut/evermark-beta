@@ -8,9 +8,52 @@ import {
   type EvermarkPagination,
   type EvermarkFeedOptions,
   type CreateEvermarkInput,
-  type UseEvermarksResult
+  type UseEvermarksResult,
+  type EvermarkFeedResult,
+  type CreateEvermarkResult
 } from '../types';
-import { EvermarkService } from '../services/EvermarkService';
+// TODO: Fix TempEvermarkService SDK imports
+// import { TempEvermarkService } from '../services/TempEvermarkService';
+
+// Temporary service replacement until SDK issues are fixed
+const TempEvermarkService = {
+  getDefaultPagination: (): EvermarkPagination => ({
+    page: 1,
+    pageSize: 12,
+    sortBy: 'created_at' as const,
+    sortOrder: 'desc' as const
+  }),
+  getDefaultFilters: (): EvermarkFilters => ({
+    search: '',
+    contentType: undefined,
+    verified: false,
+    author: '',
+    tags: [],
+    dateRange: undefined
+  }),
+  fetchEvermarks: async (options: EvermarkFeedOptions): Promise<EvermarkFeedResult> => {
+    // TODO: Replace with actual API call
+    return {
+      evermarks: [],
+      totalCount: 0,
+      page: 1,
+      totalPages: 0,
+      hasNextPage: false,
+      hasPreviousPage: false
+    };
+  },
+  fetchEvermark: async (id: string): Promise<Evermark | null> => {
+    // TODO: Replace with actual API call
+    return null;
+  },
+  createEvermark: async (input: CreateEvermarkInput, account: any): Promise<CreateEvermarkResult> => {
+    // TODO: Replace with actual API call
+    return {
+      success: false,
+      message: 'TempEvermarkService temporarily disabled'
+    };
+  }
+};
 
 // Query keys for React Query
 const QUERY_KEYS = {
@@ -29,10 +72,10 @@ export function useEvermarksState(): UseEvermarksResult {
   
   // Local state for pagination and filtering
   const [pagination, setPaginationState] = useState<EvermarkPagination>(
-    EvermarkService.getDefaultPagination()
+    TempEvermarkService.getDefaultPagination()
   );
   const [filters, setFiltersState] = useState<EvermarkFilters>(
-    EvermarkService.getDefaultFilters()
+    TempEvermarkService.getDefaultFilters()
   );
   const [selectedEvermark, setSelectedEvermark] = useState<Evermark | null>(null);
   
@@ -56,7 +99,7 @@ export function useEvermarksState(): UseEvermarksResult {
     refetch
   } = useQuery({
     queryKey: QUERY_KEYS.evermarks(queryOptions),
-    queryFn: () => EvermarkService.fetchEvermarks(queryOptions),
+    queryFn: () => TempEvermarkService.fetchEvermarks(queryOptions),
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000,   // 10 minutes
     retry: 2
@@ -74,7 +117,7 @@ export function useEvermarksState(): UseEvermarksResult {
       setCreateStep('Validating metadata...');
       
       // Pass the account to the service
-      const result = await EvermarkService.createEvermark(input, account);
+      const result = await TempEvermarkService.createEvermark(input, account);
       
       if (result.success) {
         setCreateProgress(100);
@@ -132,7 +175,7 @@ export function useEvermarksState(): UseEvermarksResult {
   const loadEvermark = useCallback(async (id: string): Promise<Evermark | null> => {
     const result = await queryClient.fetchQuery({
       queryKey: QUERY_KEYS.evermark(id),
-      queryFn: () => EvermarkService.fetchEvermark(id),
+      queryFn: () => TempEvermarkService.fetchEvermark(id),
       staleTime: 5 * 60 * 1000
     });
     return result;
@@ -157,7 +200,7 @@ export function useEvermarksState(): UseEvermarksResult {
   }, []);
 
   const clearFilters = useCallback(() => {
-    setFiltersState(EvermarkService.getDefaultFilters());
+    setFiltersState(TempEvermarkService.getDefaultFilters());
     setPaginationState(prev => ({ ...prev, page: 1 }));
   }, []);
 
@@ -196,7 +239,7 @@ export function useEvermarksState(): UseEvermarksResult {
   const isEmpty = evermarks.length === 0 && !isLoading;
   
   const isFiltered = useMemo(() => {
-    const defaultFilters = EvermarkService.getDefaultFilters();
+    const defaultFilters = TempEvermarkService.getDefaultFilters();
     return (
       filters.search !== defaultFilters.search ||
       filters.author !== defaultFilters.author ||

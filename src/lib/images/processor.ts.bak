@@ -1,5 +1,5 @@
-// Image processing utilities
-import sharp from 'sharp';
+// Image processing utilities - DEPRECATED: Using simple caching now
+// import sharp from 'sharp';
 
 export interface ProcessingOptions {
   maxWidth?: number;

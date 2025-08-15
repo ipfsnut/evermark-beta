@@ -38,7 +38,7 @@ export async function cacheImage(tokenId: number, originalUrl: string) {
 
     // Store in Supabase (keep original filename/format)
     const fileName = `evermarks/${tokenId}.jpg`; // Simple naming
-    const { data, error } = await supabase.storage
+    const { data, error } = await supabase!.storage
       .from('evermark-images')
       .upload(fileName, imageBuffer, {
         contentType: 'image/jpeg',
@@ -50,12 +50,12 @@ export async function cacheImage(tokenId: number, originalUrl: string) {
     }
 
     // Get public URL
-    const { data: urlData } = supabase.storage
+    const { data: urlData } = supabase!.storage
       .from('evermark-images')
       .getPublicUrl(fileName);
 
     // Update database
-    await supabase
+    await supabase!
       .from('evermarks')
       .update({
         supabase_image_url: urlData.publicUrl,
@@ -68,7 +68,7 @@ export async function cacheImage(tokenId: number, originalUrl: string) {
 
   } catch (error) {
     // Mark as failed
-    await supabase
+    await supabase!
       .from('evermarks')
       .update({
         image_processing_status: 'failed',

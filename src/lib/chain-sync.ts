@@ -34,7 +34,7 @@ export async function syncRecentEvermarks(count: number = 10) {
 
     for (let tokenId = startId; tokenId <= endId; tokenId++) {
       // Skip if already exists
-      const { data: existing } = await supabase
+      const { data: existing } = await supabase!
         .from('evermarks')
         .select('token_id')
         .eq('token_id', tokenId)
@@ -49,16 +49,16 @@ export async function syncRecentEvermarks(count: number = 10) {
       const metadata = nft.metadata;
       
       // Insert into database
-      const { error } = await supabase
+      const { error } = await supabase!
         .from('evermarks')
         .insert([{
           token_id: tokenId,
           title: metadata.name || `Evermark #${tokenId}`,
           description: metadata.description || '',
-          author: extractFromAttributes(metadata.attributes, 'author') || 'Unknown',
-          creator: extractFromAttributes(metadata.attributes, 'creator') || 'Unknown',
-          content_type: extractFromAttributes(metadata.attributes, 'content_type') || 'Custom',
-          source_url: extractFromAttributes(metadata.attributes, 'source_url'),
+          author: extractFromAttributes(metadata.attributes as any[], 'author') || 'Unknown',
+          creator: extractFromAttributes(metadata.attributes as any[], 'creator') || 'Unknown',
+          content_type: extractFromAttributes(metadata.attributes as any[], 'content_type') || 'Custom',
+          source_url: extractFromAttributes(metadata.attributes as any[], 'source_url'),
           processed_image_url: metadata.image,
           ipfs_image_hash: extractIpfsHash(metadata.image),
           image_processing_status: metadata.image ? 'pending' : 'none',
@@ -85,7 +85,7 @@ export async function syncRecentEvermarks(count: number = 10) {
  * Get evermarks that need image caching
  */
 export async function getEvermarksNeedingCache() {
-  const { data, error } = await supabase
+  const { data, error } = await supabase!
     .from('evermarks')
     .select('token_id, processed_image_url, ipfs_image_hash')
     .eq('image_processing_status', 'pending')

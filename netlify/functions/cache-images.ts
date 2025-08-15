@@ -99,7 +99,7 @@ export const handler: Handler = async (event, context) => {
  * Get specific evermarks for manual caching
  */
 async function getSpecificEvermarksForCache(tokenIds: number[]) {
-  const { data, error } = await supabase
+  const { data, error } = await supabase!
     .from('evermarks')
     .select('token_id, processed_image_url, ipfs_image_hash')
     .in('token_id', tokenIds)
