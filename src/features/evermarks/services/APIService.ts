@@ -168,7 +168,7 @@ export class APIService {
       const validatedData = Array.isArray(data) ? data : [];
       
       // Import the IPFS gateway fix
-      const { processEvermarkImagesArray } = await import('@/utils/ipfs-gateway');
+      const { processEvermarkImagesArray } = await import('../../../utils/ipfs-gateway');
       
       const transformedEvermarks = await Promise.all(
         validatedData
@@ -176,8 +176,12 @@ export class APIService {
           .map(async (item) => await this.transformSupabaseToEvermarkWithSDK(item))
       );
       
+      console.log('🔍 BEFORE gateway processing:', transformedEvermarks[0]?.image?.substring(0, 50));
+      
       // Process all evermarks to replace problematic IPFS gateways
       const evermarks = processEvermarkImagesArray(transformedEvermarks);
+      
+      console.log('🔧 AFTER gateway processing:', evermarks[0]?.image?.substring(0, 50));
       
       const totalPages = Math.ceil((count || 0) / validatedPageSize);
       
@@ -277,7 +281,7 @@ export class APIService {
       const transformedEvermark = await this.transformSupabaseToEvermarkWithSDK(data);
       
       // Import and apply IPFS gateway fix
-      const { processEvermarkImages } = await import('@/utils/ipfs-gateway');
+      const { processEvermarkImages } = await import('../../../utils/ipfs-gateway');
       const evermark = processEvermarkImages(transformedEvermark);
       
       // RECORD PERFORMANCE
