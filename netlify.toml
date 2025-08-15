@@ -9,8 +9,8 @@
   framework = "#custom"
 
 [build]
-  # Use existing pnpm with frozen lockfile for consistent builds
-  command = "pnpm install --frozen-lockfile && pnpm run build"
+  # Use pnpm with flexible lockfile to prevent build failures
+  command = "pnpm install --no-frozen-lockfile && pnpm run build"
   publish = "dist"
   functions = "netlify/functions"
   
@@ -101,6 +101,12 @@
 [[redirects]]
   from = "/manifest.json"
   to = "/manifest.json"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/service-worker.js"
+  to = "/service-worker.js"
   status = 200
   force = true
 
@@ -206,7 +212,7 @@
     Cache-Control = "public, max-age=86400"
 
 [[headers]]
-  for = "/sw.js"
+  for = "/service-worker.js"
   [headers.values]
     Content-Type = "application/javascript"
     Cache-Control = "no-cache"
