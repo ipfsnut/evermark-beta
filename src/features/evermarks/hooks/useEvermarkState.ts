@@ -32,19 +32,59 @@ const TempEvermarkService = {
     dateRange: undefined
   }),
   fetchEvermarks: async (options: EvermarkFeedOptions): Promise<EvermarkFeedResult> => {
-    // TODO: Replace with actual API call
-    return {
-      evermarks: [],
-      totalCount: 0,
-      page: 1,
-      totalPages: 0,
-      hasNextPage: false,
-      hasPreviousPage: false
-    };
+    try {
+      // Simple API call to our evermarks endpoint
+      const response = await fetch('/.netlify/functions/evermarks', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Transform the response to match our expected format
+      return {
+        evermarks: data.evermarks || [],
+        totalCount: data.total || 0,
+        page: options.page || 1,
+        totalPages: Math.ceil((data.total || 0) / (options.pageSize || 12)),
+        hasNextPage: (options.page || 1) * (options.pageSize || 12) < (data.total || 0),
+        hasPreviousPage: (options.page || 1) > 1
+      };
+    } catch (error) {
+      console.error('Failed to fetch evermarks:', error);
+      // Return empty result on error
+      return {
+        evermarks: [],
+        totalCount: 0,
+        page: 1,
+        totalPages: 0,
+        hasNextPage: false,
+        hasPreviousPage: false
+      };
+    }
   },
   fetchEvermark: async (id: string): Promise<Evermark | null> => {
-    // TODO: Replace with actual API call
-    return null;
+    try {
+      // Simple API call to get individual evermark
+      const response = await fetch(`/.netlify/functions/evermarks?id=${id}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return data.evermark || null;
+    } catch (error) {
+      console.error('Failed to fetch evermark:', error);
+      return null;
+    }
   },
   createEvermark: async (input: CreateEvermarkInput, account: any): Promise<CreateEvermarkResult> => {
     // TODO: Replace with actual API call

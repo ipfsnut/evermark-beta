@@ -2,9 +2,8 @@ import { createThirdwebClient, defineChain } from 'thirdweb';
 
 export const client = createThirdwebClient({
   clientId: import.meta.env.VITE_THIRDWEB_CLIENT_ID || "your_client_id_here",
-  ...(import.meta.env.VITE_THIRDWEB_SECRET_KEY && {
-    secretKey: import.meta.env.VITE_THIRDWEB_SECRET_KEY
-  })
+  // Removed secretKey to prevent auto-admin access in frontend
+  // secretKey should only be used in backend/server environments
 });
 
 // Use Thirdweb's RPC for Base instead of public RPC
