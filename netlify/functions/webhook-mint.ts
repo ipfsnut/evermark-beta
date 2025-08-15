@@ -1,6 +1,6 @@
 // Webhook handler for Thirdweb mint events
 import { Handler } from '@netlify/functions';
-import { syncRecentEvermarks } from '../../src/lib/images/chain-sync';
+import { syncRecentEvermarks } from '../../src/lib/chain-sync';
 
 export const handler: Handler = async (event, context) => {
   console.log('🎯 Mint webhook triggered');
@@ -29,20 +29,20 @@ export const handler: Handler = async (event, context) => {
     
     console.log(`✅ Sync result:`, result);
 
-    // Trigger background processing for any new pending images
-    if (result.processed > 0) {
-      console.log(`🔄 Triggering image processing for ${result.processed} evermarks`);
+    // Trigger background caching for any new pending images
+    if (result.needsCache > 0) {
+      console.log(`🔄 Triggering image caching for ${result.needsCache} evermarks`);
       
-      // Trigger the background processing function
+      // Trigger the background caching function
       try {
-        await fetch(`${process.env.URL}/.netlify/functions/process-images`, {
+        await fetch(`${process.env.URL}/.netlify/functions/cache-images`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ trigger: 'webhook', count: result.processed })
+          body: JSON.stringify({ trigger: 'webhook', count: result.needsCache })
         });
-        console.log('✅ Image processing triggered');
+        console.log('✅ Image caching triggered');
       } catch (error) {
-        console.error('❌ Failed to trigger image processing:', error);
+        console.error('❌ Failed to trigger image caching:', error);
         // Don't fail the webhook for this
       }
     }
@@ -55,8 +55,7 @@ export const handler: Handler = async (event, context) => {
       body: JSON.stringify({
         success: true,
         synced: result.synced,
-        processed: result.processed,
-        errors: result.errors
+        needsCache: result.needsCache
       })
     };
 

@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import type { Evermark } from '../types';
-import { EvermarkImage } from './EvermarkImage';
+import { SimpleEvermarkImage } from '../../../components/images/SimpleEvermarkImage';
 
 interface EvermarkModalProps {
   evermark: Evermark | null;
@@ -81,8 +81,10 @@ export function EvermarkModal({
           {/* Image */}
           {(evermark.image || evermark.supabaseImageUrl || evermark.processed_image_url) && (
             <div className="relative">
-              <EvermarkImage
-                evermark={evermark}
+              <SimpleEvermarkImage
+                tokenId={evermark.token_id}
+                ipfsHash={evermark.ipfs_image_hash}
+                originalUrl={evermark.processed_image_url}
                 variant="hero"
                 alt={evermark.title}
                 className="w-full h-64 md:h-80 object-cover rounded-lg border border-gray-600"

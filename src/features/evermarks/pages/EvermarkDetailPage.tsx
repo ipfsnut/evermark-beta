@@ -22,7 +22,7 @@ import { formatDistanceToNow } from 'date-fns';
 
 // Feature imports
 import { useEvermarksState, type Evermark } from '@/features/evermarks';
-import { EvermarkImage } from '@/features/evermarks/components/EvermarkImage';
+import { SimpleEvermarkImage } from '@/components/images/SimpleEvermarkImage';
 import { VotingPanel } from '@/features/voting';
 import { useAppAuth } from '@/providers/AppContext';
 import { useFarcasterUser } from '@/lib/farcaster';
@@ -343,8 +343,10 @@ export default function EvermarkDetailPage() {
             {/* Featured Image */}
             {(evermark.image || evermark.supabaseImageUrl || evermark.processed_image_url) && (
               <div className="relative">
-                <EvermarkImage
-                  evermark={evermark}
+                <SimpleEvermarkImage
+                  tokenId={evermark.token_id}
+                  ipfsHash={evermark.ipfs_image_hash}
+                  originalUrl={evermark.processed_image_url}
                   variant="hero"
                   alt={evermark.title}
                   className="w-full h-64 md:h-96 object-cover rounded-lg border border-gray-700"
