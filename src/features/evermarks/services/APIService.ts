@@ -70,8 +70,9 @@ interface SupabaseEvermarkRow {
   supabase_image_url?: string | null;
   thumbnail_url?: string | null;
   ipfs_image_hash?: string | null;
-  image_file_size?: number | null;
-  image_dimensions?: string | null;
+  file_size_bytes?: number | null;
+  image_width?: number | null;
+  image_height?: number | null;
   image_processing_status?: 'pending' | 'processing' | 'completed' | 'failed' | null;
   metadata?: Record<string, any> | null;
   metadata_json?: Record<string, any> | null;
@@ -312,6 +313,7 @@ export class APIService {
     sourceUrl?: string;
     metadataURI: string;
     txHash: string;
+    owner: string; // NEW: Required owner address
     supabaseImageUrl?: string;
     thumbnailUrl?: string;
     ipfsHash?: string;
@@ -345,18 +347,19 @@ export class APIService {
         token_id: parseInt(evermarkData.tokenId),
         title: evermarkData.title.trim(),
         author: evermarkData.author.trim(),
+        owner: evermarkData.owner.trim(), // NEW: Required owner field
         description: evermarkData.description.trim(),
         source_url: evermarkData.sourceUrl?.trim(),
         token_uri: evermarkData.metadataURI,
         tx_hash: evermarkData.txHash,
         
-        // SDK-ENHANCED: Optimized image fields
+        // SDK-ENHANCED: Optimized image fields (matching actual database schema)
         supabase_image_url: evermarkData.supabaseImageUrl,
         thumbnail_url: evermarkData.thumbnailUrl,
-        processed_image_url: evermarkData.supabaseImageUrl, // Primary is Supabase now
         ipfs_image_hash: evermarkData.ipfsHash,
-        image_file_size: evermarkData.fileSize,
-        image_dimensions: evermarkData.dimensions,
+        file_size_bytes: evermarkData.fileSize,
+        image_width: evermarkData.dimensions ? parseInt(evermarkData.dimensions.split(',')[0]) || null : null,
+        image_height: evermarkData.dimensions ? parseInt(evermarkData.dimensions.split(',')[1]) || null : null,
         
         content_type: evermarkData.contentType,
         metadata: {
@@ -545,8 +548,9 @@ export class APIService {
         thumbnailUrl: supabaseData.thumbnail_url || undefined,
         processed_image_url: supabaseData.processed_image_url || undefined,
         ipfsHash: ipfsHash || undefined,
-        imageFileSize: supabaseData.image_file_size || undefined,
-        imageDimensions: supabaseData.image_dimensions || undefined,
+        imageFileSize: supabaseData.file_size_bytes || undefined,
+        imageWidth: supabaseData.image_width || undefined,
+        imageHeight: supabaseData.image_height || undefined,
         
         extendedMetadata: {
           doi: supabaseData.metadata?.doi,

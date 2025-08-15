@@ -15,8 +15,8 @@ import {
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
-// FIXED: Updated to use unified SDK package
-import { EvermarkImage } from 'evermark-sdk/react';
+// Use our local EvermarkImage component with style support
+import { EvermarkImage } from './EvermarkImage';
 import { type Evermark } from '../types';
 
 // FIXED: Import performance monitoring from updated config
@@ -209,33 +209,24 @@ export function EvermarkCard({
       >
         {/* FIXED: SDK Image Component */}
         {showImage && (
-          <div className="relative">
+          <div className="relative overflow-hidden rounded-lg w-24 h-24 sm:w-32 sm:h-32 flex-shrink-0">
             <EvermarkImage
-              evermark={{
-                id: evermark.id,
-                tokenId: evermark.tokenId,
-                title: evermark.title,
-                contentType: evermark.contentType,
-                supabaseImageUrl: evermark.supabaseImageUrl,
-                thumbnailUrl: evermark.thumbnailUrl,
-                processed_image_url: evermark.processed_image_url,
-                ipfsHash: evermark.ipfsHash,
-                imageStatus: evermark.imageStatus
-              }}
+              evermark={evermark}
               variant="list"
-              showPlaceholder={true}
               enableAutoTransfer={true}
-              showTransferStatus={false}
-              storageConfig={getEvermarkStorageConfig()}
-              onImageLoad={() => {
+              onLoad={() => {
                 if (showPerformanceInfo) {
                   console.log(`✅ List image loaded for evermark #${evermark.tokenId}`);
                 }
               }}
-              onImageError={(error) => {
+              onError={(error) => {
                 console.warn(`❌ List image error for #${evermark.tokenId}:`, error);
               }}
-              className="w-24 h-24 sm:w-32 sm:h-32 flex-shrink-0"
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover'
+              }}
             />
             <PerformanceIndicator />
           </div>
@@ -308,33 +299,24 @@ export function EvermarkCard({
     >
       {/* FIXED: SDK Image Component */}
       {showImage && (
-        <div className="relative">
+        <div className={`relative overflow-hidden rounded-t-xl ${variant === 'hero' ? 'h-64 sm:h-80' : 'h-48 sm:h-56'}`}>
           <EvermarkImage
-            evermark={{
-              id: evermark.id,
-              tokenId: evermark.tokenId,
-              title: evermark.title,
-              contentType: evermark.contentType,
-              supabaseImageUrl: evermark.supabaseImageUrl,
-              thumbnailUrl: evermark.thumbnailUrl,
-              processed_image_url: evermark.processed_image_url,
-              ipfsHash: evermark.ipfsHash,
-              imageStatus: evermark.imageStatus
-            }}
+            evermark={evermark}
             variant={variant}
-            showPlaceholder={true}
             enableAutoTransfer={true}
-            showTransferStatus={false}
-            storageConfig={getEvermarkStorageConfig()}
-            onImageLoad={() => {
+            onLoad={() => {
               if (showPerformanceInfo) {
                 console.log(`✅ Card image loaded for evermark #${evermark.tokenId}`);
               }
             }}
-            onImageError={(error) => {
+            onError={(error) => {
               console.warn(`❌ Card image error for #${evermark.tokenId}:`, error);
             }}
-            className={variant === 'hero' ? 'h-64 sm:h-80' : 'h-48 sm:h-56'}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover'
+            }}
           />
           <PerformanceIndicator />
         </div>

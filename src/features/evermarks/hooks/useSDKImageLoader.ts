@@ -42,12 +42,29 @@ export function useSDKImageLoader({
   onProgress
 }: UseSDKImageLoaderOptions): UseSDKImageLoaderResult {
   
-  // Convert evermark to ImageSourceInput
+  // Simplified source selection - use best available URL only
+  const getBestImageUrl = () => {
+    // For thumbnails, prefer thumbnailUrl
+    if ((variant === 'compact' || variant === 'list') && evermark.thumbnailUrl) {
+      return evermark.thumbnailUrl;
+    }
+    // Otherwise use supabase URL if available
+    if (evermark.supabaseImageUrl) {
+      return evermark.supabaseImageUrl;
+    }
+    // Fallback to processed URL if not from problematic gateway
+    if (evermark.processed_image_url && !evermark.processed_image_url.includes('gateway.pinata.cloud')) {
+      return evermark.processed_image_url;
+    }
+    // Last resort: use image field
+    return evermark.image;
+  };
+
   const sources: ImageSourceInput = {
-    supabaseUrl: evermark.supabaseImageUrl,
-    thumbnailUrl: evermark.thumbnailUrl,
-    processedUrl: evermark.processed_image_url,
-    ipfsHash: evermark.ipfsHash,
+    supabaseUrl: getBestImageUrl(),
+    thumbnailUrl: undefined, // Don't provide multiple sources to avoid retries
+    processedUrl: undefined, // Don't provide multiple sources to avoid retries
+    ipfsHash: undefined, // Never use IPFS to avoid slow loads
     preferThumbnail: variant === 'compact' || variant === 'list'
   };
 
@@ -82,24 +99,37 @@ export function useSDKImageLoader({
   // Debug information getter
   const getDebugInfo = () => ({
     sources: [
-      { type: 'supabase', url: evermark.supabaseImageUrl, available: !!evermark.supabaseImageUrl },
-      { type: 'thumbnail', url: evermark.thumbnailUrl, available: !!evermark.thumbnailUrl },
-      { type: 'processed', url: evermark.processed_image_url, available: !!evermark.processed_image_url },
-      { type: 'ipfs', url: evermark.ipfsHash ? `https://gateway.pinata.cloud/ipfs/${evermark.ipfsHash}` : undefined, available: !!evermark.ipfsHash }
+      { type: 'supabase', url: evermark.supabaseImageUrl, available: !!evermark.supabaseImageUrl, priority: 1 },
+      { type: 'thumbnail', url: evermark.thumbnailUrl, available: !!evermark.thumbnailUrl, priority: 1 },
+      { 
+        type: 'processed', 
+        url: evermark.processed_image_url, 
+        available: !!evermark.processed_image_url && !evermark.processed_image_url?.includes('gateway.pinata.cloud'),
+        priority: 2,
+        blocked: evermark.processed_image_url?.includes('gateway.pinata.cloud') 
+      },
+      { 
+        type: 'ipfs', 
+        url: evermark.ipfsHash ? `https://ipfs.io/ipfs/${evermark.ipfsHash}` : undefined, 
+        available: !!evermark.ipfsHash && enableAutoTransfer,
+        priority: 3,
+        gateway: 'ipfs.io'
+      }
     ].filter(source => source.available),
     attempts: result.attempts,
     timing: {
       loadTime: result.loadTime,
       fromCache: result.fromCache
+    },
+    config: {
+      variant,
+      enableAutoTransfer,
+      preferThumbnail: variant === 'compact' || variant === 'list'
     }
   });
 
-  // Log progress if handler provided
-  if (onProgress && result.isLoading) {
-    const phase = result.currentSource ? `Loading from ${result.currentSource}` : 'Preparing';
-    const percentage = result.attempts.length * 25;
-    onProgress({ phase, percentage });
-  }
+  // Removed progress handler to prevent re-render loops
+  // Progress tracking should be handled at a higher level if needed
 
   return {
     ...result,

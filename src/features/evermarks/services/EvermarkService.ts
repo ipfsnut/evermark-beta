@@ -294,6 +294,7 @@ export class EvermarkService {
           sourceUrl: input.metadata.sourceUrl,
           metadataURI: metadata.metadataURI!,
           txHash: mintResult.txHash!,
+          owner: account.address, // NEW: Set initial owner to minter
           supabaseImageUrl: imageUrls.supabaseUrl,
           thumbnailUrl: imageUrls.thumbnailUrl,
           ipfsHash: imageUrls.ipfsHash,

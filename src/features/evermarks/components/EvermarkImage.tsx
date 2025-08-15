@@ -30,6 +30,7 @@ interface EvermarkImageProps {
   evermark: Evermark;
   variant?: 'hero' | 'standard' | 'compact' | 'list';
   className?: string;
+  style?: React.CSSProperties; // Added style prop support
   alt?: string;
   enableAutoTransfer?: boolean;
   debug?: boolean;
@@ -42,6 +43,7 @@ export function EvermarkImage({
   evermark,
   variant = 'standard',
   className = '',
+  style,
   alt,
   enableAutoTransfer = true,
   debug = false,
@@ -85,44 +87,67 @@ export function EvermarkImage({
     load 
   } = useImageLoader(sources, options);
 
-  // Handle callbacks through useEffect since they're not part of options
+  // Use refs to track if callbacks have been called to prevent infinite loops
+  const hasCalledOnLoad = React.useRef(false);
+  const hasCalledOnError = React.useRef(false);
+  const lastProgressPhase = React.useRef<string>('');
+
+  // Handle onLoad callback - only call once when image loads
   React.useEffect(() => {
-    if (imageUrl && onLoad) {
+    if (imageUrl && onLoad && !hasCalledOnLoad.current) {
+      hasCalledOnLoad.current = true;
       onLoad();
     }
-  }, [imageUrl, onLoad]);
+  }, [imageUrl]); // Removed onLoad from deps to prevent loops
 
+  // Handle onError callback - only call once on error
   React.useEffect(() => {
-    if (hasError && onError) {
+    if (hasError && onError && !hasCalledOnError.current) {
+      hasCalledOnError.current = true;
       onError('Image failed to load');
     }
-  }, [hasError, onError]);
+  }, [hasError]); // Removed onError from deps to prevent loops
 
-  // Handle transfer progress reporting
+  // Handle transfer progress reporting - only report when phase changes
   React.useEffect(() => {
     if (onTransferProgress) {
+      let newPhase = '';
+      
       if (isLoading && currentSource) {
-        onTransferProgress({
-          phase: 'transferring',
-          progress: Math.min(attempts.length * 25, 75),
-          message: `Loading from ${currentSource}...`
-        });
+        newPhase = 'transferring';
       } else if (imageUrl) {
-        onTransferProgress({
-          phase: 'completed',
-          progress: 100,
-          message: 'Image loaded successfully'
-        });
+        newPhase = 'completed';
       } else if (hasError) {
-        onTransferProgress({
-          phase: 'failed',
-          progress: 0,
-          message: 'Failed to load image',
-          error: 'All image sources failed'
-        });
+        newPhase = 'failed';
+      }
+      
+      // Only report if phase actually changed
+      if (newPhase && newPhase !== lastProgressPhase.current) {
+        lastProgressPhase.current = newPhase;
+        
+        if (newPhase === 'transferring') {
+          onTransferProgress({
+            phase: 'transferring',
+            progress: 50,
+            message: `Loading from ${currentSource}...`
+          });
+        } else if (newPhase === 'completed') {
+          onTransferProgress({
+            phase: 'completed',
+            progress: 100,
+            message: 'Image loaded successfully'
+          });
+        } else if (newPhase === 'failed') {
+          onTransferProgress({
+            phase: 'failed',
+            progress: 0,
+            message: 'Failed to load image',
+            error: 'All image sources failed'
+          });
+        }
       }
     }
-  }, [isLoading, imageUrl, hasError, currentSource, attempts.length, onTransferProgress]);
+  }, [isLoading, imageUrl, hasError, currentSource]); // Removed attempts.length and onTransferProgress
 
   // Generate appropriate CSS classes based on variant
   const getImageClasses = () => {
@@ -196,6 +221,7 @@ export function EvermarkImage({
       src={imageUrl}
       alt={alt || evermark.title || 'Evermark image'}
       className={`${getImageClasses()} ${className}`}
+      style={style} // Added style prop
       onLoad={onLoad}
       onError={() => onError?.('Image failed to load')}
       loading="lazy"

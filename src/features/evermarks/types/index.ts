@@ -35,6 +35,8 @@ export interface Evermark {
   ipfsHash?: string;           // NEW: IPFS backup hash
   imageFileSize?: number;      // NEW: File size tracking
   imageDimensions?: string;    // NEW: Dimensions as "width,height"
+  imageWidth?: number;         // NEW: Separate width field (from database)
+  imageHeight?: number;        // NEW: Separate height field (from database)
   
   // Extended metadata
   extendedMetadata: {
@@ -272,13 +274,13 @@ export interface EvermarkDatabaseRow {
   tx_hash?: string;
   block_number?: number;
   
-  // ENHANCED: Hybrid image storage
-  processed_image_url?: string;           // Legacy field
-  supabase_image_url?: string;           // NEW: Primary Supabase Storage URL
-  thumbnail_url?: string;                // NEW: Thumbnail URL
-  ipfs_image_hash?: string;             // NEW: IPFS backup hash
-  image_file_size?: number;             // NEW: File size in bytes
-  image_dimensions?: string;            // NEW: "width,height" format
+  // ENHANCED: Hybrid image storage (matching actual database schema)
+  supabase_image_url?: string;           // Primary Supabase Storage URL
+  thumbnail_url?: string;                // Thumbnail URL
+  ipfs_image_hash?: string;             // IPFS backup hash
+  file_size_bytes?: number;             // File size in bytes (actual column name)
+  image_width?: number;                 // Image width (separate column)
+  image_height?: number;                // Image height (separate column)
   image_processing_status?: 'pending' | 'processing' | 'completed' | 'failed';
   
   // JSON metadata storage

@@ -70,7 +70,7 @@ export const performanceMonitor = performanceMonitorInstance || new PerformanceM
 export const cacheManager = cacheManagerInstance || new CacheManager({});
 export const corsHandler = corsHandlerInstance || new CORSHandler({});
 
-// FIXED: Storage config with proper error handling
+// FIXED: Storage config with proper error handling and singleton client
 export function createEvermarkStorageConfig(): StorageConfig {
   if (storageConfigInstance) {
     return storageConfigInstance;
@@ -84,8 +84,10 @@ export function createEvermarkStorageConfig(): StorageConfig {
       throw new Error('Missing required environment variables: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY');
     }
 
-    // Use regular supabase client for metadata and caching only
-    // IPFS uploads don't need Supabase authentication
+    // FIXED: Use existing singleton client to prevent multiple instances
+    if (!supabase) {
+      throw new Error('Supabase client not initialized. Check environment variables.');
+    }
     const clientToUse = supabase;
 
     const config = createDefaultStorageConfig(
@@ -95,15 +97,23 @@ export function createEvermarkStorageConfig(): StorageConfig {
       clientToUse
     );
     
-    // Override IPFS configuration with proper upload settings
+    // Override IPFS configuration with CORS-friendly gateways and rate limiting
     config.ipfs = {
-      gateway: import.meta.env.VITE_PINATA_GATEWAY || 'https://gateway.pinata.cloud/ipfs',
+      gateway: 'https://ipfs.io/ipfs', // Primary: CORS-friendly, reliable
       fallbackGateways: [
-        'https://ipfs.io/ipfs',
-        'https://cloudflare-ipfs.com/ipfs'
+        'https://cloudflare-ipfs.com/ipfs', // Fast, CORS-friendly
+        'https://dweb.link/ipfs', // Reliable fallback
+        'https://gateway.lighthouse.storage/ipfs', // Alternative IPFS gateway
+        'https://ipfs.filebase.io/ipfs', // Another reliable option
+        // Pinata as last resort due to CORS/rate limiting issues
+        import.meta.env.VITE_PINATA_GATEWAY || 'https://gateway.pinata.cloud/ipfs'
       ],
-      timeout: 10000
+      timeout: 8000 // Reduced timeout for faster failover
     };
+    
+    // Add retry configuration as separate properties
+    (config.ipfs as any).retryDelay = 1000; // Wait 1s between retries
+    (config.ipfs as any).maxRetries = 2; // Limit retries per gateway
     
     // Add upload properties separately to avoid TypeScript issues
     (config.ipfs as any).uploadEndpoint = 'https://api.pinata.cloud/pinning/pinFileToIPFS';
@@ -132,10 +142,11 @@ export function createEvermarkStorageConfig(): StorageConfig {
         bucketName: 'evermark-images'
       },
       ipfs: {
-        gateway: import.meta.env.VITE_PINATA_GATEWAY || 'https://gateway.pinata.cloud/ipfs',
+        gateway: 'https://ipfs.io/ipfs', // CORS-friendly primary gateway
         fallbackGateways: [
-          'https://ipfs.io/ipfs',
-          'https://cloudflare-ipfs.com/ipfs'
+          'https://cloudflare-ipfs.com/ipfs',
+          'https://dweb.link/ipfs',
+          import.meta.env.VITE_PINATA_GATEWAY || 'https://gateway.pinata.cloud/ipfs'
         ],
         timeout: 10000,
         // Upload configuration for Pinata
@@ -157,19 +168,21 @@ export function getEvermarkStorageConfig(): StorageConfig {
   return createEvermarkStorageConfig();
 }
 
-// FIXED: Image loader options with proper error handling
+// FIXED: Optimized image loader options to prevent infinite loops and improve speed
 export function getDefaultImageLoaderOptions() {
   try {
     return {
       autoLoad: true,
-      debug: import.meta.env.DEV,
-      timeout: 8000,
-      maxRetries: 2,
+      debug: false, // Disable debug in production to reduce console spam
+      timeout: 5000, // Reduced timeout for faster failover
+      maxRetries: 1, // Reduced retries to prevent infinite loops
       useCORS: true,
+      retryDelay: 500, // Shorter delay for faster retry
+      exponentialBackoff: false, // Disable exponential backoff to prevent long waits
       resolution: {
-        maxSources: 3,
-        defaultTimeout: 8000,
-        includeIpfs: true,
+        maxSources: 2, // Limit sources to speed up loading
+        defaultTimeout: 5000, // Reduced timeout
+        includeIpfs: false, // Disable IPFS by default to avoid slow gateways
         mobileOptimization: false
       },
       supabase: {
@@ -187,7 +200,19 @@ export function getDefaultImageLoaderOptions() {
         }
       },
       onError: (error: string, source: string) => {
-        console.warn(`❌ Image load failed from ${source}:`, error);
+        // Enhanced error handling for rate limiting
+        if (error.includes('429') || error.includes('Too Many Requests')) {
+          console.warn(`🚫 Rate limited from ${source}, using fallback strategy`);
+        } else if (error.includes('CORS')) {
+          console.warn(`🔒 CORS blocked from ${source}, trying alternative`);
+        } else {
+          console.warn(`❌ Image load failed from ${source}:`, error);
+        }
+      },
+      onRetry: (attempt: number, source: string, delay: number) => {
+        if (import.meta.env.DEV) {
+          console.log(`🔄 Retry ${attempt} for ${source} in ${delay}ms`);
+        }
       }
     };
   } catch (error) {
@@ -197,7 +222,8 @@ export function getDefaultImageLoaderOptions() {
       autoLoad: true,
       debug: false,
       timeout: 8000,
-      maxRetries: 2
+      maxRetries: 2,
+      retryDelay: 1000
     };
   }
 }
@@ -227,17 +253,17 @@ export function getDebugImageLoaderOptions() {
   };
 }
 
-// Mobile optimized version
+// Mobile optimized version - even faster
 export function getMobileImageLoaderOptions() {
   const options = getDefaultImageLoaderOptions();
   return {
     ...options,
-    timeout: 5000,
-    maxRetries: 1,
+    timeout: 3000, // Even shorter timeout for mobile
+    maxRetries: 0, // No retries on mobile to prevent loops
     resolution: {
-      maxSources: 2,
-      defaultTimeout: 5000,
-      includeIpfs: false,
+      maxSources: 1, // Only try best source on mobile
+      defaultTimeout: 3000,
+      includeIpfs: false, // Never use IPFS on mobile
       preferThumbnail: true,
       mobileOptimization: true
     },

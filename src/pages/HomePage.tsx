@@ -49,9 +49,11 @@ const QuickSupabaseTest = () => {
           return;
         }
 
-        // Try to import and use supabase
-        const { createClient } = await import('@supabase/supabase-js');
-        const supabase = createClient(supabaseUrl, supabaseKey);
+        // Use existing singleton client to avoid multiple instances
+        const { supabase } = await import('../lib/supabase');
+        if (!supabase) {
+          throw new Error('Supabase client not initialized');
+        }
         
         // Test query
         const { data, error, count } = await supabase
