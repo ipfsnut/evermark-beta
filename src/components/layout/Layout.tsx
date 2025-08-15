@@ -17,9 +17,10 @@ export function Layout({ children }: LayoutProps) {
   const { isInFarcaster } = useFarcasterUser();
   const isMobile = useIsMobileDevice();
 
-  // Mobile-first: Use bottom nav on mobile, sidebar on desktop
-  const showMobileNav = isMobile || isInFarcaster;
-  const showSidebar = !showMobileNav;
+  // Mobile-first: Always show mobile nav on mobile devices
+  // Don't rely on Farcaster detection for mobile layout
+  const showMobileNav = isMobile;
+  const showSidebar = !isMobile && !isInFarcaster;
 
   return (
     <div className={cn(

@@ -75,11 +75,31 @@ export function getDeviceType(): 'mobile' | 'tablet' | 'desktop' {
  */
 export function useIsMobileDevice(): boolean {
   // Initialize with actual detection on first render
-  const [isMobile, setIsMobile] = useState(() => isMobileDevice());
+  const [isMobile, setIsMobile] = useState(() => {
+    // Check if we already detected mobile in HTML
+    if (typeof document !== 'undefined' && document.documentElement.classList.contains('mobile-device')) {
+      return true;
+    }
+    return isMobileDevice();
+  });
 
   useEffect(() => {
+    // Debounce the check to prevent rapid state changes
+    let timeoutId: NodeJS.Timeout;
+    
     const checkDevice = () => {
-      setIsMobile(isMobileDevice());
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        const newIsMobile = isMobileDevice();
+        setIsMobile(current => {
+          // Only update if there's an actual change
+          if (current !== newIsMobile) {
+            console.log('Mobile detection changed:', newIsMobile);
+            return newIsMobile;
+          }
+          return current;
+        });
+      }, 100); // Small debounce to prevent flashing
     };
 
     // Re-check on resize and orientation change
@@ -101,6 +121,7 @@ export function useIsMobileDevice(): boolean {
     }
 
     return () => {
+      clearTimeout(timeoutId);
       window.removeEventListener('resize', checkDevice);
       window.removeEventListener('orientationchange', checkDevice);
       if (mediaQuery.removeEventListener) {
