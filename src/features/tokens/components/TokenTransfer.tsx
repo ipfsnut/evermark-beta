@@ -11,7 +11,13 @@ import { prepareContractCall } from 'thirdweb';
 import { useSendTransaction } from 'thirdweb/react';
 import { getContract } from 'thirdweb';
 import { client } from '@/lib/thirdweb';
-import { CHAIN, CONTRACTS } from '@/lib/contracts';
+import { base } from 'thirdweb/chains';
+
+// Local contract constants to avoid @/lib/contracts dependency
+const CHAIN = base;
+const LOCAL_CONTRACTS = {
+  EMARK_TOKEN: import.meta.env.VITE_EMARK_TOKEN_ADDRESS || '',
+} as const;
 
 // Import ABI from the actual JSON file
 import EMARK_ABI from '@/features/tokens/abis/EMARK.json';
@@ -39,7 +45,7 @@ export function TokenTransfer({ tokenState, className = '' }: TokenTransferProps
       return getContract({
         client,
         chain: CHAIN,
-        address: CONTRACTS.EMARK_TOKEN,
+        address: LOCAL_CONTRACTS.EMARK_TOKEN,
         abi: EMARK_ABI as any // Cast to any to avoid TypeScript ABI issues
       });
     } catch (error) {

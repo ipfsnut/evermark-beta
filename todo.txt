@@ -1,0 +1,149 @@
+# EVERMARK FEATURES DEV SPRINT TODO
+# Generated: 2025-08-18
+# Priority: HIGH - All features currently broken due to architectural inconsistencies
+
+================================================================================
+🔴 CRITICAL ISSUES ANALYSIS
+================================================================================
+
+LEADERBOARD FEATURE ISSUES:
+- ❌ No React Query integration (uses manual state management)
+- ❌ Mock data only (no actual blockchain integration)  
+- ❌ Contract placeholders (hardcoded addresses instead of env vars)
+- ❌ Type mismatches (import/export inconsistencies)
+
+STAKING FEATURE ISSUES:
+- ❌ Inconsistent patterns (mix of React Query and raw hooks)
+- ❌ Hook complexity (multiple interdependent hooks)
+- ❌ Provider issues (may have circular dependencies)
+- ❌ Data fragmentation (scattered data fetching logic)
+
+TOKENS FEATURE ISSUES:
+- ⚠️ Better condition but has issues (uses React Query but has dependencies)
+- ❌ Path alias issues (@/lib/contracts may not exist)
+- ❌ External dependencies (not self-contained)
+- ❌ Service layer gaps (direct contract calls in components)
+
+VOTING FEATURE ISSUES:
+- ❌ Feature coupling (imports from other features breaks isolation)
+- ❌ Missing ABIs (references non-existent ABI files)
+- ❌ Complex dependencies (tight coupling with staking)
+- ❌ Event handling (incomplete event service implementation)
+
+ROOT CAUSES:
+1. Inconsistent Architecture - Each feature uses different patterns
+2. Broken Feature Isolation - Cross-feature imports and dependencies
+3. Missing Infrastructure - Contract addresses, ABIs, providers not set up
+4. Incomplete Migration - Mix of old and new patterns throughout
+
+================================================================================
+⚡ DEV SPRINT TASKS - PRIORITY ORDER
+================================================================================
+
+PHASE 1: FOUNDATION (Critical Path)
+[ ] 1. Fix cross-feature dependencies
+    - Remove @/features/staking imports from voting
+    - Remove @/lib/contracts dependencies from tokens
+    - Make each feature self-contained
+
+[ ] 2. Set up proper contract configurations
+    - Fix leaderboard contract address (use env var instead of placeholder)
+    - Create local ABI files for voting feature
+    - Ensure all contract addresses use environment variables
+
+[ ] 3. Remove path alias dependencies
+    - Replace @/lib/contracts imports with relative paths
+    - Replace @/lib/abis imports with local feature ABIs
+    - Ensure features don't depend on external lib files
+
+PHASE 2: CORE PATTERNS (Architecture)
+[ ] 4. Standardize all features to React Query
+    - Migrate leaderboard to React Query pattern (like evermarks)
+    - Migrate staking to consistent React Query pattern
+    - Ensure all features use same data fetching approach
+
+[ ] 5. Implement proper service layers
+    - Add blockchain data fetching to leaderboard service
+    - Implement tokens service layer pattern consistently
+    - Create proper voting events service implementation
+
+[ ] 6. Consolidate data fetching
+    - Merge staking's multiple hooks into single state hook
+    - Fix staking hook dependencies and providers
+    - Ensure single entry point per feature
+
+PHASE 3: INTEGRATION (Polish)
+[ ] 7. Resolve remaining type issues
+    - Fix leaderboard RankingChange type import
+    - Ensure all type exports are consistent
+    - Verify index.ts files export correctly
+
+[ ] 8. Implement event services properly
+    - Complete voting events service (useVotingEvents)
+    - Add proper error handling
+    - Ensure real-time updates work
+
+[ ] 9. Test feature independence
+    - Build each feature in isolation
+    - Test all features work together
+    - Verify no circular dependencies
+
+================================================================================
+🎯 SUCCESS CRITERIA
+================================================================================
+
+✅ Each feature builds independently without errors
+✅ No cross-feature imports (except types if needed)
+✅ All features use React Query consistently
+✅ All contract addresses from environment variables
+✅ Service layers handle all business logic
+✅ TypeScript passes without errors
+✅ Features work together in main app
+
+================================================================================
+📝 IMPLEMENTATION NOTES
+================================================================================
+
+FOLLOW EVERMARKS PATTERN:
+- Single main state hook per feature (useFeatureState)
+- React Query for all data fetching (30s stale time)
+- Service layer for business logic (pure functions)
+- Components only handle UI state
+- Types exported from feature index
+- Feature config and utils exported
+
+ARCHITECTURAL PRINCIPLES:
+1. Feature-first organization
+2. Pure functions in services
+3. Single state hook per feature  
+4. Clean separation of concerns
+5. Feature isolation (no cross-imports)
+6. Type safety with no implicit any
+
+TESTING APPROACH:
+- Test each feature independently first
+- Then test integration with main app
+- Verify no build errors at each step
+- Check React Query devtools for proper caching
+
+================================================================================
+🔧 DEV ENVIRONMENT SETUP
+================================================================================
+
+Required for sprint:
+- Node.js environment with npm
+- TypeScript checking: npm run type-check
+- Build testing: npm run build
+- Dev server: npx netlify dev
+- React Query devtools enabled
+
+Contract addresses needed in .env.local:
+- VITE_EVERMARK_LEADERBOARD_ADDRESS
+- VITE_CARD_CATALOG_ADDRESS  
+- VITE_EMARK_TOKEN_ADDRESS
+- VITE_EVERMARK_VOTING_ADDRESS
+- VITE_EVERMARK_NFT_ADDRESS
+
+================================================================================
+END TODO.TXT
+================================================================================

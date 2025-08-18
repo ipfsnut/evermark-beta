@@ -12,6 +12,7 @@ const LeaderboardPage = React.lazy(() => import('../src/features/leaderboard/pag
 const StakingPage = React.lazy(() => import('../src/features/staking/pages/StakingPage'));
 const EvermarkDetailPage = React.lazy(() => import('../src/features/evermarks/pages/EvermarkDetailPage'));
 const CreatePage = React.lazy(() => import('../src/features/evermarks/pages/CreatePage'));
+const AdminPage = React.lazy(() => import('../src/pages/AdminPage'));
 const NotFoundPage = React.lazy(() => import('../src/pages/NotFoundPage'));
 
 // Loading fallback component
@@ -42,6 +43,9 @@ function AppContent() {
             {/* Evermark-specific routes */}
             <Route path="/create" element={<CreatePage />} />
             <Route path="/evermark/:id" element={<EvermarkDetailPage />} />
+            
+            {/* Admin route */}
+            <Route path="/admin" element={<AdminPage />} />
             
             {/* Catch-all route */}
             <Route path="*" element={<NotFoundPage />} />

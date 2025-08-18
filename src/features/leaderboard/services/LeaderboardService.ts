@@ -1,8 +1,10 @@
 // src/features/leaderboard/services/LeaderboardService.ts
-// Real blockchain integration using viem and your contract
+// Real blockchain integration using Thirdweb SDK
 
-import { createPublicClient, http, formatUnits } from 'viem';
-import { base } from 'viem/chains'; // Assuming you're on Base - adjust as needed
+import { readContract } from 'thirdweb';
+import { formatUnits } from 'viem';
+import { client } from '@/lib/thirdweb';
+import { base } from 'thirdweb/chains';
 import { 
   LeaderboardEntry, 
   LeaderboardFeedResult, 
@@ -12,59 +14,18 @@ import {
   RankingPeriod
 } from '../types';
 
+// Import the real ABI
+import EvermarkLeaderboardABI from '../abis/EvermarkLeaderboard.json';
+import { LeaderboardSyncService } from './LeaderboardSyncService';
+
 // Your actual contract configuration
 const LEADERBOARD_CONTRACT = {
   address: import.meta.env.VITE_EVERMARK_LEADERBOARD_ADDRESS || '',
-  abi: [
-    {
-      "inputs": [
-        {"internalType": "uint256", "name": "cycle", "type": "uint256"},
-        {"internalType": "uint256", "name": "startRank", "type": "uint256"},
-        {"internalType": "uint256", "name": "count", "type": "uint256"}
-      ],
-      "name": "getLeaderboard",
-      "outputs": [
-        {
-          "components": [
-            {"internalType": "uint256", "name": "evermarkId", "type": "uint256"},
-            {"internalType": "uint256", "name": "votes", "type": "uint256"},
-            {"internalType": "address", "name": "creator", "type": "address"}
-          ],
-          "internalType": "struct LiveLeaderboard.LeaderboardEntry[]",
-          "name": "",
-          "type": "tuple[]"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [{"internalType": "uint256", "name": "cycle", "type": "uint256"}],
-      "name": "getCycleStats",
-      "outputs": [
-        {"internalType": "uint256", "name": "totalUpdates", "type": "uint256"},
-        {"internalType": "uint256", "name": "leaderboardSize", "type": "uint256"},
-        {"internalType": "uint256", "name": "lastUpdate", "type": "uint256"},
-        {"internalType": "bool", "name": "initialized", "type": "bool"}
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [{"internalType": "uint256", "name": "cycle", "type": "uint256"}],
-      "name": "getLeaderboardSize",
-      "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
-      "stateMutability": "view",
-      "type": "function"
-    }
-  ] as const
+  abi: EvermarkLeaderboardABI
 };
 
-// Public client for reading contract data
-const publicClient = createPublicClient({
-  chain: base, // Adjust to your chain
-  transport: http()
-});
+// Use Thirdweb client and Base chain
+const CHAIN = base;
 
 /**
  * LeaderboardService - Real blockchain integration
@@ -86,59 +47,114 @@ export class LeaderboardService {
     const startRank = (page - 1) * pageSize + 1;
     
     try {
-      // Call the actual contract
+      // Check if contract address is valid
+      if (!LEADERBOARD_CONTRACT.address || LEADERBOARD_CONTRACT.address === '') {
+        console.error('❌ No leaderboard contract address configured');
+        throw new Error('Leaderboard contract address not configured');
+      }
+
+      console.log('🔍 Fetching leaderboard data:', {
+        contractAddress: LEADERBOARD_CONTRACT.address,
+        cycle,
+        startRank,
+        pageSize
+      });
+
+      // Let's also check if any cycles are initialized at all
+      try {
+        const cycleInitCheck = await readContract({
+          contract: {
+            client,
+            chain: CHAIN,
+            address: LEADERBOARD_CONTRACT.address,
+            abi: LEADERBOARD_CONTRACT.abi
+          },
+          method: "cycleInitialized",
+          params: [BigInt(0)]
+        });
+        console.log('🔍 Cycle 0 initialized status:', cycleInitCheck);
+      } catch (error) {
+        console.log('❌ Could not check cycle initialization:', error);
+      }
+
+      // Create contract instance first
+      const leaderboardContract = {
+        client,
+        chain: CHAIN,
+        address: LEADERBOARD_CONTRACT.address,
+        abi: LEADERBOARD_CONTRACT.abi
+      };
+
+      // Call the actual contract using Thirdweb
       const [leaderboardData, cycleStats] = await Promise.all([
-        publicClient.readContract({
-          address: LEADERBOARD_CONTRACT.address,
-          abi: LEADERBOARD_CONTRACT.abi,
-          functionName: 'getLeaderboard',
-          args: [BigInt(cycle), BigInt(startRank), BigInt(pageSize)]
+        readContract({
+          contract: leaderboardContract,
+          method: "getLeaderboard",
+          params: [BigInt(cycle), BigInt(startRank), BigInt(pageSize)]
         }),
-        publicClient.readContract({
-          address: LEADERBOARD_CONTRACT.address,
-          abi: LEADERBOARD_CONTRACT.abi,
-          functionName: 'getCycleStats',
-          args: [BigInt(cycle)]
+        readContract({
+          contract: leaderboardContract,
+          method: "getCycleStats", 
+          params: [BigInt(cycle)]
         })
       ]);
 
-      // Transform contract data to our format
-      const entries: LeaderboardEntry[] = (leaderboardData as any[]).map((entry, index) => ({
-        id: `${cycle}-${entry.evermarkId}`,
-        evermarkId: entry.evermarkId.toString(),
-        rank: startRank + index,
-        totalVotes: entry.votes,
-        voteCount: 1, // We don't have this from contract, would need separate call
-        percentageOfTotal: 0, // Calculate if needed
-        title: `Evermark #${entry.evermarkId}`, // Would need to fetch from metadata
-        description: '', // Would need to fetch from metadata
-        creator: entry.creator,
-        createdAt: new Date().toISOString(), // Would need to fetch from contract events
-        contentType: 'Custom' as const,
-        tags: [],
-        verified: false, // Would need verification logic
-        change: { direction: 'same' as const, positions: 0 } // RankingChange type - would need previous data to calculate
-      }));
+      console.log('✅ Contract data received:', {
+        leaderboardData: leaderboardData,
+        cycleStats: cycleStats,
+        leaderboardLength: Array.isArray(leaderboardData) ? leaderboardData.length : 'not array'
+      });
 
-      const totalCount = Number(cycleStats[1]); // leaderboardSize
-      const totalPages = Math.ceil(totalCount / pageSize);
+      // Log detailed cycle stats to understand the state
+      if (Array.isArray(cycleStats) && cycleStats.length === 4) {
+        const [totalUpdates, leaderboardSize, lastUpdate, initialized] = cycleStats;
+        console.log('📊 Cycle Stats for cycle', cycle, ':', {
+          totalUpdates: totalUpdates.toString(),
+          leaderboardSize: leaderboardSize.toString(),
+          lastUpdate: lastUpdate.toString(),
+          initialized: initialized,
+          rawCycleStats: cycleStats
+        });
 
-      return {
-        entries,
-        totalCount,
-        totalPages,
-        currentPage: page,
-        pageSize,
-        hasNextPage: page * pageSize < totalCount,
-        hasPreviousPage: page > 1,
-        lastUpdated: new Date(),
-        filters: filters || {}
-      };
+        // If cycle is not initialized, try cycle 0 or suggest checking different cycles
+        if (!initialized && cycle === 1) {
+          console.log('⚠️ Cycle 1 is not initialized, trying cycle 0...');
+          
+          try {
+            const cycle0Data = await readContract({
+              contract: leaderboardContract,
+              method: "getLeaderboard",
+              params: [BigInt(0), BigInt(startRank), BigInt(pageSize)]
+            });
+            
+            console.log('🔍 Cycle 0 leaderboard data:', cycle0Data);
+            
+            if (Array.isArray(cycle0Data) && cycle0Data.length > 0) {
+              console.log('✅ Found data in cycle 0! Using that instead.');
+              // Use cycle 0 data instead
+              return this.processLeaderboardData(cycle0Data, cycleStats, 0, page, pageSize, startRank, filters);
+            }
+          } catch (error) {
+            console.log('❌ Cycle 0 also failed:', error);
+          }
+        }
+      }
+
+      // If no data found, provide diagnostic information
+      if (Array.isArray(leaderboardData) && leaderboardData.length === 0) {
+        console.log('📊 No leaderboard data found - running diagnostics...');
+        this.runDiagnostics();
+      }
+
+      // Process the data regardless of which cycle we end up using
+      return this.processLeaderboardData(leaderboardData, cycleStats, cycle, page, pageSize, startRank, filters);
 
     } catch (error) {
-      console.error('Failed to fetch leaderboard from contract:', error);
+      console.error('❌ Failed to fetch leaderboard from contract:', error);
+      console.error('Contract address:', LEADERBOARD_CONTRACT.address);
+      console.error('Cycle:', cycle, 'StartRank:', startRank, 'PageSize:', pageSize);
       
-      // Return empty result on error
+      // Return empty result on error - we need to fix the contract issue
       return {
         entries: [],
         totalCount: 0,
@@ -160,11 +176,17 @@ export class LeaderboardService {
     const cycle = parseInt(period) || 1;
     
     try {
-      const stats = await publicClient.readContract({
+      const leaderboardContract = {
+        client,
+        chain: CHAIN,
         address: LEADERBOARD_CONTRACT.address,
-        abi: LEADERBOARD_CONTRACT.abi,
-        functionName: 'getCycleStats',
-        args: [BigInt(cycle)]
+        abi: LEADERBOARD_CONTRACT.abi
+      };
+
+      const stats = await readContract({
+        contract: leaderboardContract,
+        method: "getCycleStats",
+        params: [BigInt(cycle)]
       });
 
       return {
@@ -261,17 +283,122 @@ export class LeaderboardService {
    */
   static async healthCheck(): Promise<boolean> {
     try {
-      // Try to read basic contract info
-      await publicClient.readContract({
+      const leaderboardContract = {
+        client,
+        chain: CHAIN,
         address: LEADERBOARD_CONTRACT.address,
-        abi: LEADERBOARD_CONTRACT.abi,
-        functionName: 'getCycleStats',
-        args: [BigInt(1)]
+        abi: LEADERBOARD_CONTRACT.abi
+      };
+
+      // Try to read basic contract info
+      await readContract({
+        contract: leaderboardContract,
+        method: "getCycleStats",
+        params: [BigInt(1)]
       });
       return true;
     } catch (error) {
       console.error('Contract health check failed:', error);
       return false;
     }
+  }
+
+
+  /**
+   * Run diagnostics to understand why leaderboard is empty
+   */
+  static async runDiagnostics(): Promise<void> {
+    try {
+      console.log('🔍 Running leaderboard diagnostics...');
+      
+      const status = await LeaderboardSyncService.getLeaderboardStatus();
+      
+      console.log('📊 Leaderboard Status Report:');
+      console.log(`   Current Cycle: ${status.currentCycle}`);
+      console.log(`   Cycle Initialized: ${status.cycleInitialized}`);
+      console.log(`   Has Voting Data: ${status.hasVotingData}`);
+      
+      if (status.suggestions.length > 0) {
+        console.log('💡 Suggestions to populate leaderboard:');
+        status.suggestions.forEach((suggestion, index) => {
+          console.log(`   ${index + 1}. ${suggestion}`);
+        });
+      }
+      
+      console.log('🎯 Quick Start Guide:');
+      console.log('   → Visit the Staking page to stake EMARK tokens');
+      console.log('   → Use voting power to delegate votes to evermarks');
+      console.log('   → Leaderboard will populate with voting results');
+      
+    } catch (error) {
+      console.error('Failed to run diagnostics:', error);
+    }
+  }
+
+  /**
+   * Process leaderboard data from contract into our format
+   */
+  static processLeaderboardData(
+    leaderboardData: any,
+    cycleStats: any,
+    cycle: number,
+    page: number,
+    pageSize: number,
+    startRank: number,
+    filters?: any
+  ): LeaderboardFeedResult {
+    // Check if we have valid leaderboard data
+    if (!Array.isArray(leaderboardData)) {
+      console.warn('⚠️ Leaderboard data is not an array:', leaderboardData);
+      return {
+        entries: [],
+        totalCount: 0,
+        totalPages: 0,
+        currentPage: page,
+        pageSize,
+        hasNextPage: false,
+        hasPreviousPage: false,
+        lastUpdated: new Date(),
+        filters: filters || {}
+      };
+    }
+
+    console.log('📊 Processing', leaderboardData.length, 'leaderboard entries from cycle', cycle);
+
+    // Transform contract data to our format
+    const entries: LeaderboardEntry[] = (leaderboardData as any[]).map((entry, index) => {
+      console.log(`🔍 Processing entry ${index + 1}:`, entry);
+      return {
+        id: `${cycle}-${entry.evermarkId}`,
+        evermarkId: entry.evermarkId.toString(),
+        rank: startRank + index,
+        totalVotes: entry.votes,
+        voteCount: 1, // We don't have this from contract, would need separate call
+        percentageOfTotal: 0, // Calculate if needed
+        title: `Evermark #${entry.evermarkId}`, // Would need to fetch from metadata
+        description: '', // Would need to fetch from metadata
+        creator: entry.creator,
+        createdAt: new Date().toISOString(), // Would need to fetch from contract events
+        contentType: 'Custom' as const,
+        tags: [],
+        verified: false, // Would need verification logic
+        change: { direction: 'same' as const, positions: 0 } // RankingChange type - would need previous data to calculate
+      };
+    });
+
+    const totalCount = Number(cycleStats[1]); // leaderboardSize
+    const totalPages = Math.ceil(totalCount / pageSize);
+
+    return {
+      entries,
+      totalCount,
+      totalPages,
+      currentPage: page,
+      pageSize,
+      hasNextPage: page * pageSize < totalCount,
+      hasPreviousPage: page > 1,
+      lastUpdated: new Date(),
+      filters: filters || {}
+    };
   }
 }

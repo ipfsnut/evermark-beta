@@ -1,5 +1,6 @@
-// src/features/leaderboard/hooks/useLeaderboardState.ts
-import { useState, useEffect, useCallback, useMemo } from 'react';
+// src/features/leaderboard/hooks/useLeaderboardState.ts - Migrated to React Query
+import { useState, useCallback, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { LeaderboardService } from '../services/LeaderboardService';
 import type { 
   LeaderboardEntry, 
@@ -11,29 +12,79 @@ import type {
 } from '../types';
 import { LEADERBOARD_CONSTANTS } from '../types';
 
+// React Query keys
+const QUERY_KEYS = {
+  leaderboard: (options: LeaderboardFeedOptions) => 
+    ['leaderboard', 'entries', options],
+  stats: (period?: string) => 
+    ['leaderboard', 'stats', period || LEADERBOARD_CONSTANTS.DEFAULT_PERIOD],
+} as const;
+
 /**
- * Hook for managing leaderboard state and data fetching
+ * Hook for managing leaderboard state and data fetching - React Query version
  */
 export function useLeaderboardState(): UseLeaderboardStateReturn {
-  // Core data state
-  const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
-  const [stats, setStats] = useState<LeaderboardStats | null>(null);
-  const [totalCount, setTotalCount] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const queryClient = useQueryClient();
 
-  // UI state
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Filters and pagination
+  // Local state for filters and pagination
   const [filters, setFiltersState] = useState<LeaderboardFilters>(() => 
     LeaderboardService.getDefaultFilters()
   );
   const [pagination, setPaginationState] = useState<LeaderboardPagination>(() => 
     LeaderboardService.getDefaultPagination()
   );
+
+  // Create options for queries
+  const leaderboardOptions: LeaderboardFeedOptions = useMemo(() => ({
+    page: pagination.page,
+    pageSize: pagination.pageSize,
+    sortBy: pagination.sortBy,
+    sortOrder: pagination.sortOrder,
+    filters
+  }), [pagination, filters]);
+
+  // Leaderboard data query
+  const { 
+    data: leaderboardData,
+    isLoading: isLoadingEntries,
+    isRefetching: isRefreshingEntries,
+    error: entriesError,
+    refetch: refetchEntries
+  } = useQuery({
+    queryKey: QUERY_KEYS.leaderboard(leaderboardOptions),
+    queryFn: () => LeaderboardService.fetchLeaderboard(leaderboardOptions),
+    staleTime: 30 * 1000, // 30 seconds
+    retry: 2,
+    retryDelay: 1000,
+  });
+
+  // Leaderboard stats query
+  const { 
+    data: stats,
+    isLoading: isLoadingStats,
+    isRefetching: isRefreshingStats,
+    error: statsError,
+    refetch: refetchStats
+  } = useQuery({
+    queryKey: QUERY_KEYS.stats(filters.period),
+    queryFn: () => LeaderboardService.fetchLeaderboardStats(
+      filters.period || LEADERBOARD_CONSTANTS.DEFAULT_PERIOD
+    ),
+    staleTime: 30 * 1000, // 30 seconds
+    retry: 2,
+    retryDelay: 1000,
+  });
+
+  // Extract data from queries
+  const entries = leaderboardData?.entries || [];
+  const totalCount = leaderboardData?.totalCount || 0;
+  const totalPages = leaderboardData?.totalPages || 0;
+  const lastUpdated = leaderboardData?.lastUpdated || null;
+
+  // Combined loading and error states
+  const isLoading = isLoadingEntries || isLoadingStats;
+  const isRefreshing = isRefreshingEntries || isRefreshingStats;
+  const error = entriesError?.message || statsError?.message || null;
 
   // Available periods
   const availablePeriods = useMemo(() => 
@@ -72,71 +123,31 @@ export function useLeaderboardState(): UseLeaderboardStateReturn {
     );
   }, [filters]);
 
-  // Load leaderboard data
+  // Load leaderboard data with updated options
   const loadLeaderboard = useCallback(async (options?: Partial<LeaderboardFeedOptions>) => {
-    try {
-      const loadOptions: LeaderboardFeedOptions = {
-        page: options?.page || pagination.page,
-        pageSize: options?.pageSize || pagination.pageSize,
-        sortBy: options?.sortBy || pagination.sortBy,
-        sortOrder: options?.sortOrder || pagination.sortOrder,
-        filters: { ...filters, ...options?.filters }
-      };
-
-      setIsLoading(true);
-      setError(null);
-
-      const [feedResult, statsResult] = await Promise.all([
-        LeaderboardService.fetchLeaderboard(loadOptions),
-        LeaderboardService.fetchLeaderboardStats(loadOptions.filters?.period || filters.period || LEADERBOARD_CONSTANTS.DEFAULT_PERIOD)
-      ]);
-
-      setEntries(feedResult.entries);
-      setTotalCount(feedResult.totalCount);
-      setTotalPages(feedResult.totalPages);
-      setLastUpdated(feedResult.lastUpdated);
-      setStats(statsResult);
-
-    } catch (err) {
-      console.error('Failed to load leaderboard:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load leaderboard data');
-    } finally {
-      setIsLoading(false);
+    if (options?.filters) {
+      setFiltersState(prev => ({ ...prev, ...options.filters }));
     }
-  }, [pagination, filters]);
+    if (options?.page !== undefined || options?.pageSize !== undefined || 
+        options?.sortBy !== undefined || options?.sortOrder !== undefined) {
+      setPaginationState(prev => ({
+        ...prev,
+        ...(options.page !== undefined && { page: options.page }),
+        ...(options.pageSize !== undefined && { pageSize: options.pageSize }),
+        ...(options.sortBy !== undefined && { sortBy: options.sortBy }),
+        ...(options.sortOrder !== undefined && { sortOrder: options.sortOrder }),
+      }));
+    }
+    // React Query will automatically refetch when dependencies change
+  }, []);
 
-  // Refresh data
+  // Refresh data using React Query
   const refresh = useCallback(async () => {
-    try {
-      setIsRefreshing(true);
-      setError(null);
-
-      const loadOptions: LeaderboardFeedOptions = {
-        page: pagination.page,
-        pageSize: pagination.pageSize,
-        sortBy: pagination.sortBy,
-        sortOrder: pagination.sortOrder,
-        filters
-      };
-
-      const [feedResult, statsResult] = await Promise.all([
-        LeaderboardService.fetchLeaderboard(loadOptions),
-        LeaderboardService.fetchLeaderboardStats(filters.period || LEADERBOARD_CONSTANTS.DEFAULT_PERIOD)
-      ]);
-
-      setEntries(feedResult.entries);
-      setTotalCount(feedResult.totalCount);
-      setTotalPages(feedResult.totalPages);
-      setLastUpdated(feedResult.lastUpdated);
-      setStats(statsResult);
-
-    } catch (err) {
-      console.error('Failed to refresh leaderboard:', err);
-      setError(err instanceof Error ? err.message : 'Failed to refresh leaderboard data');
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [pagination, filters]);
+    await Promise.all([
+      refetchEntries(),
+      refetchStats()
+    ]);
+  }, [refetchEntries, refetchStats]);
 
   // Set period (resets pagination)
   const setPeriod = useCallback((periodId: string) => {
@@ -171,28 +182,13 @@ export function useLeaderboardState(): UseLeaderboardStateReturn {
     return entry ? entry.rank : null;
   }, [getEntryByEvermarkId]);
 
-  // Load data on mount and when dependencies change
-  useEffect(() => {
-    loadLeaderboard();
-  }, [loadLeaderboard]);
-
-  // Auto-refresh interval (optional)
-  useEffect(() => {
-    if (!LEADERBOARD_CONSTANTS.AUTO_REFRESH) return;
-
-    const interval = setInterval(() => {
-      if (!isLoading && !isRefreshing) {
-        refresh();
-      }
-    }, LEADERBOARD_CONSTANTS.REFRESH_INTERVAL);
-
-    return () => clearInterval(interval);
-  }, [refresh, isLoading, isRefreshing]);
+  // Note: Auto-refresh is now handled by React Query's refetch options
+  // React Query automatically manages data fetching, caching, and refetching
 
   return {
     // Data
     entries,
-    stats,
+    stats: stats || null,
     currentPeriod,
     availablePeriods,
     

@@ -4,7 +4,10 @@ import { useActiveAccount, useSendTransaction } from 'thirdweb/react';
 import { prepareContractCall, waitForReceipt } from 'thirdweb';
 import { useContracts } from '@/hooks/core/useContracts';
 import { client } from '@/lib/thirdweb';
-import { CHAIN } from '@/lib/contracts';
+import { base } from 'thirdweb/chains';
+
+// Local constants to avoid @/lib/contracts dependency
+const CHAIN = base;
 
 export interface StakingTransactions {
   // Transaction states

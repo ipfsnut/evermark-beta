@@ -2,7 +2,10 @@
 import { formatUnits, parseUnits } from 'viem';
 import { readContract, getContractEvents, estimateGas, getGasPrice, prepareEvent, prepareContractCall } from 'thirdweb';
 import { client } from '@/lib/thirdweb';
-import { CHAIN } from '@/lib/contracts';
+import { base } from 'thirdweb/chains';
+
+// Local constants to avoid @/lib/contracts dependency
+const CHAIN = base;
 import { 
   type Vote,
   type Delegation,

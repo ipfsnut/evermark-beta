@@ -6,9 +6,18 @@ import { useActiveAccount } from 'thirdweb/react';
 import { prepareContractCall, waitForReceipt } from 'thirdweb';
 import { getContract } from 'thirdweb';
 import { client } from '@/lib/thirdweb';
-import { CHAIN, CONTRACTS } from '@/lib/contracts';
-import { EvermarkVotingABI } from '@/lib/abis';
-import { useStakingState } from '@/features/staking';
+import { base } from 'thirdweb/chains';
+
+// Local contract constants and ABI to avoid @/lib dependencies
+const CHAIN = base;
+const LOCAL_CONTRACTS = {
+  EVERMARK_VOTING: import.meta.env.VITE_EVERMARK_VOTING_ADDRESS || '',
+  CARD_CATALOG: import.meta.env.VITE_CARD_CATALOG_ADDRESS || '',
+} as const;
+
+// Import ABI from local feature directory
+import EvermarkVotingABI from '../abis/EvermarkVoting.json';
+// Removed cross-feature dependency on staking
 import { VotingService } from '../services/VotingService';
 import type { 
   VotingPower, 
@@ -47,14 +56,53 @@ export function useVotingState(): UseVotingStateReturn {
   const votingContract = useMemo(() => getContract({
     client,
     chain: CHAIN,
-    address: CONTRACTS.EVERMARK_VOTING,
+    address: LOCAL_CONTRACTS.EVERMARK_VOTING,
     abi: EvermarkVotingABI as any
   }), []);
   
   const userAddress = account?.address;
   const isConnected = !!account && !!userAddress;
   
-  const { stakingInfo, formatTokenAmount } = useStakingState();
+  // Local utility function for formatting token amounts
+  const formatTokenAmount = useCallback((amount: bigint, decimals: number = 2): string => {
+    if (amount === BigInt(0)) return '0';
+    
+    // Manual conversion from wei to ether (18 decimals)
+    const divisor = BigInt(10) ** BigInt(18);
+    const etherAmount = Number(amount) / Number(divisor);
+    
+    if (etherAmount < 0.0001) {
+      return '< 0.0001';
+    }
+    
+    return etherAmount.toLocaleString('en-US', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: decimals
+    });
+  }, []);
+
+  // Get user's total staked balance directly from staking contract
+  const { 
+    data: totalStakedRaw,
+    isLoading: isLoadingStakedBalance
+  } = useReadContract({
+    contract: useMemo(() => getContract({
+      client,
+      chain: CHAIN,
+      address: LOCAL_CONTRACTS.CARD_CATALOG, // Staking contract address
+      abi: [
+        {
+          "type": "function",
+          "name": "balanceOf",
+          "inputs": [{"name": "account", "type": "address"}],
+          "outputs": [{"name": "", "type": "uint256"}],
+          "stateMutability": "view"
+        }
+      ]
+    }), []),
+    method: "balanceOf",
+    params: userAddress ? [userAddress] : ['0x0000000000000000000000000000000000000000'],
+  });
   
   // Setup event listening for real-time updates
   useVotingEvents({ 
@@ -141,10 +189,10 @@ export function useVotingState(): UseVotingStateReturn {
 
   // Voting power calculation from staking + contract data with proper null handling  
   const votingPower: VotingPower | null = useMemo(() => {
-    if (!stakingInfo || remainingVotingPowerRaw === undefined || !userAddress) return null;
+    if (totalStakedRaw === undefined || remainingVotingPowerRaw === undefined || !userAddress) return null;
     
     const available = remainingVotingPowerRaw || BigInt(0);
-    const total = stakingInfo.totalStaked;
+    const total = totalStakedRaw || BigInt(0);
     const delegated = total - available;
     
     return {
@@ -153,7 +201,7 @@ export function useVotingState(): UseVotingStateReturn {
       delegated,
       reserved: BigInt(0) // Could be calculated from pending transactions
     };
-  }, [stakingInfo, remainingVotingPowerRaw, userAddress]);
+  }, [totalStakedRaw, remainingVotingPowerRaw, userAddress]);
 
   // Current cycle information with proper null handling
   const currentCycle: VotingCycle | null = useMemo(() => {
@@ -532,7 +580,7 @@ export function useVotingState(): UseVotingStateReturn {
     return null;
   }, [error, cycleError, cycleInfoError, votingPowerError, delegationError]);
 
-  const isLoading = isLoadingCycle || isLoadingCycleInfo || isLoadingDelegations || isLoadingVotingPower;
+  const isLoading = isLoadingCycle || isLoadingCycleInfo || isLoadingDelegations || isLoadingVotingPower || isLoadingStakedBalance;
 
   return {
     // Data

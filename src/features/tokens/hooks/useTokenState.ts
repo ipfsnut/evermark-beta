@@ -6,7 +6,14 @@ import { useSendTransaction } from 'thirdweb/react';
 import { useActiveAccount } from 'thirdweb/react';
 import { prepareContractCall, getContract, readContract } from 'thirdweb';
 import { client } from '@/lib/thirdweb';
-import { CHAIN, CONTRACTS } from '@/lib/contracts';
+import { base } from 'thirdweb/chains';
+
+// Local contract constants to avoid @/lib/contracts dependency
+const CHAIN = base;
+const LOCAL_CONTRACTS = {
+  EMARK_TOKEN: import.meta.env.VITE_EMARK_TOKEN_ADDRESS || '',
+  CARD_CATALOG: import.meta.env.VITE_CARD_CATALOG_ADDRESS || '',
+} as const;
 
 // Import ABIs from the actual JSON files
 import EMARK_ABI from '@/features/tokens/abis/EMARK.json';
@@ -50,7 +57,7 @@ export function useTokenState(): UseTokenStateReturn {
       return getContract({
         client,
         chain: CHAIN,
-        address: CONTRACTS.EMARK_TOKEN,
+        address: LOCAL_CONTRACTS.EMARK_TOKEN,
         abi: EMARK_ABI as any
       });
     } catch (error) {
@@ -61,7 +68,7 @@ export function useTokenState(): UseTokenStateReturn {
   
   const userAddress = account?.address;
   const isConnected = !!account && !!userAddress;
-  const stakingContractAddress = CONTRACTS.CARD_CATALOG;
+  const stakingContractAddress = LOCAL_CONTRACTS.CARD_CATALOG;
 
   // Token balance query using React Query + readContract
   const { 
@@ -129,11 +136,11 @@ export function useTokenState(): UseTokenStateReturn {
     isLoading: isLoadingTokenInfo,
     error: tokenInfoError
   } = useQuery({
-    queryKey: QUERY_KEYS.tokenInfo(CONTRACTS.EMARK_TOKEN),
+    queryKey: QUERY_KEYS.tokenInfo(LOCAL_CONTRACTS.EMARK_TOKEN),
     queryFn: async () => {
-      return TokenService.createDefaultTokenInfo(CONTRACTS.EMARK_TOKEN);
+      return TokenService.createDefaultTokenInfo(LOCAL_CONTRACTS.EMARK_TOKEN);
     },
-    enabled: !!CONTRACTS.EMARK_TOKEN,
+    enabled: !!LOCAL_CONTRACTS.EMARK_TOKEN,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
