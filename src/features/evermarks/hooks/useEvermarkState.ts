@@ -277,6 +277,28 @@ const TempEvermarkService = {
           
           if (dbSyncResponse.ok) {
             console.log('✅ Database sync completed');
+            
+            // Step 6: Trigger image caching immediately after successful database sync
+            console.log('📡 Step 6: Triggering image caching...');
+            try {
+              const cachingResponse = await fetch('/.netlify/functions/cache-images', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                  trigger: 'creation',
+                  tokenIds: [parseInt(mintResult.tokenId)]
+                })
+              });
+              
+              if (cachingResponse.ok) {
+                console.log('✅ Image caching triggered successfully');
+              } else {
+                console.warn('⚠️ Image caching trigger failed, but evermark created successfully');
+              }
+            } catch (cacheError) {
+              console.warn('⚠️ Image caching trigger error:', cacheError);
+              // Don't fail the whole operation if caching fails
+            }
           } else {
             console.warn('⚠️ Database sync failed, but blockchain mint succeeded');
           }
