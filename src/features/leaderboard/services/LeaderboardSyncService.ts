@@ -12,7 +12,7 @@ const CHAIN = base;
 export class LeaderboardSyncService {
   
   /**
-   * Check if a cycle is initialized in the leaderboard
+   * Check if a cycle is finalized in the leaderboard
    */
   static async isCycleInitialized(cycle: number): Promise<boolean> {
     try {
@@ -23,15 +23,15 @@ export class LeaderboardSyncService {
         abi: EvermarkLeaderboardABI
       };
 
-      const initialized = await readContract({
+      const finalized = await readContract({
         contract: leaderboardContract,
-        method: "cycleInitialized",
+        method: "isLeaderboardFinalized",
         params: [BigInt(cycle)]
       });
 
-      return initialized;
+      return finalized;
     } catch (error) {
-      console.error('Failed to check cycle initialization:', error);
+      console.error('Failed to check cycle finalization:', error);
       return false;
     }
   }

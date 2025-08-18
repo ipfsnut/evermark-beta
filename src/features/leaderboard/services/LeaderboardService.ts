@@ -60,21 +60,21 @@ export class LeaderboardService {
         pageSize
       });
 
-      // Let's also check if any cycles are initialized at all
+      // Check if any cycles are finalized
       try {
-        const cycleInitCheck = await readContract({
+        const cycleFinalized = await readContract({
           contract: {
             client,
             chain: CHAIN,
             address: LEADERBOARD_CONTRACT.address,
             abi: LEADERBOARD_CONTRACT.abi
           },
-          method: "cycleInitialized",
-          params: [BigInt(0)]
+          method: "isLeaderboardFinalized",
+          params: [BigInt(cycle)]
         });
-        console.log('🔍 Cycle 0 initialized status:', cycleInitCheck);
+        console.log(`🔍 Cycle ${cycle} finalized status:`, cycleFinalized);
       } catch (error) {
-        console.log('❌ Could not check cycle initialization:', error);
+        console.log('❌ Could not check cycle finalization:', error);
       }
 
       // Create contract instance first
@@ -85,12 +85,12 @@ export class LeaderboardService {
         abi: LEADERBOARD_CONTRACT.abi
       };
 
-      // Call the actual contract using Thirdweb
+      // Call the actual contract using Thirdweb - fix method signature for getLeaderboard
       const [leaderboardData, cycleStats] = await Promise.all([
         readContract({
           contract: leaderboardContract,
           method: "getLeaderboard",
-          params: [BigInt(cycle), BigInt(startRank), BigInt(pageSize)]
+          params: [BigInt(cycle), BigInt(pageSize)] // Only cycle and limit, not startRank
         }),
         readContract({
           contract: leaderboardContract,
@@ -105,38 +105,21 @@ export class LeaderboardService {
         leaderboardLength: Array.isArray(leaderboardData) ? leaderboardData.length : 'not array'
       });
 
-      // Log detailed cycle stats to understand the state
-      if (Array.isArray(cycleStats) && cycleStats.length === 4) {
-        const [totalUpdates, leaderboardSize, lastUpdate, initialized] = cycleStats;
+      // Log detailed cycle stats to understand the state - updated for correct format
+      if (Array.isArray(cycleStats) && cycleStats.length === 5) {
+        const [totalParticipants, totalVotes, rewardPool, finalized, finalizedAt] = cycleStats;
         console.log('📊 Cycle Stats for cycle', cycle, ':', {
-          totalUpdates: totalUpdates.toString(),
-          leaderboardSize: leaderboardSize.toString(),
-          lastUpdate: lastUpdate.toString(),
-          initialized: initialized,
+          totalParticipants: totalParticipants.toString(),
+          totalVotes: totalVotes.toString(),
+          rewardPool: rewardPool.toString(),
+          finalized: finalized,
+          finalizedAt: finalizedAt.toString(),
           rawCycleStats: cycleStats
         });
 
-        // If cycle is not initialized, try cycle 0 or suggest checking different cycles
-        if (!initialized && cycle === 1) {
-          console.log('⚠️ Cycle 1 is not initialized, trying cycle 0...');
-          
-          try {
-            const cycle0Data = await readContract({
-              contract: leaderboardContract,
-              method: "getLeaderboard",
-              params: [BigInt(0), BigInt(startRank), BigInt(pageSize)]
-            });
-            
-            console.log('🔍 Cycle 0 leaderboard data:', cycle0Data);
-            
-            if (Array.isArray(cycle0Data) && cycle0Data.length > 0) {
-              console.log('✅ Found data in cycle 0! Using that instead.');
-              // Use cycle 0 data instead
-              return this.processLeaderboardData(cycle0Data, cycleStats, 0, page, pageSize, startRank, filters);
-            }
-          } catch (error) {
-            console.log('❌ Cycle 0 also failed:', error);
-          }
+        // If cycle is not finalized, suggest finalizing it
+        if (!finalized) {
+          console.log(`⚠️ Cycle ${cycle} is not finalized yet. Use admin interface to finalize it.`);
         }
       }
 
@@ -386,7 +369,7 @@ export class LeaderboardService {
       };
     });
 
-    const totalCount = Number(cycleStats[1]); // leaderboardSize
+    const totalCount = Number(cycleStats[0]); // totalParticipants
     const totalPages = Math.ceil(totalCount / pageSize);
 
     return {

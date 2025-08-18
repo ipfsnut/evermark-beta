@@ -13,12 +13,14 @@ import {
   Clock,
   Shield
 } from 'lucide-react';
-import { prepareContractCall, sendTransaction } from 'thirdweb';
+import { prepareContractCall, sendTransaction, readContract } from 'thirdweb';
 import { useSendTransaction } from 'thirdweb/react';
 import { client } from '@/lib/thirdweb';
 import { base } from 'thirdweb/chains';
 import { useActiveAccount } from 'thirdweb/react';
 import EvermarkLeaderboardABI from '@/features/leaderboard/abis/EvermarkLeaderboard.json';
+import EvermarkVotingABI from '@/features/voting/abis/EvermarkVoting.json';
+import EvermarkNFTABI from '@/features/evermarks/abis/EvermarkNFT.json';
 import { LeaderboardSyncService } from '@/features/leaderboard/services/LeaderboardSyncService';
 
 interface CycleStatus {
@@ -36,15 +38,23 @@ interface AdminRoles {
   contractOwner?: string;
 }
 
+interface ContractStatus {
+  nft: { initialized: boolean; totalSupply: number };
+  voting: { initialized: boolean; currentCycle: number; hasAddresses: boolean };
+  leaderboard: { initialized: boolean; hasAddresses: boolean };
+}
+
 export default function AdminPage() {
   const account = useActiveAccount();
   const { mutate: sendTx, isPending } = useSendTransaction();
   
   const [cycleStatuses, setCycleStatuses] = useState<CycleStatus[]>([]);
   const [adminRoles, setAdminRoles] = useState<AdminRoles | null>(null);
+  const [contractStatus, setContractStatus] = useState<ContractStatus | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedCycle, setSelectedCycle] = useState(1);
   const [logs, setLogs] = useState<string[]>([]);
+  const [currentStep, setCurrentStep] = useState(1);
 
   const LEADERBOARD_CONTRACT = {
     client,
@@ -53,12 +63,128 @@ export default function AdminPage() {
     abi: EvermarkLeaderboardABI
   };
 
+  const VOTING_CONTRACT = {
+    client,
+    chain: base,
+    address: import.meta.env.VITE_EVERMARK_VOTING_ADDRESS || '',
+    abi: EvermarkVotingABI
+  };
+
+  const NFT_CONTRACT = {
+    client,
+    chain: base,
+    address: import.meta.env.VITE_EVERMARK_NFT_ADDRESS || '',
+    abi: EvermarkNFTABI
+  };
+
   // Add log entry
   const addLog = (message: string, type: 'info' | 'success' | 'error' = 'info') => {
     const timestamp = new Date().toLocaleTimeString();
     const logEntry = `[${timestamp}] ${type.toUpperCase()}: ${message}`;
     setLogs(prev => [logEntry, ...prev].slice(0, 50)); // Keep last 50 logs
     console.log(logEntry);
+  };
+
+  // Check all contract statuses
+  const checkAllContractStatuses = async (): Promise<ContractStatus> => {
+    try {
+      addLog('Checking all contract statuses...');
+      
+      // Check NFT contract
+      const nftTotalSupply = await readContract({
+        contract: NFT_CONTRACT,
+        method: "totalSupply",
+        params: []
+      });
+      
+      // Check voting contract addresses
+      let votingInitialized = false;
+      let currentCycle = 0;
+      try {
+        const cycle = await readContract({
+          contract: VOTING_CONTRACT,
+          method: "getCurrentCycle",
+          params: []
+        });
+        currentCycle = Number(cycle);
+        votingInitialized = true; // If we can call getCurrentCycle, it's initialized
+        addLog(`Voting contract responding: current cycle ${currentCycle}`);
+      } catch (error) {
+        addLog('Voting contract not responding', 'error');
+        // Try to check if contract has cardCatalog address set as fallback
+        try {
+          const cardCatalog = await readContract({
+            contract: VOTING_CONTRACT,
+            method: "cardCatalog",
+            params: []
+          });
+          if (cardCatalog && cardCatalog !== '0x0000000000000000000000000000000000000000') {
+            votingInitialized = true;
+            addLog('Voting contract has cardCatalog set, treating as initialized');
+          }
+        } catch (catalogError) {
+          addLog('Cannot determine voting contract status', 'error');
+        }
+      }
+      
+      // Check leaderboard contract addresses
+      let leaderboardInitialized = false;
+      try {
+        const votingAddr = await readContract({
+          contract: LEADERBOARD_CONTRACT,
+          method: "evermarkVoting",
+          params: []
+        });
+        leaderboardInitialized = votingAddr && votingAddr !== '0x0000000000000000000000000000000000000000';
+        if (leaderboardInitialized) {
+          addLog(`Leaderboard has voting address: ${votingAddr}`);
+        }
+      } catch (error) {
+        addLog('Leaderboard contract not responding', 'error');
+      }
+      
+      const status = {
+        nft: { 
+          initialized: true, 
+          totalSupply: Number(nftTotalSupply) 
+        },
+        voting: { 
+          initialized: votingInitialized, 
+          currentCycle, 
+          hasAddresses: votingInitialized 
+        },
+        leaderboard: { 
+          initialized: leaderboardInitialized, 
+          hasAddresses: leaderboardInitialized 
+        }
+      };
+      
+      addLog(`Contract Status - NFT: ${status.nft.totalSupply} minted, Voting: ${status.voting.initialized ? 'initialized' : 'not initialized'}, Leaderboard: ${status.leaderboard.initialized ? 'initialized' : 'not initialized'}`);
+      
+      return status;
+    } catch (error) {
+      addLog(`Failed to check contract statuses: ${error}`, 'error');
+      return {
+        nft: { initialized: false, totalSupply: 0 },
+        voting: { initialized: false, currentCycle: 0, hasAddresses: false },
+        leaderboard: { initialized: false, hasAddresses: false }
+      };
+    }
+  };
+
+  // Check if contract is already initialized
+  const checkContractInitialization = async (): Promise<boolean> => {
+    try {
+      // Try to get a role constant - if this works, contract is initialized
+      await readContract({
+        contract: LEADERBOARD_CONTRACT,
+        method: "DEFAULT_ADMIN_ROLE",
+        params: []
+      });
+      return true;
+    } catch (error) {
+      return false;
+    }
   };
 
   // Check admin roles for connected wallet
@@ -74,8 +200,19 @@ export default function AdminPage() {
     try {
       addLog('Checking admin roles for connected wallet...');
 
-      const [defaultAdminRole, adminRole, managerRole, hasDefaultAdmin, hasAdmin, hasManager] = await Promise.all([
-        // Get role constants
+      // First check if contract is initialized
+      const isInitialized = await checkContractInitialization();
+      if (!isInitialized) {
+        addLog('Contract is not initialized yet', 'error');
+        return {
+          hasDefaultAdminRole: false,
+          hasAdminRole: false,
+          hasLeaderboardManagerRole: false
+        };
+      }
+
+      // Get role constants first
+      const [defaultAdminRole, adminRole, managerRole] = await Promise.all([
         readContract({
           contract: LEADERBOARD_CONTRACT,
           method: "DEFAULT_ADMIN_ROLE",
@@ -90,17 +227,20 @@ export default function AdminPage() {
           contract: LEADERBOARD_CONTRACT,
           method: "LEADERBOARD_MANAGER_ROLE",
           params: []
-        }),
-        // Check if wallet has roles
-        readContract({
-          contract: LEADERBOARD_CONTRACT,
-          method: "hasRole",
-          params: [0x0000000000000000000000000000000000000000000000000000000000000000n, account.address] // DEFAULT_ADMIN_ROLE is bytes32(0)
-        }),
+        })
+      ]);
+
+      // Now check if wallet has these roles
+      const [hasDefaultAdmin, hasAdmin, hasManager] = await Promise.all([
         readContract({
           contract: LEADERBOARD_CONTRACT,
           method: "hasRole",
           params: [defaultAdminRole, account.address]
+        }),
+        readContract({
+          contract: LEADERBOARD_CONTRACT,
+          method: "hasRole",
+          params: [adminRole, account.address]
         }),
         readContract({
           contract: LEADERBOARD_CONTRACT,
@@ -117,8 +257,8 @@ export default function AdminPage() {
 
       addLog(`Admin roles: DEFAULT_ADMIN=${hasDefaultAdmin}, ADMIN=${hasAdmin}, MANAGER=${hasManager}`);
       
-      if (!hasDefaultAdmin && !hasAdmin && !hasManager) {
-        addLog('⚠️ Wallet has no admin roles - transactions will fail', 'error');
+      if (hasDefaultAdmin || hasAdmin || hasManager) {
+        addLog('✅ Contract is initialized and you have admin access!', 'success');
       }
 
       return roles;
@@ -132,27 +272,51 @@ export default function AdminPage() {
     }
   };
 
-  // Check cycle status
+  // Check cycle status using the correct contract methods
   const checkCycleStatus = async (cycle: number): Promise<CycleStatus> => {
     try {
-      const isInitialized = await LeaderboardSyncService.isCycleInitialized(cycle);
+      // First try the simple finalized check
+      const finalized = await readContract({
+        contract: LEADERBOARD_CONTRACT,
+        method: "isLeaderboardFinalized",
+        params: [BigInt(cycle)]
+      });
       
-      // If initialized, try to get stats
-      let totalUpdates = 0;
-      let leaderboardSize = 0;
-      let lastUpdate = 0;
-      
-      if (isInitialized) {
-        // TODO: Add stats fetching when cycle is initialized
+      if (finalized) {
+        // If finalized, try to get detailed stats
+        try {
+          const [totalParticipants, totalVotes, rewardPool, isFinalized, finalizedAt] = await readContract({
+            contract: LEADERBOARD_CONTRACT,
+            method: "getCycleStats",
+            params: [BigInt(cycle)]
+          });
+          
+          return {
+            cycle,
+            initialized: true,
+            totalUpdates: Number(totalVotes),
+            leaderboardSize: Number(totalParticipants),
+            lastUpdate: Number(finalizedAt)
+          };
+        } catch (statsError) {
+          addLog(`Cycle ${cycle} is finalized but stats unavailable: ${statsError}`, 'info');
+          return {
+            cycle,
+            initialized: true,
+            totalUpdates: 0,
+            leaderboardSize: 0,
+            lastUpdate: 0
+          };
+        }
+      } else {
+        return {
+          cycle,
+          initialized: false,
+          totalUpdates: 0,
+          leaderboardSize: 0,
+          lastUpdate: 0
+        };
       }
-
-      return {
-        cycle,
-        initialized: isInitialized,
-        totalUpdates,
-        leaderboardSize,
-        lastUpdate
-      };
     } catch (error) {
       console.error(`Failed to check cycle ${cycle}:`, error);
       return {
@@ -165,59 +329,223 @@ export default function AdminPage() {
     }
   };
 
-  // Load cycle statuses
+  // Load all statuses
   const loadCycleStatuses = async () => {
     setIsLoading(true);
-    addLog('Loading cycle statuses...');
+    addLog('Loading all contract and cycle statuses...');
     
     try {
-      // Check admin roles and cycle statuses in parallel
-      const [roles, ...statuses] = await Promise.all([
+      // Check admin roles, contract statuses, and cycle statuses in parallel
+      const [roles, contractStat, ...statuses] = await Promise.all([
         checkAdminRoles(),
+        checkAllContractStatuses(),
         ...([1, 2, 3].map(cycle => checkCycleStatus(cycle)))
       ]);
       
       setAdminRoles(roles);
+      setContractStatus(contractStat);
       setCycleStatuses(statuses);
       addLog(`Loaded status for ${statuses.length} cycles`);
       
       const initializedCount = statuses.filter(s => s.initialized).length;
       addLog(`Found ${initializedCount} initialized cycles`, 'success');
+      
+      // Determine current step based on contract statuses
+      if (!contractStat.voting.initialized) {
+        setCurrentStep(1);
+      } else if (contractStat.voting.currentCycle === 0) {
+        setCurrentStep(2);
+      } else if (!contractStat.leaderboard.initialized) {
+        setCurrentStep(3);
+      } else {
+        setCurrentStep(4);
+      }
+      
     } catch (error) {
-      addLog(`Failed to load cycle statuses: ${error}`, 'error');
+      addLog(`Failed to load statuses: ${error}`, 'error');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Initialize a cycle
-  const initializeCycle = async (cycle: number) => {
+  // STEP 1: Initialize Voting Contract
+  const initializeVotingContract = async () => {
     if (!account) {
       addLog('Please connect your wallet first', 'error');
       return;
     }
 
-    addLog(`Initializing cycle ${cycle}...`);
+    addLog('Step 1: Initializing voting contract...');
+
+    try {
+      const cardCatalogAddress = import.meta.env.VITE_CARD_CATALOG_ADDRESS || '';
+      const nftAddress = import.meta.env.VITE_EVERMARK_NFT_ADDRESS || '';
+      
+      addLog(`Using Card Catalog address: ${cardCatalogAddress}`);
+      addLog(`Using NFT address: ${nftAddress}`);
+      
+      const transaction = prepareContractCall({
+        contract: VOTING_CONTRACT,
+        method: "initialize",
+        params: [cardCatalogAddress, nftAddress]
+      });
+
+      sendTx(transaction, {
+        onSuccess: (result) => {
+          addLog('✅ Voting contract initialized successfully!', 'success');
+          addLog(`Transaction hash: ${result.transactionHash}`, 'info');
+          setCurrentStep(2);
+          setTimeout(() => checkAllContractStatuses().then(setContractStatus), 3000);
+        },
+        onError: (error) => {
+          addLog(`Failed to initialize voting contract: ${error.message}`, 'error');
+        }
+      });
+    } catch (error) {
+      addLog(`Failed to prepare voting initialization: ${error}`, 'error');
+    }
+  };
+
+  // STEP 2: Start First Voting Cycle  
+  const startFirstVotingCycle = async () => {
+    if (!account) {
+      addLog('Please connect your wallet first', 'error');
+      return;
+    }
+
+    addLog('Step 2: Starting first voting cycle...');
+
+    try {
+      const transaction = prepareContractCall({
+        contract: VOTING_CONTRACT,
+        method: "startNewVotingCycle",
+        params: []
+      });
+
+      sendTx(transaction, {
+        onSuccess: (result) => {
+          addLog('✅ First voting cycle started successfully!', 'success');
+          addLog(`Transaction hash: ${result.transactionHash}`, 'info');
+          setCurrentStep(3);
+          setTimeout(() => checkAllContractStatuses().then(setContractStatus), 3000);
+        },
+        onError: (error) => {
+          addLog(`Failed to start voting cycle: ${error.message}`, 'error');
+        }
+      });
+    } catch (error) {
+      addLog(`Failed to prepare voting cycle start: ${error}`, 'error');
+    }
+  };
+
+  // STEP 3: Initialize Leaderboard Contract
+  const initializeLeaderboardContract = async () => {
+    if (!account) {
+      addLog('Please connect your wallet first', 'error');
+      return;
+    }
+
+    addLog('Step 3: Initializing leaderboard contract...');
+
+    try {
+      const votingAddress = import.meta.env.VITE_EVERMARK_VOTING_ADDRESS || '';
+      const nftAddress = import.meta.env.VITE_EVERMARK_NFT_ADDRESS || '';
+      
+      addLog(`Using voting address: ${votingAddress}`);
+      addLog(`Using NFT address: ${nftAddress}`);
+      
+      const transaction = prepareContractCall({
+        contract: LEADERBOARD_CONTRACT,
+        method: "initialize",
+        params: [
+          votingAddress,
+          nftAddress,
+          '0x0000000000000000000000000000000000000000' // rewards contract (can be zero address)
+        ]
+      });
+
+      sendTx(transaction, {
+        onSuccess: (result) => {
+          addLog('✅ Leaderboard contract initialized successfully!', 'success');
+          addLog(`Transaction hash: ${result.transactionHash}`, 'info');
+          addLog('🎉 All contracts initialized! Ready for testing!', 'success');
+          setCurrentStep(4);
+          setTimeout(() => {
+            checkAllContractStatuses().then(setContractStatus);
+            loadCycleStatuses();
+          }, 3000);
+        },
+        onError: (error) => {
+          addLog(`Failed to initialize leaderboard: ${error.message}`, 'error');
+        }
+      });
+    } catch (error) {
+      addLog(`Failed to prepare leaderboard initialization: ${error}`, 'error');
+    }
+  };
+
+  // Finalize a cycle (this is how cycles get "initialized" in this contract)
+  const finalizeCycle = async (cycle: number) => {
+    if (!account) {
+      addLog('Please connect your wallet first', 'error');
+      return;
+    }
+
+    addLog(`Finalizing cycle ${cycle}...`);
 
     try {
       const transaction = prepareContractCall({
         contract: LEADERBOARD_CONTRACT,
-        method: "function initializeCycle(uint256 cycle)",
+        method: "finalizeLeaderboard",
         params: [BigInt(cycle)]
       });
 
       sendTx(transaction, {
         onSuccess: (result) => {
-          addLog(`Cycle ${cycle} initialized successfully!`, 'success');
+          addLog(`Cycle ${cycle} finalized successfully!`, 'success');
           addLog(`Transaction hash: ${result.transactionHash}`, 'info');
-          setTimeout(() => loadCycleStatuses(), 3000); // Reload after 3 seconds
+          setTimeout(() => loadCycleStatuses(), 3000);
         },
         onError: (error) => {
-          addLog(`Failed to initialize cycle ${cycle}: ${error.message}`, 'error');
+          addLog(`Failed to finalize cycle ${cycle}: ${error.message}`, 'error');
+          addLog('Trying emergency finalization instead...', 'info');
+          emergencyFinalizeCycle(cycle);
         }
       });
     } catch (error) {
-      addLog(`Failed to prepare transaction: ${error}`, 'error');
+      addLog(`Failed to finalize cycle: ${error}`, 'error');
+    }
+  };
+
+  // Emergency finalize cycle (bypasses voting requirements)
+  const emergencyFinalizeCycle = async (cycle: number) => {
+    if (!account) {
+      addLog('Please connect your wallet first', 'error');
+      return;
+    }
+
+    addLog(`Emergency finalizing cycle ${cycle}...`);
+
+    try {
+      const transaction = prepareContractCall({
+        contract: LEADERBOARD_CONTRACT,
+        method: "emergencyFinalizeLeaderboard",
+        params: [BigInt(cycle)]
+      });
+
+      sendTx(transaction, {
+        onSuccess: (result) => {
+          addLog(`Cycle ${cycle} emergency finalized!`, 'success');
+          addLog(`Transaction hash: ${result.transactionHash}`, 'info');
+          addLog('Cycle is now finalized (empty leaderboard)', 'info');
+          setTimeout(() => loadCycleStatuses(), 3000);
+        },
+        onError: (error) => {
+          addLog(`Failed to emergency finalize cycle ${cycle}: ${error.message}`, 'error');
+        }
+      });
+    } catch (error) {
+      addLog(`Failed to emergency finalize cycle: ${error}`, 'error');
     }
   };
 
@@ -402,26 +730,184 @@ export default function AdminPage() {
               <div className="flex space-x-2 mt-4">
                 {!status.initialized ? (
                   <button
-                    onClick={() => initializeCycle(status.cycle)}
+                    onClick={() => finalizeCycle(status.cycle)}
                     disabled={isPending}
                     className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-medium transition-colors disabled:opacity-50"
                   >
                     <Play className="h-3 w-3" />
-                    <span>Initialize</span>
+                    <span>Finalize</span>
                   </button>
                 ) : (
                   <button
-                    onClick={() => updateLeaderboard(status.cycle)}
+                    onClick={() => emergencyFinalizeCycle(status.cycle)}
                     disabled={isPending}
-                    className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors disabled:opacity-50"
+                    className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded text-sm font-medium transition-colors disabled:opacity-50"
                   >
                     <BarChart3 className="h-3 w-3" />
-                    <span>Update Data</span>
+                    <span>Emergency Finalize</span>
                   </button>
                 )}
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Contract Status Overview */}
+        {contractStatus && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div className={`p-4 rounded-lg border ${
+              contractStatus.nft.initialized ? 'bg-green-900/20 border-green-500/50' : 'bg-red-900/20 border-red-500/50'
+            }`}>
+              <h3 className="font-semibold mb-2 flex items-center space-x-2">
+                <span>🎨 EvermarkNFT</span>
+                {contractStatus.nft.initialized ? <CheckCircle className="h-4 w-4 text-green-400" /> : <AlertTriangle className="h-4 w-4 text-red-400" />}
+              </h3>
+              <p className="text-sm">{contractStatus.nft.totalSupply} NFTs minted</p>
+            </div>
+            
+            <div className={`p-4 rounded-lg border ${
+              contractStatus.voting.initialized ? 'bg-green-900/20 border-green-500/50' : 'bg-red-900/20 border-red-500/50'
+            }`}>
+              <h3 className="font-semibold mb-2 flex items-center space-x-2">
+                <span>🗺️ EvermarkVoting</span>
+                {contractStatus.voting.initialized ? <CheckCircle className="h-4 w-4 text-green-400" /> : <AlertTriangle className="h-4 w-4 text-red-400" />}
+              </h3>
+              <p className="text-sm">
+                {contractStatus.voting.initialized ? `Cycle ${contractStatus.voting.currentCycle}` : 'Not initialized'}
+              </p>
+            </div>
+            
+            <div className={`p-4 rounded-lg border ${
+              contractStatus.leaderboard.initialized ? 'bg-green-900/20 border-green-500/50' : 'bg-red-900/20 border-red-500/50'
+            }`}>
+              <h3 className="font-semibold mb-2 flex items-center space-x-2">
+                <span>🏆 EvermarkLeaderboard</span>
+                {contractStatus.leaderboard.initialized ? <CheckCircle className="h-4 w-4 text-green-400" /> : <AlertTriangle className="h-4 w-4 text-red-400" />}
+              </h3>
+              <p className="text-sm">
+                {contractStatus.leaderboard.initialized ? 'Initialized' : 'Not initialized'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Step-by-Step Initialization */}
+        <div className="bg-gray-800 rounded-lg p-6 border border-gray-700 mb-8">
+          <h2 className="text-xl font-semibold mb-6 flex items-center space-x-2">
+            <Settings className="h-5 w-5 text-cyan-400" />
+            <span>Contract Initialization Wizard</span>
+          </h2>
+          
+          <div className="space-y-6">
+            {/* Step 1: Initialize Voting Contract */}
+            <div className={`p-4 rounded-lg border ${
+              currentStep === 1 ? 'border-cyan-400 bg-cyan-900/20' : 
+              currentStep > 1 ? 'border-green-500 bg-green-900/20' : 
+              'border-gray-600 bg-gray-700/20'
+            }`}>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold flex items-center space-x-2">
+                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-sm ${
+                    currentStep > 1 ? 'bg-green-500 text-black' : 
+                    currentStep === 1 ? 'bg-cyan-400 text-black' : 
+                    'bg-gray-600 text-white'
+                  }`}>1</span>
+                  <span>Initialize Voting Contract</span>
+                </h3>
+                {currentStep > 1 && <CheckCircle className="h-5 w-5 text-green-400" />}
+              </div>
+              <p className="text-sm text-gray-300 mb-3">
+                Connect the voting contract to Card Catalog and NFT contracts
+              </p>
+              {currentStep === 1 && (
+                <button
+                  onClick={initializeVotingContract}
+                  disabled={isPending}
+                  className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded font-medium transition-colors disabled:opacity-50"
+                >
+                  🚀 Initialize Voting Contract
+                </button>
+              )}
+            </div>
+
+            {/* Step 2: Start Voting Cycle */}
+            <div className={`p-4 rounded-lg border ${
+              currentStep === 2 ? 'border-cyan-400 bg-cyan-900/20' : 
+              currentStep > 2 ? 'border-green-500 bg-green-900/20' : 
+              'border-gray-600 bg-gray-700/20'
+            }`}>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold flex items-center space-x-2">
+                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-sm ${
+                    currentStep > 2 ? 'bg-green-500 text-black' : 
+                    currentStep === 2 ? 'bg-cyan-400 text-black' : 
+                    'bg-gray-600 text-white'
+                  }`}>2</span>
+                  <span>Start First Voting Cycle</span>
+                </h3>
+                {currentStep > 2 && <CheckCircle className="h-5 w-5 text-green-400" />}
+              </div>
+              <p className="text-sm text-gray-300 mb-3">
+                Create the first voting cycle for users to delegate votes
+              </p>
+              {currentStep === 2 && (
+                <button
+                  onClick={startFirstVotingCycle}
+                  disabled={isPending}
+                  className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded font-medium transition-colors disabled:opacity-50"
+                >
+                  🗺️ Start Voting Cycle
+                </button>
+              )}
+            </div>
+
+            {/* Step 3: Initialize Leaderboard */}
+            <div className={`p-4 rounded-lg border ${
+              currentStep === 3 ? 'border-cyan-400 bg-cyan-900/20' : 
+              currentStep > 3 ? 'border-green-500 bg-green-900/20' : 
+              'border-gray-600 bg-gray-700/20'
+            }`}>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold flex items-center space-x-2">
+                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-sm ${
+                    currentStep > 3 ? 'bg-green-500 text-black' : 
+                    currentStep === 3 ? 'bg-cyan-400 text-black' : 
+                    'bg-gray-600 text-white'
+                  }`}>3</span>
+                  <span>Initialize Leaderboard Contract</span>
+                </h3>
+                {currentStep > 3 && <CheckCircle className="h-5 w-5 text-green-400" />}
+              </div>
+              <p className="text-sm text-gray-300 mb-3">
+                Connect leaderboard to voting and NFT contracts for final rankings
+              </p>
+              {currentStep === 3 && (
+                <button
+                  onClick={initializeLeaderboardContract}
+                  disabled={isPending}
+                  className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded font-medium transition-colors disabled:opacity-50"
+                >
+                  🏆 Initialize Leaderboard
+                </button>
+              )}
+            </div>
+
+            {/* Step 4: Ready for Use */}
+            {currentStep >= 4 && (
+              <div className="p-4 rounded-lg border border-green-500 bg-green-900/20">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold flex items-center space-x-2">
+                    <span className="w-6 h-6 rounded-full bg-green-500 text-black flex items-center justify-center text-sm">4</span>
+                    <span>System Ready!</span>
+                  </h3>
+                  <CheckCircle className="h-5 w-5 text-green-400" />
+                </div>
+                <p className="text-sm text-gray-300 mb-3">
+                  🎉 All contracts are initialized and ready for use! You can now finalize leaderboard cycles.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Quick Actions */}
@@ -433,7 +919,7 @@ export default function AdminPage() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-300">Initialize New Cycle</h3>
+              <h3 className="text-lg font-medium text-gray-300">Finalize Cycle</h3>
               <div className="flex space-x-2">
                 <select
                   value={selectedCycle}
@@ -445,25 +931,29 @@ export default function AdminPage() {
                   ))}
                 </select>
                 <button
-                  onClick={() => initializeCycle(selectedCycle)}
+                  onClick={() => finalizeCycle(selectedCycle)}
                   disabled={isPending}
                   className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-medium transition-colors disabled:opacity-50"
                 >
-                  Initialize Cycle {selectedCycle}
+                  Finalize Cycle {selectedCycle}
                 </button>
+              </div>
+              <div className="text-xs text-gray-400">
+                ⚠️ If normal finalization fails, try emergency finalization from cycle cards above
               </div>
             </div>
             
             <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-300">Beta Setup</h3>
+              <h3 className="text-lg font-medium text-gray-300">Contract Status</h3>
               <div className="text-sm text-gray-400">
-                <p>For beta launch:</p>
-                <ol className="list-decimal list-inside space-y-1 mt-2">
-                  <li>Initialize Cycle 1</li>
-                  <li>Check for existing voting data</li>
-                  <li>Update leaderboard if data exists</li>
-                  <li>Test leaderboard display</li>
-                </ol>
+                <div className="space-y-2">
+                  <div>Contract: 0x89117B7a9ef008d27443fC3845a5E2AB7C75eae0</div>
+                  <div>Voting: 0x174cEA217d2331880E6c1ccA9DD9a5F59A28178D</div>
+                  <div>NFT: 0x12cB9a1fAfcC389dafCd80cC0eD49739DdB4EdCc</div>
+                  <div className="text-yellow-400">
+                    🔧 Contract may need voting system setup first
+                  </div>
+                </div>
               </div>
             </div>
           </div>

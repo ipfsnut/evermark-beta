@@ -131,7 +131,9 @@ const QuickSupabaseTest = () => {
 // Real Protocol Stats using the evermarks hook
 const ProtocolStats: React.FC = () => {
   const isMobile = useIsMobile();
+  console.log('📊 ProtocolStats component rendering');
   const { totalCount, evermarks, isLoading } = useEvermarksState();
+  console.log('📈 ProtocolStats state:', { totalCount, evermarksCount: evermarks?.length || 0, isLoading });
   
   // Calculate stats from real data with null checks
   const safeEvermarks = Array.isArray(evermarks) ? evermarks : [];

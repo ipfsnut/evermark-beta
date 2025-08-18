@@ -91,34 +91,34 @@
 				"internalType": "uint256",
 				"name": "cycle",
 				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "totalRewards",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "recipientCount",
+				"type": "uint256"
 			}
 		],
-		"name": "CycleInitialized",
+		"name": "CreatorRewardsDistributed",
 		"type": "event"
 	},
 	{
 		"anonymous": false,
 		"inputs": [
 			{
-				"indexed": true,
-				"internalType": "uint256",
-				"name": "cycle",
-				"type": "uint256"
-			},
-			{
 				"indexed": false,
 				"internalType": "uint256",
-				"name": "evermarkId",
+				"name": "timestamp",
 				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"internalType": "string",
-				"name": "reason",
-				"type": "string"
 			}
 		],
-		"name": "GasOptimizationSkipped",
+		"name": "EmergencyPauseSet",
 		"type": "event"
 	},
 	{
@@ -138,25 +138,25 @@
 		"anonymous": false,
 		"inputs": [
 			{
-				"indexed": true,
-				"internalType": "uint256",
-				"name": "cycle",
-				"type": "uint256"
+				"indexed": false,
+				"internalType": "address",
+				"name": "voting",
+				"type": "address"
 			},
 			{
 				"indexed": false,
-				"internalType": "uint256",
-				"name": "evermarkId",
-				"type": "uint256"
+				"internalType": "address",
+				"name": "nft",
+				"type": "address"
 			},
 			{
 				"indexed": false,
-				"internalType": "string",
-				"name": "optimizationType",
-				"type": "string"
+				"internalType": "address",
+				"name": "rewards",
+				"type": "address"
 			}
 		],
-		"name": "LeaderboardOptimizationUsed",
+		"name": "LeaderboardConfigUpdated",
 		"type": "event"
 	},
 	{
@@ -169,25 +169,13 @@
 				"type": "uint256"
 			},
 			{
-				"indexed": true,
-				"internalType": "uint256",
-				"name": "evermarkId",
-				"type": "uint256"
-			},
-			{
 				"indexed": false,
 				"internalType": "uint256",
-				"name": "newVotes",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "position",
+				"name": "totalParticipants",
 				"type": "uint256"
 			}
 		],
-		"name": "LeaderboardUpdated",
+		"name": "LeaderboardFinalized",
 		"type": "event"
 	},
 	{
@@ -345,19 +333,6 @@
 	},
 	{
 		"inputs": [],
-		"name": "LEADERBOARD_SIZE",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
 		"name": "MAX_BATCH_SIZE",
 		"outputs": [
 			{
@@ -371,7 +346,7 @@
 	},
 	{
 		"inputs": [],
-		"name": "MAX_QUERY_SIZE",
+		"name": "MAX_LEADERBOARD_SIZE",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -409,6 +384,70 @@
 		"type": "function"
 	},
 	{
+		"inputs": [],
+		"name": "clearEmergencyPause",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "currentProcessedCycle",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "cycleData",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "cycle",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "totalParticipants",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "totalVotes",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "rewardPool",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bool",
+				"name": "finalized",
+				"type": "bool"
+			},
+			{
+				"internalType": "uint256",
+				"name": "finalizedAt",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
 		"inputs": [
 			{
 				"internalType": "uint256",
@@ -416,12 +455,12 @@
 				"type": "uint256"
 			},
 			{
-				"internalType": "uint256[]",
-				"name": "evermarkIds",
-				"type": "uint256[]"
+				"internalType": "uint256",
+				"name": "rewardPool",
+				"type": "uint256"
 			}
 		],
-		"name": "batchUpdateLeaderboard",
+		"name": "distributeCreatorRewards",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -430,101 +469,18 @@
 		"inputs": [
 			{
 				"internalType": "uint256",
-				"name": "",
+				"name": "cycle",
 				"type": "uint256"
 			}
 		],
-		"name": "cycleInitialized",
-		"outputs": [
-			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"name": "cycleLeaderboards",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "evermarkId",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "votes",
-				"type": "uint256"
-			},
-			{
-				"internalType": "address",
-				"name": "creator",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"name": "cycleUpdateCount",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
+		"name": "emergencyFinalizeLeaderboard",
+		"outputs": [],
+		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
 		"inputs": [],
 		"name": "emergencyPauseTimestamp",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"name": "evermarkLastUpdate",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -561,12 +517,25 @@
 				"type": "uint256"
 			}
 		],
-		"name": "evermarkPositions",
+		"name": "evermarkRanks",
 		"outputs": [
 			{
 				"internalType": "uint256",
 				"name": "",
 				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "evermarkRewards",
+		"outputs": [
+			{
+				"internalType": "contract IEvermarkRewards",
+				"name": "",
+				"type": "address"
 			}
 		],
 		"stateMutability": "view",
@@ -593,27 +562,45 @@
 				"type": "uint256"
 			}
 		],
+		"name": "finalizeLeaderboard",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "cycle",
+				"type": "uint256"
+			}
+		],
 		"name": "getCycleStats",
 		"outputs": [
 			{
 				"internalType": "uint256",
-				"name": "totalUpdates",
+				"name": "totalParticipants",
 				"type": "uint256"
 			},
 			{
 				"internalType": "uint256",
-				"name": "leaderboardSize",
+				"name": "totalVotes",
 				"type": "uint256"
 			},
 			{
 				"internalType": "uint256",
-				"name": "lastUpdate",
+				"name": "rewardPool",
 				"type": "uint256"
 			},
 			{
 				"internalType": "bool",
-				"name": "initialized",
+				"name": "finalized",
 				"type": "bool"
+			},
+			{
+				"internalType": "uint256",
+				"name": "finalizedAt",
+				"type": "uint256"
 			}
 		],
 		"stateMutability": "view",
@@ -652,46 +639,7 @@
 			},
 			{
 				"internalType": "uint256",
-				"name": "evermarkId",
-				"type": "uint256"
-			}
-		],
-		"name": "getEvermarkUpdateInfo",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "position",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "lastUpdateBlockNum",
-				"type": "uint256"
-			},
-			{
-				"internalType": "bool",
-				"name": "onLeaderboard",
-				"type": "bool"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "cycle",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "startRank",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "count",
+				"name": "limit",
 				"type": "uint256"
 			}
 		],
@@ -705,17 +653,22 @@
 						"type": "uint256"
 					},
 					{
+						"internalType": "address",
+						"name": "creator",
+						"type": "address"
+					},
+					{
 						"internalType": "uint256",
 						"name": "votes",
 						"type": "uint256"
 					},
 					{
-						"internalType": "address",
-						"name": "creator",
-						"type": "address"
+						"internalType": "uint256",
+						"name": "rank",
+						"type": "uint256"
 					}
 				],
-				"internalType": "struct LiveLeaderboard.LeaderboardEntry[]",
+				"internalType": "struct EvermarkLeaderboard.LeaderboardEntry[]",
 				"name": "",
 				"type": "tuple[]"
 			}
@@ -729,9 +682,126 @@
 				"internalType": "uint256",
 				"name": "cycle",
 				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "rank",
+				"type": "uint256"
 			}
 		],
-		"name": "getLeaderboardSize",
+		"name": "getLeaderboardEntry",
+		"outputs": [
+			{
+				"components": [
+					{
+						"internalType": "uint256",
+						"name": "evermarkId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "address",
+						"name": "creator",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "votes",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "rank",
+						"type": "uint256"
+					}
+				],
+				"internalType": "struct EvermarkLeaderboard.LeaderboardEntry",
+				"name": "",
+				"type": "tuple"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "cycle",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "page",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "pageSize",
+				"type": "uint256"
+			}
+		],
+		"name": "getLeaderboardPage",
+		"outputs": [
+			{
+				"components": [
+					{
+						"internalType": "uint256",
+						"name": "evermarkId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "address",
+						"name": "creator",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "votes",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "rank",
+						"type": "uint256"
+					}
+				],
+				"internalType": "struct EvermarkLeaderboard.LeaderboardEntry[]",
+				"name": "entries",
+				"type": "tuple[]"
+			},
+			{
+				"internalType": "uint256",
+				"name": "totalPages",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "totalEntries",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "rank",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "totalParticipants",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "totalRewardPool",
+				"type": "uint256"
+			}
+		],
+		"name": "getRewardForRank",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -739,7 +809,7 @@
 				"type": "uint256"
 			}
 		],
-		"stateMutability": "view",
+		"stateMutability": "pure",
 		"type": "function"
 	},
 	{
@@ -770,11 +840,11 @@
 			},
 			{
 				"internalType": "uint256",
-				"name": "n",
+				"name": "count",
 				"type": "uint256"
 			}
 		],
-		"name": "getTopN",
+		"name": "getTopEntries",
 		"outputs": [
 			{
 				"components": [
@@ -784,22 +854,40 @@
 						"type": "uint256"
 					},
 					{
+						"internalType": "address",
+						"name": "creator",
+						"type": "address"
+					},
+					{
 						"internalType": "uint256",
 						"name": "votes",
 						"type": "uint256"
 					},
 					{
-						"internalType": "address",
-						"name": "creator",
-						"type": "address"
+						"internalType": "uint256",
+						"name": "rank",
+						"type": "uint256"
 					}
 				],
-				"internalType": "struct LiveLeaderboard.LeaderboardEntry[]",
+				"internalType": "struct EvermarkLeaderboard.LeaderboardEntry[]",
 				"name": "",
 				"type": "tuple[]"
 			}
 		],
 		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "manager",
+				"type": "address"
+			}
+		],
+		"name": "grantLeaderboardManagerRole",
+		"outputs": [],
+		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
@@ -855,6 +943,11 @@
 				"internalType": "address",
 				"name": "_evermarkNFT",
 				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "_evermarkRewards",
+				"type": "address"
 			}
 		],
 		"name": "initialize",
@@ -868,14 +961,9 @@
 				"internalType": "uint256",
 				"name": "cycle",
 				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "evermarkId",
-				"type": "uint256"
 			}
 		],
-		"name": "isEvermarkOnLeaderboard",
+		"name": "isLeaderboardFinalized",
 		"outputs": [
 			{
 				"internalType": "bool",
@@ -892,13 +980,33 @@
 				"internalType": "uint256",
 				"name": "",
 				"type": "uint256"
-			}
-		],
-		"name": "lastUpdateBlock",
-		"outputs": [
+			},
 			{
 				"internalType": "uint256",
 				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "leaderboardEntries",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "evermarkId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "creator",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "votes",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "rank",
 				"type": "uint256"
 			}
 		],
@@ -952,6 +1060,19 @@
 			}
 		],
 		"name": "renounceRole",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "manager",
+				"type": "address"
+			}
+		],
+		"name": "revokeLeaderboardManagerRole",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -1024,27 +1145,14 @@
 				"internalType": "address",
 				"name": "_evermarkNFT",
 				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "_evermarkRewards",
+				"type": "address"
 			}
 		],
 		"name": "updateContracts",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "cycle",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "evermarkId",
-				"type": "uint256"
-			}
-		],
-		"name": "updateEvermarkInLeaderboard",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
