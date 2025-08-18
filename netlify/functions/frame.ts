@@ -3,8 +3,8 @@ import { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.VITE_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_ANON_KEY!
 );
 
 const headers = {
@@ -15,7 +15,7 @@ const headers = {
 function generateFrameHTML(evermark: any, baseUrl: string) {
   const title = evermark?.title || 'Evermark Protocol';
   const description = evermark?.description || 'Content preserved forever on blockchain';
-  const image = evermark?.processed_image_url || evermark?.token_uri || `${baseUrl}/og-image.png`;
+  const image = evermark?.supabase_image_url || evermark?.token_uri || `${baseUrl}/og-image.png`;
   const author = evermark?.author || 'Anonymous';
   const tokenId = evermark?.token_id;
 

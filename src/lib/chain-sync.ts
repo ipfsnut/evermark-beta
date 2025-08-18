@@ -5,13 +5,13 @@ import { getNFT, totalSupply } from 'thirdweb/extensions/erc721';
 import { supabase } from './supabase';
 
 const client = createThirdwebClient({
-  clientId: import.meta.env.VITE_THIRDWEB_CLIENT_ID!
+  clientId: process.env.VITE_THIRDWEB_CLIENT_ID || import.meta.env?.VITE_THIRDWEB_CLIENT_ID!
 });
 
 const contract = getContract({
   client,
   chain: base,
-  address: import.meta.env.VITE_EVERMARK_NFT_ADDRESS!
+  address: process.env.VITE_EVERMARK_NFT_ADDRESS || import.meta.env?.VITE_EVERMARK_NFT_ADDRESS!
 });
 
 /**
