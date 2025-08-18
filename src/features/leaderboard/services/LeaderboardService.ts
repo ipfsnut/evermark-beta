@@ -14,7 +14,7 @@ import {
 
 // Your actual contract configuration
 const LEADERBOARD_CONTRACT = {
-  address: (import.meta.env.VITE_EVERMARK_LEADERBOARD_ADDRESS || '') as const,
+  address: import.meta.env.VITE_EVERMARK_LEADERBOARD_ADDRESS || '',
   abi: [
     {
       "inputs": [
