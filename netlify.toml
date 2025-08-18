@@ -5,7 +5,7 @@
   targetPort = 3000
   port = 8888
   functionsPort = 9999
-  autoLaunch = false
+  autoLaunch = true  # Auto-open the correct port (8888) with full functionality
   framework = "#custom"
 
 [build]
@@ -43,6 +43,11 @@
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/api/evermarks"
+  to = "/.netlify/functions/evermarks"
   status = 200
 
 [[redirects]]

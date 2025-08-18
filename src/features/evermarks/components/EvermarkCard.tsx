@@ -215,7 +215,7 @@ export function EvermarkCard({
             <SimpleEvermarkImage
               tokenId={evermark.tokenId}
               ipfsHash={evermark.ipfsHash}
-              originalUrl={evermark.processed_image_url}
+              originalUrl={evermark.supabaseImageUrl}
               variant="list"
               onLoad={() => {
                 if (showPerformanceInfo) {
@@ -301,7 +301,7 @@ export function EvermarkCard({
           <SimpleEvermarkImage
             tokenId={evermark.tokenId}
             ipfsHash={evermark.ipfsHash}
-            originalUrl={evermark.processed_image_url}
+            originalUrl={evermark.supabaseImageUrl}
             variant={variant}
             onLoad={() => {
               if (showPerformanceInfo) {

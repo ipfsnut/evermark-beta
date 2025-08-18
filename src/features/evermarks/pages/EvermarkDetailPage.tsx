@@ -341,12 +341,12 @@ export default function EvermarkDetailPage() {
             </div>
 
             {/* Featured Image */}
-            {(evermark.image || evermark.supabaseImageUrl || evermark.processed_image_url) && (
+            {(evermark.image || evermark.supabaseImageUrl) && (
               <div className="relative">
                 <SimpleEvermarkImage
                   tokenId={evermark.tokenId}
                   ipfsHash={evermark.ipfsHash}
-                  originalUrl={evermark.processed_image_url}
+                  originalUrl={evermark.supabaseImageUrl}
                   variant="hero"
                   alt={evermark.title}
                   className="w-full h-64 md:h-96 object-cover rounded-lg border border-gray-700"

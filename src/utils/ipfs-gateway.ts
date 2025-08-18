@@ -84,7 +84,6 @@ export function getRandomIPFSGateway(): string {
  */
 export function processEvermarkImages<T extends { 
   image?: string;
-  processed_image_url?: string;
   supabaseImageUrl?: string;
   thumbnailUrl?: string;
 }>(evermark: T): T {
@@ -100,9 +99,6 @@ export function processEvermarkImages<T extends {
     processed.image = replaceIPFSGateway(processed.image);
   }
   
-  if (processed.processed_image_url && isProblematicGateway(processed.processed_image_url)) {
-    processed.processed_image_url = replaceIPFSGateway(processed.processed_image_url);
-  }
   
   if (processed.thumbnailUrl && isProblematicGateway(processed.thumbnailUrl)) {
     processed.thumbnailUrl = replaceIPFSGateway(processed.thumbnailUrl);
@@ -116,7 +112,6 @@ export function processEvermarkImages<T extends {
  */
 export function processEvermarkImagesArray<T extends { 
   image?: string;
-  processed_image_url?: string;
   supabaseImageUrl?: string;
   thumbnailUrl?: string;
 }>(evermarks: T[]): T[] {

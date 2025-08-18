@@ -54,8 +54,9 @@ export default defineConfig(({ mode }) => {
     // Server configuration
     server: {
       port: 3000,
-      open: true,
+      open: false, // Don't auto-open - Netlify dev handles the correct port (8888)
       cors: true,
+      host: 'localhost',
     },
 
     // Build configuration

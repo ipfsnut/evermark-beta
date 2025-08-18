@@ -34,11 +34,16 @@ const TempEvermarkService = {
   }),
   fetchEvermarks: async (options: EvermarkFeedOptions): Promise<EvermarkFeedResult> => {
     try {
+      console.log('🔄 TempEvermarkService.fetchEvermarks called with options:', options);
+      
       // Simple API call to our evermarks endpoint
-      const response = await fetch('/.netlify/functions/evermarks', {
+      // Use /api/ path which is redirected to /.netlify/functions/
+      const response = await fetch('/api/evermarks', {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
+      
+      console.log('📡 API response status:', response.status, response.statusText);
       
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`);
@@ -70,8 +75,7 @@ const TempEvermarkService = {
           tokenId: item.token_id, // Add tokenId for components
           tags: tags, // Ensure tags is always an array
           ipfsHash: item.ipfs_image_hash, // Map IPFS hash
-          processed_image_url: item.processed_image_url, // Map processed image URL
-          image: item.ipfs_image_hash ? `ipfs://${item.ipfs_image_hash}` : item.processed_image_url, // Add image field
+          image: item.supabase_image_url || (item.ipfs_image_hash ? `ipfs://${item.ipfs_image_hash}` : undefined), // Prioritize Supabase cached images
           createdAt: item.created_at || new Date().toISOString(),
           updatedAt: item.updated_at || item.created_at || new Date().toISOString(),
           contentType: item.content_type,
@@ -107,7 +111,7 @@ const TempEvermarkService = {
   fetchEvermark: async (id: string): Promise<Evermark | null> => {
     try {
       // Simple API call to get individual evermark
-      const response = await fetch(`/.netlify/functions/evermarks?id=${id}`, {
+      const response = await fetch(`/api/evermarks?id=${id}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -240,7 +244,7 @@ const TempEvermarkService = {
       
       if (mintResult.tokenId && mintResult.txHash) {
         try {
-          const dbSyncResponse = await fetch('/.netlify/functions/evermarks', {
+          const dbSyncResponse = await fetch('/api/evermarks', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -314,6 +318,8 @@ const QUERY_KEYS = {
  * Handles data fetching, creation, pagination, and filtering
  */
 export function useEvermarksState(): UseEvermarksResult {
+  console.log('🎯 useEvermarksState hook called');
+  
   // Get the active account for blockchain operations
   const account = useActiveAccount();
   
@@ -346,10 +352,15 @@ export function useEvermarksState(): UseEvermarksResult {
     refetch
   } = useQuery({
     queryKey: QUERY_KEYS.evermarks(queryOptions),
-    queryFn: () => TempEvermarkService.fetchEvermarks(queryOptions),
+    queryFn: () => {
+      console.log('🚀 React Query queryFn called with options:', queryOptions);
+      return TempEvermarkService.fetchEvermarks(queryOptions);
+    },
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000,   // 10 minutes
-    retry: 2
+    retry: 2,
+    enabled: true, // Explicitly enable the query
+    refetchOnWindowFocus: false
   });
 
   // Create evermark mutation with blockchain-first approach

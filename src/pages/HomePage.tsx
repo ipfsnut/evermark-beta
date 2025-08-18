@@ -288,7 +288,14 @@ const QuickActions: React.FC = () => {
 
 // Real Evermarks Feed Component
 const EvermarksFeed: React.FC = () => {
+  console.log('📱 EvermarksFeed component rendering');
   const { evermarks, isLoading, error, isEmpty } = useEvermarksState();
+  console.log('📊 EvermarksFeed state:', { 
+    evermarksCount: evermarks?.length || 0, 
+    isLoading, 
+    error, 
+    isEmpty 
+  });
 
   if (error) {
     return (

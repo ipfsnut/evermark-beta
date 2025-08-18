@@ -1,5 +1,6 @@
 // Simple image caching - just download and store
 import { supabase } from './supabase';
+import { replaceIPFSGateway } from '../utils/ipfs-gateway';
 
 /**
  * Cache image from IPFS/Pinata to Supabase storage
@@ -96,9 +97,10 @@ export function getImageUrl(evermark: {
     return evermark.supabase_image_url;
   }
 
-  // 2. Fall back to IPFS via Pinata gateway
+  // 2. Fall back to IPFS via CORS-friendly gateway (not Pinata)
   if (evermark.ipfs_image_hash) {
-    return `https://gateway.pinata.cloud/ipfs/${evermark.ipfs_image_hash}`;
+    const pinataUrl = `https://gateway.pinata.cloud/ipfs/${evermark.ipfs_image_hash}`;
+    return replaceIPFSGateway(pinataUrl) || `https://ipfs.io/ipfs/${evermark.ipfs_image_hash}`;
   }
 
   // 3. Last resort: placeholder
