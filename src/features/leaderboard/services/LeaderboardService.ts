@@ -14,7 +14,7 @@ import {
 
 // Your actual contract configuration
 const LEADERBOARD_CONTRACT = {
-  address: '0x...' as const, // Replace with your deployed contract address
+  address: (import.meta.env.VITE_EVERMARK_LEADERBOARD_ADDRESS || '') as const,
   abi: [
     {
       "inputs": [

@@ -80,6 +80,10 @@
       const ua = navigator.userAgent.toLowerCase();
       const url = window.location.href.toLowerCase();
       
+      // Development mode override - add ?farcaster=true to test in browser
+      const devOverride = window.location.search.includes('farcaster=true') || 
+                         window.location.search.includes('fc=true');
+      
       // Strong indicators of Farcaster environment
       const strongIndicators = 
         ua.includes('farcaster-') ||
@@ -87,12 +91,14 @@
         url.includes('farcaster.xyz') ||
         url.includes('warpcast.com') ||
         window.location.search.includes('inFeed=true') ||
-        window.location.search.includes('action_type=share');
+        window.location.search.includes('action_type=share') ||
+        devOverride;
       
       console.log('🔍 Farcaster Detection:', {
         detected: strongIndicators,
         userAgent: ua.substring(0, 50),
-        url: url.substring(0, 50)
+        url: url.substring(0, 50),
+        devOverride: devOverride
       });
       
       return strongIndicators;
