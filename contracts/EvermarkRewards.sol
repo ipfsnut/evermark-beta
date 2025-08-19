@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// Evermark-Beta
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
@@ -19,7 +20,7 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
  ╚═╝  ╚═╝╚══════╝ ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ╚══════╝
 */
 
-interface IWEMARK {
+interface ICardCatalog {
     function balanceOf(address account) external view returns (uint256);
     function totalSupply() external view returns (uint256);
 }
@@ -48,7 +49,7 @@ contract EvermarkRewards is
 
     IERC20 public emarkToken;         
     IERC20 public wethToken;          // CHANGED: Added WETH token
-    IWEMARK public stakingToken; 
+    ICardCatalog public stakingToken; 
     
     // Adaptive configuration
     uint256 public ethDistributionRate;    // Annual % in basis points for WETH (e.g., 1000 = 10%)
@@ -128,7 +129,7 @@ contract EvermarkRewards is
 
         emarkToken = IERC20(_emarkToken);
         wethToken = IERC20(_wethToken);                              // NEW
-        stakingToken = IWEMARK(_stakingToken);
+        stakingToken = ICardCatalog(_stakingToken);
         ethDistributionRate = _wethDistributionRate;
         emarkDistributionRate = _emarkDistributionRate;
         rebalancePeriod = _rebalancePeriod;
