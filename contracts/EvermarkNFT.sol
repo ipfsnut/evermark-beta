@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Evermark-Beta
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.30;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
@@ -25,7 +24,7 @@ contract EvermarkNFT is
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
 
-    uint256 public constant MINTING_FEE = 0.0007 ether;
+    uint256 public constant MINTING_FEE = 0.00007 ether;
     uint256 public constant REFERRAL_PERCENTAGE = 10;
 
     struct EvermarkMetadata {
@@ -79,7 +78,6 @@ contract EvermarkNFT is
         _nextTokenId = 1;
     }
 
-    // FIXED: Removed nonReentrant to prevent double reentrancy guard
     function mintEvermark(
         string calldata metadataURI,
         string calldata title, 

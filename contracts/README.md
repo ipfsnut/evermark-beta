@@ -1,175 +1,297 @@
 # Evermark-Beta Smart Contracts
 
-This directory contains the complete Evermark smart contract system designed for on-chain content preservation, token staking, voting, and rewards distribution.
+This directory contains the complete Evermark smart contract system for on-chain content preservation, creator verification, token staking, voting, and rewards distribution.
 
 ## Contract Overview
 
-### FeeCollector.sol
-**Purpose:** Converts incoming ETH fees to WEMARK tokens for ecosystem liquidity
+### FeeCollector.sol (164 lines) - Treasury Smart Contract
+**Purpose:** Multi-token treasury that collects Clanker trading fees and forwards to EvermarkRewards
 
 **Core Functions:**
-- `convertEthToWemark()` - Converts ETH to WEMARK at current rates
-- `setConversionRate(uint256 rate)` - Admin function to update conversion rates
-- Emergency withdrawal functions for admin recovery
+- `collectTradingFees(address token, uint256 amount)` - Receive WETH/EMARK from Clanker pool
+- `forwardWethToRewards(uint256 amount)` - Manual WETH forwarding to rewards
+- `forwardEmarkToRewards(uint256 amount)` - Manual EMARK forwarding to rewards
+- `forwardAllWethToRewards()` - Forward all accumulated WETH
+- `forwardAllEmarkToRewards()` - Forward all accumulated EMARK
+- `withdrawSpamToken(address token)` - Remove unwanted tokens
+- `getTokenBalances()` - View WETH/EMARK balances
 
-**Integration:** Entry point for ETH → WEMARK conversion
+**Key Features:**
+- **Multi-Token Support:** Handles WETH, EMARK, ETH, and spam tokens
+- **Manual Admin Control:** No automatic forwarding, admin-triggered transfers
+- **EvermarkRewards Integration:** Direct funding of reward pools
+- **Spam Protection:** Recovery mechanism for unwanted tokens
+- **Treasury Architecture:** Smart wallet-like functionality
 
-### WEMARK.sol  
-**Purpose:** Stake EMARK tokens to receive wEMARK voting power with unbonding periods
+**Integration:** Receives 0.4% of trading fees from Clanker EMARK/WETH liquidity pool → manually forwards to EvermarkRewards
+
+---
+
+### WEMARK.sol (137 lines)
+**Purpose:** Non-transferrable ERC20 wrapper for EMARK tokens providing voting power
 
 **Core Functions:**
 - `stake(uint256 amount)` - Stake EMARK to receive 1:1 wEMARK
-- `initiateUnstake(uint256 amount)` - Begin 7-day unbonding process
-- `completeUnstake()` - Complete unstaking after cooldown
-- `getVotingPower(address user)` - Get voting power (wEMARK balance)
-- `canUnstake(address user)` - Check if unstaking is available
+- `startUnbonding(uint256 amount)` - Begin 7-day unbonding process
+- `withdraw()` - Complete unstaking after cooldown period
+- `cancelUnbonding()` - Cancel unbonding and restore voting power
+- `getVotingPower(address user)` - Get user's voting power (wEMARK balance)
 
 **Key Features:**
 - 1:1 EMARK ↔ wEMARK staking ratio
 - 7-day unbonding cooldown period
-- Automatic voting power calculation
-- ERC20 compliance for compatibility
+- Non-transferrable (voting power cannot be traded)
+- SafeERC20 for secure token transfers
 
-### EvermarkNFT.sol
+**Integration:** Provides voting power to EvermarkVoting, serves as staking token for EvermarkRewards
+
+---
+
+### EvermarkNFT.sol (242 lines)
 **Purpose:** Mint and manage Evermark NFTs representing preserved content
 
 **Core Functions:**
-- `mint(address to, string memory contentHash, string memory metadataURI)` - Mint new Evermark
-- `tokenURI(uint256 tokenId)` - Get NFT metadata URI
-- `getContentHash(uint256 tokenId)` - Get preserved content hash
-- `totalSupply()` - Get total minted NFTs
+- `mintEvermark(string metadataURI, string title, address creator)` - Mint new Evermark
+- `mintEvermarkWithReferral(...)` - Mint with referral fee sharing
+- `exists(uint256 tokenId)` - Check if NFT exists
+- `setFeeCollector(address)` - Update fee collection address
+- `setMintingFee(uint256)` - Update minting fee (admin only)
 
 **Key Features:**
+- **Minting Fee:** 0.00007 ETH per NFT
 - UUPS upgradeable pattern
-- Pausable for emergency stops
-- Role-based access control
-- Content hash preservation
+- Role-based access control (ADMIN, MINTER, UPGRADER)
+- Referral system (10% fee sharing)
+- Emergency pause functionality
+- NFT minting fees (separate from trading fees)
 
-### EvermarkVoting.sol
-**Purpose:** Seasonal voting system using wEMARK voting power
+**Integration:** Validates NFT existence for other contracts, minting fees stay in contract (separate from trading fees)
+
+---
+
+### EvermarkVoting.sol (146 lines)
+**Purpose:** Seasonal voting system for Evermark content curation
 
 **Core Functions:**
-- `startNewSeason()` - Begin new voting season
-- `voteForEvermark(uint256 evermarkId, uint256 votes)` - Cast votes using wEMARK power
+- `startNewSeason()` - Begin new 7-day voting season (admin only)
+- `voteForEvermark(uint256 evermarkId, uint256 votes)` - Cast votes for content
 - `getCurrentSeason()` - Get active season number
-- `getEvermarkVotes(uint256 seasonId, uint256 evermarkId)` - Get vote counts
-- `getRemainingVotingPower(address user)` - Check available votes for season
+- `getEvermarkVotesInSeason(uint256 season, uint256 evermarkId)` - Get vote counts
+- `getRemainingVotingPower(address user)` - Check available votes for current season
 
 **Key Features:**
-- Seasonal voting cycles
-- Voting power based on wEMARK balance
+- Seasonal voting cycles (7-day duration)
+- Direct voting (no delegation system)
+- Voting power = wEMARK balance
 - Vote tracking per user per season
-- Integration with WEMARK for power calculation
+- Admin-controlled season management
 
-### NFTStaking.sol
-**Purpose:** Content creator verification through NFT staking (repurposed for verification badges)
+**Integration:** Gets voting power from WEMARK, validates NFT existence via EvermarkNFT
+
+---
+
+### NFTStaking.sol (219 lines) - Simplified for Creator Verification
+**Purpose:** Creator verification through Evermark NFT staking
 
 **Core Functions:**
-- `stakeNFT(uint256 tokenId, uint8 lockTier)` - Stake Evermark NFT for verification
-- `unstakeNFT(uint256 tokenId)` - Return staked NFT
-- `isNFTStaked(uint256 tokenId)` - Check if NFT is staked
-- `getStakedNFTs(address user)` - Get user's staked NFTs
+- `stakeNFT(uint256 tokenId)` - Stake Evermark NFT for verification
+- `startUnbonding(uint256 tokenId)` - Begin 7-day unbonding process
+- `unstakeNFT(uint256 tokenId)` - Complete unstaking after cooldown
+- `isVerifiedCreator(address user)` - Check if user has staked NFTs
+- `getStakeInfo(uint256 tokenId)` - Get staking status and timing
 
 **Key Features:**
-- Content creator verification system
-- Lock tiers for different commitment levels
-- No token rewards (verification badge only)
-- Proves content ownership/creation
+- 7-day unbonding period (matches voting cycles)
+- No token rewards (pure verification system)
+- UUPS upgradeable pattern
+- Emergency admin functions
 
-### EvermarkRewards.sol
+**Purpose:** Allows content creators to stake their own Evermark NFTs to prove ownership/creation and staked NFTs receive "Verified Asset" status in the app if they have been staked for at least 7 days and not flagged for inauthenticity.
+
+---
+
+### EvermarkRewards.sol (381 lines) - Most Complex
 **Purpose:** Dual-token rewards system (EMARK + WETH) with adaptive pool-based distribution
 
 **Core Functions:**
 - `claimRewards()` - Claim both EMARK and WETH rewards
-- `fundWethRewards(uint256 amount)` - Fund WETH reward pool
-- `fundEmarkRewards(uint256 amount)` - Fund EMARK reward pool
+- `fundWethRewards(uint256 amount)` - Fund WETH reward pool (admin only)
+- `fundEmarkRewards(uint256 amount)` - Fund EMARK reward pool (admin only)
 - `getPeriodStatus()` - Get current reward period information
 - `getUserRewardInfo(address user)` - Get user's pending rewards
 
 **Key Features:**
-- Adaptive rate calculation based on pool balances
-- Stable reward periods with automatic rebalancing
-- Synthetix-style reward tracking for gas efficiency
-- Uses WEMARK as staking token for reward eligibility
+- **Dual-Token System:** EMARK (utility) + WETH (value) rewards
+- **Adaptive Rates:** Reward rates adjust based on actual pool balances
+- **Stable Periods:** Fixed rates for period duration (typically 7 days)
+- **Synthetix-Style:** Gas-efficient reward tracking
+- **Pool-Based:** Sustainable rewards from funded pools (no infinite emission)
+- **Automatic Rebalancing:** Rates update at period end
+
+**Integration:** Uses WEMARK as staking token, rewards wEMARK holders proportionally
+
+---
+
+## System Architecture
+
+### User Flow A: Content Creator Verification
+```
+Creator → EvermarkNFT.mint() → NFTStaking.stakeNFT() → Verified Creator Badge (off-chain)
+```
+
+### User Flow B: Voting Participation  
+```
+EMARK → WEMARK.stake() → EvermarkVoting.voteForEvermark() → Content Curation
+```
+
+### User Flow C: Earning Rewards
+```
+WEMARK.stake() → EvermarkRewards eligibility → claimRewards() → Receive EMARK + WETH
+```
+
+### User Flow D: Trading Fee Collection & Reward Funding
+```
+EMARK/WETH Trading → Clanker Pool → 0.8% fee split → FeeCollector (0.4%) + Dev Wallet (0.4%)
+                                                    ↓
+Admin Panel → FeeCollector.forwardToRewards() → EvermarkRewards → wEMARK Staker Rewards
+```
 
 ## Contract Relationships
 
+```mermaid
+graph TB
+    User[User] --> EvermarkNFT[EvermarkNFT Contract]
+    User --> WEMARK[WEMARK Contract]
+    User --> EvermarkVoting[EvermarkVoting Contract]
+    User --> NFTStaking[NFTStaking Contract]
+    
+    ClankerPool[Clanker EMARK/WETH Pool] --> FeeCollector[FeeCollector Treasury]
+    FeeCollector --> EvermarkRewards[Forwards Trading Fees]
+    WEMARK --> EvermarkVoting[Provides Voting Power]
+    WEMARK --> EvermarkRewards[Staking Token for Rewards]
+    NFTStaking --> EvermarkNFT[Stakes Evermark NFTs]
+    EvermarkVoting --> EvermarkNFT[Validates NFT Existence]
+    
+    Admin[Admin] --> FeeCollector[Manual Fee Forwarding]
+    Admin --> EvermarkVoting[Manages Seasons]
+    
+    style EvermarkRewards fill:#f9f,stroke:#333,stroke-width:2px
+    style WEMARK fill:#bbf,stroke:#333,stroke-width:2px
+    style FeeCollector fill:#bfb,stroke:#333,stroke-width:2px
 ```
-User Flow A (Voting):
-EMARK → stake() → WEMARK → getVotingPower() → EvermarkVoting
 
-User Flow B (Rewards):  
-WEMARK → balanceOf() → EvermarkRewards → earn EMARK+WETH
+## Deployment Architecture
 
-User Flow C (Verification):
-Creator → mint EvermarkNFT → stake in NFTStaking → get Verified badge
+### Contract Types
+- **Non-Upgradeable:** FeeCollector, WEMARK, EvermarkVoting
+- **UUPS Upgradeable:** EvermarkNFT, NFTStaking, EvermarkRewards
 
-User Flow D (Fee Collection):
-ETH fees → FeeCollector → convertEthToWemark() → WEMARK liquidity
-```
+### Deployment Order
+1. **FeeCollector** (needs WETH + EMARK addresses)
+2. **WEMARK** (needs EMARK token address)
+3. **EvermarkNFT** (upgradeable, configure fee collector after)
+4. **EvermarkVoting** (needs WEMARK + EvermarkNFT addresses)
+5. **NFTStaking** (upgradeable, needs EvermarkNFT address)
+6. **EvermarkRewards** (upgradeable, needs EMARK + WEMARK + WETH addresses)
 
-## Integration Architecture
-
-### Provider Hierarchy (Frontend)
-1. QueryClientProvider (React Query)
-2. ThirdwebProvider (blockchain SDK)
-3. FarcasterProvider (Frame/auth context)
-4. WalletProvider (wallet connection)
-5. BlockchainProvider (contract interactions)
-6. IntegratedUserProvider (unified user management)
-7. AppContextProvider (app-level state)
-
-### Contract Dependencies
-- **EvermarkRewards** uses WEMARK as stakingToken (ICardCatalog interface)
-- **EvermarkVoting** reads voting power from WEMARK contract
-- **NFTStaking** manages EvermarkNFT tokens for verification
-- **FeeCollector** converts ETH to WEMARK for ecosystem liquidity
+### Configuration Steps
+1. **FeeCollector:** Set EvermarkRewards contract address + grant DISTRIBUTOR_ROLE
+2. **EvermarkNFT:** Set fee collector address and minting fee
+3. **EvermarkVoting:** Start first voting season
+4. **EvermarkRewards:** Fund initial reward pools (optional)
 
 ## Technical Implementation
 
-### Interface Compatibility
-✅ **WEMARK ↔ EvermarkRewards**: Compatible (ERC20 provides required interface)
-✅ **EvermarkVoting ↔ WEMARK**: Perfect interface match
-✅ **All contracts**: Properly implement expected interfaces
-
 ### Security Features
-- All contracts use OpenZeppelin upgradeable patterns
-- Role-based access control (ADMIN_ROLE, DISTRIBUTOR_ROLE, etc.)
-- Reentrancy guards on critical functions
-- Pausable functionality for emergency stops
-- UUPS proxy pattern for upgrades
+- **All contracts:** Solidity ^0.8.30, MIT licensed
+- **Role-based access control:** ADMIN, MINTER, UPGRADER roles
+- **Reentrancy guards:** All state-changing functions protected
+- **Pausable functionality:** Emergency stops for critical contracts
+- **UUPS proxy pattern:** Safe upgrades for complex contracts
+- **SafeERC20:** Secure token transfers
 
-### Deployment Considerations
-- All contracts tagged with "Evermark-Beta" for version identification
-- UUPS upgradeable pattern allows for future improvements
-- Proper initialization functions for proxy deployment
-- Compatible with Base network (chain ID 8453)
+### Gas Optimization
+- **Efficient storage layouts:** Minimal gas costs for common operations
+- **Batch operations:** Where applicable (EvermarkRewards)
+- **Event-driven architecture:** Off-chain indexing support
+- **Optimized algorithms:** Synthetix-style reward calculations
+
+### Integration Points
+- **WEMARK ↔ EvermarkVoting:** Perfect interface compatibility
+- **WEMARK ↔ EvermarkRewards:** ERC20 compatibility for staking token
+- **Clanker Pool ↔ FeeCollector:** Trading fee collection (0.4% of 0.8% total)
+- **FeeCollector ↔ EvermarkRewards:** Manual token forwarding with DISTRIBUTOR_ROLE
+- **NFTStaking ↔ EvermarkNFT:** NFT custody and verification
+
+## Key Design Decisions
+
+### 1. **Simplified NFTStaking**
+- **Removed:** Complex reward calculations, lock tiers, batch operations
+- **Kept:** Simple verification through NFT staking with 7-day unbonding
+- **Result:** 75% code reduction, focused on creator verification
+
+### 2. **Separate Fee and Reward Systems**
+- **Trading Fee Collection:** Clanker pool trading fees (0.4%) go to treasury via FeeCollector
+- **NFT Minting Fees:** Separate 0.00007 ETH fees for NFT minting
+- **Reward Distribution:** WETH rewards funded separately in EvermarkRewards
+- **Benefit:** Clean separation of concerns, flexible funding
+
+### 3. **Non-Transferrable Voting Power**
+- **WEMARK tokens cannot be transferred**
+- **Prevents vote buying and maintains governance integrity**
+- **Requires actual EMARK staking for voting participation**
+
+### 4. **Adaptive Pool-Based Rewards**
+- **No infinite token emission**
+- **Sustainable reward distribution based on actual funding**
+- **Rates adjust automatically based on pool balances**
+
+### 5. **7-Day Unbonding Across System**
+- **WEMARK:** 7-day unbonding for token unstaking
+- **NFTStaking:** 7-day unbonding for NFT unstaking
+- **EvermarkVoting:** 7-day seasonal cycles
+- **Benefit:** Consistent timing prevents gaming across all systems
 
 ## Environment Variables Required
 
-```
+```bash
+# Existing tokens
 VITE_EMARK_TOKEN_ADDRESS=           # EMARK token contract
+WETH_ADDRESS=0x4200000000000000000000000000000000000006  # Base WETH
+
+# New contracts
+VITE_FEE_COLLECTOR_ADDRESS=         # FeeCollector contract
 VITE_WEMARK_ADDRESS=                # WEMARK staking contract  
 VITE_EVERMARK_NFT_ADDRESS=          # EvermarkNFT contract
 VITE_EVERMARK_VOTING_ADDRESS=       # EvermarkVoting contract
 VITE_NFT_STAKING_ADDRESS=           # NFTStaking contract
 VITE_EVERMARK_REWARDS_ADDRESS=      # EvermarkRewards contract
-VITE_FEE_COLLECTOR_ADDRESS=         # FeeCollector contract
+
+# Configuration
+FEE_RECIPIENT=                      # Treasury address for fees
 ```
 
-## Gas Optimization Features
+## Strategic Benefits
 
-- Efficient batch operations where applicable
-- Optimized storage layouts
-- Minimal external contract calls
-- Event-driven state updates for off-chain tracking
+### 1. **On-Chain Transparency**
+- All voting, staking, and rewards are verifiable on-chain
+- No reliance on centralized systems for core functionality
 
-## Strategic Design Decisions
+### 2. **Creator Verification**
+- Provable content ownership through NFT staking
+- "Skin in the game" approach to verification
 
-1. **On-chain Rewards**: Trustless distribution with automatic enforcement
-2. **Dual Token System**: EMARK utility + WETH value rewards
-3. **Verification Badges**: NFT staking for creator verification (off-chain badges)
-4. **Seasonal Voting**: Time-bound cycles for fair participation
-5. **Adaptive Rates**: Pool-based reward calculation for sustainability
+### 3. **Sustainable Economics**
+- Pool-based rewards prevent runaway inflation
+- Trading fee collection from Clanker pool provides ongoing platform revenue
 
-This architecture balances on-chain functionality with off-chain flexibility, ensuring core financial operations remain trustless while allowing UI/UX iteration.
+### 4. **Governance Integrity**
+- Non-transferrable voting power prevents vote buying
+- Economic stake required for voting participation
+
+### 5. **Modular Architecture**
+- Each contract has focused responsibility
+- Upgradeable where needed, immutable where appropriate
+- Easy to extend or modify individual components
+
+This architecture provides a solid foundation for the Evermark ecosystem while maintaining simplicity where possible and complexity only where necessary.
