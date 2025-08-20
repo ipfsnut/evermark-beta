@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useAppAuth } from '../../providers/AppContext';
 import { useFarcasterUser } from '../../lib/farcaster';
+import { useTheme } from '../../providers/ThemeProvider';
 import { cn } from '../../utils/responsive';
 
 interface NavItem {
@@ -53,6 +54,7 @@ const mobileNavItems: NavItem[] = [
 export function MobileNavigation() {
   const { isAuthenticated } = useAppAuth();
   const { isInFarcaster } = useFarcasterUser();
+  const { isDark } = useTheme();
   const location = useLocation();
 
   // Check if current route is active
@@ -66,7 +68,10 @@ export function MobileNavigation() {
   return (
     <nav className={cn(
       'fixed bottom-0 left-0 right-0 z-50',
-      'bg-black/95 backdrop-blur-lg border-t border-gray-800',
+      'backdrop-blur-lg transition-colors duration-200',
+      isDark 
+        ? 'bg-black/95 border-t border-gray-800' 
+        : 'bg-yellow-50/95 border-t border-yellow-200',
       'safe-area-inset-bottom', // iOS safe area
       isInFarcaster ? 'pb-0' : 'pb-safe' // Adjust for Farcaster
     )}>
@@ -80,8 +85,14 @@ export function MobileNavigation() {
             return (
               <div key={item.to} className="opacity-30 pointer-events-none">
                 <div className="flex flex-col items-center justify-center h-full px-2">
-                  <Icon className="h-5 w-5 text-gray-600" />
-                  <span className="text-[10px] mt-1 text-gray-600">
+                  <Icon className={cn(
+                    "h-5 w-5",
+                    isDark ? "text-gray-600" : "text-gray-400"
+                  )} />
+                  <span className={cn(
+                    "text-[10px] mt-1",
+                    isDark ? "text-gray-600" : "text-gray-400"
+                  )}>
                     {item.label}
                   </span>
                 </div>
@@ -121,11 +132,15 @@ export function MobileNavigation() {
                 <>
                   <Icon className={cn(
                     'h-5 w-5 transition-colors',
-                    isActive ? 'text-white' : 'text-gray-400'
+                    isActive 
+                      ? (isDark ? 'text-white' : 'text-gray-900')
+                      : (isDark ? 'text-gray-400' : 'text-gray-500')
                   )} />
                   <span className={cn(
                     'text-[10px] mt-1 transition-colors',
-                    isActive ? 'text-white' : 'text-gray-400'
+                    isActive 
+                      ? (isDark ? 'text-white' : 'text-gray-900')
+                      : (isDark ? 'text-gray-400' : 'text-gray-500')
                   )}>
                     {item.label}
                   </span>

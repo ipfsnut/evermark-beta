@@ -2,17 +2,34 @@
 import { StakingWidget } from '@/features/staking';
 import { TokenBalance } from '@/features/tokens';
 import { useStakingState } from '@/features/staking';
-import { TrendingUpIcon, CoinsIcon } from 'lucide-react';
+import { useContractsStatus } from '@/hooks/core/useContracts';
+import { TrendingUpIcon, CoinsIcon, AlertCircleIcon, CheckCircleIcon } from 'lucide-react';
 import { cn, useIsMobile } from '@/utils/responsive';
+import { useTheme } from '@/providers/ThemeProvider';
 
 export default function StakePage() {
   const stakingState = useStakingState();
+  const contractsStatus = useContractsStatus();
   const isMobile = useIsMobile();
+  const { isDark } = useTheme();
+  
+  const requiredContracts = ['emarkToken', 'wemark'];
+  const missingRequiredContracts = requiredContracts.filter(contract => 
+    contractsStatus.missing.includes(contract)
+  );
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className={cn(
+      "min-h-screen transition-colors duration-200",
+      isDark ? "bg-black text-white" : "bg-yellow-50 text-gray-900"
+    )}>
       {/* Header */}
-      <div className="bg-gradient-to-r from-gray-900 via-black to-gray-900 border-b border-purple-400/30">
+      <div className={cn(
+        "border-b border-purple-400/30",
+        isDark 
+          ? "bg-gradient-to-r from-gray-900 via-black to-gray-900" 
+          : "bg-gradient-to-r from-yellow-100 via-yellow-50 to-yellow-100"
+      )}>
         <div className="container mx-auto px-4 py-8">
           <div className="text-center space-y-6">
             <div className="flex justify-center items-center gap-4">
@@ -20,11 +37,14 @@ export default function StakePage() {
                 <TrendingUpIcon className="h-7 w-7 text-black" />
               </div>
               <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-purple-400 via-cyan-400 to-green-500 bg-clip-text text-transparent">
-                STAKING CENTER
+                STAKING CENTER <span className="text-2xl md:text-3xl text-cyan-400 font-normal">[BETA]</span>
               </h1>
             </div>
             
-            <p className="text-gray-300 max-w-3xl mx-auto text-lg">
+            <p className={cn(
+              "max-w-3xl mx-auto text-lg",
+              isDark ? "text-gray-300" : "text-gray-600"
+            )}>
               Stake your EMARK tokens to receive wEMARK voting power and participate in governance.
             </p>
           </div>
@@ -32,6 +52,46 @@ export default function StakePage() {
       </div>
 
       <div className="container mx-auto px-4 py-8">
+        {/* Contract Status Warning */}
+        {missingRequiredContracts.length > 0 && (
+          <div className="mb-8 bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-6">
+            <div className="flex items-start gap-3">
+              <AlertCircleIcon className="w-6 h-6 text-yellow-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-lg font-semibold text-yellow-400 mb-2">
+                  Beta Configuration Required
+                </h3>
+                <p className="text-yellow-200 text-sm mb-3">
+                  Some staking contracts are not configured. Please check your environment variables:
+                </p>
+                <ul className="text-yellow-200 text-sm space-y-1">
+                  {missingRequiredContracts.includes('emarkToken') && (
+                    <li>• <code className="bg-yellow-500/20 px-1 rounded">VITE_EMARK_TOKEN_ADDRESS</code> - EMARK Token contract</li>
+                  )}
+                  {missingRequiredContracts.includes('wemark') && (
+                    <li>• <code className="bg-yellow-500/20 px-1 rounded">VITE_WEMARK_ADDRESS</code> - WEMARK Token contract</li>
+                  )}
+                </ul>
+                <p className="text-yellow-200 text-xs mt-3">
+                  Staking features will be limited until all contracts are configured.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Success message when contracts are configured */}
+        {missingRequiredContracts.length === 0 && (
+          <div className="mb-8 bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+            <div className="flex items-center gap-3">
+              <CheckCircleIcon className="w-5 h-5 text-green-400" />
+              <p className="text-green-200 text-sm">
+                ✅ All staking contracts are configured and ready for Beta testing
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className={cn(
           "grid gap-8",
           isMobile ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-2"
@@ -41,7 +101,7 @@ export default function StakePage() {
             {/* Token Balance Widget */}
             <TokenBalance
               variant="full"
-              showActions={true}
+              showActions={false}
               showApprovalStatus={true}
               onApprovalSuccess={() => {
                 // Refresh staking data after approval
@@ -107,9 +167,9 @@ export default function StakePage() {
                     </div>
                   </div>
                   <div className="text-center p-3 bg-gray-700/30 rounded-lg">
-                    <div className="text-sm text-gray-400 mb-1">Estimated APR</div>
+                    <div className="text-sm text-gray-400 mb-1">Real-Time APR</div>
                     <div className="text-lg font-bold text-green-400">
-                      {stakingState.stakingStats.aprEstimate.toFixed(1)}%
+                      {stakingState.stakingStats.realTimeAPR.toFixed(1)}%
                     </div>
                   </div>
                 </div>

@@ -11,8 +11,8 @@ import { base } from 'thirdweb/chains';
 // Local contract constants to avoid @/lib/contracts dependency
 const CHAIN = base;
 const LOCAL_CONTRACTS = {
-  EMARK_TOKEN: import.meta.env.VITE_EMARK_TOKEN_ADDRESS || '',
-  CARD_CATALOG: import.meta.env.VITE_CARD_CATALOG_ADDRESS || '',
+  EMARK_TOKEN: import.meta.env.VITE_EMARK_ADDRESS || '',
+  WEMARK_STAKING: import.meta.env.VITE_WEMARK_ADDRESS || '', // Using WEMARK as the EMARK staking contract
 } as const;
 
 // Import ABIs from the actual JSON files
@@ -61,14 +61,18 @@ export function useTokenState(): UseTokenStateReturn {
         abi: EMARK_ABI as any
       });
     } catch (error) {
-      console.error('Failed to create EMARK token contract:', error);
+      if (!LOCAL_CONTRACTS.EMARK_TOKEN) {
+        console.warn('[EVERMARK BETA] EMARK token address not configured. Staking features disabled.');
+      } else {
+        console.error('[EVERMARK BETA] Failed to create EMARK token contract:', error);
+      }
       return null;
     }
   }, []);
   
   const userAddress = account?.address;
   const isConnected = !!account && !!userAddress;
-  const stakingContractAddress = LOCAL_CONTRACTS.CARD_CATALOG;
+  const stakingContractAddress = LOCAL_CONTRACTS.WEMARK_STAKING;
 
   // Token balance query using React Query + readContract
   const { 

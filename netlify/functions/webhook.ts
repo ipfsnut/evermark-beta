@@ -2,6 +2,9 @@
 import { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
 
+// Beta table name - using beta_evermarks instead of alpha evermarks table
+const EVERMARKS_TABLE = 'beta_evermarks';
+
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_ANON_KEY!
@@ -96,7 +99,7 @@ async function handleEvermarkCreated(event: BlockchainEvent) {
   
   // Update or create evermark with blockchain data
   const { error } = await supabase
-    .from('evermarks')
+    .from(EVERMARKS_TABLE)
     .upsert({
       token_id: tokenId,
       owner: creator,
@@ -130,7 +133,7 @@ async function handleTransfer(event: BlockchainEvent) {
   // Update owner when token is transferred
   if (to !== '0x0000000000000000000000000000000000000000') {
     await supabase
-      .from('evermarks')
+      .from(EVERMARKS_TABLE)
       .update({
         owner: to,
         updated_at: new Date().toISOString(),
@@ -146,7 +149,7 @@ async function handleMetadataUpdate(event: BlockchainEvent) {
   
   // Mark metadata as needing refresh
   await supabase
-    .from('evermarks')
+    .from(EVERMARKS_TABLE)
     .update({
       metadata_fetched: false,
       updated_at: new Date().toISOString(),

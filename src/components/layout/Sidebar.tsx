@@ -1,5 +1,5 @@
 import { Navigation } from './Navigation';
-import { useAppUI } from '@/providers/AppContext';
+import { useTheme } from '../../providers/ThemeProvider';
 import { cn } from '@/utils/responsive';
 
 interface SidebarProps {
@@ -8,12 +8,11 @@ interface SidebarProps {
 }
 
 export function Sidebar({ className }: SidebarProps) {
-  const { theme } = useAppUI();
+  const { isDark } = useTheme();
 
   return (
     <aside className={cn(
-      'w-64 min-h-screen border-r transition-colors duration-200',
-      theme === 'light' && 'border-gray-200',
+      'w-64 min-h-screen border-r transition-colors duration-200 bg-white border-gray-200 dark:bg-gray-900 dark:border-gray-800',
       className
     )}>
       <Navigation />

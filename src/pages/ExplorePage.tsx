@@ -17,47 +17,59 @@ import {
 
 import { useAppAuth } from '@/providers/AppContext';
 import { useFarcasterUser } from '@/lib/farcaster';
+import { useTheme } from '@/providers/ThemeProvider';
 import { cn, useIsMobile } from '@/utils/responsive';
+
+// Import real Evermarks functionality
+import { useEvermarksState, EvermarkFeed } from '@/features/evermarks';
 
 type ViewMode = 'grid' | 'list';
 
-// Mock data for demonstration
-const mockStats = {
-  total: 1234,
-  thisWeek: 42,
-  creators: 89,
-  verified: 234
-};
-
-// Enhanced stats component
-const ExploreStats: React.FC = () => {
+// Enhanced stats component with real data
+const ExploreStats: React.FC<{ 
+  totalCount: number; 
+  evermarks: any[];
+  isLoading: boolean;
+  isDark: boolean; 
+}> = ({ totalCount, evermarks, isLoading, isDark }) => {
   const isMobile = useIsMobile();
+  
+  // Calculate stats from real data
+  const thisWeekCount = evermarks.filter(em => {
+    const createdAt = new Date(em.createdAt);
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    return createdAt >= weekAgo;
+  }).length;
+  
+  const uniqueCreators = new Set(evermarks.map(em => em.owner)).size;
+  const verifiedCount = evermarks.filter(em => em.verificationStatus === 'verified').length;
   
   const statCards = [
     {
       label: 'Total',
-      value: mockStats.total.toLocaleString(),
+      value: isLoading ? '...' : totalCount.toLocaleString(),
       icon: <CompassIcon className="h-5 w-5" />,
       gradient: 'from-cyan-400 to-cyan-600',
       glow: 'shadow-cyan-500/20'
     },
     {
       label: 'This Week',
-      value: mockStats.thisWeek.toLocaleString(),
+      value: isLoading ? '...' : thisWeekCount.toLocaleString(),
       icon: <ClockIcon className="h-5 w-5" />,
       gradient: 'from-green-400 to-green-600',
       glow: 'shadow-green-500/20'
     },
     {
       label: 'Creators',
-      value: mockStats.creators.toLocaleString(),
+      value: isLoading ? '...' : uniqueCreators.toLocaleString(),
       icon: <UserIcon className="h-5 w-5" />,
       gradient: 'from-purple-400 to-purple-600',
       glow: 'shadow-purple-500/20'
     },
     {
       label: 'Verified',
-      value: mockStats.verified.toLocaleString(),
+      value: isLoading ? '...' : verifiedCount.toLocaleString(),
       icon: <StarIcon className="h-5 w-5" />,
       gradient: 'from-yellow-400 to-yellow-600',
       glow: 'shadow-yellow-500/20'
@@ -73,7 +85,10 @@ const ExploreStats: React.FC = () => {
         <div
           key={index}
           className={cn(
-            "bg-gray-800/50 border border-gray-700 rounded-lg p-4 text-center transition-all duration-300 hover:border-gray-600",
+            "rounded-lg p-4 text-center transition-all duration-300",
+            isDark 
+              ? "bg-gray-800/50 border border-gray-700 hover:border-gray-600" 
+              : "bg-white/80 border border-yellow-200 hover:border-yellow-300",
             stat.glow
           )}
         >
@@ -83,10 +98,16 @@ const ExploreStats: React.FC = () => {
           )}>
             {stat.icon}
           </div>
-          <div className="text-xl font-bold text-white mb-1">
+          <div className={cn(
+            "text-xl font-bold mb-1",
+            isDark ? "text-white" : "text-gray-900"
+          )}>
             {stat.value}
           </div>
-          <div className="text-gray-400 text-sm">
+          <div className={cn(
+            "text-sm",
+            isDark ? "text-gray-400" : "text-gray-600"
+          )}>
             {stat.label}
           </div>
         </div>
@@ -95,32 +116,86 @@ const ExploreStats: React.FC = () => {
   );
 };
 
-// Placeholder content feed
-const PlaceholderFeed: React.FC<{ viewMode: ViewMode }> = ({ viewMode }) => {
+// Real Evermark Feed or Empty State
+const ExploreContent: React.FC<{ 
+  viewMode: ViewMode; 
+  evermarks: any[];
+  totalCount: number;
+  isLoading: boolean;
+  isEmpty: boolean;
+  isDark: boolean;
+}> = ({ viewMode, evermarks, totalCount, isLoading, isEmpty, isDark }) => {
+  
+  if (isLoading) {
+    return (
+      <div className={cn(
+        "rounded-lg p-8 text-center border",
+        isDark 
+          ? "bg-gray-800/30 border-gray-700" 
+          : "bg-white/60 border-yellow-200"
+      )}>
+        <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full flex items-center justify-center animate-pulse">
+          <CompassIcon className="h-8 w-8 text-black" />
+        </div>
+        <h3 className={cn(
+          "text-xl font-semibold mb-2",
+          isDark ? "text-white" : "text-gray-900"
+        )}>Loading Evermarks...</h3>
+        <p className={cn(
+          "mb-6",
+          isDark ? "text-gray-400" : "text-gray-600"
+        )}>
+          Fetching preserved content from the blockchain
+        </p>
+      </div>
+    );
+  }
+  
+  if (isEmpty) {
+    return (
+      <div className={cn(
+        "rounded-lg p-8 text-center border",
+        isDark 
+          ? "bg-gray-800/30 border-gray-700" 
+          : "bg-white/60 border-yellow-200"
+      )}>
+        <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full flex items-center justify-center">
+          {viewMode === 'grid' ? <GridIcon className="h-8 w-8 text-black" /> : <ListIcon className="h-8 w-8 text-black" />}
+        </div>
+        <h3 className={cn(
+          "text-xl font-semibold mb-2",
+          isDark ? "text-white" : "text-gray-900"
+        )}>No Evermarks Yet</h3>
+        <p className={cn(
+          "mb-6",
+          isDark ? "text-gray-400" : "text-gray-600"
+        )}>
+          {totalCount === 0 
+            ? "Be the first to preserve content on the blockchain! Create an Evermark to get started."
+            : "No evermarks found with current filters. Try adjusting your search criteria."
+          }
+        </p>
+        {totalCount === 0 && (
+          <button
+            onClick={() => window.location.href = '/create'}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-500 hover:to-green-600 transition-colors font-medium"
+          >
+            <PlusIcon className="h-4 w-4" />
+            Create First Evermark
+          </button>
+        )}
+      </div>
+    );
+  }
+  
+  // Show the actual EvermarkFeed component
   return (
-    <div className="bg-gray-800/30 border border-gray-700 rounded-lg p-8 text-center">
-      <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full flex items-center justify-center">
-        {viewMode === 'grid' ? <GridIcon className="h-8 w-8 text-black" /> : <ListIcon className="h-8 w-8 text-black" />}
-      </div>
-      <h3 className="text-xl font-semibold text-white mb-2">Evermarks Coming Soon</h3>
-      <p className="text-gray-400 mb-6">
-        The explore feed will show all preserved content once the evermarks feature is ready.
-      </p>
-      <div className="grid gap-4 max-w-md mx-auto">
-        <div className="bg-gray-700/50 rounded-lg p-4">
-          <div className="w-full h-4 bg-gray-600 rounded mb-2"></div>
-          <div className="w-3/4 h-3 bg-gray-600 rounded"></div>
-        </div>
-        <div className="bg-gray-700/50 rounded-lg p-4">
-          <div className="w-full h-4 bg-gray-600 rounded mb-2"></div>
-          <div className="w-2/3 h-3 bg-gray-600 rounded"></div>
-        </div>
-        <div className="bg-gray-700/50 rounded-lg p-4">
-          <div className="w-full h-4 bg-gray-600 rounded mb-2"></div>
-          <div className="w-4/5 h-3 bg-gray-600 rounded"></div>
-        </div>
-      </div>
-    </div>
+    <EvermarkFeed 
+      viewMode={viewMode as any}
+      showPagination={true}
+      showFilters={false} // We have filters above
+      className="space-y-4"
+    />
   );
 };
 
@@ -129,16 +204,41 @@ export default function ExplorePage() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAppAuth();
   const { isInFarcaster } = useFarcasterUser();
+  const { isDark } = useTheme();
   const isMobile = useIsMobile();
   
   // Local state
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Get real evermarks data
+  const {
+    evermarks,
+    totalCount,
+    isLoading,
+    isEmpty,
+    setFilters,
+    setPagination
+  } = useEvermarksState();
+  
+  // Handle search
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    setFilters({ search: value });
+  };
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className={cn(
+      "min-h-screen transition-colors duration-200",
+      isDark ? "bg-black text-white" : "bg-yellow-50 text-gray-900"
+    )}>
       {/* Header */}
-      <div className="bg-gradient-to-r from-gray-900 via-black to-gray-900 border-b border-cyan-400/30">
+      <div className={cn(
+        "border-b border-cyan-400/30",
+        isDark 
+          ? "bg-gradient-to-r from-gray-900 via-black to-gray-900" 
+          : "bg-gradient-to-r from-yellow-100 via-yellow-50 to-yellow-100"
+      )}>
         <div className="container mx-auto px-4 py-8">
           <div className="text-center space-y-6">
             <div className="flex justify-center items-center gap-4">
@@ -146,11 +246,14 @@ export default function ExplorePage() {
                 <CompassIcon className="h-7 w-7 text-black" />
               </div>
               <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-500 bg-clip-text text-transparent">
-                EXPLORE EVERMARKS
+                EXPLORE EVERMARK BETA
               </h1>
             </div>
             
-            <p className="text-gray-300 max-w-3xl mx-auto text-lg">
+            <p className={cn(
+              "max-w-3xl mx-auto text-lg",
+              isDark ? "text-gray-300" : "text-gray-700"
+            )}>
               Discover and vote on community-curated content preserved forever on the blockchain.
             </p>
           </div>
@@ -159,7 +262,12 @@ export default function ExplorePage() {
 
       <div className="container mx-auto px-4 py-8">
         {/* Stats */}
-        <ExploreStats />
+        <ExploreStats 
+          totalCount={totalCount}
+          evermarks={evermarks}
+          isLoading={isLoading}
+          isDark={isDark}
+        />
 
         {/* Search and Controls */}
         <div className="mb-8 space-y-4">
@@ -170,8 +278,13 @@ export default function ExplorePage() {
               type="text"
               placeholder="Search evermarks..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-20 transition-colors"
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className={cn(
+                "w-full pl-12 pr-4 py-4 border rounded-lg transition-colors focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-20",
+                isDark 
+                  ? "bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-cyan-400"
+                  : "bg-white border-yellow-300 text-gray-900 placeholder-gray-500 focus:border-purple-400"
+              )}
             />
           </div>
 
@@ -182,13 +295,23 @@ export default function ExplorePage() {
           )}>
             <div className="flex items-center gap-3">
               {/* Filter Button */}
-              <button className="flex items-center gap-2 px-4 py-2 bg-gray-800 border border-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+              <button className={cn(
+                "flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors",
+                isDark 
+                  ? "bg-gray-800 border-gray-600 text-white hover:bg-gray-700"
+                  : "bg-white border-yellow-300 text-gray-900 hover:bg-yellow-50"
+              )}>
                 <FilterIcon className="h-4 w-4" />
                 Filters
               </button>
 
               {/* Sort Dropdown */}
-              <select className="px-4 py-2 bg-gray-800 border border-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-20">
+              <select className={cn(
+                "px-4 py-2 border rounded-lg transition-colors focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-20",
+                isDark 
+                  ? "bg-gray-800 border-gray-600 text-white hover:bg-gray-700 focus:border-cyan-400"
+                  : "bg-white border-yellow-300 text-gray-900 hover:bg-yellow-50 focus:border-purple-400"
+              )}>
                 <option value="newest">Newest First</option>
                 <option value="oldest">Oldest First</option>
                 <option value="title">Title A-Z</option>
@@ -247,23 +370,52 @@ export default function ExplorePage() {
         )}>
           {/* Main Feed */}
           <div className={cn("space-y-6", !isMobile && "lg:col-span-3")}>
-            <PlaceholderFeed viewMode={viewMode} />
+            <ExploreContent 
+              viewMode={viewMode}
+              evermarks={evermarks}
+              totalCount={totalCount}
+              isLoading={isLoading}
+              isEmpty={isEmpty}
+              isDark={isDark}
+            />
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Connect prompt or voting panel */}
             {!isAuthenticated ? (
-              <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6 text-center">
-                <TagIcon className="mx-auto h-12 w-12 text-gray-500 mb-4" />
-                <h3 className="text-lg font-medium text-white mb-2">
+              <div className={cn(
+                "rounded-lg p-6 text-center border",
+                isDark 
+                  ? "bg-gray-800/50 border-gray-700" 
+                  : "bg-white/80 border-yellow-200"
+              )}>
+                <TagIcon className={cn(
+                  "mx-auto h-12 w-12 mb-4",
+                  isDark ? "text-gray-500" : "text-gray-400"
+                )} />
+                <h3 className={cn(
+                  "text-lg font-medium mb-2",
+                  isDark ? "text-white" : "text-gray-900"
+                )}>
                   Join the Community
                 </h3>
-                <p className="text-gray-400 mb-4">
+                <p className={cn(
+                  "mb-4",
+                  isDark ? "text-gray-400" : "text-gray-600"
+                )}>
                   Connect your wallet to vote on content and earn rewards
                 </p>
-                <div className="bg-gradient-to-r from-blue-900/50 to-purple-900/50 border border-blue-500/30 rounded-lg p-4">
-                  <p className="text-sm text-blue-300">
+                <div className={cn(
+                  "border rounded-lg p-4",
+                  isDark 
+                    ? "bg-gradient-to-r from-blue-900/50 to-purple-900/50 border-blue-500/30" 
+                    : "bg-gradient-to-r from-purple-100/50 to-blue-100/50 border-purple-300/30"
+                )}>
+                  <p className={cn(
+                    "text-sm",
+                    isDark ? "text-blue-300" : "text-purple-700"
+                  )}>
                     {isInFarcaster 
                       ? "🚀 Farcaster wallet integration available"
                       : "🖥️ Connect any Ethereum wallet"
@@ -272,59 +424,119 @@ export default function ExplorePage() {
                 </div>
               </div>
             ) : (
-              <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6 text-center">
-                <TagIcon className="mx-auto h-12 w-12 text-gray-500 mb-4" />
-                <h3 className="text-lg font-medium text-white mb-2">
+              <div className={cn(
+                "rounded-lg p-6 text-center border",
+                isDark 
+                  ? "bg-gray-800/50 border-gray-700" 
+                  : "bg-white/80 border-yellow-200"
+              )}>
+                <TagIcon className={cn(
+                  "mx-auto h-12 w-12 mb-4",
+                  isDark ? "text-gray-500" : "text-gray-400"
+                )} />
+                <h3 className={cn(
+                  "text-lg font-medium mb-2",
+                  isDark ? "text-white" : "text-gray-900"
+                )}>
                   Select Content to Vote
                 </h3>
-                <p className="text-gray-400 mb-4">
+                <p className={cn(
+                  "mb-4",
+                  isDark ? "text-gray-400" : "text-gray-600"
+                )}>
                   Click any Evermark to delegate your voting power
                 </p>
               </div>
             )}
 
             {/* Quick Actions */}
-            <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6">
-              <h3 className="font-semibold text-white mb-4">Quick Actions</h3>
+            <div className={cn(
+              "rounded-lg p-6 border",
+              isDark 
+                ? "bg-gray-800/50 border-gray-700" 
+                : "bg-white/80 border-yellow-200"
+            )}>
+              <h3 className={cn(
+                "font-semibold mb-4",
+                isDark ? "text-white" : "text-gray-900"
+              )}>Quick Actions</h3>
               <div className="space-y-3">
                 <button
                   onClick={() => navigate('/leaderboard')}
-                  className="w-full flex items-center justify-between p-3 bg-gray-700/50 hover:bg-gray-700 rounded-lg transition-colors group"
+                  className={cn(
+                    "w-full flex items-center justify-between p-3 rounded-lg transition-colors group",
+                    isDark 
+                      ? "bg-gray-700/50 hover:bg-gray-700" 
+                      : "bg-yellow-100/50 hover:bg-yellow-200/50"
+                  )}
                 >
                   <div className="flex items-center">
                     <TrendingUpIcon className="h-4 w-4 text-yellow-400 mr-3" />
-                    <span className="text-white">View Leaderboard</span>
+                    <span className={cn(
+                      isDark ? "text-white" : "text-gray-900"
+                    )}>View Leaderboard</span>
                   </div>
-                  <span className="text-gray-400 group-hover:text-white transition-colors">→</span>
+                  <span className={cn(
+                    "transition-colors",
+                    isDark 
+                      ? "text-gray-400 group-hover:text-white" 
+                      : "text-gray-600 group-hover:text-gray-900"
+                  )}>→</span>
                 </button>
                 
                 <button
                   onClick={() => navigate('/staking')}
-                  className="w-full flex items-center justify-between p-3 bg-gray-700/50 hover:bg-gray-700 rounded-lg transition-colors group"
+                  className={cn(
+                    "w-full flex items-center justify-between p-3 rounded-lg transition-colors group",
+                    isDark 
+                      ? "bg-gray-700/50 hover:bg-gray-700" 
+                      : "bg-yellow-100/50 hover:bg-yellow-200/50"
+                  )}
                 >
                   <div className="flex items-center">
                     <StarIcon className="h-4 w-4 text-purple-400 mr-3" />
-                    <span className="text-white">Start Staking</span>
+                    <span className={cn(
+                      isDark ? "text-white" : "text-gray-900"
+                    )}>Start Staking</span>
                   </div>
-                  <span className="text-gray-400 group-hover:text-white transition-colors">→</span>
+                  <span className={cn(
+                    "transition-colors",
+                    isDark 
+                      ? "text-gray-400 group-hover:text-white" 
+                      : "text-gray-600 group-hover:text-gray-900"
+                  )}>→</span>
                 </button>
               </div>
             </div>
 
             {/* Protocol Info */}
-            <div className="bg-gradient-to-r from-gray-800/50 to-gray-900/50 border border-gray-700 rounded-lg p-6">
-              <h3 className="font-semibold text-white mb-4">Protocol Info</h3>
+            <div className={cn(
+              "rounded-lg p-6 border",
+              isDark 
+                ? "bg-gradient-to-r from-gray-800/50 to-gray-900/50 border-gray-700" 
+                : "bg-gradient-to-r from-yellow-100/50 to-white/50 border-yellow-200"
+            )}>
+              <h3 className={cn(
+                "font-semibold mb-4",
+                isDark ? "text-white" : "text-gray-900"
+              )}>Protocol Info</h3>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Network:</span>
+                  <span className={cn(
+                    isDark ? "text-gray-400" : "text-gray-600"
+                  )}>Network:</span>
                   <span className="text-green-400 font-medium">Base Mainnet</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Storage:</span>
+                  <span className={cn(
+                    isDark ? "text-gray-400" : "text-gray-600"
+                  )}>Storage:</span>
                   <span className="text-cyan-400 font-medium">IPFS + Blockchain</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Status:</span>
+                  <span className={cn(
+                    isDark ? "text-gray-400" : "text-gray-600"
+                  )}>Status:</span>
                   <div className="flex items-center">
                     <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
                     <span className="text-green-400 font-medium">Live</span>

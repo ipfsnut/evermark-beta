@@ -34,7 +34,6 @@ const TempEvermarkService = {
   }),
   fetchEvermarks: async (options: EvermarkFeedOptions): Promise<EvermarkFeedResult> => {
     try {
-      console.log('🔄 TempEvermarkService.fetchEvermarks called with options:', options);
       
       // Simple API call to our evermarks endpoint
       // Use /api/ path which is redirected to /.netlify/functions/
@@ -42,8 +41,6 @@ const TempEvermarkService = {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
-      
-      console.log('📡 API response status:', response.status, response.statusText);
       
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`);
@@ -340,7 +337,6 @@ const QUERY_KEYS = {
  * Handles data fetching, creation, pagination, and filtering
  */
 export function useEvermarksState(): UseEvermarksResult {
-  console.log('🎯 useEvermarksState hook called');
   
   // Get the active account for blockchain operations
   const account = useActiveAccount();
@@ -375,7 +371,6 @@ export function useEvermarksState(): UseEvermarksResult {
   } = useQuery({
     queryKey: QUERY_KEYS.evermarks(queryOptions),
     queryFn: () => {
-      console.log('🚀 React Query queryFn called with options:', queryOptions);
       return TempEvermarkService.fetchEvermarks(queryOptions);
     },
     staleTime: 5 * 60 * 1000, // 5 minutes

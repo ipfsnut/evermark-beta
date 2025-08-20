@@ -7,23 +7,22 @@ import {
 } from 'lucide-react';
 import { useAppUI, useAppAuth } from '../../providers/AppContext';
 import { useFarcasterUser } from '../../lib/farcaster';
+import { useTheme } from '../../providers/ThemeProvider';
+import { ThemeToggle } from '../ui/ThemeToggle';
 import { WalletConnect } from '../ConnectButton';
 import { cn, useIsMobile } from '../../utils/responsive';
 
 export function Header() {
-  const { toggleSidebar, notifications, theme } = useAppUI();
+  const { toggleSidebar, notifications } = useAppUI();
   const { isAuthenticated, user } = useAppAuth();
   const { isInFarcaster } = useFarcasterUser();
+  const { isDark } = useTheme();
   const isMobile = useIsMobile();
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
-    <header className={cn(
-      'sticky top-0 z-50 border-b transition-colors duration-200',
-      'bg-gray-900/95 backdrop-blur-sm border-gray-800',
-      theme === 'light' && 'bg-white/95 border-gray-200'
-    )}>
+    <header className="sticky top-0 z-50 border-b transition-colors duration-200 bg-white/95 backdrop-blur-sm border-gray-200 dark:bg-gray-900/95 dark:border-gray-800">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Left section */}
@@ -32,7 +31,7 @@ export function Header() {
             {!isInFarcaster && (
               <button
                 onClick={toggleSidebar}
-                className="p-2 rounded-lg hover:bg-gray-800 transition-colors lg:hidden"
+                className="p-2 rounded-lg transition-colors lg:hidden hover:bg-gray-100 dark:hover:bg-gray-800"
                 aria-label="Toggle sidebar"
               >
                 <MenuIcon className="h-5 w-5" />
@@ -63,12 +62,7 @@ export function Header() {
                 <input
                   type="text"
                   placeholder="Search Evermarks..."
-                  className={cn(
-                    'w-full pl-10 pr-4 py-2 rounded-lg border transition-colors',
-                    'bg-gray-800 border-gray-700 text-white placeholder-gray-400',
-                    'focus:border-cyber-primary focus:ring-1 focus:ring-cyber-primary focus:outline-none',
-                    theme === 'light' && 'bg-gray-100 border-gray-300 text-gray-900 placeholder-gray-500'
-                  )}
+                  className="w-full pl-10 pr-4 py-2 rounded-lg border transition-colors bg-gray-100 border-gray-300 text-gray-900 placeholder-gray-500 focus:border-cyber-primary focus:ring-1 focus:ring-cyber-primary focus:outline-none dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:placeholder-gray-400"
                 />
               </div>
             </div>
@@ -80,14 +74,17 @@ export function Header() {
             {isMobile && (
               <Link 
                 to="/explore"
-                className="p-2 rounded-lg hover:bg-gray-800 transition-colors"
+                className="p-2 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
               >
                 <SearchIcon className="h-5 w-5" />
               </Link>
             )}
 
+            {/* Theme toggle */}
+            <ThemeToggle size="sm" />
+
             {/* Notifications */}
-            <button className="relative p-2 rounded-lg hover:bg-gray-800 transition-colors">
+            <button className="relative p-2 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-800">
               <BellIcon className="h-5 w-5" />
               {unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">

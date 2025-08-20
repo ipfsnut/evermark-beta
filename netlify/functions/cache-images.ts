@@ -2,6 +2,9 @@
 import { Handler } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
 
+// Beta table name - using beta_evermarks instead of alpha evermarks table
+const EVERMARKS_TABLE = 'beta_evermarks';
+
 // Initialize Supabase for serverless function with secret key for storage access
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -106,7 +109,7 @@ export const handler: Handler = async (event, context) => {
  */
 async function getEvermarksNeedingCache() {
   const { data, error } = await supabase
-    .from('evermarks')
+    .from(EVERMARKS_TABLE)
     .select('token_id, ipfs_image_hash')
     .is('supabase_image_url', null) // Need caching if no Supabase URL
     .not('ipfs_image_hash', 'is', null) // But have IPFS hash
@@ -123,7 +126,7 @@ async function getSpecificEvermarksForCache(tokenIds: number[]) {
   console.log('🔍 Looking for token IDs:', tokenIds);
   
   const { data, error } = await supabase
-    .from('evermarks')
+    .from(EVERMARKS_TABLE)
     .select('token_id, ipfs_image_hash, supabase_image_url')
     .in('token_id', tokenIds)
     .not('ipfs_image_hash', 'is', null);
@@ -197,7 +200,7 @@ async function cacheImage(tokenId: number, originalUrl: string) {
 
     // Update database with cached image URL
     await supabase
-      .from('evermarks')
+      .from(EVERMARKS_TABLE)
       .update({
         supabase_image_url: urlData.publicUrl,
         updated_at: new Date().toISOString()

@@ -7,6 +7,7 @@ import { WalletProvider } from './WalletProvider';
 import { BlockchainProvider } from './BlockchainProvider';
 import { IntegratedUserProvider } from './IntegratedUserProvider'; // NOW INCLUDED
 import { AppContextProvider } from './AppContext';
+import { ThemeProvider } from './ThemeProvider';
 
 interface AppProvidersProps {
   children: React.ReactNode;
@@ -36,31 +37,34 @@ const queryClient = new QueryClient({
 });
 
 /**
- * AppProviders - UPDATED ORDER with IntegratedUserProvider:
+ * AppProviders - UPDATED ORDER with ThemeProvider and IntegratedUserProvider:
  * 1. React Query (data management)
- * 2. Thirdweb Provider (blockchain SDK)
- * 3. Farcaster Provider (authentication & context detection)
- * 4. Wallet Provider (wallet connection management)
- * 5. Blockchain Provider (contract interactions)
- * 6. IntegratedUserProvider (UNIFIED USER MANAGEMENT) ← NEW
- * 7. App Context (app-level state) ← RECEIVES INTEGRATED USER
+ * 2. Theme Provider (dark/light mode) ← NEW
+ * 3. Thirdweb Provider (blockchain SDK)
+ * 4. Farcaster Provider (authentication & context detection)
+ * 5. Wallet Provider (wallet connection management)
+ * 6. Blockchain Provider (contract interactions)
+ * 7. IntegratedUserProvider (UNIFIED USER MANAGEMENT)
+ * 8. App Context (app-level state) ← RECEIVES INTEGRATED USER
  */
 export function AppProviders({ children }: AppProvidersProps) {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThirdwebProvider>
-        <FarcasterProvider>
-          <WalletProvider>
-            <BlockchainProvider>
-              <IntegratedUserProvider>
-                <AppContextProvider>
-                  {children}
-                </AppContextProvider>
-              </IntegratedUserProvider>
-            </BlockchainProvider>
-          </WalletProvider>
-        </FarcasterProvider>
-      </ThirdwebProvider>
+      <ThemeProvider>
+        <ThirdwebProvider>
+          <FarcasterProvider>
+            <WalletProvider>
+              <BlockchainProvider>
+                <IntegratedUserProvider>
+                  <AppContextProvider>
+                    {children}
+                  </AppContextProvider>
+                </IntegratedUserProvider>
+              </BlockchainProvider>
+            </WalletProvider>
+          </FarcasterProvider>
+        </ThirdwebProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

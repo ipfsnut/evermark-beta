@@ -7,10 +7,13 @@ import { client } from '@/lib/thirdweb';
 import { base } from 'thirdweb/chains';
 
 // Contract addresses from environment variables
-const getContractAddress = (envVar: string | undefined): `0x${string}` => {
+const getContractAddress = (envVar: string | undefined, contractName: string): `0x${string}` => {
   if (!envVar) {
-    console.warn(`Contract address not found for ${envVar}`);
+    console.warn(`[EVERMARK BETA] Missing contract address for ${contractName}. Please check environment variables.`);
     return '0x0000000000000000000000000000000000000000';
+  }
+  if (envVar === '0x0000000000000000000000000000000000000000') {
+    console.warn(`[EVERMARK BETA] ${contractName} address is set to zero address. Contract will not function.`);
   }
   return envVar as `0x${string}`;
 };
@@ -22,44 +25,44 @@ export function useContracts() {
         emarkToken: getContract({
           client,
           chain: base,
-          address: getContractAddress(import.meta.env.VITE_EMARK_TOKEN_ADDRESS)
+          address: getContractAddress(import.meta.env.VITE_EMARK_ADDRESS, 'EMARK Token')
           // ABI omitted - thirdweb v5 will auto-resolve for verified contracts
         }),
         
-        cardCatalog: getContract({
+        wemark: getContract({
           client,
           chain: base,
-          address: getContractAddress(import.meta.env.VITE_CARD_CATALOG_ADDRESS)
+          address: getContractAddress(import.meta.env.VITE_WEMARK_ADDRESS, 'WEMARK Token')
         }),
         
         evermarkNFT: getContract({
           client,
           chain: base,
-          address: getContractAddress(import.meta.env.VITE_EVERMARK_NFT_ADDRESS)
+          address: getContractAddress(import.meta.env.VITE_EVERMARK_NFT_ADDRESS, 'Evermark NFT')
         }),
         
         evermarkVoting: getContract({
           client,
           chain: base,
-          address: getContractAddress(import.meta.env.VITE_EVERMARK_VOTING_ADDRESS)
+          address: getContractAddress(import.meta.env.VITE_EVERMARK_VOTING_ADDRESS, 'Evermark Voting')
         }),
         
-        evermarkLeaderboard: getContract({
+        nftStaking: getContract({
           client,
           chain: base,
-          address: getContractAddress(import.meta.env.VITE_EVERMARK_LEADERBOARD_ADDRESS)
+          address: getContractAddress(import.meta.env.VITE_NFT_STAKING_ADDRESS, 'NFT Staking')
         }),
         
         evermarkRewards: getContract({
           client,
           chain: base,
-          address: getContractAddress(import.meta.env.VITE_EVERMARK_REWARDS_ADDRESS)
+          address: getContractAddress(import.meta.env.VITE_EVERMARK_REWARDS_ADDRESS, 'Evermark Rewards')
         }),
         
         feeCollector: getContract({
           client,
           chain: base,
-          address: getContractAddress(import.meta.env.VITE_FEE_COLLECTOR_ADDRESS)
+          address: getContractAddress(import.meta.env.VITE_FEE_COLLECTOR_ADDRESS, 'Fee Collector')
         })
       };
     } catch (error) {
@@ -77,11 +80,11 @@ export function useContractsStatus() {
   
   const status = useMemo(() => {
     const addresses = {
-      emarkToken: import.meta.env.VITE_EMARK_TOKEN_ADDRESS,
-      cardCatalog: import.meta.env.VITE_CARD_CATALOG_ADDRESS,
+      emarkToken: import.meta.env.VITE_EMARK_ADDRESS,
+      wemark: import.meta.env.VITE_WEMARK_ADDRESS,
       evermarkNFT: import.meta.env.VITE_EVERMARK_NFT_ADDRESS,
       evermarkVoting: import.meta.env.VITE_EVERMARK_VOTING_ADDRESS,
-      evermarkLeaderboard: import.meta.env.VITE_EVERMARK_LEADERBOARD_ADDRESS,
+      nftStaking: import.meta.env.VITE_NFT_STAKING_ADDRESS,
       evermarkRewards: import.meta.env.VITE_EVERMARK_REWARDS_ADDRESS,
       feeCollector: import.meta.env.VITE_FEE_COLLECTOR_ADDRESS
     };

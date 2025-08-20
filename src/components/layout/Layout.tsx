@@ -2,9 +2,10 @@
 import React from 'react';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
-import { MobileNavigation } from './MobileNavigation';
+import { MobileMenu } from './MobileMenu';
 import { useAppUI } from '../../providers/AppContext';
 import { useFarcasterUser } from '../../lib/farcaster';
+import { useTheme } from '../../providers/ThemeProvider';
 import { cn } from '../../utils/responsive';
 import { useIsMobileDevice } from '../../utils/device-detection';
 
@@ -13,26 +14,26 @@ interface LayoutProps {
 }
 
 export function Layout({ children }: LayoutProps) {
-  const { sidebarOpen, theme, toggleSidebar } = useAppUI();
+  const { sidebarOpen, toggleSidebar } = useAppUI();
   const { isInFarcaster } = useFarcasterUser();
+  const { isDark } = useTheme();
   const isMobile = useIsMobileDevice();
 
-  // Mobile-first: Always show mobile nav on mobile devices
-  // Don't rely on Farcaster detection for mobile layout
-  const showMobileNav = isMobile;
-  const showSidebar = !isMobile && !isInFarcaster;
+  // Mobile-first: Use slide-out menu on mobile, sidebar on desktop
+  const showDesktopSidebar = !isMobile && !isInFarcaster;
+  const showMobileMenu = isMobile;
 
   return (
     <div className={cn(
-      'min-h-screen bg-black text-white transition-colors duration-200',
-      theme === 'light' && 'bg-gray-50 text-gray-900'
+      "min-h-screen transition-colors duration-200",
+      isDark ? "bg-black text-white" : "bg-yellow-50 text-gray-900"
     )}>
       {/* Header - optimized for mobile */}
       <Header />
       
       <div className="flex relative">
         {/* Desktop Sidebar */}
-        {showSidebar && (
+        {showDesktopSidebar && (
           <Sidebar 
             isOpen={sidebarOpen}
             className={cn(
@@ -43,12 +44,11 @@ export function Layout({ children }: LayoutProps) {
           />
         )}
         
-        {/* Main content area - adjusted for mobile nav */}
+        {/* Main content area - no bottom padding needed for slide-out menu */}
         <main className={cn(
           'flex-1 transition-all duration-300',
           'min-h-[calc(100vh-64px)]', // Account for header
-          showSidebar && sidebarOpen && 'lg:ml-0',
-          showMobileNav && 'pb-20' // Space for bottom nav
+          showDesktopSidebar && sidebarOpen && 'lg:ml-0'
         )}>
           {/* Safe area padding for notches/home indicators */}
           <div className={cn(
@@ -68,11 +68,16 @@ export function Layout({ children }: LayoutProps) {
         </main>
       </div>
       
-      {/* Mobile Bottom Navigation */}
-      {showMobileNav && <MobileNavigation />}
+      {/* Mobile Menu */}
+      {showMobileMenu && (
+        <MobileMenu 
+          isOpen={sidebarOpen}
+          onClose={toggleSidebar}
+        />
+      )}
       
-      {/* Sidebar backdrop for mobile (tablets) */}
-      {showSidebar && sidebarOpen && (
+      {/* Sidebar backdrop for desktop */}
+      {showDesktopSidebar && sidebarOpen && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
           onClick={toggleSidebar}

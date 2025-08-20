@@ -1,0 +1,298 @@
+# EVERMARK BETA LAUNCH CHECKLIST
+# Generated: 2025-08-20
+# Status: Contracts are deployed and are the source of truth
+# Goal: Align entire codebase with new contract architecture
+
+## CRITICAL PATH - Must fix before any testing
+==============================================
+
+### 1. CONTRACT INTEGRATION & ABIS
+[ ] Update lib/contracts.ts
+    - Remove getCardCatalogContract(), replace with getWEMARKContract()
+    - Remove getEvermarkLeaderboardContract()
+    - Add getNFTStakingContract()
+    - Update all contract addresses to use new env vars
+    - Import new ABI files (.abi.json versions)
+
+[ ] Update environment variables (.env.example and docs)
+    - Rename VITE_CARD_CATALOG_ADDRESS to VITE_WEMARK_ADDRESS
+    - Remove VITE_EVERMARK_LEADERBOARD_ADDRESS
+    - Add VITE_NFT_STAKING_ADDRESS
+    - Document all new contract addresses
+
+[ ] Update ABI imports in all features
+    - /features/evermarks: Use EvermarkNFT.abi.json
+    - /features/voting: Use EvermarkVoting.abi.json  
+    - /features/staking: Use WEMARK.abi.json and NFTStaking.abi.json
+    - /features/tokens: Use EvermarkRewards.abi.json
+    - /lib/abis: Use FeeCollector.abi.json
+
+[ ] Update hooks/core/useContracts.ts
+    - Replace cardCatalog with wemark
+    - Remove evermarkLeaderboard
+    - Add nftStaking
+    - Update all contract references
+
+## FEATURE: EVERMARKS
+=====================
+
+### Minting & Fees
+[ ] Fix minting fee in BlockchainService.ts line 359
+    - Change from 0.0007 ETH to 0.00007 ETH (match contract)
+    
+[ ] Remove MAX_BATCH_SIZE references in BlockchainService.ts
+    - Lines 125, 142, 215-238 reference non-existent contract method
+    - Remove or replace with actual contract constants
+
+### Referral System (NEW FEATURE)
+[ ] Add referral support to minting flow
+    - Update BlockchainService.mintEvermark() to accept optional referrer address
+    - Use mintEvermarkWithReferral when referrer provided
+    
+[ ] Create referral UI components
+    - Add referral link generation
+    - Show referral earnings in user profile
+    - Add "Claim Referral Earnings" button
+    - Display referral statistics (count, total earned)
+
+[ ] Implement claimPendingReferralPayment
+    - Add service method in BlockchainService.ts
+    - Create UI in user profile/dashboard
+    - Show pending vs claimed amounts
+
+[ ] Add referral tracking to database
+    - Store referrer relationships
+    - Track referral earnings
+    - Sync with contract events
+
+## FEATURE: VOTING (MAJOR REWORK)
+=================================
+
+### Core Contract Changes
+[ ] Update VotingService.ts completely
+    - Remove ALL delegateVotes/undelegateVotes references
+    - Implement voteForEvermark(evermarkId, votes) method
+    - Remove undelegation logic entirely
+    - Change from "cycles" to "seasons" terminology
+
+[ ] Update voting types (types/index.ts)
+    - Replace VotingCycle with VotingSeason
+    - Remove Delegation type
+    - Add Season type with startTime, endTime, active, totalVotes
+    - Update Vote type for direct voting model
+
+[ ] Implement season management
+    - Add getSeasonInfo() method
+    - Add getCurrentSeason() method
+    - Track season start/end times
+    - Show time remaining in current season
+
+[ ] Update useVotingState hook
+    - Remove delegation state management
+    - Add season tracking
+    - Implement vote casting (not delegation)
+    - Track votes per evermark per season
+
+[ ] Update VotingPanel component
+    - Remove delegate/undelegate UI
+    - Add "Vote for Evermark" interface
+    - Show current season info
+    - Display votes cast vs available voting power
+    - Remove delegation history
+
+## FEATURE: STAKING (WEMARK INTEGRATION)
+=========================================
+
+### Replace CardCatalog with WEMARK
+[ ] Update all CardCatalog references to WEMARK
+    - StakingService.ts
+    - useStakingState.ts
+    - All staking components
+
+[ ] Implement WEMARK contract methods
+    - stake(amount) - stake EMARK to get wEMARK
+    - startUnbonding(amount) - begin 7-day unbonding period
+    - withdraw() - claim after unbonding period
+    - Remove transfer/transferFrom (non-transferable)
+
+[ ] Add unbonding period UI
+    - Show 7-day countdown for unbonding
+    - Track unbonding status
+    - Disable withdraw until period complete
+    - Show unbonding amount separately from staked
+
+[ ] Update staking flow
+    - Stake EMARK → receive wEMARK (1:1)
+    - wEMARK balance = voting power
+    - Cannot transfer wEMARK
+    - Must unbond to get EMARK back
+
+### NFT Staking Integration (NEW)
+[ ] Create NFTStaking service
+    - Implement stake/unstake NFT methods
+    - Track staked NFTs per user
+    - Calculate rewards for staked NFTs
+
+[ ] Add NFT staking UI
+    - Show user's NFTs available to stake
+    - Display currently staked NFTs
+    - Add stake/unstake buttons
+    - Show NFT staking rewards
+
+## FEATURE: LEADERBOARD (OFFCHAIN REWORK)
+==========================================
+
+[ ] Remove all contract-based leaderboard code
+    - Delete LeaderboardService contract calls
+    - Remove contract sync logic
+    - Delete EvermarkLeaderboard.json ABI
+
+[ ] Implement offchain leaderboard using Supabase
+    - Create view/query for evermarks with vote counts
+    - Order by total votes in current season
+    - Cache results for performance
+    - Update every few minutes
+
+[ ] Update LeaderboardService.ts
+    - Query voting data from Supabase
+    - Join evermarks table with voting events
+    - Calculate rankings based on current season votes
+    - Add pagination support
+
+[ ] Sync voting data to Supabase
+    - Listen to VoteCast events from EvermarkVoting contract
+    - Store vote counts per evermark per season
+    - Update totals on each vote
+
+[ ] Update LeaderboardTable component
+    - Show vote counts from database
+    - Display season information
+    - Add vote trend indicators
+    - Show voter count per evermark
+
+## FEATURE: TOKENS & REWARDS
+============================
+
+[ ] Update EvermarkRewards integration
+    - Use new ABI with dual reward system
+    - Implement ETH + EMARK reward claiming
+    - Show both reward types in UI
+
+[ ] Add reward distribution tracking
+    - Display distribution rates
+    - Show reward pools
+    - Track user earnings
+
+## FEATURE: ADMIN DASHBOARD
+===========================
+
+[ ] Integrate FeeCollector contract
+    - Add to AdminPage.tsx
+    - Show collected fees
+    - Add withdraw functionality for admin
+    - Display fee statistics
+
+[ ] Add contract management section
+    - Show all contract addresses
+    - Display contract states (paused, etc.)
+    - Add emergency controls
+
+[ ] Season management for voting
+    - Start new season button
+    - End current season button
+    - Show season statistics
+
+## DATABASE & API UPDATES
+=========================
+
+[ ] Update Supabase schema
+    - Add referrals table
+    - Add voting_seasons table
+    - Add season_votes table
+    - Add unbonding_queue table
+    - Remove leaderboard contract tables
+
+[ ] Update API endpoints (netlify/functions)
+    - Add voting data sync endpoint
+    - Add referral tracking endpoint
+    - Update evermarks endpoint for new fields
+    - Add season management endpoints
+
+## TESTING & VALIDATION
+=======================
+
+[ ] Test complete minting flow with referrals
+[ ] Test voting in seasons (not delegation)
+[ ] Test WEMARK staking with unbonding period
+[ ] Test NFT staking functionality
+[ ] Test offchain leaderboard accuracy
+[ ] Test reward claiming (ETH + EMARK)
+[ ] Test admin fee collection
+[ ] Verify all contract addresses configured
+[ ] Test with multiple wallets
+[ ] Verify gas costs are reasonable
+
+## DEPLOYMENT CHECKLIST
+=======================
+
+[ ] Update all environment variables
+[ ] Run database migrations
+[ ] Deploy Netlify functions
+[ ] Clear caches
+[ ] Test on testnet first
+[ ] Monitor contract events
+[ ] Verify Supabase sync working
+[ ] Check error reporting
+
+## NICE TO HAVE (Post-Beta)
+===========================
+
+[ ] Add referral leaderboard
+[ ] Implement vote delegation (if needed)
+[ ] Add historical season data viewing
+[ ] Create voting strategies/recommendations
+[ ] Add NFT staking boost multipliers
+[ ] Implement reward compounding
+[ ] Add governance proposals
+[ ] Create mobile-optimized views
+
+## NOTES
+========
+- Contracts are source of truth - if there's a conflict, follow the contract
+- WEMARK is non-transferable by design
+- Voting is now direct (vote for evermark) not delegation-based
+- Leaderboard is purely offchain, calculated from voting data
+- Referral system is 10% of minting fee
+- Unbonding period is fixed at 7 days
+- Seasons are managed by admin, not automatic
+
+## PRIORITY ORDER
+=================
+1. Fix contract integration and ABIs (foundation)
+2. Fix voting system (core feature change)  
+3. Implement WEMARK staking (required for voting)
+4. Fix minting fee (quick fix but important)
+5. Move leaderboard offchain (architecture change)
+6. Add referral system (new revenue feature)
+7. Integrate FeeCollector (admin functionality)
+8. Add NFT staking (additional feature)
+
+## CONTRACT ADDRESSES TO CONFIGURE
+==================================
+- VITE_EMARK_ADDRESS
+- VITE_WEMARK_ADDRESS (replaces CARD_CATALOG)
+- VITE_EVERMARK_NFT_ADDRESS
+- VITE_EVERMARK_VOTING_ADDRESS
+- VITE_NFT_STAKING_ADDRESS
+- VITE_EVERMARK_REWARDS_ADDRESS
+- VITE_FEE_COLLECTOR_ADDRESS
+
+## REMOVED CONTRACTS
+====================
+- CardCatalog (replaced by WEMARK)
+- EvermarkLeaderboard (moved offchain)
+
+---
+End of Checklist
+Generated from code analysis on 2025-08-20
+Next step: Start with CONTRACT INTEGRATION & ABIS section

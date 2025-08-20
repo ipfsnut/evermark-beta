@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Protocol Overview - Evermark Documentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+            line-height: 1.7;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #06b6d4;
+            text-decoration: none;
+            font-size: 0.9rem;
+            margin-bottom: 2rem;
+            transition: color 0.3s ease;
+        }
+        
+        .back-link:hover {
+            color: #0891b2;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #06b6d4, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        h2 {
+            font-size: 1.8rem;
+            margin: 2rem 0 1rem 0;
+            color: #06b6d4;
+            border-bottom: 2px solid #374151;
+            padding-bottom: 0.5rem;
+        }
+        
+        h3 {
+            font-size: 1.3rem;
+            margin: 1.5rem 0 0.75rem 0;
+            color: #8b5cf6;
+        }
+        
+        p {
+            margin-bottom: 1.2rem;
+            color: #e5e7eb;
+        }
+        
+        ul, ol {
+            margin: 1rem 0 1.2rem 2rem;
+            color: #e5e7eb;
+        }
+        
+        li {
+            margin-bottom: 0.5rem;
+        }
+        
+        strong {
+            color: #06b6d4;
+            font-weight: 600;
+        }
+        
+        .icon {
+            width: 16px;
+            height: 16px;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+        
+        .feature-card {
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+        
+        .feature-card h3 {
+            margin-top: 0;
+        }
+        
+        .steps {
+            counter-reset: step-counter;
+        }
+        
+        .steps ol {
+            list-style: none;
+            margin-left: 0;
+        }
+        
+        .steps li {
+            counter-increment: step-counter;
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            position: relative;
+            padding-left: 3rem;
+        }
+        
+        .steps li::before {
+            content: counter(step-counter);
+            position: absolute;
+            left: 1rem;
+            top: 1rem;
+            background: #06b6d4;
+            color: #0a0a0a;
+            width: 1.5rem;
+            height: 1.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+        
+        .contract-list {
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+        
+        .contract-list ul {
+            margin-left: 1rem;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            h2 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/docs" class="back-link">
+            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+            Back to Documentation
+        </a>
+        
+        <h1>Evermark Protocol</h1>
+        
+        <h2>What is Evermark?</h2>
+        <p>Evermark Protocol is a decentralized system for creating permanent, verifiable references to online content. Built on the Base blockchain, it allows users to mark any digital content and ensure it remains accessible and attributable forever.</p>
+        
+        <h2>Key Features</h2>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <h3>Permanent References</h3>
+                <ul>
+                    <li>Create immutable links to any online content</li>
+                    <li>Store metadata on IPFS for decentralized access</li>
+                    <li>Blockchain-verified ownership and timestamps</li>
+                </ul>
+            </div>
+            
+            <div class="feature-card">
+                <h3>Social Discovery</h3>
+                <ul>
+                    <li>Discover content through community curation</li>
+                    <li>Build personal collections of valuable references</li>
+                    <li>Share and explore evermarked content in Farcaster or via PWA or webapp</li>
+                </ul>
+            </div>
+            
+            <div class="feature-card">
+                <h3>Farcaster Integration</h3>
+                <ul>
+                    <li>Native support for Farcaster casts</li>
+                    <li>Seamless wallet integration in Farcaster frames</li>
+                    <li>Social sharing and discovery features</li>
+                </ul>
+            </div>
+        </div>
+        
+        <h2>How It Works</h2>
+        <div class="steps">
+            <ol>
+                <li><strong>Create:</strong> Submit a URL or Farcaster cast to create an Evermark</li>
+                <li><strong>Store:</strong> Metadata is stored on IPFS, reference recorded on-chain</li>
+                <li><strong>Share:</strong> Your Evermark becomes part of the permanent web</li>
+                <li><strong>Discover:</strong> Browse and collect Evermarks from the community</li>
+            </ol>
+        </div>
+        
+        <h2>Smart Contracts</h2>
+        <p>The protocol consists of several interconnected smart contracts:</p>
+        <div class="contract-list">
+            <ul>
+                <li><strong>Evermark NFT:</strong> Core NFT contract for minting and managing Evermarks</li>
+                <li><strong>Voting System:</strong> Community governance and content curation</li>
+                <li><strong>Rewards:</strong> Token distribution and incentive mechanisms</li>
+                <li><strong>Leaderboard:</strong> Ranking and reputation system</li>
+            </ul>
+        </div>
+        
+        <h2>Getting Started</h2>
+        <div class="steps">
+            <ol>
+                <li>Connect your wallet (MetaMask, Coinbase Wallet, or Farcaster)</li>
+                <li>Create your first Evermark by submitting a URL, DOI, or ISBN to share something meaningful on the network</li>
+                <li>Build your collection and discover content from others to earn rewards</li>
+                <li>Participate in the skin-in-the-game curation community through staking and voting</li>
+            </ol>
+        </div>
+        
+        <h2>Technical Details</h2>
+        <ul>
+            <li><strong>Blockchain:</strong> Base (Ethereum L2)</li>
+            <li><strong>Storage:</strong> IPFS for metadata and images</li>
+            <li><strong>Standards:</strong> ERC-721 for NFTs, ERC-20 for tokens</li>
+            <li><strong>Frontend:</strong> React with ThirdWeb and Wagmi integration</li>
+        </ul>
+    </div>
+</body>
+</html>

@@ -6,9 +6,11 @@ import {
   TrendingUpIcon,
   CoinsIcon,
   PlusIcon,
-  BookOpenIcon
+  BookOpenIcon,
+  InfoIcon
 } from 'lucide-react';
 import { useAppAuth } from '../../providers/AppContext';
+import { useTheme } from '../../providers/ThemeProvider';
 import { cn } from '../../utils/responsive';
 
 // Navigation item interface
@@ -31,6 +33,11 @@ const navigationItems: NavItem[] = [
     to: '/explore',
     label: 'Explore',
     icon: CompassIcon,
+  },
+  {
+    to: '/about',
+    label: 'About',
+    icon: InfoIcon,
   },
   {
     to: '/leaderboard',
@@ -57,6 +64,7 @@ const actionItems: NavItem[] = [
 
 export function Navigation() {
   const { isAuthenticated } = useAppAuth();
+  const { isDark } = useTheme();
   const location = useLocation();
 
   // Check if a route is active
@@ -79,7 +87,7 @@ export function Navigation() {
 
     const baseClasses = cn(
       'flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 group',
-      'hover:bg-gray-800 hover:text-white',
+      isDark ? 'hover:bg-gray-800 hover:text-white' : 'hover:bg-gray-200 hover:text-gray-900',
       variant === 'action' && 'bg-gradient-to-r from-cyber-primary/20 to-cyber-secondary/20 border border-cyber-primary/30'
     );
 
@@ -91,7 +99,11 @@ export function Navigation() {
 
     const iconClasses = cn(
       'h-5 w-5 mr-3 transition-colors',
-      isActive ? 'text-cyber-primary' : 'text-gray-400 group-hover:text-white'
+      isActive 
+        ? 'text-cyber-primary' 
+        : isDark 
+          ? 'text-gray-400 group-hover:text-white' 
+          : 'text-gray-500 group-hover:text-gray-900'
     );
 
     return (
@@ -106,7 +118,11 @@ export function Navigation() {
         <Icon className={iconClasses} />
         <span className={cn(
           'font-medium transition-colors',
-          isActive ? 'text-cyber-primary' : 'text-gray-300 group-hover:text-white'
+          isActive 
+            ? 'text-cyber-primary' 
+            : isDark 
+              ? 'text-gray-300 group-hover:text-white'
+              : 'text-gray-600 group-hover:text-gray-900'
         )}>
           {item.label}
         </span>
@@ -125,19 +141,28 @@ export function Navigation() {
     <div className="space-y-6">
       {/* Primary navigation */}
       <div className="space-y-1">
-        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+        <h3 className={cn(
+          "text-xs font-semibold uppercase tracking-wider mb-3",
+          isDark ? "text-gray-500" : "text-gray-400"
+        )}>
           Main
         </h3>
         {navigationItems.map(item => renderNavItem(item))}
       </div>
 
       {/* Divider */}
-      <div className="border-t border-gray-800" />
+      <div className={cn(
+        "border-t",
+        isDark ? "border-gray-800" : "border-gray-200"
+      )} />
 
       {/* Action items */}
       {isAuthenticated && (
         <div className="space-y-1">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+          <h3 className={cn(
+          "text-xs font-semibold uppercase tracking-wider mb-3",
+          isDark ? "text-gray-500" : "text-gray-400"
+        )}>
             Actions
           </h3>
           {actionItems.map(item => renderNavItem(item, 'action'))}
@@ -146,13 +171,24 @@ export function Navigation() {
 
       {/* Auth prompt for non-authenticated users */}
       {!isAuthenticated && (
-        <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+        <div className={cn(
+          "rounded-lg p-4",
+          isDark 
+            ? "bg-gray-800/50 border border-gray-700"
+            : "bg-gray-100/50 border border-gray-300"
+        )}>
           <div className="text-center">
             <BookOpenIcon className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-            <h4 className="text-sm font-medium text-white mb-1">
+            <h4 className={cn(
+              "text-sm font-medium mb-1",
+              isDark ? "text-white" : "text-gray-900"
+            )}>
               Create & Collect
             </h4>
-            <p className="text-xs text-gray-400 mb-3">
+            <p className={cn(
+              "text-xs mb-3",
+              isDark ? "text-gray-400" : "text-gray-600"
+            )}>
               Connect to start creating Evermarks and building your collection.
             </p>
             <NavLink
@@ -166,7 +202,10 @@ export function Navigation() {
       )}
 
       {/* Network status indicator */}
-      <div className="flex items-center justify-center space-x-2 text-xs text-gray-500">
+      <div className={cn(
+        "flex items-center justify-center space-x-2 text-xs",
+        isDark ? "text-gray-500" : "text-gray-400"
+      )}>
         <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
         <span>Base Network</span>
       </div>

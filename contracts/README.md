@@ -47,12 +47,13 @@ This directory contains the complete Evermark smart contract system for on-chain
 
 ---
 
-### EvermarkNFT.sol (242 lines)
+### EvermarkNFT.sol (238 lines)
 **Purpose:** Mint and manage Evermark NFTs representing preserved content
 
 **Core Functions:**
 - `mintEvermark(string metadataURI, string title, address creator)` - Mint new Evermark
 - `mintEvermarkWithReferral(...)` - Mint with referral fee sharing
+- `mintEvermarkFor(address to, ...)` - Admin mint to any address (no fee)
 - `exists(uint256 tokenId)` - Check if NFT exists
 - `setFeeCollector(address)` - Update fee collector address (admin only)
 
@@ -89,7 +90,7 @@ This directory contains the complete Evermark smart contract system for on-chain
 
 ---
 
-### NFTStaking.sol (219 lines) - Simplified for Creator Verification
+### NFTStaking.sol (215 lines) - Simplified for Creator Verification
 **Purpose:** Creator verification through Evermark NFT staking
 
 **Core Functions:**
@@ -109,7 +110,7 @@ This directory contains the complete Evermark smart contract system for on-chain
 
 ---
 
-### EvermarkRewards.sol (381 lines) - Most Complex
+### EvermarkRewards.sol (377 lines) - Most Complex
 **Purpose:** Dual-token rewards system (EMARK + WETH) with adaptive pool-based distribution
 
 **Core Functions:**

@@ -8,6 +8,8 @@ import { PWAInstallPrompt } from '../src/components/PWAInstallPrompt';
 // Lazy load pages for better performance
 const HomePage = React.lazy(() => import('../src/pages/HomePage'));
 const ExplorePage = React.lazy(() => import('../src/pages/ExplorePage'));
+const AboutPage = React.lazy(() => import('../src/pages/AboutPage'));
+const DocsPage = React.lazy(() => import('../src/pages/DocsPage'));
 const LeaderboardPage = React.lazy(() => import('../src/features/leaderboard/pages/LeaderboardPage'));
 const StakingPage = React.lazy(() => import('../src/features/staking/pages/StakingPage'));
 const EvermarkDetailPage = React.lazy(() => import('../src/features/evermarks/pages/EvermarkDetailPage'));
@@ -37,6 +39,8 @@ function AppContent() {
             {/* Core feature routes */}
             <Route path="/" element={<HomePage />} />
             <Route path="/explore" element={<ExplorePage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/docs" element={<DocsPage />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
             <Route path="/staking" element={<StakingPage />} />
             

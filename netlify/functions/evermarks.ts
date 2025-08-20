@@ -6,6 +6,12 @@ const supabase = createClient(
   process.env.SUPABASE_ANON_KEY!
 );
 
+// Beta table name - using beta_evermarks instead of alpha evermarks table
+const EVERMARKS_TABLE = 'beta_evermarks';
+
+// Dev wallet for debug logging
+const DEV_WALLET = '0x3427b4716B90C11F9971e43999a48A47Cf5B571E'.toLowerCase();
+
 // Based on your actual schema
 interface EvermarkRecord {
   token_id: number;
@@ -88,7 +94,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
         if (tokenId && tokenId !== 'evermarks') {
           // Get single evermark by token_id
           const { data, error } = await supabase
-            .from('evermarks')
+            .from(EVERMARKS_TABLE)
             .select('*')
             .eq('token_id', parseInt(tokenId))
             .single();
@@ -121,7 +127,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
           const sortOrder = queryStringParameters?.sort_order || 'desc';
 
           let query = supabase
-            .from('evermarks')
+            .from(EVERMARKS_TABLE)
             .select('*', { count: 'exact' })
             .order(sortBy, { ascending: sortOrder === 'asc' })
             .range(offset, offset + limit - 1);
@@ -229,7 +235,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
         };
 
         const { data: createdData, error: createError } = await supabase
-          .from('evermarks')
+          .from(EVERMARKS_TABLE)
           .insert([newEvermark])
           .select()
           .single();
@@ -276,7 +282,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
 
         // First, check if the wallet owns this evermark
         const { data: existingEvermark, error: fetchError } = await supabase
-          .from('evermarks')
+          .from(EVERMARKS_TABLE)
           .select('owner, user_id')
           .eq('token_id', parseInt(tokenId))
           .single();
@@ -309,7 +315,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
         updateData.updated_at = new Date().toISOString();
 
         const { data: updatedData, error: updateError } = await supabase
-          .from('evermarks')
+          .from(EVERMARKS_TABLE)
           .update(updateData)
           .eq('token_id', parseInt(tokenId))
           .select()
@@ -353,7 +359,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
 
         // Check ownership before deletion
         const { data: deleteEvermark, error: deleteFetchError } = await supabase
-          .from('evermarks')
+          .from(EVERMARKS_TABLE)
           .select('owner, user_id, title')
           .eq('token_id', parseInt(tokenId))
           .single();
@@ -378,7 +384,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
         }
 
         const { error: deleteError } = await supabase
-          .from('evermarks')
+          .from(EVERMARKS_TABLE)
           .delete()
           .eq('token_id', parseInt(tokenId));
 

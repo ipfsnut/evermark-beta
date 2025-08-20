@@ -2,6 +2,9 @@
 import { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
 
+// Beta table name - using beta_evermarks instead of alpha evermarks table
+const EVERMARKS_TABLE = 'beta_evermarks';
+
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_ANON_KEY!
@@ -151,7 +154,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
     if (tokenId && tokenId !== 'frame') {
       // Get specific evermark for frame
       const { data: evermark, error } = await supabase
-        .from('evermarks')
+        .from(EVERMARKS_TABLE)
         .select('*')
         .eq('token_id', parseInt(tokenId))
         .single();
@@ -172,7 +175,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
     } else {
       // Default frame - show latest verified evermark
       const { data: latestEvermark } = await supabase
-        .from('evermarks')
+        .from(EVERMARKS_TABLE)
         .select('*')
         .eq('verified', true)
         .order('created_at', { ascending: false })

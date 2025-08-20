@@ -50,7 +50,6 @@ export interface TransactionDetails {
 export interface ContractInfo {
   mintingFee: bigint;
   referralPercentage: number;
-  maxBatchSize: number;
   totalSupply: number;
   isPaused: boolean;
 }
@@ -119,10 +118,9 @@ export class EvermarkBlockchainService {
       
       // Fetch all contract parameters in parallel with error handling
       console.log('📋 Attempting to read contract functions...');
-      const [mintingFee, referralPercentage, maxBatchSize, totalSupply, isPaused] = await Promise.allSettled([
+      const [mintingFee, referralPercentage, totalSupply, isPaused] = await Promise.allSettled([
         this.getMintingFee(),
         this.getReferralPercentage(),
-        this.getMaxBatchSize(),
         this.getTotalSupply(),
         this.getIsPaused()
       ]);
@@ -131,15 +129,13 @@ export class EvermarkBlockchainService {
       console.log('📋 Contract call results:', {
         mintingFee: mintingFee.status === 'fulfilled' ? 'SUCCESS' : `FAILED: ${mintingFee.reason}`,
         referralPercentage: referralPercentage.status === 'fulfilled' ? 'SUCCESS' : `FAILED: ${referralPercentage.reason}`,
-        maxBatchSize: maxBatchSize.status === 'fulfilled' ? 'SUCCESS' : `FAILED: ${maxBatchSize.reason}`,
         totalSupply: totalSupply.status === 'fulfilled' ? 'SUCCESS' : `FAILED: ${totalSupply.reason}`,
         isPaused: isPaused.status === 'fulfilled' ? 'SUCCESS' : `FAILED: ${isPaused.reason}`
       });
 
       const contractInfo: ContractInfo = {
-        mintingFee: mintingFee.status === 'fulfilled' ? mintingFee.value : BigInt('1000000000000000'), // 0.001 ETH fallback
+        mintingFee: mintingFee.status === 'fulfilled' ? mintingFee.value : BigInt('70000000000000'), // 0.00007 ETH fallback
         referralPercentage: referralPercentage.status === 'fulfilled' ? referralPercentage.value : 10,
-        maxBatchSize: maxBatchSize.status === 'fulfilled' ? maxBatchSize.value : 10,
         totalSupply: totalSupply.status === 'fulfilled' ? totalSupply.value : 0,
         isPaused: isPaused.status === 'fulfilled' ? isPaused.value : false
       };
@@ -209,33 +205,7 @@ export class EvermarkBlockchainService {
     }
   }
 
-  /**
-   * Get max batch size from contract
-   */
-  static async getMaxBatchSize(): Promise<number> {
-    const configValidation = this.validateConfiguration();
-    if (!configValidation.isValid) {
-      throw new StorageError(configValidation.error!, 'CONFIG_ERROR');
-    }
-
-    try {
-      const result = await readContract({
-        contract: {
-          address: CONTRACTS.EVERMARK_NFT,
-          chain: getEvermarkNFTContract().chain,
-        } as any,
-        method: "function MAX_BATCH_SIZE() view returns (uint256)",
-        params: []
-      });
-      return Number(result);
-    } catch (error) {
-      console.warn('Failed to get max batch size from contract:', error);
-      throw new StorageError(
-        `Failed to read max batch size: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        'CONTRACT_ERROR' as any
-      );
-    }
-  }
+  // MAX_BATCH_SIZE method removed - not available in current contract
 
   /**
    * Check if contract is paused
@@ -356,7 +326,7 @@ export class EvermarkBlockchainService {
 
       // Step 5: Use fixed minting fee to avoid any contract reads before minting
       console.log('📋 Step 5: Using fixed minting fee to avoid reentrancy...');
-      const mintingFee = BigInt('700000000000000'); // 0.0007 ETH - known fee from previous logs
+      const mintingFee = BigInt('70000000000000'); // 0.00007 ETH - correct fee from contracts
       console.log('💰 Using fixed minting fee:', mintingFee.toString(), 'wei');
 
       // Step 6: Skip balance check to avoid any RPC calls before minting

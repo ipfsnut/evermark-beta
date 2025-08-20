@@ -1,8 +1,9 @@
 // src/providers/WalletProvider.tsx - Fixed based on actual Thirdweb v5 API
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useEffect } from 'react';
 import { useActiveAccount, useConnect, useDisconnect, useActiveWallet } from 'thirdweb/react';
 import { createWallet } from 'thirdweb/wallets';
 import { client } from '../lib/thirdweb';
+import { setCurrentWallet, prodLog } from '../utils/debug';
 
 interface WalletContextType {
   isConnected: boolean;
@@ -71,7 +72,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
       // useDisconnect requires the wallet parameter
       if (wallet) {
         thirdwebDisconnect(wallet);
-        console.log('✅ Wallet disconnected successfully');
+        prodLog('Wallet disconnected successfully');
       }
     } catch (error) {
       console.error('❌ Disconnect failed:', error);
@@ -84,6 +85,11 @@ export function WalletProvider({ children }: WalletProviderProps) {
     }
     return await connect();
   };
+
+  // Track wallet address changes for debug logging
+  useEffect(() => {
+    setCurrentWallet(account?.address || null);
+  }, [account?.address]);
 
   const value: WalletContextType = {
     isConnected: !!account?.address,

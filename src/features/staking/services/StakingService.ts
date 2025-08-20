@@ -23,8 +23,7 @@ export class StakingService {
   static validateStakeAmount(
     amount: string,
     balance: bigint,
-    minAmount: bigint = STAKING_CONSTANTS.MIN_STAKE_AMOUNT,
-    maxAmount: bigint = STAKING_CONSTANTS.MAX_STAKE_AMOUNT
+    minAmount: bigint = STAKING_CONSTANTS.MIN_STAKE_AMOUNT
   ): StakingValidation {
     const errors: string[] = [];
     const warnings: string[] = [];
@@ -42,17 +41,12 @@ export class StakingService {
       return { isValid: false, errors, warnings };
     }
 
-    // Convert to wei for comparison
+    // Convert to wei for comparison (EMARK has 18 decimals)
     const amountWei = toWei(amount);
 
     // Minimum amount check
     if (amountWei < minAmount) {
       errors.push(`Minimum stake amount is ${this.formatTokenAmount(minAmount)} EMARK`);
-    }
-
-    // Maximum amount check
-    if (amountWei > maxAmount) {
-      errors.push(`Maximum stake amount is ${this.formatTokenAmount(maxAmount)} EMARK`);
     }
 
     // Balance check
@@ -196,7 +190,8 @@ export class StakingService {
   static calculateStakingStats(
     stakingInfo: StakingInfo,
     stakingDuration: number,
-    totalSupply: bigint
+    totalSupply: bigint,
+    realTimeAPR?: number
   ): StakingStats {
     // User statistics
     const userStakePercentage = stakingInfo.totalProtocolStaked > BigInt(0) 
@@ -208,8 +203,20 @@ export class StakingService {
       ? Number(stakingInfo.totalProtocolStaked) / Number(totalSupply)
       : 0;
 
-    // Mock calculations - in production these would come from actual protocol data
-    const aprEstimate = 12.5; // 12.5% APR
+    // Use real-time APR if provided, otherwise fallback to calculated estimate
+    const aprEstimate = realTimeAPR ?? (() => {
+      // Fallback calculation based on staking ratio
+      const baseApr = 15; // 15% base APR
+      const minimumApr = 5; // 5% minimum APR
+      const stakingRatioDecimal = stakingRatio;
+      
+      // APR decreases as more people stake (supply/demand economics)
+      return Math.max(
+        minimumApr,
+        baseApr * (1 - (stakingRatioDecimal * 0.6)) // 60% max reduction from base
+      );
+    })();
+    
     const stakingYield = stakingDuration > 0 
       ? (aprEstimate / 365) * (stakingDuration / (24 * 60 * 60)) // Daily yield * days staked
       : 0;
@@ -222,6 +229,7 @@ export class StakingService {
       averageStakeAmount: BigInt(0), // Would calculate from total/count
       stakingRatio,
       aprEstimate,
+      realTimeAPR: realTimeAPR ?? aprEstimate, // Use real-time APR if available
       stakingYield
     };
   }

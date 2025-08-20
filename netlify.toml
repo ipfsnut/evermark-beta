@@ -102,6 +102,9 @@
   to = "/.netlify/functions/sync-now"
   status = 200
 
+# Documentation pages are now handled by React Router
+# Removed static file redirects to allow SPA routing
+
 # Exclude static files from SPA fallback
 [[redirects]]
   from = "/manifest.json"

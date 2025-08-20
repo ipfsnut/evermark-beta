@@ -6,12 +6,15 @@ import App from './App';
 import '../index.css';
 import './styles/mobile-first.css';
 
+// Import dev logging utilities
+import { devLog, prodLog } from './utils/debug';
+
 // Register service worker for PWA functionality
 async function registerServiceWorker() {
   if ('serviceWorker' in navigator && import.meta.env.PROD) {
     try {
       const registration = await navigator.serviceWorker.register('/service-worker.js');
-      console.log('✅ Service Worker registered:', registration.scope);
+      prodLog('Service Worker registered:', registration.scope);
       
       // Check for updates periodically
       setInterval(() => {

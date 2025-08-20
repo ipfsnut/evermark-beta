@@ -67,9 +67,10 @@ export function useStakingState(userAddress?: string): UseStakingStateReturn {
     return StakingService.calculateStakingStats(
       stakingInfo,
       0, // Would track actual staking duration in production
-      stakingStatsData.totalSupply
+      stakingStatsData.totalSupply,
+      stakingStatsData.realTimeAPR // Pass real-time APR from stats
     );
-  }, [stakingInfo, stakingStatsData.totalSupply]);
+  }, [stakingInfo, stakingStatsData.totalSupply, stakingStatsData.realTimeAPR]);
 
   // ✅ Validation functions using StakingService
   const validateStakeAmount = useCallback((amount: string): StakingValidation => {
@@ -84,8 +85,7 @@ export function useStakingState(userAddress?: string): UseStakingStateReturn {
     return StakingService.validateStakeAmount(
       amount,
       stakingInfo.emarkBalance,
-      STAKING_CONSTANTS.MIN_STAKE_AMOUNT,
-      STAKING_CONSTANTS.MAX_STAKE_AMOUNT
+      STAKING_CONSTANTS.MIN_STAKE_AMOUNT
     );
   }, [stakingInfo]);
 

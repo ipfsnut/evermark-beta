@@ -16,7 +16,9 @@ import {
 // Providers and utilities
 import { useAppAuth } from '../providers/AppContext';
 import { useFarcasterUser } from '../lib/farcaster';
+import { useTheme } from '../providers/ThemeProvider';
 import { cn, useIsMobile } from '../utils/responsive';
+import { devLog } from '../utils/debug';
 
 // Evermarks feature
 import { useEvermarksState, EvermarkFeed } from '../features/evermarks';
@@ -33,7 +35,7 @@ const QuickSupabaseTest = () => {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
         
-        console.log('Environment check:', {
+        devLog('Environment check:', {
           hasUrl: !!supabaseUrl,
           hasKey: !!supabaseKey,
           url: supabaseUrl?.substring(0, 30) + '...'
@@ -131,9 +133,7 @@ const QuickSupabaseTest = () => {
 // Real Protocol Stats using the evermarks hook
 const ProtocolStats: React.FC = () => {
   const isMobile = useIsMobile();
-  console.log('📊 ProtocolStats component rendering');
   const { totalCount, evermarks, isLoading } = useEvermarksState();
-  console.log('📈 ProtocolStats state:', { totalCount, evermarksCount: evermarks?.length || 0, isLoading });
   
   // Calculate stats from real data with null checks
   const safeEvermarks = Array.isArray(evermarks) ? evermarks : [];
@@ -290,14 +290,7 @@ const QuickActions: React.FC = () => {
 
 // Real Evermarks Feed Component
 const EvermarksFeed: React.FC = () => {
-  console.log('📱 EvermarksFeed component rendering');
   const { evermarks, isLoading, error, isEmpty } = useEvermarksState();
-  console.log('📊 EvermarksFeed state:', { 
-    evermarksCount: evermarks?.length || 0, 
-    isLoading, 
-    error, 
-    isEmpty 
-  });
 
   if (error) {
     return (
@@ -370,12 +363,13 @@ const EvermarksFeed: React.FC = () => {
 export default function HomePage() {
   const { isAuthenticated } = useAppAuth();
   const { isInFarcaster } = useFarcasterUser();
+  const { isDark } = useTheme();
   const isMobile = useIsMobile();
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen transition-colors duration-200 bg-gray-50 text-gray-900 dark:bg-black dark:text-white">
       {/* Hero Section */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-black to-gray-900">
+      <div className="relative overflow-hidden transition-colors duration-200 bg-gradient-to-br from-white via-gray-50 to-gray-100 dark:from-gray-900 dark:via-black dark:to-gray-900">
         {/* Animated background effects */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-green-400/20 to-purple-500/20 rounded-full blur-3xl animate-pulse" />
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-cyan-400/20 to-yellow-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
@@ -397,7 +391,7 @@ export default function HomePage() {
             {/* Title and description */}
             <div className="max-w-4xl mx-auto space-y-6">
               <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-green-400 via-cyan-400 to-purple-500 bg-clip-text text-transparent leading-tight">
-                EVERMARK PROTOCOL
+                EVERMARK PROTOCOL <span className="text-2xl md:text-4xl text-cyan-400 font-normal">[BETA]</span>
               </h1>
               
               <p className="text-xl md:text-2xl text-gray-300 leading-relaxed max-w-3xl mx-auto">

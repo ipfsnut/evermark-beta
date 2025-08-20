@@ -9,6 +9,8 @@ import {
   CheckCircleIcon 
 } from 'lucide-react';
 import { StakingService } from '../services/StakingService';
+import { useTheme } from '@/providers/ThemeProvider';
+import { cn } from '@/utils/responsive';
 import type { UseStakingStateReturn, StakingValidation } from '../types';
 
 interface StakeFormProps {
@@ -25,8 +27,11 @@ export function StakeForm({ stakingState, onSuccess, className = '' }: StakeForm
     warnings: [] 
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [localSuccess, setLocalSuccess] = useState<string | null>(null);
+  const [approvedAmount, setApprovedAmount] = useState<bigint | null>(null);
+  const { isDark } = useTheme();
 
   const { stakingInfo, isStaking, formatTokenAmount } = stakingState;
 
@@ -61,8 +66,30 @@ export function StakeForm({ stakingState, onSuccess, className = '' }: StakeForm
     }
   }, [stakingInfo?.emarkBalance, formatTokenAmount]);
 
-  // Handle form submission
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+  // Handle setting up the stake amount (no actual approval, just UI state)
+  const handleApproval = useCallback(async () => {
+    if (!validation.isValid || !amount || isApproving) return;
+
+    setIsApproving(true);
+    setLocalError(null);
+    setLocalSuccess(null);
+
+    try {
+      const amountWei = toWei(amount);
+      
+      // Just set the approved amount for UI - actual approval happens in stake()
+      setApprovedAmount(amountWei);
+      setLocalSuccess(`Ready to stake ${amount} EMARK - click Stake to proceed!`);
+    } catch (error: any) {
+      console.error('Amount validation failed:', error);
+      setLocalError(error.message || 'Amount validation failed.');
+    } finally {
+      setIsApproving(false);
+    }
+  }, [validation.isValid, amount, isApproving]);
+
+  // Handle staking (with automatic approval)
+  const handleStake = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validation.isValid || !amount || isSubmitting) return;
@@ -73,10 +100,13 @@ export function StakeForm({ stakingState, onSuccess, className = '' }: StakeForm
 
     try {
       const amountWei = toWei(amount);
+      
+      // The stake method handles approval internally
       await stakingState.stake(amountWei);
       
-      setLocalSuccess(`Successfully staked ${amount} EMARK!`);
+      setLocalSuccess(`Successfully staked ${formatTokenAmount(amountWei, 4)} EMARK!`);
       setAmount('');
+      setApprovedAmount(null);
       onSuccess?.();
     } catch (error: any) {
       console.error('Stake submission failed:', error);
@@ -84,7 +114,7 @@ export function StakeForm({ stakingState, onSuccess, className = '' }: StakeForm
     } finally {
       setIsSubmitting(false);
     }
-  }, [validation.isValid, amount, isSubmitting, stakingState, onSuccess]);
+  }, [validation.isValid, amount, isSubmitting, stakingState, formatTokenAmount, onSuccess]);
 
   // Handle amount input changes
   const handleAmountChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -94,12 +124,26 @@ export function StakeForm({ stakingState, onSuccess, className = '' }: StakeForm
     if (value === '' || /^\d*\.?\d*$/.test(value)) {
       setAmount(value);
       setLocalError(null);
+      
+      // Reset approved amount if user changes the amount
+      if (approvedAmount) {
+        const newAmountWei = value ? toWei(value) : BigInt(0);
+        if (newAmountWei !== approvedAmount) {
+          setApprovedAmount(null);
+        }
+      }
     }
-  }, []);
+  }, [approvedAmount]);
 
   if (!stakingState.isConnected) {
     return (
-      <div className={`bg-gray-800/50 border border-gray-700 rounded-lg p-6 ${className}`}>
+      <div className={cn(
+        "rounded-lg p-6 transition-colors duration-200",
+        isDark 
+          ? "bg-gray-800/50 border border-gray-700" 
+          : "bg-yellow-100/50 border border-yellow-200",
+        className
+      )}>
         <div className="text-center py-8">
           <LockIcon className="mx-auto h-12 w-12 text-gray-500 mb-4" />
           <h3 className="text-lg font-medium text-white mb-2">Connect Wallet</h3>
@@ -110,7 +154,13 @@ export function StakeForm({ stakingState, onSuccess, className = '' }: StakeForm
   }
 
   return (
-    <div className={`bg-gray-800/50 border border-gray-700 rounded-lg p-6 ${className}`}>
+    <div className={cn(
+      "rounded-lg p-6 transition-colors duration-200",
+      isDark 
+        ? "bg-gray-800/50 border border-gray-700" 
+        : "bg-yellow-100/50 border border-yellow-200",
+      className
+    )}>
       <div className="flex items-center mb-6">
         <div className="p-2 bg-purple-900/30 border border-purple-500/30 rounded-lg mr-3">
           <LockIcon className="h-5 w-5 text-purple-400" />
@@ -136,7 +186,7 @@ export function StakeForm({ stakingState, onSuccess, className = '' }: StakeForm
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-4">
         {/* Amount Input */}
         <div>
           <label htmlFor="stake-amount" className="block text-sm font-medium text-gray-300 mb-2">
@@ -150,7 +200,12 @@ export function StakeForm({ stakingState, onSuccess, className = '' }: StakeForm
               inputMode="decimal"
               value={amount}
               onChange={handleAmountChange}
-              className="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 focus:ring-opacity-20 transition-colors pr-20"
+              className={cn(
+                "w-full px-4 py-3 rounded-lg transition-colors pr-20 focus:ring-2 focus:ring-purple-500 focus:ring-opacity-20",
+                isDark 
+                  ? "bg-gray-900 border border-gray-600 text-white placeholder-gray-400 focus:border-purple-500"
+                  : "bg-white/90 border border-yellow-300 text-gray-900 placeholder-gray-500 focus:border-purple-400"
+              )}
               placeholder="0.0"
               disabled={isSubmitting || isStaking}
             />
@@ -203,25 +258,62 @@ export function StakeForm({ stakingState, onSuccess, className = '' }: StakeForm
           </div>
         )}
 
-        {/* Submit Button */}
-        <button
-          type="submit"
-          disabled={!validation.isValid || isSubmitting || isStaking || !amount}
-          className="w-full flex items-center justify-center px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-        >
-          {isSubmitting || isStaking ? (
-            <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              {amount ? 'Staking...' : 'Processing...'}
-            </>
-          ) : (
-            <>
-              <LockIcon className="h-4 w-4 mr-2" />
-              Stake EMARK
-            </>
+        {/* Approval Status */}
+        {approvedAmount && (
+          <div className="p-3 bg-green-900/20 border border-green-500/30 rounded-lg flex items-center">
+            <CheckCircleIcon className="h-4 w-4 text-green-400 mr-2" />
+            <span className="text-green-200 text-sm">
+              Approved {formatTokenAmount(approvedAmount, 4)} EMARK for staking
+            </span>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="space-y-2">
+          {!approvedAmount || (amount && toWei(amount) !== approvedAmount) ? (
+            <button
+              type="button"
+              onClick={handleApproval}
+              disabled={!validation.isValid || isApproving || !amount}
+              className="w-full flex items-center justify-center px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            >
+              {isApproving ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Approving...
+                </>
+              ) : (
+                <>
+                  <CheckCircleIcon className="h-4 w-4 mr-2" />
+                  Approve {amount || '0'} EMARK
+                </>
+              )}
+            </button>
+          ) : null}
+
+          {approvedAmount && (
+            <form onSubmit={handleStake}>
+              <button
+                type="submit"
+                disabled={!validation.isValid || isSubmitting || isStaking || !amount || !approvedAmount}
+                className="w-full flex items-center justify-center px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              >
+                {isSubmitting || isStaking ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Staking...
+                  </>
+                ) : (
+                  <>
+                    <LockIcon className="h-4 w-4 mr-2" />
+                    Stake {amount || '0'} EMARK
+                  </>
+                )}
+              </button>
+            </form>
           )}
-        </button>
-      </form>
+        </div>
+      </div>
 
       {/* Information Section */}
       <div className="mt-6 p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg">
@@ -244,13 +336,23 @@ export function StakeForm({ stakingState, onSuccess, className = '' }: StakeForm
       {/* Current Stats Display */}
       {stakingInfo && (
         <div className="mt-6 grid grid-cols-2 gap-4">
-          <div className="text-center p-3 bg-gray-900/50 border border-gray-600 rounded-lg">
+          <div className={cn(
+            "text-center p-3 rounded-lg transition-colors duration-200",
+            isDark 
+              ? "bg-gray-900/50 border border-gray-600"
+              : "bg-white/60 border border-yellow-300"
+          )}>
             <div className="text-sm text-gray-400 mb-1">Current Stake</div>
             <div className="text-lg font-medium text-white">
               {formatTokenAmount(stakingInfo.totalStaked)} wEMARK
             </div>
           </div>
-          <div className="text-center p-3 bg-gray-900/50 border border-gray-600 rounded-lg">
+          <div className={cn(
+            "text-center p-3 rounded-lg transition-colors duration-200",
+            isDark 
+              ? "bg-gray-900/50 border border-gray-600"
+              : "bg-white/60 border border-yellow-300"
+          )}>
             <div className="text-sm text-gray-400 mb-1">Voting Power</div>
             <div className="text-lg font-medium text-white">
               {formatTokenAmount(stakingInfo.availableVotingPower)} wEMARK

@@ -206,15 +206,8 @@ export class EnhancedUserService {
         enhancedUser = ensEnhanced;
       }
 
-      // TODO: Try to find Farcaster profile by verified address
-      // This would require reverse lookup which isn't available in Neynar
-      // Could be implemented with a custom index or different service
+      // Farcaster profile lookup by address not yet implemented
 
-      console.log('✅ Enhanced user created from address:', {
-        displayName: enhancedUser.displayName,
-        source: enhancedUser.source,
-        identityScore: enhancedUser.identityScore
-      });
 
       this.setCache(cacheKey, enhancedUser);
       return enhancedUser;

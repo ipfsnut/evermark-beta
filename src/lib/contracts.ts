@@ -2,7 +2,12 @@
 import { getContract } from 'thirdweb';
 import type { Abi } from 'abitype';
 import { client, chain as CHAIN } from './thirdweb';
-import EvermarkNFTABI from '../features/evermarks/abis/EvermarkNFT.json';
+import EvermarkNFTABI from '../features/evermarks/abis/EvermarkNFT.abi.json';
+import WEMARKABBI from '../features/staking/abis/WEMARK.abi.json';
+import EvermarkVotingABI from '../features/voting/abis/EvermarkVoting.abi.json';
+import NFTStakingABI from '../features/staking/abis/NFTStaking.abi.json';
+import EvermarkRewardsABI from '../features/tokens/abis/EvermarkRewards.abi.json';
+import FeeCollectorABI from './abis/FeeCollector.abi.json';
 
 // Export the chain from thirdweb.tsx so we use the same Thirdweb RPC everywhere
 export { CHAIN };
@@ -50,7 +55,7 @@ export function getWEMARKContract() {
     client,
     chain: CHAIN,
     address: CONTRACTS.WEMARK,
-    abi: PLACEHOLDER_ABI, // Will be replaced with actual ABI from features
+    abi: WEMARKABBI as Abi,
   });
 }
 
@@ -74,7 +79,7 @@ export function getEvermarkVotingContract() {
     client,
     chain: CHAIN,
     address: CONTRACTS.EVERMARK_VOTING,
-    abi: PLACEHOLDER_ABI, // Will be replaced with actual ABI from features
+    abi: EvermarkVotingABI as Abi,
   });
 }
 
@@ -86,7 +91,7 @@ export function getNFTStakingContract() {
     client,
     chain: CHAIN,
     address: CONTRACTS.NFT_STAKING,
-    abi: PLACEHOLDER_ABI, // Will be replaced with actual ABI from features
+    abi: NFTStakingABI as Abi,
   });
 }
 
@@ -98,7 +103,7 @@ export function getEvermarkRewardsContract() {
     client,
     chain: CHAIN,
     address: CONTRACTS.EVERMARK_REWARDS,
-    abi: PLACEHOLDER_ABI, // Will be replaced with actual ABI from features
+    abi: EvermarkRewardsABI as Abi,
   });
 }
 
@@ -110,7 +115,7 @@ export function getFeeCollectorContract() {
     client,
     chain: CHAIN,
     address: CONTRACTS.FEE_COLLECTOR,
-    abi: PLACEHOLDER_ABI, // Will be replaced with actual ABI from features
+    abi: FeeCollectorABI as Abi,
   });
 }
 

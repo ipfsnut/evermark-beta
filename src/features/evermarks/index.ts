@@ -15,8 +15,7 @@ export type {
 } from './types';
 
 // Services - Export business logic layer
-// TODO: Fix EvermarkService SDK imports
-// export { EvermarkService } from './services/EvermarkService';
+// EvermarkService not exported due to SDK dependencies
 
 // Hooks - Export main state management hook
 export { useEvermarksState } from './hooks/useEvermarkState';

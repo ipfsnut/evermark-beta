@@ -5,37 +5,38 @@ export interface Vote {
   userAddress: string;
   evermarkId: string;
   amount: bigint;
-  cycle: number;
+  season: number;
   timestamp: Date;
   transactionHash: string;
   status: 'pending' | 'confirmed' | 'failed';
-  type: 'delegate' | 'undelegate';
+  type: 'vote';
 }
 
-export interface Delegation {
-  evermarkId: string;
-  amount: bigint;
-  cycle: number;
-  timestamp: Date;
-  transactionHash?: string;
-  isActive: boolean;
-}
+// Delegation removed - now using direct voting
+// export interface Delegation {
+//   evermarkId: string;
+//   amount: bigint;
+//   season: number;
+//   timestamp: Date;
+//   transactionHash?: string;
+//   isActive: boolean;
+// }
 
-export interface VotingCycle {
-  cycleNumber: number;
+export interface VotingSeason {
+  seasonNumber: number;
   startTime: Date;
   endTime: Date;
   totalVotes: bigint;
-  totalDelegations: number;
-  isFinalized: boolean;
+  totalVoters: number;
+  isActive: boolean;
   activeEvermarksCount: number;
 }
 
 export interface VotingPower {
   total: bigint;
   available: bigint;
-  delegated: bigint;
-  reserved: bigint;
+  used: bigint;
+  remaining: bigint;
 }
 
 export interface VotingStats {
@@ -75,16 +76,14 @@ export interface VotingError {
 export interface VotingConfiguration {
   // Contract addresses
   votingContractAddress: string;
-  cardCatalogAddress: string;
+  wemarkAddress: string;
   
-  // Cycle parameters
-  cycleDuration: number; // seconds
-  maxDelegationsPerCycle: number;
+  // Season parameters
+  seasonDuration: number; // seconds (7 days)
   minVotingAmount: bigint;
   maxVotingAmount: bigint;
   
   // UI configuration
-  enableBatchVoting: boolean;
   showVotingHistory: boolean;
   enableVotingAnalytics: boolean;
   autoRefreshInterval: number;
@@ -94,32 +93,29 @@ export interface VotingConfiguration {
 export interface UseVotingStateReturn {
   // Data
   votingPower: VotingPower | null;
-  currentDelegations: Delegation[];
+  userVotes: Vote[];
   votingHistory: Vote[];
-  currentCycle: VotingCycle | null;
+  currentSeason: VotingSeason | null;
   votingStats: VotingStats | null;
   
   // Evermark-specific data
   getEvermarkVotes: (evermarkId: string) => bigint;
-  getUserVotes: (evermarkId: string) => bigint;
+  getUserVotesForEvermark: (evermarkId: string) => bigint;
   
   // UI State
   isLoading: boolean;
-  isDelegating: boolean;
-  isUndelegating: boolean;
+  isVoting: boolean;
   error: VotingError | null;
   success: string | null;
   
   // Actions
-  delegateVotes: (evermarkId: string, amount: bigint) => Promise<VotingTransaction>;
-  undelegateVotes: (evermarkId: string, amount: bigint) => Promise<VotingTransaction>;
-  delegateVotesBatch: (delegations: { evermarkId: string; amount: bigint }[]) => Promise<VotingTransaction>;
+  voteForEvermark: (evermarkId: string, amount: bigint) => Promise<VotingTransaction>;
   
   // Utilities
   validateVoteAmount: (amount: string, evermarkId?: string) => VotingValidation;
   calculateVotingPower: (stakedAmount: bigint) => bigint;
   formatVoteAmount: (amount: bigint, decimals?: number) => string;
-  getTimeRemainingInCycle: () => number;
+  getTimeRemainingInSeason: () => number;
   
   // State management
   clearErrors: () => void;
@@ -149,8 +145,7 @@ export interface VotingContractCall {
 export const VOTING_CONSTANTS = {
   MIN_VOTE_AMOUNT: BigInt(1), // 1 wEMARK minimum
   MAX_VOTE_AMOUNT: BigInt(1000000), // 1M wEMARK maximum
-  CYCLE_DURATION: 7 * 24 * 60 * 60, // 7 days in seconds
-  MAX_DELEGATIONS_PER_CYCLE: 100,
+  SEASON_DURATION: 7 * 24 * 60 * 60, // 7 days in seconds
   TRANSACTION_TIMEOUT: 60000, // 60 seconds
   RETRY_ATTEMPTS: 3,
   CACHE_DURATION: 30000, // 30 seconds
@@ -206,8 +201,8 @@ export type VotingEvent =
   | { type: 'UNDELEGATION_INITIATED'; evermarkId: string; amount: bigint }
   | { type: 'UNDELEGATION_CONFIRMED'; evermarkId: string; amount: bigint; hash: string }
   | { type: 'UNDELEGATION_FAILED'; evermarkId: string; error: VotingError }
-  | { type: 'CYCLE_STARTED'; cycle: VotingCycle }
-  | { type: 'CYCLE_ENDED'; cycle: VotingCycle }
+  | { type: 'SEASON_STARTED'; season: VotingSeason }
+  | { type: 'SEASON_ENDED'; season: VotingSeason }
   | { type: 'VOTING_POWER_UPDATED'; newPower: VotingPower }
   | { type: 'DATA_REFRESHED'; timestamp: number }
   | { type: 'ERROR_CLEARED' }

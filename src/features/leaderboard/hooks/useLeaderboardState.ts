@@ -1,4 +1,4 @@
-// src/features/leaderboard/hooks/useLeaderboardState.ts - Migrated to React Query
+// src/features/leaderboard/hooks/useLeaderboardState.ts - Offchain leaderboard from evermarks
 import { useState, useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { LeaderboardService } from '../services/LeaderboardService';
@@ -12,6 +12,9 @@ import type {
 } from '../types';
 import { LEADERBOARD_CONSTANTS } from '../types';
 
+// Import evermarks state to calculate leaderboard from
+import { useEvermarksState } from '../../evermarks';
+
 // React Query keys
 const QUERY_KEYS = {
   leaderboard: (options: LeaderboardFeedOptions) => 
@@ -21,10 +24,13 @@ const QUERY_KEYS = {
 } as const;
 
 /**
- * Hook for managing leaderboard state and data fetching - React Query version
+ * Hook for managing leaderboard state and data fetching - Uses real evermarks data
  */
 export function useLeaderboardState(): UseLeaderboardStateReturn {
   const queryClient = useQueryClient();
+
+  // Get real evermarks data to calculate leaderboard from
+  const { evermarks, isLoading: isLoadingEvermarks } = useEvermarksState();
 
   // Local state for filters and pagination
   const [filters, setFiltersState] = useState<LeaderboardFilters>(() => 
@@ -34,14 +40,15 @@ export function useLeaderboardState(): UseLeaderboardStateReturn {
     LeaderboardService.getDefaultPagination()
   );
 
-  // Create options for queries
-  const leaderboardOptions: LeaderboardFeedOptions = useMemo(() => ({
+  // Create options for queries with evermarks data
+  const leaderboardOptions: LeaderboardFeedOptions & { evermarks?: any[] } = useMemo(() => ({
     page: pagination.page,
     pageSize: pagination.pageSize,
     sortBy: pagination.sortBy,
     sortOrder: pagination.sortOrder,
-    filters
-  }), [pagination, filters]);
+    filters,
+    evermarks // Pass evermarks data to calculate leaderboard
+  }), [pagination, filters, evermarks]);
 
   // Leaderboard data query
   const { 
@@ -52,10 +59,11 @@ export function useLeaderboardState(): UseLeaderboardStateReturn {
     refetch: refetchEntries
   } = useQuery({
     queryKey: QUERY_KEYS.leaderboard(leaderboardOptions),
-    queryFn: () => LeaderboardService.fetchLeaderboard(leaderboardOptions),
+    queryFn: () => LeaderboardService.getCurrentLeaderboard(leaderboardOptions),
     staleTime: 30 * 1000, // 30 seconds
     retry: 2,
     retryDelay: 1000,
+    enabled: !isLoadingEvermarks // Only run when evermarks data is available
   });
 
   // Leaderboard stats query

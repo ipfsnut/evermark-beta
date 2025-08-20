@@ -5,6 +5,7 @@ import { prepareContractCall, waitForReceipt } from 'thirdweb';
 import { useContracts } from '@/hooks/core/useContracts';
 import { client } from '@/lib/thirdweb';
 import { base } from 'thirdweb/chains';
+import { devLog, prodLog, prodError } from '@/utils/debug';
 
 // Local constants to avoid @/lib/contracts dependency
 const CHAIN = base;
@@ -30,7 +31,7 @@ export interface StakingTransactions {
 
 export function useStakingTransactions(): StakingTransactions {
   const account = useActiveAccount();
-  const { cardCatalog, emarkToken } = useContracts();
+  const { wemark, emarkToken } = useContracts();
   const { mutateAsync: sendTransaction } = useSendTransaction();
   
   // Transaction states
@@ -48,9 +49,9 @@ export function useStakingTransactions(): StakingTransactions {
     
     setIsApproving(true);
     try {
-      console.log("🔓 Approving EMARK spending:", {
+      devLog("Approving EMARK spending:", {
         amount: amount.toString(),
-        spender: cardCatalog.address,
+        spender: wemark.address,
         user: account.address
       });
       
@@ -58,7 +59,7 @@ export function useStakingTransactions(): StakingTransactions {
       const transaction = prepareContractCall({
         contract: emarkToken,
         method: "function approve(address spender, uint256 amount) returns (bool)",
-        params: [cardCatalog.address, amount]
+        params: [wemark.address, amount]
       });
       
       const result = await sendTransaction(transaction);
@@ -70,11 +71,11 @@ export function useStakingTransactions(): StakingTransactions {
         transactionHash: result.transactionHash
       });
       
-      console.log("✅ EMARK approval successful:", result.transactionHash);
+      prodLog("EMARK approval successful:", result.transactionHash);
     } finally {
       setIsApproving(false);
     }
-  }, [account, cardCatalog.address, emarkToken, sendTransaction]);
+  }, [account, wemark.address, emarkToken, sendTransaction]);
   
   // Stake EMARK tokens (wrap to wEMARK)
   const stake = useCallback(async (amount: bigint) => {
@@ -84,15 +85,15 @@ export function useStakingTransactions(): StakingTransactions {
     
     setIsStaking(true);
     try {
-      console.log("🔒 Staking EMARK tokens:", {
+      devLog("Staking EMARK tokens:", {
         amount: amount.toString(),
         user: account.address
       });
       
       // Fixed: Use prepareContractCall with thirdweb v5 pattern
       const transaction = prepareContractCall({
-        contract: cardCatalog,
-        method: "function wrap(uint256 amount)",
+        contract: wemark,
+        method: "function stake(uint256 amount)",
         params: [amount]
       });
       
@@ -105,11 +106,11 @@ export function useStakingTransactions(): StakingTransactions {
         transactionHash: result.transactionHash
       });
       
-      console.log("✅ Staking successful:", result.transactionHash);
+      prodLog("Staking successful:", result.transactionHash);
     } finally {
       setIsStaking(false);
     }
-  }, [account, cardCatalog, sendTransaction]);
+  }, [account, wemark, sendTransaction]);
   
   // Request unstake (start unbonding period)
   const requestUnstake = useCallback(async (amount: bigint) => {
@@ -119,15 +120,15 @@ export function useStakingTransactions(): StakingTransactions {
     
     setIsUnstaking(true);
     try {
-      console.log("🔓 Requesting unstake:", {
+      devLog("Requesting unstake:", {
         amount: amount.toString(),
         user: account.address
       });
       
       // Fixed: Use prepareContractCall with thirdweb v5 pattern
       const transaction = prepareContractCall({
-        contract: cardCatalog,
-        method: "function requestUnwrap(uint256 amount)",
+        contract: wemark,
+        method: "function startUnbonding(uint256 amount)",
         params: [amount]
       });
       
@@ -140,11 +141,11 @@ export function useStakingTransactions(): StakingTransactions {
         transactionHash: result.transactionHash
       });
       
-      console.log("✅ Unstake request successful:", result.transactionHash);
+      prodLog("Unstake request successful:", result.transactionHash);
     } finally {
       setIsUnstaking(false);
     }
-  }, [account, cardCatalog, sendTransaction]);
+  }, [account, wemark, sendTransaction]);
   
   // Complete unstake (claim after unbonding period)
   const completeUnstake = useCallback(async () => {
@@ -154,14 +155,14 @@ export function useStakingTransactions(): StakingTransactions {
     
     setIsCompleting(true);
     try {
-      console.log("💰 Completing unstake (claiming tokens):", {
+      devLog("Completing unstake (claiming tokens):", {
         user: account.address
       });
       
       // Fixed: Use prepareContractCall with thirdweb v5 pattern
       const transaction = prepareContractCall({
-        contract: cardCatalog,
-        method: "function completeUnwrap()",
+        contract: wemark,
+        method: "function withdraw()",
         params: []
       });
       
@@ -174,11 +175,11 @@ export function useStakingTransactions(): StakingTransactions {
         transactionHash: result.transactionHash
       });
       
-      console.log("✅ Unstake completion successful:", result.transactionHash);
+      prodLog("Unstake completion successful:", result.transactionHash);
     } finally {
       setIsCompleting(false);
     }
-  }, [account, cardCatalog, sendTransaction]);
+  }, [account, wemark, sendTransaction]);
   
   // Cancel unbonding (cancel unstake request)
   const cancelUnbonding = useCallback(async () => {
@@ -188,13 +189,13 @@ export function useStakingTransactions(): StakingTransactions {
     
     setIsCancelling(true);
     try {
-      console.log("❌ Cancelling unbonding:", {
+      devLog("Cancelling unbonding:", {
         user: account.address
       });
       
       // Fixed: Use prepareContractCall with thirdweb v5 pattern
       const transaction = prepareContractCall({
-        contract: cardCatalog,
+        contract: wemark,
         method: "function cancelUnbonding()",
         params: []
       });
@@ -208,15 +209,15 @@ export function useStakingTransactions(): StakingTransactions {
         transactionHash: result.transactionHash
       });
       
-      console.log("✅ Unbonding cancellation successful:", result.transactionHash);
+      prodLog("Unbonding cancellation successful:", result.transactionHash);
     } finally {
       setIsCancelling(false);
     }
-  }, [account, cardCatalog, sendTransaction]);
+  }, [account, wemark, sendTransaction]);
   
   // Refetch data (placeholder - would trigger data hooks to refresh)
   const refetch = useCallback(async () => {
-    console.log("🔄 Refetching staking data...");
+    devLog("Refetching staking data...");
     // The data hooks will automatically refetch when this component re-renders
     // or we could implement a more sophisticated cache invalidation system
   }, []);

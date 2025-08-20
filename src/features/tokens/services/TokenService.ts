@@ -330,7 +330,7 @@ spender: string, amount: bigint, isUnlimited = false  ): {
     
     return {
       gasLimit,
-      estimatedCost: '~$0.50 USD' // Mock estimation
+      estimatedCost: 'Estimating...'
     };
   }
 

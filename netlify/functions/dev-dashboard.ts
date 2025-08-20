@@ -2,6 +2,9 @@
 import { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
 
+// Beta table name - using beta_evermarks instead of alpha evermarks table
+const EVERMARKS_TABLE = 'beta_evermarks';
+
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_ANON_KEY!
@@ -19,21 +22,21 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
   try {
     // Get evermarks statistics
     const { data: evermarksCount } = await supabase
-      .from('evermarks')
+      .from(EVERMARKS_TABLE)
       .select('*', { count: 'exact', head: true });
 
     const { data: verifiedCount } = await supabase
-      .from('evermarks')
+      .from(EVERMARKS_TABLE)
       .select('*', { count: 'exact', head: true })
       .eq('verified', true);
 
     const { data: needsMetadata } = await supabase
-      .from('evermarks')
+      .from(EVERMARKS_TABLE)
       .select('*', { count: 'exact', head: true })
       .eq('metadata_fetched', false);
 
     const { data: recentEvermarks } = await supabase
-      .from('evermarks')
+      .from(EVERMARKS_TABLE)
       .select('token_id, title, author, created_at, verified')
       .order('created_at', { ascending: false })
       .limit(5);

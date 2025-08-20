@@ -45,29 +45,29 @@ export function useUserData(userAddress?: string) {
   const { data: stakingAllowance, refetch: refetchAllowance } = useReadContract({
     contract: contracts.emarkToken,
     method: "function allowance(address owner, address spender) view returns (uint256)",
-    params: [effectiveAddress || '0x0000000000000000000000000000000000000000', contracts.cardCatalog?.address || '0x0000000000000000000000000000000000000000'],
+    params: [effectiveAddress || '0x0000000000000000000000000000000000000000', contracts.wemark?.address || '0x0000000000000000000000000000000000000000'],
     queryOptions: {
-      enabled: !!contracts.emarkToken && !!contracts.cardCatalog && !!effectiveAddress
+      enabled: !!contracts.emarkToken && !!contracts.wemark && !!effectiveAddress
     }
   });
 
   // wEMARK balance (from CardCatalog)
   const { data: wEmarkBalance, refetch: refetchWEmarkBalance } = useReadContract({
-    contract: contracts.cardCatalog,
+    contract: contracts.wemark,
     method: "function balanceOf(address) view returns (uint256)",
     params: [effectiveAddress || '0x0000000000000000000000000000000000000000'],
     queryOptions: {
-      enabled: !!contracts.cardCatalog && !!effectiveAddress
+      enabled: !!contracts.wemark && !!effectiveAddress
     }
   });
 
   // User staking summary
   const { data: userSummary, refetch: refetchSummary } = useReadContract({
-    contract: contracts.cardCatalog,
+    contract: contracts.wemark,
     method: "function getUserSummary(address) view returns (uint256 stakedBalance, uint256 availableVotingPower, uint256 delegatedPower, uint256 unbondingAmount_, uint256 unbondingReleaseTime_, bool canClaimUnbonding)",
     params: [effectiveAddress || '0x0000000000000000000000000000000000000000'],
     queryOptions: {
-      enabled: !!contracts.cardCatalog && !!effectiveAddress
+      enabled: !!contracts.wemark && !!effectiveAddress
     }
   });
 

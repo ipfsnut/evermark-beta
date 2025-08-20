@@ -2,6 +2,7 @@
 import { useMemo } from 'react';
 import { useReadContract } from "thirdweb/react";
 import { useContracts } from '@/hooks/core/useContracts';
+import { devLog } from '@/utils/debug';
 
 export interface StakingData {
   // Token balances
@@ -26,7 +27,7 @@ export interface StakingData {
 }
 
 export function useStakingData(userAddress?: string): StakingData {
-  const { cardCatalog, emarkToken } = useContracts();
+  const { wemark, emarkToken } = useContracts();
   const effectiveAddress = userAddress || '0x0000000000000000000000000000000000000000';
   
   // EMARK token balance
@@ -38,7 +39,7 @@ export function useStakingData(userAddress?: string): StakingData {
   
   // wEMARK balance (staked tokens)
   const { data: wEmarkBalance, isLoading: wEmarkLoading } = useReadContract({
-    contract: cardCatalog,
+    contract: wemark,
     method: "function balanceOf(address) view returns (uint256)",
     params: [effectiveAddress],
   });
@@ -47,47 +48,47 @@ export function useStakingData(userAddress?: string): StakingData {
   const { data: stakingAllowance, isLoading: allowanceLoading } = useReadContract({
     contract: emarkToken,
     method: "function allowance(address,address) view returns (uint256)",
-    params: [effectiveAddress, cardCatalog.address],
+    params: [effectiveAddress, wemark.address],
   });
   
   // Available voting power
   const { data: availableVotingPower, isLoading: votingLoading } = useReadContract({
-    contract: cardCatalog,
-    method: "function getAvailableVotingPower(address) view returns (uint256)",
+    contract: wemark,
+    method: "function getVotingPower(address) view returns (uint256)",
     params: [effectiveAddress],
   });
   
-  // Delegated voting power
+  // Delegated voting power (not applicable for WEMARK - non-transferable)
   const { data: delegatedPower, isLoading: delegatedLoading } = useReadContract({
-    contract: cardCatalog,
-    method: "function getDelegatedVotingPower(address) view returns (uint256)",
+    contract: wemark,
+    method: "function balanceOf(address) view returns (uint256)",
     params: [effectiveAddress],
   });
   
-  // Unbonding information
-  const { data: unbondingInfo, isLoading: unbondingLoading, error: unbondingError } = useReadContract({
-    contract: cardCatalog,
-    method: "function getUnbondingInfo(address) view returns (uint256,uint256,bool)",
+  // User staking info (includes unbonding)
+  const { data: userInfo, isLoading: unbondingLoading, error: unbondingError } = useReadContract({
+    contract: wemark,
+    method: "function getUserInfo(address) view returns (uint256,uint256,uint256,bool)",
     params: [effectiveAddress],
   });
   
-  // User staking summary (includes additional data)
-  const { data: userSummary, isLoading: summaryLoading } = useReadContract({
-    contract: cardCatalog,
-    method: "function getUserSummary(address) view returns (uint256,uint256,uint256,uint256,uint256,bool)",
+  // Can withdraw check
+  const { data: canWithdraw, isLoading: summaryLoading } = useReadContract({
+    contract: wemark,
+    method: "function canWithdraw(address) view returns (bool)",
     params: [effectiveAddress],
   });
   
   const stakingData = useMemo(() => {
-    // Parse unbonding info
-    const unbondingAmount = unbondingInfo?.[0] || BigInt(0);
-    const unbondingReleaseTime = unbondingInfo?.[1] || BigInt(0);
-    const canClaimUnbonding = unbondingInfo?.[2] || false;
+    // Parse user info from WEMARK: (stakedBalance, unbonding, withdrawTime, canWithdrawNow)
+    const stakedBalance = userInfo?.[0] || BigInt(0);
+    const unbondingAmount = userInfo?.[1] || BigInt(0);
+    const unbondingReleaseTime = userInfo?.[2] || BigInt(0);
+    const canClaimUnbonding = userInfo?.[3] || canWithdraw || false;
     
-    // Parse user summary (if available)
-    const stakedBalance = userSummary?.[0] || wEmarkBalance || BigInt(0);
-    const availableVoting = userSummary?.[1] || availableVotingPower || BigInt(0);
-    const delegated = userSummary?.[2] || delegatedPower || BigInt(0);
+    // Voting power is the wEMARK balance
+    const availableVoting = availableVotingPower || BigInt(0);
+    const delegated = BigInt(0); // WEMARK is non-transferable, no delegation
     
     const isLoading = emarkLoading || wEmarkLoading || allowanceLoading || votingLoading || 
                      delegatedLoading || unbondingLoading || summaryLoading;
@@ -96,7 +97,7 @@ export function useStakingData(userAddress?: string): StakingData {
     
     const isUnbonding = unbondingAmount > BigInt(0);
     
-    console.log("📊 Staking data loaded:", {
+    devLog("Staking data loaded:", {
       userAddress: effectiveAddress,
       emarkBalance: emarkBalance?.toString() || '0',
       wEmarkBalance: wEmarkBalance?.toString() || '0', 
@@ -138,8 +139,8 @@ export function useStakingData(userAddress?: string): StakingData {
     stakingAllowance,
     availableVotingPower,
     delegatedPower,
-    unbondingInfo,
-    userSummary,
+    userInfo,
+    canWithdraw,
     emarkLoading,
     wEmarkLoading,
     allowanceLoading,

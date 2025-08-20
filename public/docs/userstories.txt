@@ -1,0 +1,166 @@
+Evermark-Beta User Stories
+==========================
+
+Story 1: Sarah the Content Creator
+----------------------------------
+
+Sarah is a digital artist who wants to preserve her work on-chain and build credibility as a verified creator.
+
+1. **Preserve Content** (EvermarkNFT)
+   - Sarah creates a new artwork and uploads it to IPFS
+   - She mints an Evermark NFT containing the content hash and metadata
+   - Contract: EvermarkNFT.mint(sarah_address, content_hash, metadata_uri)
+   - Result: Sarah receives NFT #1337 representing her artwork
+
+2. **Become Verified Creator** (NFTStaking)
+   - Sarah stakes her own Evermark NFT to prove she owns/created the content
+   - She chooses a 90-day lock tier to show strong commitment
+   - Contract: NFTStaking.stakeNFT(1337, LOCK_TIER_90_DAYS)
+   - Result: Sarah's profile shows "Verified Creator" badge in the app
+
+3. **Earn Tokens** (FeeCollector via app fees)
+   - Other users tip Sarah's content, generating ETH fees
+   - The platform automatically converts these fees to WEMARK tokens
+   - Contract: FeeCollector.convertEthToWemark() (called by app)
+   - Result: Sarah receives WEMARK tokens as creator rewards
+
+
+Story 2: Alex the Community Curator  
+------------------------------------
+
+Alex holds EMARK tokens and wants to participate in governance by voting for quality content.
+
+1. **Stake for Voting Power** (WEMARK)
+   - Alex has 1000 EMARK tokens from previous activities
+   - He stakes them to receive voting power in the governance system
+   - Contract: WEMARK.stake(1000 * 10^18)  // 1000 EMARK
+   - Result: Alex receives 1000 wEMARK tokens = 1000 voting power
+
+2. **Participate in Voting** (EvermarkVoting)
+   - Alex reviews content during the current voting season
+   - He votes for Sarah's artwork and other quality content
+   - Contract: EvermarkVoting.voteForEvermark(1337, 250)  // 250 votes for NFT #1337
+   - Contract: EvermarkVoting.voteForEvermark(2468, 750)  // 750 votes for another piece
+   - Result: Alex has used all 1000 of his voting power for this season
+
+3. **Earn Rewards** (EvermarkRewards)
+   - Alex's wEMARK balance makes him eligible for dual-token rewards
+   - The rewards system distributes EMARK and WETH based on his staked amount
+   - Contract: EvermarkRewards.claimRewards()
+   - Result: Alex receives proportional EMARK and WETH rewards from the pools
+
+
+Story 3: Jordan the Platform User
+---------------------------------
+
+Jordan discovers the platform and wants to engage with content and earn rewards.
+
+1. **Discover and Support Content** (FeeCollector)
+   - Jordan finds Sarah's artwork and wants to support her
+   - He sends a 0.01 ETH tip through the platform
+   - Contract: FeeCollector.convertEthToWemark() (triggered by tip)
+   - Result: Platform converts ETH to WEMARK, Sarah gets creator share
+
+2. **Build Voting Power** (WEMARK)
+   - Jordan buys 500 EMARK tokens on a DEX
+   - He stakes them to participate in content curation
+   - Contract: WEMARK.stake(500 * 10^18)
+   - Result: Jordan receives 500 wEMARK = 500 voting power
+
+3. **Curate Content** (EvermarkVoting)
+   - Jordan participates in the voting season
+   - He distributes his votes across content he finds valuable
+   - Contract: EvermarkVoting.voteForEvermark(1337, 100)  // Votes for Sarah's art
+   - Contract: EvermarkVoting.voteForEvermark(3579, 400)  // Votes for other content
+   - Result: Jordan helps curate the community's content rankings
+
+4. **Earn from Participation** (EvermarkRewards)
+   - Jordan's staked wEMARK makes him eligible for ongoing rewards
+   - He claims rewards after several weeks of participation
+   - Contract: EvermarkRewards.claimRewards()
+   - Result: Jordan receives EMARK and WETH rewards based on his stake
+
+
+Story 4: Maria the Long-term Participant
+----------------------------------------
+
+Maria has been using the platform and wants to optimize her participation strategy.
+
+1. **Check Rewards Status** (EvermarkRewards)
+   - Maria checks her pending rewards and current pool status
+   - Contract: EvermarkRewards.getUserRewardInfo(maria_address)
+   - Contract: EvermarkRewards.getPeriodStatus()
+   - Result: Maria sees her pending EMARK/WETH and next rebalance timing
+
+2. **Manage Staking Strategy** (WEMARK)
+   - Maria wants to adjust her stake based on upcoming voting seasons
+   - She checks if she can unstake some tokens
+   - Contract: WEMARK.canUnstake(maria_address)
+   - Contract: WEMARK.initiateUnstake(200 * 10^18)  // Start unbonding 200 wEMARK
+   - Result: Maria begins 7-day cooldown period for partial unstaking
+
+3. **Strategic Voting** (EvermarkVoting)
+   - Maria studies the current season's content carefully
+   - She distributes votes based on quality and community value
+   - Contract: EvermarkVoting.getRemainingVotingPower(maria_address)
+   - Contract: EvermarkVoting.voteForEvermark(multiple_nfts, various_amounts)
+   - Result: Maria maximizes her voting impact for the season
+
+4. **Creator Verification Check** (NFTStaking)
+   - Maria sees a piece of content and wants to verify if creator is staking their NFT
+   - Contract: NFTStaking.isNFTStaked(some_token_id)
+   - Result: Maria can see if the creator has "skin in the game" via verification
+
+
+Cross-Contract Integration Flows:
+=================================
+
+**Complete Creator Journey:**
+EvermarkNFT.mint() → NFTStaking.stakeNFT() → Earn tips via FeeCollector → Verified status
+
+**Complete Curator Journey:**  
+WEMARK.stake() → EvermarkVoting.voteForEvermark() → EvermarkRewards.claimRewards()
+
+**Platform Revenue Flow:**
+User tips → FeeCollector.convertEthToWemark() → WEMARK liquidity → EvermarkRewards pool funding
+
+**Governance Participation:**
+EMARK holdings → WEMARK.stake() → EvermarkVoting participation → Community curation
+
+**Verification System:**
+Content creation → EvermarkNFT.mint() → NFTStaking.stakeNFT() → Verified creator badge
+
+
+Expected User Behaviors:
+========================
+
+1. **Content Creators:**
+   - Mint NFTs for their work (preserve on-chain)
+   - Stake their own NFTs (prove ownership/creation)
+   - Receive tips converted to WEMARK (monetization)
+
+2. **Curators/Voters:**
+   - Stake EMARK for voting power (governance participation)
+   - Vote for quality content (curation)
+   - Earn rewards for participation (incentivization)
+
+3. **Platform Users:**
+   - Support creators via tips (engagement)
+   - Participate in governance (community building)
+   - Earn rewards for staking (retention)
+
+4. **Long-term Participants:**
+   - Optimize staking strategies (efficiency)
+   - Strategic voting for seasons (competition)
+   - Manage unbonding periods (liquidity planning)
+
+
+Technical Notes:
+===============
+
+- All interactions are on-chain and trustless
+- Rewards are automatically calculated and claimable
+- Verification is based on actual stake, not admin approval
+- Voting power is directly tied to economic stake
+- Creator verification requires "skin in the game"
+- Platform fees automatically flow into ecosystem liquidity
