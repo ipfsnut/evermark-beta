@@ -19,11 +19,8 @@ import { useEvermarksState } from '../hooks/useEvermarkState';
 import { type CreateEvermarkInput, type EvermarkMetadata } from '../types';
 import { useAppAuth } from '@/providers/AppContext';
 import { useUserForEvermarks } from '@/providers/IntegratedUserProvider';
-
-// Utility function for responsive classes
-function cn(...classes: (string | undefined | null | false)[]): string {
-  return classes.filter(Boolean).join(' ');
-}
+import { useTheme } from '@/providers/ThemeProvider';
+import { cn } from '@/utils/responsive';
 
 // Simple mobile detection hook
 function useIsMobile(): boolean {
@@ -56,30 +53,57 @@ const HelpModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
 }> = ({ isOpen, onClose }) => {
+  const { isDark } = useTheme();
+  
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-gray-900 border border-gray-700 rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b border-gray-700">
-          <h3 className="text-xl font-bold text-white">Creating Evermarks</h3>
+      <div className={cn(
+        "relative border rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto",
+        isDark 
+          ? "bg-gray-900 border-gray-700" 
+          : "bg-white border-gray-300"
+      )}>
+        <div className={cn(
+          "flex items-center justify-between p-6 border-b",
+          isDark ? "border-gray-700" : "border-gray-200"
+        )}>
+          <h3 className={cn(
+            "text-xl font-bold",
+            isDark ? "text-white" : "text-gray-900"
+          )}>Creating Evermarks</h3>
           <button
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+            className={cn(
+              "p-2 rounded transition-colors",
+              isDark 
+                ? "text-gray-400 hover:text-white hover:bg-gray-800" 
+                : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+            )}
           >
             <XIcon className="h-5 w-5" />
           </button>
         </div>
         
-        <div className="p-6 space-y-6 text-gray-300">
+        <div className={cn(
+          "p-6 space-y-6",
+          isDark ? "text-gray-300" : "text-gray-700"
+        )}>
           <div>
-            <h4 className="text-lg font-semibold text-white mb-2">What is an Evermark?</h4>
+            <h4 className={cn(
+              "text-lg font-semibold mb-2",
+              isDark ? "text-white" : "text-gray-900"
+            )}>What is an Evermark?</h4>
             <p>Evermarks preserve content permanently on the blockchain with hybrid storage for optimal performance.</p>
           </div>
           
           <div>
-            <h4 className="text-lg font-semibold text-white mb-2">SDK-Powered Storage</h4>
+            <h4 className={cn(
+              "text-lg font-semibold mb-2",
+              isDark ? "text-white" : "text-gray-900"
+            )}>SDK-Powered Storage</h4>
             <p>Your content is stored using our advanced SDK:</p>
             <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
               <li><strong className="text-green-400">Primary:</strong> Supabase for fast loading</li>
@@ -109,6 +133,7 @@ export function CreateEvermarkForm({
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { isAuthenticated, user, requireAuth } = useAppAuth();
+  const { isDark } = useTheme();
   
   // SIMPLIFIED: Just check wallet connection
   const { 
@@ -328,10 +353,25 @@ export function CreateEvermarkForm({
   // Show authentication prompt if not connected
   if (!isAuthenticated) {
     return (
-      <div className={cn("bg-gray-800/30 border border-gray-700 rounded-lg p-12 text-center", className)}>
-        <PlusIcon className="mx-auto h-16 w-16 text-gray-500 mb-6" />
-        <h3 className="text-2xl font-medium text-white mb-4">Connect to Create</h3>
-        <p className="text-gray-400 mb-6 max-w-md mx-auto">
+      <div className={cn(
+        "border rounded-lg p-12 text-center",
+        isDark 
+          ? "bg-gray-800/30 border-gray-700" 
+          : "bg-white border-gray-300",
+        className
+      )}>
+        <PlusIcon className={cn(
+          "mx-auto h-16 w-16 mb-6",
+          isDark ? "text-gray-500" : "text-gray-400"
+        )} />
+        <h3 className={cn(
+          "text-2xl font-medium mb-4",
+          isDark ? "text-white" : "text-gray-900"
+        )}>Connect to Create</h3>
+        <p className={cn(
+          "mb-6 max-w-md mx-auto",
+          isDark ? "text-gray-400" : "text-gray-600"
+        )}>
           Please connect your wallet to create an Evermark
         </p>
       </div>
@@ -343,9 +383,18 @@ export function CreateEvermarkForm({
   // No longer need SDK configuration - using IPFS-first approach in EvermarkService
 
   return (
-    <div className={cn("min-h-screen bg-black text-white", className)}>
+    <div className={cn(
+      "min-h-screen transition-colors duration-200",
+      isDark ? "bg-black text-white" : "bg-gray-50 text-gray-900",
+      className
+    )}>
       {/* Header */}
-      <div className="bg-gradient-to-r from-gray-900 via-black to-gray-900 border-b border-green-400/30">
+      <div className={cn(
+        "border-b border-green-400/30",
+        isDark 
+          ? "bg-gradient-to-r from-gray-900 via-black to-gray-900" 
+          : "bg-gradient-to-r from-gray-100 via-gray-50 to-gray-100"
+      )}>
         <div className="container mx-auto px-4 py-8">
           <div className="text-center space-y-6">
             <div className="flex justify-center items-center gap-4">
@@ -357,14 +406,22 @@ export function CreateEvermarkForm({
               </h1>
               <button
                 onClick={() => setShowHelpModal(true)}
-                className="w-8 h-8 bg-gray-800/50 border border-cyan-400/50 rounded-full flex items-center justify-center hover:bg-gray-700 transition-colors group"
+                className={cn(
+                  "w-8 h-8 border border-cyan-400/50 rounded-full flex items-center justify-center transition-colors group",
+                  isDark 
+                    ? "bg-gray-800/50 hover:bg-gray-700" 
+                    : "bg-white/50 hover:bg-white"
+                )}
                 title="Get Help"
               >
                 <HelpCircleIcon className="h-4 w-4 text-cyan-400 group-hover:text-cyan-300" />
               </button>
             </div>
             
-            <p className="text-gray-300 max-w-3xl mx-auto text-lg">
+            <p className={cn(
+              "max-w-3xl mx-auto text-lg",
+              isDark ? "text-gray-300" : "text-gray-700"
+            )}>
               Transform any content into a permanent reference with our advanced SDK. 
               <span className="text-green-400 font-bold"> Hybrid storage</span> ensures optimal performance and permanence.
             </p>
@@ -375,15 +432,32 @@ export function CreateEvermarkForm({
       <div className="container mx-auto px-4 py-8">
         {/* Error Display */}
         {createError && (
-          <div className="mb-6 p-4 bg-red-900/30 border border-red-500/50 rounded-lg flex items-start">
-            <AlertCircleIcon className="h-5 w-5 text-red-400 mr-3 mt-0.5 flex-shrink-0" />
+          <div className={cn(
+            "mb-6 p-4 border rounded-lg flex items-start",
+            isDark 
+              ? "bg-red-900/30 border-red-500/50" 
+              : "bg-red-100/80 border-red-300"
+          )}>
+            <AlertCircleIcon className={cn(
+              "h-5 w-5 mr-3 mt-0.5 flex-shrink-0",
+              isDark ? "text-red-400" : "text-red-600"
+            )} />
             <div className="flex-1">
-              <p className="text-red-300 font-medium">Error</p>
-              <p className="text-red-400 text-sm">{createError}</p>
+              <p className={cn(
+                "font-medium",
+                isDark ? "text-red-300" : "text-red-700"
+              )}>Error</p>
+              <p className={cn(
+                "text-sm",
+                isDark ? "text-red-400" : "text-red-600"
+              )}>{createError}</p>
             </div>
             <button
               onClick={clearCreateError}
-              className="text-red-400 hover:text-red-300"
+              className={cn(
+                "transition-colors",
+                isDark ? "text-red-400 hover:text-red-300" : "text-red-600 hover:text-red-500"
+              )}
             >
               <XIcon className="h-4 w-4" />
             </button>
@@ -393,11 +467,19 @@ export function CreateEvermarkForm({
 
         {/* ADDED: Auth Status Indicator */}
         {isAuthenticated && (
-          <div className="mb-6 p-4 bg-gray-800/50 border border-gray-600 rounded-lg">
+          <div className={cn(
+            "mb-6 p-4 border rounded-lg",
+            isDark 
+              ? "bg-gray-800/50 border-gray-600" 
+              : "bg-white border-gray-300"
+          )}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-3 h-3 rounded-full bg-green-400" />
-                <span className="text-sm text-gray-300">
+                <span className={cn(
+                  "text-sm",
+                  isDark ? "text-gray-300" : "text-gray-700"
+                )}>
                   ✅ Wallet connected - Ready to create
                 </span>
               </div>
@@ -407,14 +489,31 @@ export function CreateEvermarkForm({
 
         {/* Progress Display */}
         {isCreating && (
-          <div className="mb-6 p-4 bg-blue-900/30 border border-blue-500/50 rounded-lg">
+          <div className={cn(
+            "mb-6 p-4 border rounded-lg",
+            isDark 
+              ? "bg-blue-900/30 border-blue-500/50" 
+              : "bg-blue-100/80 border-blue-300"
+          )}>
             <div className="flex items-start">
-              <LoaderIcon className="animate-spin h-5 w-5 text-blue-400 mr-3 mt-0.5 flex-shrink-0" />
+              <LoaderIcon className={cn(
+                "animate-spin h-5 w-5 mr-3 mt-0.5 flex-shrink-0",
+                isDark ? "text-blue-400" : "text-blue-600"
+              )} />
               <div className="flex-1">
-                <p className="text-blue-300 font-medium">Creating Evermark with SDK...</p>
-                <p className="text-blue-400 text-sm">{createStep}</p>
+                <p className={cn(
+                  "font-medium",
+                  isDark ? "text-blue-300" : "text-blue-700"
+                )}>Creating Evermark with SDK...</p>
+                <p className={cn(
+                  "text-sm",
+                  isDark ? "text-blue-400" : "text-blue-600"
+                )}>{createStep}</p>
                 {createProgress > 0 && (
-                  <div className="mt-2 bg-gray-700 rounded-full h-2">
+                  <div className={cn(
+                    "mt-2 rounded-full h-2",
+                    isDark ? "bg-gray-700" : "bg-gray-300"
+                  )}>
                     <div 
                       className="bg-gradient-to-r from-blue-400 to-cyan-400 h-2 rounded-full transition-all duration-300"
                       style={{ width: `${createProgress}%` }}
@@ -432,10 +531,21 @@ export function CreateEvermarkForm({
         )}>
           {/* Left Column - Form */}
           <div className="space-y-6">
-            <div className="bg-gray-800/50 border border-gray-700 rounded-lg shadow-lg p-6">
+            <div className={cn(
+              "border rounded-lg shadow-lg p-6",
+              isDark 
+                ? "bg-gray-800/50 border-gray-700" 
+                : "bg-white border-gray-300"
+            )}>
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-white">Create Evermark</h2>
-                <div className="flex items-center text-sm text-gray-400">
+                <h2 className={cn(
+                  "text-xl font-bold",
+                  isDark ? "text-white" : "text-gray-900"
+                )}>Create Evermark</h2>
+                <div className={cn(
+                  "flex items-center text-sm",
+                  isDark ? "text-gray-400" : "text-gray-600"
+                )}>
                   <FileTextIcon className="h-4 w-4 mr-2" />
                   <span>SDK Powered</span>
                 </div>
@@ -444,7 +554,10 @@ export function CreateEvermarkForm({
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Content Type Selection */}
                 <div className="space-y-3">
-                  <label className="block text-sm font-medium text-cyan-400">
+                  <label className={cn(
+                    "block text-sm font-medium",
+                    isDark ? "text-cyan-400" : "text-purple-600"
+                  )}>
                     Content Type
                   </label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -456,15 +569,22 @@ export function CreateEvermarkForm({
                         className={cn(
                           "p-4 rounded-lg border transition-all text-left",
                           formData.contentType === type.value
-                            ? "border-cyan-400 bg-cyan-900/30 text-cyan-300"
-                            : "border-gray-600 bg-gray-700/50 text-gray-300 hover:border-gray-500"
+                            ? (isDark 
+                                ? "border-cyan-400 bg-cyan-900/30 text-cyan-300" 
+                                : "border-purple-400 bg-purple-100/50 text-purple-700")
+                            : (isDark 
+                                ? "border-gray-600 bg-gray-700/50 text-gray-300 hover:border-gray-500" 
+                                : "border-gray-300 bg-gray-100/50 text-gray-700 hover:border-gray-400")
                         )}
                       >
                         <div className="flex items-center gap-3 mb-2">
                           <span className="text-lg">{type.icon}</span>
                           <span className="font-medium">{type.label}</span>
                         </div>
-                        <p className="text-xs text-gray-400">{type.description}</p>
+                        <p className={cn(
+                          "text-xs",
+                          isDark ? "text-gray-400" : "text-gray-600"
+                        )}>{type.description}</p>
                       </button>
                     ))}
                   </div>
@@ -472,7 +592,10 @@ export function CreateEvermarkForm({
 
                 {/* Title */}
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-cyan-400">
+                  <label className={cn(
+                    "block text-sm font-medium",
+                    isDark ? "text-cyan-400" : "text-purple-600"
+                  )}>
                     Title *
                   </label>
                   <input
@@ -480,37 +603,59 @@ export function CreateEvermarkForm({
                     value={formData.title}
                     onChange={(e) => handleFieldChange('title', e.target.value)}
                     placeholder="Enter a descriptive title..."
-                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-20"
+                    className={cn(
+                      "w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-opacity-20 transition-colors",
+                      isDark 
+                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-cyan-400" 
+                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-purple-400 focus:ring-purple-400"
+                    )}
                     maxLength={100}
                     required
                   />
-                  <div className="text-xs text-gray-500 text-right">
+                  <div className={cn(
+                    "text-xs text-right",
+                    isDark ? "text-gray-500" : "text-gray-600"
+                  )}>
                     {formData.title.length}/100
                   </div>
                 </div>
 
                 {/* Description */}
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-cyan-400">
+                  <label className={cn(
+                    "block text-sm font-medium",
+                    isDark ? "text-cyan-400" : "text-purple-600"
+                  )}>
                     Description *
                   </label>
                   <textarea
                     value={formData.description}
                     onChange={(e) => handleFieldChange('description', e.target.value)}
                     placeholder="Describe this content and why it's worth preserving..."
-                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-20 resize-none"
+                    className={cn(
+                      "w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-opacity-20 resize-none transition-colors",
+                      isDark 
+                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-cyan-400" 
+                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-purple-400 focus:ring-purple-400"
+                    )}
                     rows={4}
                     maxLength={1000}
                     required
                   />
-                  <div className="text-xs text-gray-500 text-right">
+                  <div className={cn(
+                    "text-xs text-right",
+                    isDark ? "text-gray-500" : "text-gray-600"
+                  )}>
                     {formData.description.length}/1000
                   </div>
                 </div>
 
                 {/* Source URL */}
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-cyan-400">
+                  <label className={cn(
+                    "block text-sm font-medium",
+                    isDark ? "text-cyan-400" : "text-purple-600"
+                  )}>
                     Source URL (Optional)
                   </label>
                   <div className="flex gap-2">
@@ -519,7 +664,12 @@ export function CreateEvermarkForm({
                       value={formData.sourceUrl}
                       onChange={(e) => handleFieldChange('sourceUrl', e.target.value)}
                       placeholder="https://example.com/content"
-                      className="flex-1 px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-20"
+                      className={cn(
+                        "flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-opacity-20 transition-colors",
+                        isDark 
+                          ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-cyan-400" 
+                          : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-purple-400 focus:ring-purple-400"
+                      )}
                     />
                     {formData.sourceUrl && (
                       <button
@@ -536,7 +686,10 @@ export function CreateEvermarkForm({
 
                 {/* Tags */}
                 <div className="space-y-3">
-                  <label className="block text-sm font-medium text-cyan-400">
+                  <label className={cn(
+                    "block text-sm font-medium",
+                    isDark ? "text-cyan-400" : "text-purple-600"
+                  )}>
                     Tags (Optional)
                   </label>
                   <div className="flex gap-2">
@@ -546,14 +699,24 @@ export function CreateEvermarkForm({
                       onChange={(e) => setTagInput(e.target.value)}
                       onKeyPress={handleTagKeyPress}
                       placeholder="Add tags..."
-                      className="flex-1 px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-20"
+                      className={cn(
+                        "flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-opacity-20 transition-colors",
+                        isDark 
+                          ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-cyan-400" 
+                          : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-purple-400 focus:ring-purple-400"
+                      )}
                       disabled={tags.length >= 10}
                     />
                     <button
                       type="button"
                       onClick={handleAddTag}
                       disabled={!tagInput.trim() || tags.length >= 10}
-                      className="px-4 py-3 bg-gray-600 hover:bg-gray-500 disabled:bg-gray-800 disabled:text-gray-500 text-white rounded-lg transition-colors"
+                      className={cn(
+                        "px-4 py-3 text-white rounded-lg transition-colors",
+                        isDark 
+                          ? "bg-gray-600 hover:bg-gray-500 disabled:bg-gray-800 disabled:text-gray-500" 
+                          : "bg-gray-500 hover:bg-gray-400 disabled:bg-gray-300 disabled:text-gray-500"
+                      )}
                     >
                       <TagIcon className="h-4 w-4" />
                     </button>
@@ -564,13 +727,21 @@ export function CreateEvermarkForm({
                       {tags.map((tag, index) => (
                         <span
                           key={index}
-                          className="inline-flex items-center bg-purple-900/30 text-purple-300 px-3 py-1 rounded-full border border-purple-500/30"
+                          className={cn(
+                            "inline-flex items-center px-3 py-1 rounded-full border",
+                            isDark 
+                              ? "bg-purple-900/30 text-purple-300 border-purple-500/30" 
+                              : "bg-purple-100 text-purple-700 border-purple-300"
+                          )}
                         >
                           {tag}
                           <button
                             type="button"
                             onClick={() => handleRemoveTag(tag)}
-                            className="ml-2 text-purple-400 hover:text-purple-200"
+                            className={cn(
+                              "ml-2 transition-colors",
+                              isDark ? "text-purple-400 hover:text-purple-200" : "text-purple-600 hover:text-purple-800"
+                            )}
                           >
                             <XIcon className="h-3 w-3" />
                           </button>
@@ -579,7 +750,10 @@ export function CreateEvermarkForm({
                     </div>
                   )}
                   
-                  <p className="text-xs text-gray-500">
+                  <p className={cn(
+                    "text-xs",
+                    isDark ? "text-gray-500" : "text-gray-600"
+                  )}>
                     {tags.length}/10 tags • Press Enter to add
                   </p>
                 </div>

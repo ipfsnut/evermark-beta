@@ -64,7 +64,7 @@ export { StakingWidget, StakeForm, UnstakeForm };
 export const stakingConfig = {
   name: 'staking',
   version: '1.0.0',
-  description: 'EMARK token staking for voting power and governance',
+  description: 'EMARK token staking for voting power and content curation',
   
   // Feature capabilities
   features: {

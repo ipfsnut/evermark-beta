@@ -245,7 +245,7 @@ export function DelegateButton({
           
           {userVotes > BigInt(0) && (
             <span className="px-2 py-1 text-xs bg-cyan-600/20 border border-cyan-500/30 rounded text-cyan-400">
-              {formatVoteAmount(userVotes, 1)}
+              {formatVoteAmount(userVotes, true)}
             </span>
           )}
         </div>

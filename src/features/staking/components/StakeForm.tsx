@@ -61,7 +61,7 @@ export function StakeForm({ stakingState, onSuccess, className = '' }: StakeForm
   // Handle max button click
   const handleMaxClick = useCallback(() => {
     if (stakingInfo?.emarkBalance) {
-      const maxAmount = formatTokenAmount(stakingInfo.emarkBalance, 6);
+      const maxAmount = formatTokenAmount(stakingInfo.emarkBalance, false);
       setAmount(maxAmount);
     }
   }, [stakingInfo?.emarkBalance, formatTokenAmount]);
@@ -104,7 +104,7 @@ export function StakeForm({ stakingState, onSuccess, className = '' }: StakeForm
       // The stake method handles approval internally
       await stakingState.stake(amountWei);
       
-      setLocalSuccess(`Successfully staked ${formatTokenAmount(amountWei, 4)} EMARK!`);
+      setLocalSuccess(`Successfully staked ${formatTokenAmount(amountWei, true)} EMARK!`);
       setAmount('');
       setApprovedAmount(null);
       onSuccess?.();
@@ -225,7 +225,7 @@ export function StakeForm({ stakingState, onSuccess, className = '' }: StakeForm
           {/* Balance Display */}
           <div className="mt-2 flex justify-between text-xs text-gray-400">
             <span>
-              Available: {stakingInfo ? formatTokenAmount(stakingInfo.emarkBalance, 4) : '0'} EMARK
+              Available: {stakingInfo ? formatTokenAmount(stakingInfo.emarkBalance, true) : '0'} EMARK
             </span>
             {amount && validation.isValid && (
               <span>
@@ -263,7 +263,7 @@ export function StakeForm({ stakingState, onSuccess, className = '' }: StakeForm
           <div className="p-3 bg-green-900/20 border border-green-500/30 rounded-lg flex items-center">
             <CheckCircleIcon className="h-4 w-4 text-green-400 mr-2" />
             <span className="text-green-200 text-sm">
-              Approved {formatTokenAmount(approvedAmount, 4)} EMARK for staking
+              Approved {formatTokenAmount(approvedAmount, true)} EMARK for staking
             </span>
           </div>
         )}
@@ -324,7 +324,7 @@ export function StakeForm({ stakingState, onSuccess, className = '' }: StakeForm
               <strong className="text-blue-300">Two-step process:</strong> First approve EMARK spending, then stake to receive wEMARK tokens.
             </p>
             <p>
-              <strong className="text-blue-300">Voting Power:</strong> wEMARK tokens give you voting power in governance and content curation.
+              <strong className="text-blue-300">Voting Power:</strong> wEMARK tokens give you voting power for content curation.
             </p>
             <p>
               <strong className="text-blue-300">Unbonding:</strong> Unstaking requires a {stakingInfo ? StakingService.formatUnbondingPeriod(stakingInfo.unbondingPeriod) : '7 day'} waiting period.

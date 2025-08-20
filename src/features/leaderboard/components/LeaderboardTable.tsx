@@ -24,15 +24,12 @@ import {
   Hash
 } from 'lucide-react';
 import { Formatters } from '../../../utils/formatters';
+import { useTheme } from '../../../providers/ThemeProvider';
+import { cn } from '../../../utils/responsive';
 
 import useLeaderboardState from '../hooks/useLeaderboardState';
 import { LeaderboardService } from '../services/LeaderboardService';
 import type { LeaderboardEntry, RankingChange } from '../types';
-
-// Simple utility function since we can't import from @/utils/responsive
-function cn(...classes: (string | undefined | boolean)[]): string {
-  return classes.filter(Boolean).join(' ');
-}
 
 interface LeaderboardTableProps {
   className?: string;
@@ -51,6 +48,7 @@ export function LeaderboardTable({
 }: LeaderboardTableProps) {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
+  const { isDark } = useTheme();
   
   const leaderboardState = useLeaderboardState();
   
@@ -162,13 +160,30 @@ export function LeaderboardTable({
 
   if (error) {
     return (
-      <div className={cn("bg-red-900/30 border border-red-500/50 rounded-lg p-6", className)}>
+      <div className={cn(
+        "border rounded-lg p-6",
+        isDark 
+          ? "bg-red-900/30 border-red-500/50" 
+          : "bg-red-100/80 border-red-300",
+        className
+      )}>
         <div className="text-center">
-          <h3 className="text-red-300 font-medium mb-2">Error Loading Leaderboard</h3>
-          <p className="text-red-400 text-sm mb-4">{error}</p>
+          <h3 className={cn(
+            "font-medium mb-2",
+            isDark ? "text-red-300" : "text-red-700"
+          )}>Error Loading Leaderboard</h3>
+          <p className={cn(
+            "text-sm mb-4",
+            isDark ? "text-red-400" : "text-red-600"
+          )}>{error}</p>
           <button
             onClick={refresh}
-            className="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-300 rounded-lg transition-colors"
+            className={cn(
+              "px-4 py-2 rounded-lg transition-colors",
+              isDark 
+                ? "bg-red-600/20 hover:bg-red-600/30 text-red-300" 
+                : "bg-red-200 hover:bg-red-300 text-red-700"
+            )}
           >
             Try Again
           </button>
@@ -182,15 +197,24 @@ export function LeaderboardTable({
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+          <h2 className={cn(
+            "text-2xl sm:text-3xl font-bold mb-2",
+            isDark ? "text-white" : "text-gray-900"
+          )}>
             Leaderboard
             {totalCount > 0 && (
-              <span className="ml-2 text-base text-gray-400 font-normal">
+              <span className={cn(
+                "ml-2 text-base font-normal",
+                isDark ? "text-gray-400" : "text-gray-600"
+              )}>
                 ({totalCount.toLocaleString()})
               </span>
             )}
           </h2>
-          <div className="flex items-center space-x-4 text-sm text-gray-400">
+          <div className={cn(
+            "flex items-center space-x-4 text-sm",
+            isDark ? "text-gray-400" : "text-gray-600"
+          )}>
             <span>Period: {currentPeriod.label}</span>
             {lastUpdated && (
               <span>Updated {Formatters.formatRelativeTime(lastUpdated)}</span>
@@ -202,10 +226,19 @@ export function LeaderboardTable({
           <button
             onClick={refresh}
             disabled={isRefreshing}
-            className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-600 transition-colors disabled:opacity-50"
+            className={cn(
+              "p-2 rounded-lg border transition-colors disabled:opacity-50",
+              isDark 
+                ? "bg-gray-800 hover:bg-gray-700 border-gray-600" 
+                : "bg-white hover:bg-gray-50 border-gray-300"
+            )}
             title="Refresh leaderboard"
           >
-            <RefreshCw className={cn("h-4 w-4 text-gray-300", isRefreshing && "animate-spin")} />
+            <RefreshCw className={cn(
+              "h-4 w-4", 
+              isDark ? "text-gray-300" : "text-gray-700",
+              isRefreshing && "animate-spin"
+            )} />
           </button>
         </div>
       </div>
@@ -218,13 +251,21 @@ export function LeaderboardTable({
             {/* Search */}
             <form onSubmit={handleSearch} className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className={cn(
+                  "absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4",
+                  isDark ? "text-gray-400" : "text-gray-500"
+                )} />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search evermarks..."
-                  className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-20"
+                  className={cn(
+                    "w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-opacity-20 transition-colors",
+                    isDark 
+                      ? "bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-cyan-400" 
+                      : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-purple-400 focus:ring-purple-400"
+                  )}
                 />
               </div>
             </form>
@@ -238,8 +279,10 @@ export function LeaderboardTable({
                   className={cn(
                     "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
                     period.id === currentPeriod.id
-                      ? "bg-cyan-600 text-white"
-                      : "bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white"
+                      ? (isDark ? "bg-cyan-600 text-white" : "bg-purple-600 text-white")
+                      : (isDark 
+                          ? "bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white" 
+                          : "bg-gray-200 text-gray-700 hover:bg-gray-300 hover:text-gray-900")
                   )}
                 >
                   {period.label}
@@ -251,13 +294,21 @@ export function LeaderboardTable({
           {/* Active filters */}
           {isFiltered && (
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2 text-sm text-gray-400">
+              <div className={cn(
+                "flex items-center space-x-2 text-sm",
+                isDark ? "text-gray-400" : "text-gray-600"
+              )}>
                 <Filter className="h-4 w-4" />
                 <span>Filters active</span>
               </div>
               <button
                 onClick={clearFilters}
-                className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
+                className={cn(
+                  "text-sm transition-colors",
+                  isDark 
+                    ? "text-cyan-400 hover:text-cyan-300" 
+                    : "text-purple-600 hover:text-purple-700"
+                )}
               >
                 Clear all
               </button>

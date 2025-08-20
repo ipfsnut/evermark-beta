@@ -14,6 +14,7 @@
     "splashImageUrl": "https://evermarks.net/splash.png",
     "splashBackgroundColor": "#7c3aed",
     "webhookUrl": "https://evermarks.net/.netlify/functions/webhook",
-    "requiredChains": ["eip155:84532", "eip155:8453"]
+    "requiredChains": ["eip155:84532", "eip155:8453"],
+    "manifestUrl": "https://evermarks.net/manifest.json"
   }
 }

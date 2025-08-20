@@ -120,23 +120,34 @@ export class StakingService {
   }
 
   /**
-   * Format token amount for display
+   * Format token amount for display (whole numbers only)
    */
-  static formatTokenAmount(amount: bigint, decimals: number = 2): string {
-    if (amount === BigInt(0)) return '0';
-    
-    // Manual conversion from wei to ether (18 decimals)
-    const divisor = BigInt(10) ** BigInt(18);
-    const etherAmount = Number(amount) / Number(divisor);
-    
-    if (etherAmount < 0.0001) {
-      return '< 0.0001';
+  static formatTokenAmount(amount: bigint, useShortFormat = true): string {
+    try {
+      if (amount === BigInt(0)) return '0';
+      
+      // Manual conversion from wei to ether (18 decimals)
+      const divisor = BigInt(10) ** BigInt(18);
+      const etherAmount = Number(amount) / Number(divisor);
+      const wholeNumber = Math.floor(etherAmount); // Always whole numbers
+      
+      if (useShortFormat) {
+        // Use short format for large numbers to prevent overflow
+        if (wholeNumber >= 1000000000) {
+          return `${(wholeNumber / 1000000000).toFixed(1)}B`;
+        } else if (wholeNumber >= 1000000) {
+          return `${(wholeNumber / 1000000).toFixed(1)}M`;
+        } else if (wholeNumber >= 1000) {
+          return `${(wholeNumber / 1000).toFixed(1)}K`;
+        }
+      }
+      
+      // Return whole number with commas for readability
+      return wholeNumber.toLocaleString('en-US');
+    } catch (error) {
+      console.error('Error formatting token amount:', error);
+      return '0';
     }
-    
-    return etherAmount.toLocaleString('en-US', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: decimals
-    });
   }
 
   /**
@@ -490,7 +501,7 @@ export class StakingService {
       case 'maximum_voting_power':
         return {
           recommended: totalBalance * BigInt(95) / BigInt(100), // 95% of total
-          reasoning: 'Stake 95% for maximum voting power in governance',
+          reasoning: 'Stake 95% for maximum voting power in content curation',
           riskLevel: 'high'
         };
       

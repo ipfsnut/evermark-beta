@@ -296,10 +296,90 @@ export class VotingService {
   }
 
   /**
-   * Format vote amount for display
+   * Parse vote amount from string to wei
    */
-  static formatVoteAmount(amount: bigint, decimals: number = 2): string {
-    return parseFloat(formatUnits(amount, 18)).toFixed(decimals);
+  static parseVoteAmount(amount: string): bigint {
+    try {
+      if (!amount || amount.trim() === '') {
+        return BigInt(0);
+      }
+      
+      // Clean the input
+      const cleanAmount = amount.trim().replace(/,/g, '');
+      
+      // Validate format
+      if (!/^\d*\.?\d*$/.test(cleanAmount)) {
+        throw new Error('Invalid number format');
+      }
+      
+      return parseUnits(cleanAmount, 18);
+    } catch (error) {
+      console.error('Error parsing vote amount:', error);
+      throw new Error('Invalid amount format');
+    }
+  }
+
+  /**
+   * Format vote amount for display (whole numbers only)
+   */
+  static formatVoteAmount(amount: bigint, useShortFormat = true): string {
+    try {
+      if (amount === BigInt(0)) return '0';
+      
+      const formatted = formatUnits(amount, 18);
+      const number = Math.floor(parseFloat(formatted)); // Always whole numbers
+      
+      if (useShortFormat) {
+        // Use short format for large numbers to prevent overflow
+        if (number >= 1000000000) {
+          return `${(number / 1000000000).toFixed(1)}B`;
+        } else if (number >= 1000000) {
+          return `${(number / 1000000).toFixed(1)}M`;
+        } else if (number >= 1000) {
+          return `${(number / 1000).toFixed(1)}K`;
+        }
+      }
+      
+      // Return whole number with commas for readability
+      return number.toLocaleString('en-US');
+    } catch (error) {
+      console.error('Error formatting vote amount:', error);
+      return '0';
+    }
+  }
+
+  /**
+   * Validate undelegate amount
+   */
+  static validateUndelegateAmount(
+    amount: string,
+    currentDelegatedAmount: bigint
+  ): VotingValidation {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    try {
+      const undelegateAmount = this.parseVoteAmount(amount);
+
+      // Check if amount is greater than 0
+      if (undelegateAmount === BigInt(0)) {
+        errors.push('Amount must be greater than 0');
+      }
+
+      // Check if amount is greater than currently delegated
+      if (undelegateAmount > currentDelegatedAmount) {
+        errors.push('Cannot undelegate more than currently delegated');
+      }
+
+    } catch (error) {
+      errors.push('Invalid amount format');
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      warnings
+    };
   }
 
   /**
@@ -354,5 +434,54 @@ export class VotingService {
     } catch (error) {
       throw new Error(`Failed to prepare start season transaction: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  /**
+   * Format time remaining for display
+   */
+  static formatTimeRemaining(milliseconds: number): string {
+    if (milliseconds <= 0) return 'Ended';
+    
+    const seconds = Math.floor(milliseconds / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    
+    if (days > 0) {
+      return `${days}d ${hours % 24}h`;
+    } else if (hours > 0) {
+      return `${hours}h ${minutes % 60}m`;
+    } else if (minutes > 0) {
+      return `${minutes}m`;
+    } else {
+      return `${seconds}s`;
+    }
+  }
+
+  /**
+   * Get user-friendly error message from error object
+   */
+  static getUserFriendlyError(error: any): string {
+    if (typeof error === 'string') {
+      return error;
+    }
+    
+    if (error?.message) {
+      const message = error.message.toLowerCase();
+      
+      if (message.includes('insufficient')) {
+        return 'Insufficient voting power for this action';
+      }
+      if (message.includes('rejected')) {
+        return 'Transaction was rejected by user';
+      }
+      if (message.includes('network')) {
+        return 'Network error. Please try again.';
+      }
+      
+      return error.message;
+    }
+    
+    return 'An unexpected error occurred';
   }
 }

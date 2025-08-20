@@ -1,149 +1,204 @@
-# EVERMARK FEATURES DEV SPRINT TODO
-# Generated: 2025-08-18
-# Priority: HIGH - All features currently broken due to architectural inconsistencies
+# EVERMARK BETA PROJECT STATUS UPDATE
+# Generated: 2025-08-20
+# Focus: Farcaster Mini-App Integration & Theme System Completion
 
 ================================================================================
-🔴 CRITICAL ISSUES ANALYSIS
+🎯 CURRENT PRIORITY: FARCASTER MINI-APP INTEGRATION
 ================================================================================
 
-LEADERBOARD FEATURE ISSUES:
-- ❌ No React Query integration (uses manual state management)
-- ❌ Mock data only (no actual blockchain integration)  
-- ❌ Contract placeholders (hardcoded addresses instead of env vars)
-- ❌ Type mismatches (import/export inconsistencies)
+BLOCKING ISSUE:
+- ❌ manifest.json syntax error preventing Farcaster mini-app loading
+  - Error: "Manifest: Line: 1, column: 1, Syntax error"
+  - Manifest appears valid but may have serving/MIME type issues
+  - This blocks entire Farcaster functionality
 
-STAKING FEATURE ISSUES:
-- ❌ Inconsistent patterns (mix of React Query and raw hooks)
-- ❌ Hook complexity (multiple interdependent hooks)
-- ❌ Provider issues (may have circular dependencies)
-- ❌ Data fragmentation (scattered data fetching logic)
-
-TOKENS FEATURE ISSUES:
-- ⚠️ Better condition but has issues (uses React Query but has dependencies)
-- ❌ Path alias issues (@/lib/contracts may not exist)
-- ❌ External dependencies (not self-contained)
-- ❌ Service layer gaps (direct contract calls in components)
-
-VOTING FEATURE ISSUES:
-- ❌ Feature coupling (imports from other features breaks isolation)
-- ❌ Missing ABIs (references non-existent ABI files)
-- ❌ Complex dependencies (tight coupling with staking)
-- ❌ Event handling (incomplete event service implementation)
-
-ROOT CAUSES:
-1. Inconsistent Architecture - Each feature uses different patterns
-2. Broken Feature Isolation - Cross-feature imports and dependencies
-3. Missing Infrastructure - Contract addresses, ABIs, providers not set up
-4. Incomplete Migration - Mix of old and new patterns throughout
+FARCASTER REQUIREMENTS:
+[ ] Fix manifest.json serving/loading issue
+[ ] Test frame SDK initialization
+[ ] Verify wallet connection via Frame connector
+[ ] Ensure mobile-optimized UI works in Farcaster app
+[ ] Test navigation within Farcaster constraints
 
 ================================================================================
-⚡ DEV SPRINT TASKS - PRIORITY ORDER
+✅ RECENTLY COMPLETED (Last Session)
 ================================================================================
 
-PHASE 1: FOUNDATION (Critical Path)
-[ ] 1. Fix cross-feature dependencies
-    - Remove @/features/staking imports from voting
-    - Remove @/lib/contracts dependencies from tokens
-    - Make each feature self-contained
+DOCUMENTATION SYSTEM REDESIGN:
+✅ Replaced confusing sidebar navigation with card-based layout
+✅ Added README.md as "Getting Started" documentation
+✅ Fixed text contrast issues on light backgrounds
+✅ Removed disorienting separate doc viewer page
 
-[ ] 2. Set up proper contract configurations
-    - Fix leaderboard contract address (use env var instead of placeholder)
-    - Create local ABI files for voting feature
-    - Ensure all contract addresses use environment variables
+MOBILE NAVIGATION OVERHAUL:
+✅ Created MobileMenu.tsx with slide-out navigation
+✅ Updated Layout.tsx to use hamburger menu system
+✅ Removed bottom navigation buttons
+✅ Added stub SwapPage for future token swapping
+✅ Fixed import errors (StackIcon → LayersIcon)
 
-[ ] 3. Remove path alias dependencies
-    - Replace @/lib/contracts imports with relative paths
-    - Replace @/lib/abis imports with local feature ABIs
-    - Ensure features don't depend on external lib files
-
-PHASE 2: CORE PATTERNS (Architecture)
-[ ] 4. Standardize all features to React Query
-    - Migrate leaderboard to React Query pattern (like evermarks)
-    - Migrate staking to consistent React Query pattern
-    - Ensure all features use same data fetching approach
-
-[ ] 5. Implement proper service layers
-    - Add blockchain data fetching to leaderboard service
-    - Implement tokens service layer pattern consistently
-    - Create proper voting events service implementation
-
-[ ] 6. Consolidate data fetching
-    - Merge staking's multiple hooks into single state hook
-    - Fix staking hook dependencies and providers
-    - Ensure single entry point per feature
-
-PHASE 3: INTEGRATION (Polish)
-[ ] 7. Resolve remaining type issues
-    - Fix leaderboard RankingChange type import
-    - Ensure all type exports are consistent
-    - Verify index.ts files export correctly
-
-[ ] 8. Implement event services properly
-    - Complete voting events service (useVotingEvents)
-    - Add proper error handling
-    - Ensure real-time updates work
-
-[ ] 9. Test feature independence
-    - Build each feature in isolation
-    - Test all features work together
-    - Verify no circular dependencies
+THEME SYSTEM FIXES (Partial):
+✅ Fixed HomePage.tsx hardcoded dark theme
+✅ Fixed AboutPage.tsx hardcoded dark theme
+✅ Fixed ExplorePage.tsx hardcoded dark theme
+✅ Fixed DocsPage.tsx with full theme support
 
 ================================================================================
-🎯 SUCCESS CRITERIA
+🔧 IN PROGRESS: THEME SYSTEM COMPLETION
 ================================================================================
 
-✅ Each feature builds independently without errors
-✅ No cross-feature imports (except types if needed)
-✅ All features use React Query consistently
-✅ All contract addresses from environment variables
-✅ Service layers handle all business logic
-✅ TypeScript passes without errors
-✅ Features work together in main app
+REMAINING THEME FIXES NEEDED:
+[ ] Fix CreateEvermarkForm.tsx hardcoded dark theme backgrounds
+[ ] Fix EvermarkCard.tsx hardcoded dark theme backgrounds  
+[ ] Fix EvermarkFeed.tsx hardcoded dark theme backgrounds
+[ ] Fix TokenBalance.tsx hardcoded dark theme backgrounds
+[ ] Fix VotingPanel.tsx hardcoded dark theme backgrounds
+[ ] Fix LeaderboardTable.tsx hardcoded dark theme backgrounds
+
+PATTERN TO FOLLOW:
+- Use useTheme() hook from ThemeProvider
+- Apply conditional classes with cn() utility
+- Dark mode: bg-black/gray-900, text-white
+- Light mode: bg-yellow-50/white, text-gray-900
+- Ensure proper contrast for readability
 
 ================================================================================
-📝 IMPLEMENTATION NOTES
+📱 MOBILE-FIRST UI STATUS
 ================================================================================
 
-FOLLOW EVERMARKS PATTERN:
-- Single main state hook per feature (useFeatureState)
-- React Query for all data fetching (30s stale time)
-- Service layer for business logic (pure functions)
-- Components only handle UI state
-- Types exported from feature index
-- Feature config and utils exported
+COMPLETED:
+✅ Responsive Layout component with mobile detection
+✅ Mobile-optimized Header with hamburger menu
+✅ Slide-out MobileMenu with all navigation
+✅ PWA support with install prompt
+✅ Safe area padding for notches/home indicators
 
-ARCHITECTURAL PRINCIPLES:
-1. Feature-first organization
-2. Pure functions in services
-3. Single state hook per feature  
-4. Clean separation of concerns
-5. Feature isolation (no cross-imports)
-6. Type safety with no implicit any
+WORKING:
+✅ Navigation via hamburger menu
+✅ Theme toggle accessible
+✅ Wallet connection UI
+✅ All main routes accessible
 
-TESTING APPROACH:
-- Test each feature independently first
-- Then test integration with main app
-- Verify no build errors at each step
-- Check React Query devtools for proper caching
+NEEDS TESTING:
+[ ] Farcaster frame context detection
+[ ] In-frame navigation constraints
+[ ] Frame-specific UI adjustments
+[ ] Wallet connection via Frame SDK
 
 ================================================================================
-🔧 DEV ENVIRONMENT SETUP
+🏗️ ARCHITECTURE STATUS
 ================================================================================
 
-Required for sprint:
-- Node.js environment with npm
-- TypeScript checking: npm run type-check
-- Build testing: npm run build
-- Dev server: npx netlify dev
-- React Query devtools enabled
+FEATURE ORGANIZATION (Feature-First):
+✅ Evermarks feature - fully implemented with React Query
+✅ Staking feature - functional but needs React Query migration
+⚠️ Voting feature - has cross-feature dependencies
+⚠️ Leaderboard feature - using mock data only
+✅ Tokens feature - basic functionality working
 
-Contract addresses needed in .env.local:
-- VITE_EVERMARK_LEADERBOARD_ADDRESS
-- VITE_CARD_CATALOG_ADDRESS  
-- VITE_EMARK_TOKEN_ADDRESS
-- VITE_EVERMARK_VOTING_ADDRESS
-- VITE_EVERMARK_NFT_ADDRESS
+PROVIDER HIERARCHY (Correct Order):
+1. QueryClientProvider ✅
+2. ThirdwebProvider ✅
+3. FarcasterProvider ✅
+4. WalletProvider ✅
+5. BlockchainProvider ✅
+6. IntegratedUserProvider ✅
+7. AppContextProvider ✅
+
+STATE MANAGEMENT:
+✅ React Query for server state (30s stale time)
+✅ Context for global UI state
+✅ Feature hooks for feature-specific state
+⚠️ Some features still using inconsistent patterns
 
 ================================================================================
-END TODO.TXT
+🐛 KNOWN ISSUES
+================================================================================
+
+CRITICAL:
+1. manifest.json syntax error blocking Farcaster
+2. Some components still have hardcoded dark theme
+
+HIGH PRIORITY:
+3. Cross-feature dependencies in voting/staking
+4. Leaderboard using mock data only
+5. Inconsistent React Query usage across features
+
+MEDIUM PRIORITY:
+6. Missing service layers in some features
+7. Type inconsistencies in exports
+8. Event services incomplete
+
+LOW PRIORITY:
+9. Code comments and documentation
+10. Test coverage
+
+================================================================================
+⚡ NEXT STEPS (Priority Order)
+================================================================================
+
+IMMEDIATE (Blocking Farcaster Launch):
+1. [ ] Debug and fix manifest.json serving issue
+2. [ ] Test Farcaster mini-app loading
+3. [ ] Verify Frame SDK initialization
+
+TODAY:
+4. [ ] Complete remaining theme fixes (6 components)
+5. [ ] Test entire app in Farcaster environment
+6. [ ] Fix any Farcaster-specific UI issues
+
+THIS WEEK:
+7. [ ] Migrate staking to React Query pattern
+8. [ ] Fix voting/staking cross-dependencies
+9. [ ] Implement real leaderboard data
+10. [ ] Complete service layer implementations
+
+================================================================================
+🚀 BETA LAUNCH CHECKLIST
+================================================================================
+
+MUST HAVE:
+[ ] Farcaster mini-app fully functional
+[ ] Theme system working (light/dark modes)
+[ ] Core features operational (create, explore, vote)
+[ ] Wallet connection working
+[ ] Mobile UI polished
+
+SHOULD HAVE:
+[ ] All features using React Query
+[ ] No cross-feature dependencies
+[ ] Real blockchain data for leaderboard
+[ ] Comprehensive error handling
+[ ] Loading states for all async operations
+
+NICE TO HAVE:
+[ ] Token swap functionality
+[ ] Advanced filtering/search
+[ ] User profiles
+[ ] Analytics integration
+[ ] Performance optimizations
+
+================================================================================
+📝 DEVELOPMENT NOTES
+================================================================================
+
+COMMANDS:
+- Dev server: npx netlify dev (port 8888)
+- Type check: npm run type-check
+- Build: npm run build
+- Lint: npm run lint
+- Format: npm run format
+
+TESTING FARCASTER:
+- Use devOverride in farcaster.ts for local testing
+- Check console for "Farcaster Detection" logs
+- Verify Frame SDK initialization
+- Test wallet connection through Frame
+
+CONTRACT ADDRESSES (All deployed on Base):
+- Check .env.local for all addresses
+- Verify with beta-launch-checklist.txt
+- All contracts from evermark-contracts repo
+
+================================================================================
+END STATUS UPDATE - 2025-08-20
 ================================================================================

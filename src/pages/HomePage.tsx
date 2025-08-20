@@ -186,28 +186,40 @@ const ProtocolStats: React.FC = () => {
 
   return (
     <div className={cn(
-      "grid gap-4",
-      isMobile ? "grid-cols-2" : "grid-cols-1 md:grid-cols-4"
+      "grid gap-3",
+      isMobile ? "grid-cols-1" : "grid-cols-1 md:grid-cols-4"
     )}>
       {statCards.map((stat, index) => (
         <div
           key={index}
           className={cn(
-            "bg-gray-800/50 border border-gray-700 rounded-lg p-4 text-center transition-all duration-300 hover:border-gray-600",
-            stat.glow
+            "bg-gray-800/50 border border-gray-700 rounded-lg transition-all duration-300 hover:border-gray-600",
+            stat.glow,
+            isMobile ? "p-3 flex items-center space-x-3" : "p-4 text-center"
           )}
         >
           <div className={cn(
-            "w-10 h-10 mx-auto mb-3 rounded-full flex items-center justify-center bg-gradient-to-r text-black",
-            stat.gradient
+            "rounded-full flex items-center justify-center bg-gradient-to-r text-black flex-shrink-0",
+            stat.gradient,
+            isMobile ? "w-8 h-8" : "w-10 h-10 mx-auto mb-3"
           )}>
-            {stat.icon}
+            <div className={cn(isMobile ? "scale-75" : "")}>
+              {stat.icon}
+            </div>
           </div>
-          <div className="text-xl font-bold text-white mb-1">
-            {stat.value}
-          </div>
-          <div className="text-gray-400 text-sm">
-            {stat.label}
+          <div className={cn(isMobile ? "flex-1" : "")}>
+            <div className={cn(
+              "font-bold text-white",
+              isMobile ? "text-base mb-0" : "text-xl mb-1"
+            )}>
+              {stat.value}
+            </div>
+            <div className={cn(
+              "text-gray-400",
+              isMobile ? "text-xs" : "text-sm"
+            )}>
+              {stat.label}
+            </div>
           </div>
         </div>
       ))}
@@ -268,18 +280,28 @@ const QuickActions: React.FC = () => {
         <Link
           key={index}
           to={action.href}
-          className="group bg-gray-800/50 border border-gray-700 rounded-lg p-4 hover:border-gray-600 transition-all duration-300 hover:shadow-lg"
+          className={cn(
+            "group bg-gray-800/50 border border-gray-700 rounded-lg hover:border-gray-600 transition-all duration-300 hover:shadow-lg",
+            isMobile ? "p-4 text-center" : "p-4"
+          )}
         >
           <div className={cn(
-            "w-10 h-10 mb-3 rounded-lg flex items-center justify-center bg-gradient-to-r text-black transition-transform group-hover:scale-110",
-            action.gradient
+            "mb-3 rounded-lg flex items-center justify-center bg-gradient-to-r text-black transition-transform group-hover:scale-110",
+            action.gradient,
+            isMobile ? "w-10 h-10 mx-auto" : "w-10 h-10"
           )}>
             {action.icon}
           </div>
-          <h3 className="font-medium text-white mb-1 group-hover:text-gray-100">
+          <h3 className={cn(
+            "font-medium text-white mb-1 group-hover:text-gray-100",
+            isMobile ? "text-sm" : ""
+          )}>
             {action.label}
           </h3>
-          <p className="text-sm text-gray-400 group-hover:text-gray-300">
+          <p className={cn(
+            "text-gray-400 group-hover:text-gray-300",
+            isMobile ? "text-xs" : "text-sm"
+          )}>
             {action.description}
           </p>
         </Link>
@@ -370,48 +392,89 @@ export default function HomePage() {
     <div className="min-h-screen transition-colors duration-200 bg-gray-50 text-gray-900 dark:bg-black dark:text-white">
       {/* Hero Section */}
       <div className="relative overflow-hidden transition-colors duration-200 bg-gradient-to-br from-white via-gray-50 to-gray-100 dark:from-gray-900 dark:via-black dark:to-gray-900">
-        {/* Animated background effects */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-green-400/20 to-purple-500/20 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-cyan-400/20 to-yellow-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
+        {/* Animated background effects - responsive sizing */}
+        <div className={cn(
+          "absolute top-0 right-0 bg-gradient-to-br from-green-400/20 to-purple-500/20 rounded-full blur-3xl animate-pulse",
+          isMobile ? "w-64 h-64 -top-32 -right-32" : "w-96 h-96"
+        )} />
+        <div className={cn(
+          "absolute bottom-0 left-0 bg-gradient-to-tr from-cyan-400/20 to-yellow-500/20 rounded-full blur-3xl animate-pulse",
+          isMobile ? "w-64 h-64 -bottom-32 -left-32" : "w-96 h-96"
+        )} style={{ animationDelay: '2s' }} />
         
-        <div className="relative container mx-auto px-4 py-16 md:py-20">
-          <div className="text-center space-y-8">
+        <div className={cn(
+          "relative container mx-auto px-4",
+          isMobile ? "py-12" : "py-16 md:py-20"
+        )}>
+          <div className="text-center space-y-6 sm:space-y-8">
             {/* Logo */}
-            <div className="flex justify-center mb-8">
+            <div className={cn("flex justify-center", isMobile ? "mb-6" : "mb-8")}>
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-purple-500 rounded-3xl blur-xl opacity-40 scale-110 animate-pulse" />
                 <img 
                   src="/EvermarkLogo.png" 
                   alt="Evermark Protocol" 
-                  className="relative h-24 md:h-32 w-auto drop-shadow-2xl hover:scale-105 transition-transform duration-300"
+                  className={cn(
+                    "relative w-auto drop-shadow-2xl hover:scale-105 transition-transform duration-300",
+                    isMobile ? "h-16 sm:h-20" : "h-24 md:h-32"
+                  )}
                 />
               </div>
             </div>
             
             {/* Title and description */}
-            <div className="max-w-4xl mx-auto space-y-6">
-              <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-green-400 via-cyan-400 to-purple-500 bg-clip-text text-transparent leading-tight">
-                EVERMARK PROTOCOL <span className="text-2xl md:text-4xl text-cyan-400 font-normal">[BETA]</span>
+            <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
+              <h1 className={cn(
+                "font-bold bg-gradient-to-r from-green-400 via-cyan-400 to-purple-500 bg-clip-text text-transparent leading-tight",
+                isMobile 
+                  ? "text-2xl sm:text-3xl" 
+                  : "text-4xl md:text-6xl"
+              )}>
+                EVERMARK PROTOCOL{' '}
+                <span className={cn(
+                  "text-cyan-400 font-normal",
+                  isMobile ? "text-lg sm:text-xl block mt-1" : "text-2xl md:text-4xl"
+                )}>
+                  [BETA]
+                </span>
               </h1>
               
-              <p className="text-xl md:text-2xl text-gray-300 leading-relaxed max-w-3xl mx-auto">
+              <p className={cn(
+                "text-gray-300 leading-relaxed max-w-3xl mx-auto",
+                isMobile ? "text-base sm:text-lg px-2" : "text-xl md:text-2xl"
+              )}>
                 Discover amazing content online and earn rewards by sharing Evermarks through{' '}
                 <span className="text-green-400 font-bold">community curation</span>
               </p>
               
               {/* Feature badges */}
-              <div className="flex flex-wrap gap-3 justify-center">
-                <span className="px-4 py-2 bg-green-400/20 text-green-400 rounded-full font-medium border border-green-400/30">
+              <div className={cn(
+                "flex flex-wrap justify-center",
+                isMobile ? "gap-2 px-4" : "gap-3"
+              )}>
+                <span className={cn(
+                  "bg-green-400/20 text-green-400 rounded-full font-medium border border-green-400/30",
+                  isMobile ? "px-3 py-1 text-sm" : "px-4 py-2"
+                )}>
                   🔗 Permanent Links
                 </span>
-                <span className="px-4 py-2 bg-purple-400/20 text-purple-400 rounded-full font-medium border border-purple-400/30">
+                <span className={cn(
+                  "bg-purple-400/20 text-purple-400 rounded-full font-medium border border-purple-400/30",
+                  isMobile ? "px-3 py-1 text-sm" : "px-4 py-2"
+                )}>
                   💰 $WEMARK Rewards
                 </span>
-                <span className="px-4 py-2 bg-cyan-400/20 text-cyan-400 rounded-full font-medium border border-cyan-400/30">
+                <span className={cn(
+                  "bg-cyan-400/20 text-cyan-400 rounded-full font-medium border border-cyan-400/30",
+                  isMobile ? "px-3 py-1 text-sm" : "px-4 py-2"
+                )}>
                   🗳️ Community Voting
                 </span>
                 {isInFarcaster && (
-                  <span className="px-4 py-2 bg-yellow-400/20 text-yellow-400 rounded-full font-medium border border-yellow-400/30">
+                  <span className={cn(
+                    "bg-yellow-400/20 text-yellow-400 rounded-full font-medium border border-yellow-400/30",
+                    isMobile ? "px-3 py-1 text-sm" : "px-4 py-2"
+                  )}>
                     🚀 Farcaster Native
                   </span>
                 )}
@@ -422,39 +485,64 @@ export default function HomePage() {
       </div>
 
       {/* Supabase Test (temporary) */}
-      <div className="container mx-auto px-4 py-6">
+      <div className={cn(
+        "container mx-auto px-4",
+        isMobile ? "py-4" : "py-6"
+      )}>
         <QuickSupabaseTest />
       </div>
 
       {/* Protocol Stats */}
-      <div className="container mx-auto px-4 py-12">
+      <div className={cn(
+        "container mx-auto px-4",
+        isMobile ? "py-8" : "py-12"
+      )}>
         <ProtocolStats />
       </div>
 
       {/* Quick Actions */}
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold text-white mb-2">Get Started</h2>
-          <p className="text-gray-400">Choose your path in the Evermark ecosystem</p>
+      <div className={cn(
+        "container mx-auto px-4",
+        isMobile ? "py-6" : "py-8"
+      )}>
+        <div className={cn(
+          "text-center",
+          isMobile ? "mb-6" : "mb-8"
+        )}>
+          <h2 className={cn(
+            "font-bold text-white mb-2",
+            isMobile ? "text-xl" : "text-2xl"
+          )}>Get Started</h2>
+          <p className={cn(
+            "text-gray-400",
+            isMobile ? "text-sm px-4" : ""
+          )}>Choose your path in the Evermark ecosystem</p>
         </div>
         <QuickActions />
       </div>
 
       {/* Main Content Layout */}
-      <div className="container mx-auto px-4 py-8">
+      <div className={cn(
+        "container mx-auto px-4",
+        isMobile ? "py-6" : "py-8"
+      )}>
         <div className={cn(
-          "gap-8",
-          isMobile ? "space-y-8" : "grid grid-cols-1 lg:grid-cols-3"
+          isMobile ? "space-y-6" : "grid grid-cols-1 lg:grid-cols-3 gap-8"
         )}>
           {/* Left Column - Main Feed (2/3 width on desktop) */}
-          <div className={cn("space-y-8", !isMobile && "lg:col-span-2")}>
+          <div className={cn(
+            isMobile ? "space-y-6" : "space-y-8 lg:col-span-2"
+          )}>
             <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-white">Community Feed</h2>
+              <h2 className={cn(
+                "font-bold text-white",
+                isMobile ? "text-xl" : "text-2xl"
+              )}>Community Feed</h2>
               <Link 
                 to="/explore"
                 className="inline-flex items-center text-cyan-400 hover:text-cyan-300 font-medium group"
               >
-                View All
+                <span className={cn(isMobile ? "text-sm" : "")}>View All</span>
                 <ChevronRightIcon className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
@@ -463,17 +551,35 @@ export default function HomePage() {
           </div>
 
           {/* Right Column - Sidebar (1/3 width on desktop) */}
-          <div className="space-y-6">
+          <div className={cn(isMobile ? "space-y-4" : "space-y-6")}>
             {/* Connect prompt for non-authenticated users */}
             {!isAuthenticated ? (
-              <div className="bg-gray-800/30 border border-gray-700 rounded-lg p-6 text-center">
-                <VoteIcon className="mx-auto h-12 w-12 text-gray-500 mb-4" />
-                <h3 className="text-lg font-medium text-white mb-2">Join the Community</h3>
-                <p className="text-gray-400 mb-4">
+              <div className={cn(
+                "bg-gray-800/30 border border-gray-700 rounded-lg text-center",
+                isMobile ? "p-4" : "p-6"
+              )}>
+                <VoteIcon className={cn(
+                  "mx-auto text-gray-500 mb-4",
+                  isMobile ? "h-10 w-10" : "h-12 w-12"
+                )} />
+                <h3 className={cn(
+                  "font-medium text-white mb-2",
+                  isMobile ? "text-base" : "text-lg"
+                )}>Join the Community</h3>
+                <p className={cn(
+                  "text-gray-400 mb-4",
+                  isMobile ? "text-sm" : ""
+                )}>
                   Connect your wallet to vote on content and earn rewards
                 </p>
-                <div className="bg-gradient-to-r from-blue-900/50 to-purple-900/50 border border-blue-500/30 rounded-lg p-4">
-                  <p className="text-sm text-blue-300">
+                <div className={cn(
+                  "bg-gradient-to-r from-blue-900/50 to-purple-900/50 border border-blue-500/30 rounded-lg",
+                  isMobile ? "p-3" : "p-4"
+                )}>
+                  <p className={cn(
+                    "text-blue-300",
+                    isMobile ? "text-xs" : "text-sm"
+                  )}>
                     {isInFarcaster 
                       ? "🚀 Native Farcaster wallet integration ready"
                       : "🖥️ Desktop wallet connection available"
@@ -482,15 +588,30 @@ export default function HomePage() {
                 </div>
               </div>
             ) : (
-              <div className="bg-gray-800/30 border border-gray-700 rounded-lg p-6 text-center">
-                <CoinsIcon className="mx-auto h-12 w-12 text-gray-500 mb-4" />
-                <h3 className="text-lg font-medium text-white mb-2">Welcome Back!</h3>
-                <p className="text-gray-400 mb-4">
+              <div className={cn(
+                "bg-gray-800/30 border border-gray-700 rounded-lg text-center",
+                isMobile ? "p-4" : "p-6"
+              )}>
+                <CoinsIcon className={cn(
+                  "mx-auto text-gray-500 mb-4",
+                  isMobile ? "h-10 w-10" : "h-12 w-12"
+                )} />
+                <h3 className={cn(
+                  "font-medium text-white mb-2",
+                  isMobile ? "text-base" : "text-lg"
+                )}>Welcome Back!</h3>
+                <p className={cn(
+                  "text-gray-400 mb-4",
+                  isMobile ? "text-sm" : ""
+                )}>
                   Your wallet is connected. Start creating and curating content.
                 </p>
                 <Link
                   to="/create"
-                  className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-500 hover:to-green-600 transition-colors"
+                  className={cn(
+                    "inline-flex items-center bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-500 hover:to-green-600 transition-colors",
+                    isMobile ? "px-3 py-2 text-sm" : "px-4 py-2"
+                  )}
                 >
                   <PlusIcon className="h-4 w-4 mr-2" />
                   Create Evermark
@@ -499,9 +620,18 @@ export default function HomePage() {
             )}
 
             {/* Community Insights */}
-            <div className="bg-gradient-to-r from-gray-800/50 to-gray-900/50 border border-gray-700 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Protocol Insights</h3>
-              <div className="space-y-3 text-sm">
+            <div className={cn(
+              "bg-gradient-to-r from-gray-800/50 to-gray-900/50 border border-gray-700 rounded-lg",
+              isMobile ? "p-4" : "p-6"
+            )}>
+              <h3 className={cn(
+                "font-semibold text-white mb-4",
+                isMobile ? "text-base" : "text-lg"
+              )}>Protocol Insights</h3>
+              <div className={cn(
+                "space-y-3",
+                isMobile ? "text-xs" : "text-sm"
+              )}>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Network:</span>
                   <span className="text-green-400 font-medium">Base Mainnet</span>
@@ -529,34 +659,56 @@ export default function HomePage() {
 
       {/* Call to Action */}
       {!isAuthenticated && (
-        <div className="container mx-auto px-4 py-16">
-          <div className="bg-gradient-to-r from-gray-800 to-gray-900 border border-gray-700 rounded-2xl p-8 md:p-12 text-center">
+        <div className={cn(
+          "container mx-auto px-4",
+          isMobile ? "py-12" : "py-16"
+        )}>
+          <div className={cn(
+            "bg-gradient-to-r from-gray-800 to-gray-900 border border-gray-700 rounded-2xl text-center",
+            isMobile ? "p-6" : "p-8 md:p-12"
+          )}>
             <div className="max-w-3xl mx-auto">
-              <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-green-400 to-purple-500 bg-clip-text text-transparent mb-6">
+              <h2 className={cn(
+                "font-bold bg-gradient-to-r from-green-400 to-purple-500 bg-clip-text text-transparent mb-6",
+                isMobile ? "text-2xl" : "text-3xl md:text-4xl"
+              )}>
                 Ready to Preserve Something Amazing?
               </h2>
-              <p className="text-gray-300 text-lg mb-8 leading-relaxed">
+              <p className={cn(
+                "text-gray-300 leading-relaxed",
+                isMobile ? "text-base mb-6" : "text-lg mb-8"
+              )}>
                 Transform any online content into a permanent, shareable Evermark. 
                 Join our community of curators and earn <span className="text-green-400 font-bold">$WEMARK</span> rewards.
               </p>
               
               <div className={cn(
-                "flex gap-4 justify-center",
-                isMobile ? "flex-col" : "flex-row"
+                "flex justify-center",
+                isMobile ? "flex-col gap-3 max-w-sm mx-auto" : "flex-row gap-4"
               )}>
                 <Link
                   to="/create"
-                  className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-green-400 to-green-600 text-black font-bold rounded-lg hover:from-green-300 hover:to-green-500 transition-all shadow-lg shadow-green-500/30"
+                  className={cn(
+                    "inline-flex items-center justify-center bg-gradient-to-r from-green-400 to-green-600 text-black font-bold rounded-lg hover:from-green-300 hover:to-green-500 transition-all shadow-lg shadow-green-500/30",
+                    isMobile ? "px-6 py-3 text-sm" : "px-8 py-4"
+                  )}
                 >
                   <ZapIcon className="w-5 h-5 mr-2" />
-                  Create Your First Evermark
+                  <span className={isMobile ? "text-sm" : ""}>
+                    Create Your First Evermark
+                  </span>
                 </Link>
                 <Link
                   to="/explore"
-                  className="inline-flex items-center px-8 py-4 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                  className={cn(
+                    "inline-flex items-center justify-center bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors",
+                    isMobile ? "px-6 py-3 text-sm" : "px-8 py-4"
+                  )}
                 >
                   <GridIcon className="w-5 h-5 mr-2" />
-                  Explore All Evermarks
+                  <span className={isMobile ? "text-sm" : ""}>
+                    Explore All Evermarks
+                  </span>
                 </Link>
               </div>
             </div>

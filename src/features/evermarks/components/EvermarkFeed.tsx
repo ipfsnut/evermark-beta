@@ -15,6 +15,8 @@ import {
 import { type Evermark, type EvermarkFilters } from '../types';
 import { EvermarkCard } from './EvermarkCard';
 import { useEvermarksState } from '../hooks/useEvermarkState';
+import { useTheme } from '../../../providers/ThemeProvider';
+import { cn } from '../../../utils/responsive';
 
 interface EvermarkFeedProps {
   className?: string;
@@ -35,6 +37,7 @@ export function EvermarkFeed({
   variant = 'grid',
   emptyMessage = 'No evermarks found'
 }: EvermarkFeedProps) {
+  const { isDark } = useTheme();
   const {
     evermarks,
     pagination,
@@ -110,10 +113,16 @@ export function EvermarkFeed({
       {/* Header with search and controls */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
-          <h2 className="text-2xl font-bold text-white">
+          <h2 className={cn(
+            "text-2xl font-bold",
+            isDark ? "text-white" : "text-gray-900"
+          )}>
             Evermarks
             {totalCount > 0 && (
-              <span className="ml-2 text-sm text-gray-400 font-normal">
+              <span className={cn(
+                "ml-2 text-sm font-normal",
+                isDark ? "text-gray-400" : "text-gray-600"
+              )}>
                 ({totalCount.toLocaleString()})
               </span>
             )}
@@ -123,10 +132,19 @@ export function EvermarkFeed({
           <button
             onClick={refresh}
             disabled={isLoading}
-            className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-600 transition-colors disabled:opacity-50"
+            className={cn(
+              "p-2 rounded-lg border transition-colors disabled:opacity-50",
+              isDark 
+                ? "bg-gray-800 hover:bg-gray-700 border-gray-600" 
+                : "bg-white hover:bg-gray-50 border-gray-300"
+            )}
             title="Refresh"
           >
-            <RefreshCw className={`h-4 w-4 text-gray-300 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={cn(
+              "h-4 w-4",
+              isDark ? "text-gray-300" : "text-gray-700",
+              isLoading ? 'animate-spin' : ''
+            )} />
           </button>
         </div>
 
@@ -147,13 +165,21 @@ export function EvermarkFeed({
         <div className="mb-6 space-y-4">
           {/* Search bar */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className={cn(
+              "absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4",
+              isDark ? "text-gray-400" : "text-gray-500"
+            )} />
             <input
               type="text"
               placeholder="Search evermarks..."
               value={filters.search || ''}
               onChange={(e) => handleSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 focus:ring-opacity-20"
+              className={cn(
+                "w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-opacity-20 transition-colors",
+                isDark 
+                  ? "bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500 focus:ring-purple-500" 
+                  : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-purple-400 focus:ring-purple-400"
+              )}
             />
           </div>
 
@@ -163,7 +189,12 @@ export function EvermarkFeed({
             <select
               value={filters.contentType || ''}
               onChange={(e) => handleFilterChange({ contentType: e.target.value as any || undefined })}
-              className="px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white text-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-500 focus:ring-opacity-20"
+              className={cn(
+                "px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-opacity-20 transition-colors",
+                isDark 
+                  ? "bg-gray-800 border-gray-600 text-white focus:border-purple-500 focus:ring-purple-500" 
+                  : "bg-white border-gray-300 text-gray-900 focus:border-purple-400 focus:ring-purple-400"
+              )}
             >
               {contentTypeOptions.map(option => (
                 <option key={option.value} value={option.value}>
@@ -181,7 +212,12 @@ export function EvermarkFeed({
                   verified: value === '' ? undefined : value === 'true' 
                 });
               }}
-              className="px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white text-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-500 focus:ring-opacity-20"
+              className={cn(
+                "px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-opacity-20 transition-colors",
+                isDark 
+                  ? "bg-gray-800 border-gray-600 text-white focus:border-purple-500 focus:ring-purple-500" 
+                  : "bg-white border-gray-300 text-gray-900 focus:border-purple-400 focus:ring-purple-400"
+              )}
             >
               <option value="">All Status</option>
               <option value="true">Verified</option>
@@ -192,7 +228,12 @@ export function EvermarkFeed({
             <select
               value={currentSortValue}
               onChange={(e) => handleSortChange(e.target.value)}
-              className="px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white text-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-500 focus:ring-opacity-20"
+              className={cn(
+                "px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-opacity-20 transition-colors",
+                isDark 
+                  ? "bg-gray-800 border-gray-600 text-white focus:border-purple-500 focus:ring-purple-500" 
+                  : "bg-white border-gray-300 text-gray-900 focus:border-purple-400 focus:ring-purple-400"
+              )}
             >
               {sortOptions.map(option => (
                 <option key={option.value} value={option.value}>
@@ -202,17 +243,30 @@ export function EvermarkFeed({
             </select>
 
             {/* View toggle */}
-            <div className="flex items-center bg-gray-800 rounded-lg border border-gray-600 p-1">
+            <div className={cn(
+              "flex items-center rounded-lg border p-1",
+              isDark ? "bg-gray-800 border-gray-600" : "bg-white border-gray-300"
+            )}>
               <button
                 onClick={() => {/* Handle variant change */}}
-                className={`p-1.5 rounded ${variant === 'grid' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                className={cn(
+                  "p-1.5 rounded transition-colors",
+                  variant === 'grid' 
+                    ? "bg-purple-600 text-white" 
+                    : (isDark ? "text-gray-400 hover:text-white" : "text-gray-600 hover:text-gray-900")
+                )}
                 title="Grid view"
               >
                 <Grid className="h-4 w-4" />
               </button>
               <button
                 onClick={() => {/* Handle variant change */}}
-                className={`p-1.5 rounded ${variant === 'list' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'}`}
+                className={cn(
+                  "p-1.5 rounded transition-colors",
+                  variant === 'list' 
+                    ? "bg-purple-600 text-white" 
+                    : (isDark ? "text-gray-400 hover:text-white" : "text-gray-600 hover:text-gray-900")
+                )}
                 title="List view"
               >
                 <List className="h-4 w-4" />
@@ -223,7 +277,10 @@ export function EvermarkFeed({
             {isFiltered && (
               <button
                 onClick={clearFilters}
-                className="flex items-center gap-1 px-3 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+                className={cn(
+                  "flex items-center gap-1 px-3 py-2 text-sm transition-colors",
+                  isDark ? "text-gray-400 hover:text-white" : "text-gray-600 hover:text-gray-900"
+                )}
               >
                 <X className="h-3 w-3" />
                 Clear filters

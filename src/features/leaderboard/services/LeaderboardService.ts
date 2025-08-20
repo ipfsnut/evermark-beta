@@ -7,6 +7,7 @@ import {
   LeaderboardStats,
   LeaderboardFeedOptions,
   LeaderboardFilters,
+  LeaderboardPagination,
   RankingPeriod
 } from '../types';
 
@@ -20,11 +21,11 @@ import type { Evermark } from '../../evermarks/types';
 export class LeaderboardService {
   
   /**
-   * Calculate leaderboard entries from evermarks data
+   * Calculate leaderboard entries from evermarks data - Top evermarks by votes
    */
   static calculateLeaderboard(
     evermarks: Evermark[],
-    period: RankingPeriod = 'season'
+    period: string = 'season'
   ): LeaderboardEntry[] {
     
     // Filter evermarks by period if needed
@@ -43,86 +44,63 @@ export class LeaderboardService {
       );
     }
     
-    // Group evermarks by creator (owner)
-    const creatorStats = new Map<string, {
-      address: string;
-      evermarksCount: number;
-      verifiedCount: number;
-      totalViews: number;
-      totalVotes: number;
-      firstEvermark: Date;
-      lastEvermark: Date;
-      contentTypes: Set<string>;
-    }>();
-    
-    filteredEvermarks.forEach(evermark => {
-      const creator = evermark.owner || evermark.creator || 'Unknown';
-      const existing = creatorStats.get(creator);
+    // Convert evermarks to leaderboard entries showing individual evermarks
+    const entries: LeaderboardEntry[] = filteredEvermarks.map(evermark => {
+      const votes = evermark.votes || 0;
+      const creator = evermark.creator || evermark.author || 'Unknown';
       const createdAt = new Date(evermark.createdAt);
       
-      if (existing) {
-        existing.evermarksCount++;
-        if (evermark.verificationStatus === 'verified') existing.verifiedCount++;
-        existing.totalViews += evermark.views || 0;
-        existing.totalVotes += evermark.votes || 0;
-        existing.contentTypes.add(evermark.contentType || 'Unknown');
-        if (createdAt > existing.lastEvermark) existing.lastEvermark = createdAt;
-        if (createdAt < existing.firstEvermark) existing.firstEvermark = createdAt;
-      } else {
-        creatorStats.set(creator, {
-          address: creator,
-          evermarksCount: 1,
-          verifiedCount: evermark.verificationStatus === 'verified' ? 1 : 0,
-          totalViews: evermark.views || 0,
-          totalVotes: evermark.votes || 0,
-          firstEvermark: createdAt,
-          lastEvermark: createdAt,
-          contentTypes: new Set([evermark.contentType || 'Unknown'])
-        });
-      }
-    });
-    
-    // Convert to leaderboard entries and calculate scores
-    const entries: LeaderboardEntry[] = Array.from(creatorStats.entries()).map(([address, stats]) => {
-      // Calculate score: evermarks * 10 + verified * 50 + votes * 2 + activity bonus
-      const activityBonus = Math.min(stats.contentTypes.size * 5, 25); // Max 25 bonus for diversity
-      const consistencyBonus = stats.evermarksCount >= 5 ? 20 : 0; // Bonus for consistent creators
-      
-      const score = (
-        stats.evermarksCount * 10 +
-        stats.verifiedCount * 50 +
-        stats.totalVotes * 2 +
-        activityBonus +
-        consistencyBonus
-      );
+      // Calculate a simple score based on votes and verification
+      const verificationBonus = evermark.verified ? 100 : 0;
+      const freshnessBonus = Math.max(0, 30 - Math.floor((now.getTime() - createdAt.getTime()) / (24 * 60 * 60 * 1000))); // Bonus for recent content
+      const score = votes + verificationBonus + freshnessBonus;
       
       return {
-        id: address,
+        id: evermark.id,
+        evermarkId: evermark.id,
         rank: 0, // Will be set after sorting
-        address,
-        displayName: `${address.slice(0, 6)}...${address.slice(-4)}`,
-        avatar: `https://api.dicebear.com/7.x/identicon/svg?seed=${address}`,
-        score,
-        evermarksCount: stats.evermarksCount,
-        votes: stats.totalVotes,
-        verifiedCount: stats.verifiedCount,
-        season: 1, // Beta season
-        lastActivity: stats.lastEvermark.toISOString(),
-        // Additional fields
-        totalViews: stats.totalViews,
-        firstEvermarkDate: stats.firstEvermark.toISOString(),
-        contentTypesCount: stats.contentTypes.size,
-        isActive: (now.getTime() - stats.lastEvermark.getTime()) < (7 * 24 * 60 * 60 * 1000) // Active if created something in last week
+        totalVotes: BigInt(votes),
+        voteCount: votes, // Using votes as count for now
+        percentageOfTotal: 0, // Will be calculated after sorting
+        title: evermark.title || 'Untitled',
+        description: evermark.description || '',
+        creator,
+        createdAt: createdAt.toISOString(),
+        sourceUrl: evermark.sourceUrl,
+        image: evermark.image,
+        contentType: (evermark.contentType as LeaderboardEntry['contentType']) || 'Custom',
+        tags: evermark.tags || [],
+        verified: evermark.verified,
+        change: {
+          direction: 'same' as const,
+          positions: 0
+        }
       };
     });
     
-    // Sort by score and assign ranks
-    entries.sort((a, b) => b.score - a.score);
-    entries.forEach((entry, index) => {
+    // Sort by votes (descending)
+    entries.sort((a, b) => Number(b.totalVotes - a.totalVotes));
+    
+    // Calculate total votes for percentage
+    const totalVotes = entries.reduce((sum, entry) => sum + Number(entry.totalVotes), 0);
+    
+    // Take top 100 and assign ranks and percentages
+    const top100 = entries.slice(0, 100);
+    top100.forEach((entry, index) => {
       entry.rank = index + 1;
+      entry.percentageOfTotal = totalVotes > 0 ? (Number(entry.totalVotes) / totalVotes) * 100 : 0;
+      
+      // Assign change indicators based on rank
+      if (index < 3) {
+        entry.change.direction = 'up';
+        entry.change.positions = Math.min(10, 3 - index);
+      } else if (entry.verified) {
+        entry.change.direction = 'up';
+        entry.change.positions = 1;
+      }
     });
     
-    return entries;
+    return top100;
   }
   
   /**
@@ -159,11 +137,35 @@ export class LeaderboardService {
     
     // Apply search filter if provided
     let filteredEntries = allEntries;
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase();
-      filteredEntries = allEntries.filter(entry => 
-        entry.displayName.toLowerCase().includes(searchLower) ||
-        entry.address.toLowerCase().includes(searchLower)
+    if (filters.searchQuery) {
+      const searchLower = filters.searchQuery.toLowerCase();
+      filteredEntries = allEntries.filter(entry => {
+        const title = entry.title || '';
+        const description = entry.description || '';
+        const creator = entry.creator || '';
+        const contentType = entry.contentType || '';
+        
+        return (
+          title.toLowerCase().includes(searchLower) ||
+          description.toLowerCase().includes(searchLower) ||
+          creator.toLowerCase().includes(searchLower) ||
+          contentType.toLowerCase().includes(searchLower)
+        );
+      });
+    }
+    
+    // Apply content type filter if provided
+    if (filters.contentType) {
+      filteredEntries = filteredEntries.filter(entry => 
+        entry.contentType === filters.contentType
+      );
+    }
+    
+    // Apply minimum votes filter if provided
+    if (filters.minVotes !== undefined) {
+      const minVotes = parseInt(filters.minVotes);
+      filteredEntries = filteredEntries.filter(entry => 
+        Number(entry.totalVotes) >= minVotes
       );
     }
     
@@ -190,7 +192,7 @@ export class LeaderboardService {
   /**
    * Get leaderboard stats for current season
    */
-  static async getLeaderboardStats(season?: number): Promise<LeaderboardStats> {
+  static async fetchLeaderboardStats(period: string = 'season'): Promise<LeaderboardStats> {
     return {
       totalEvermarks: 0,
       totalVotes: BigInt(0),
@@ -198,7 +200,48 @@ export class LeaderboardService {
       averageVotesPerEvermark: BigInt(0),
       topEvermarkVotes: BigInt(0),
       participationRate: 0,
-      period: season?.toString() || '1'
+      period
+    };
+  }
+  
+  /**
+   * Get available periods for filtering
+   */
+  static getAvailablePeriods(): RankingPeriod[] {
+    return [
+      { id: 'season', label: 'Season', duration: 90 * 24 * 60 * 60, description: 'Current season' },
+      { id: 'month', label: 'Month', duration: 30 * 24 * 60 * 60, description: 'Last 30 days' },
+      { id: 'week', label: 'Week', duration: 7 * 24 * 60 * 60, description: 'Last 7 days' },
+      { id: 'all', label: 'All Time', duration: 0, description: 'All time' }
+    ];
+  }
+  
+  /**
+   * Get period by ID
+   */
+  static getPeriodById(periodId: string): RankingPeriod {
+    const periods = this.getAvailablePeriods();
+    return periods.find(p => p.id === periodId) || periods[0];
+  }
+  
+  /**
+   * Get default filters
+   */
+  static getDefaultFilters(): LeaderboardFilters {
+    return {
+      period: 'season'
+    };
+  }
+  
+  /**
+   * Get default pagination
+   */
+  static getDefaultPagination(): LeaderboardPagination {
+    return {
+      page: 1,
+      pageSize: 50,
+      sortBy: 'rank',
+      sortOrder: 'asc'
     };
   }
 
@@ -251,16 +294,36 @@ export class LeaderboardService {
   }
 
   /**
-   * Format vote count for display
+   * Format vote count for display (whole numbers only)
    */
-  static formatVoteCount(votes: bigint, decimals: number = 2): string {
-    const votesNum = Number(votes);
-    if (votesNum >= 1000000) {
-      return `${(votesNum / 1000000).toFixed(decimals)}M`;
-    } else if (votesNum >= 1000) {
-      return `${(votesNum / 1000).toFixed(decimals)}K`;
+  static formatVoteCount(votes: bigint, useShortFormat = true): string {
+    try {
+      const votesNum = Math.floor(Number(votes)); // Always whole numbers
+      
+      if (useShortFormat) {
+        // Use short format for large numbers to prevent overflow
+        if (votesNum >= 1000000000) {
+          return `${(votesNum / 1000000000).toFixed(1)}B`;
+        } else if (votesNum >= 1000000) {
+          return `${(votesNum / 1000000).toFixed(1)}M`;
+        } else if (votesNum >= 1000) {
+          return `${(votesNum / 1000).toFixed(1)}K`;
+        }
+      }
+      
+      // Return whole number with commas for readability
+      return votesNum.toLocaleString('en-US');
+    } catch (error) {
+      console.error('Error formatting vote count:', error);
+      return '0';
     }
-    return votesNum.toString();
+  }
+  
+  /**
+   * Format vote amount for display (alias for formatVoteCount)
+   */
+  static formatVoteAmount(votes: bigint, useShortFormat = true): string {
+    return this.formatVoteCount(votes, useShortFormat);
   }
 
   /**

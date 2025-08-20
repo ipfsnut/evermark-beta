@@ -45,7 +45,7 @@ export default function StakePage() {
               "max-w-3xl mx-auto text-lg",
               isDark ? "text-gray-300" : "text-gray-600"
             )}>
-              Stake your EMARK tokens to receive wEMARK voting power and participate in governance.
+              Stake your EMARK tokens to receive wEMARK voting power for content curation.
             </p>
           </div>
         </div>

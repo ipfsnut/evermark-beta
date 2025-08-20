@@ -117,7 +117,7 @@ export function StakingWidget({ stakingState, className = '' }: StakingWidgetPro
   // Handle max unstake button
   const handleMaxUnstake = () => {
     if (stakingInfo?.wEmarkBalance) {
-      const maxAmount = formatTokenAmount(stakingInfo.wEmarkBalance, 6);
+      const maxAmount = formatTokenAmount(stakingInfo.wEmarkBalance, false);
       setUnstakeAmount(maxAmount);
     }
   };
@@ -143,7 +143,7 @@ export function StakingWidget({ stakingState, className = '' }: StakingWidgetPro
           Staking Dashboard
         </h2>
         <p className="text-gray-400">
-          Stake EMARK tokens to receive wEMARK and participate in governance
+          Stake EMARK tokens to receive wEMARK and participate in content curation
         </p>
       </div>
 
@@ -266,7 +266,7 @@ export function StakingWidget({ stakingState, className = '' }: StakingWidgetPro
                 </div>
 
                 <div className="mt-2 text-xs text-gray-400">
-                  Available: {stakingInfo ? formatTokenAmount(stakingInfo.wEmarkBalance, 4) : '0'} wEMARK
+                  Available: {stakingInfo ? formatTokenAmount(stakingInfo.wEmarkBalance, true) : '0'} wEMARK
                 </div>
               </div>
 

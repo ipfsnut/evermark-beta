@@ -14,6 +14,8 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { Formatters } from '../../../utils/formatters';
+import { useTheme } from '../../../providers/ThemeProvider';
+import { cn } from '../../../utils/responsive';
 
 // Use SimpleEvermarkImage instead of the old SDK-based component
 import { SimpleEvermarkImage } from '../../../components/images/SimpleEvermarkImage';
@@ -52,6 +54,7 @@ export function EvermarkCard({
   enableRetry = true,
   className = ''
 }: EvermarkCardProps) {
+  const { isDark } = useTheme();
   
   const handleClick = () => {
     onClick?.(evermark);
@@ -82,30 +85,49 @@ export function EvermarkCard({
   };
 
   const getVariantClasses = () => {
-    const baseClasses = 'bg-gray-800/50 border border-gray-700 rounded-xl overflow-hidden transition-all duration-300 group cursor-pointer hover:border-purple-400/50 hover:shadow-lg hover:shadow-purple-500/20 backdrop-blur-sm hover:scale-[1.02]';
+    const baseClasses = cn(
+      'border rounded-xl overflow-hidden transition-all duration-300 group cursor-pointer backdrop-blur-sm hover:scale-[1.02]',
+      isDark 
+        ? 'bg-gray-800/50 border-gray-700 hover:border-purple-400/50 hover:shadow-lg hover:shadow-purple-500/20' 
+        : 'bg-white border-gray-300 hover:border-purple-400/60 hover:shadow-lg hover:shadow-purple-500/10'
+    );
+    
+    const hoverClasses = isDark
+      ? {
+          hero: 'hover:shadow-xl hover:shadow-purple-500/30 hover:border-purple-400/70',
+          compact: 'hover:border-blue-400/50 hover:shadow-blue-500/20',
+          list: 'flex flex-row hover:border-green-400/50 hover:shadow-green-500/20 hover:scale-[1.01]',
+        }
+      : {
+          hero: 'hover:shadow-xl hover:shadow-purple-500/20 hover:border-purple-400/80',
+          compact: 'hover:border-blue-400/60 hover:shadow-blue-500/10',
+          list: 'flex flex-row hover:border-green-400/60 hover:shadow-green-500/10 hover:scale-[1.01]',
+        };
     
     switch (variant) {
       case 'hero':
-        return `${baseClasses} hover:shadow-xl hover:shadow-purple-500/30 hover:border-purple-400/70`;
+        return `${baseClasses} ${hoverClasses.hero}`;
       case 'compact':
-        return `${baseClasses} hover:border-blue-400/50 hover:shadow-blue-500/20`;
+        return `${baseClasses} ${hoverClasses.compact}`;
       case 'list':
-        return `${baseClasses} flex flex-row hover:border-green-400/50 hover:shadow-green-500/20 hover:scale-[1.01]`;
+        return `${baseClasses} ${hoverClasses.list}`;
       default:
         return baseClasses;
     }
   };
 
   const getTitleClasses = () => {
+    const colorClass = isDark ? 'text-white' : 'text-gray-900';
+    
     switch (variant) {
       case 'hero':
-        return 'text-xl sm:text-2xl font-bold text-white';
+        return `text-xl sm:text-2xl font-bold ${colorClass}`;
       case 'compact':
-        return 'text-base font-semibold text-white';
+        return `text-base font-semibold ${colorClass}`;
       case 'list':
-        return 'text-base font-semibold text-white';
+        return `text-base font-semibold ${colorClass}`;
       default:
-        return 'text-lg sm:text-xl font-semibold text-white';
+        return `text-lg sm:text-xl font-semibold ${colorClass}`;
     }
   };
 
@@ -233,11 +255,17 @@ export function EvermarkCard({
         {/* Content */}
         <div className="flex-1 min-w-0 p-4 flex flex-col justify-between">
           <div>
-            <h3 className={`${getTitleClasses()} group-hover:text-purple-400 transition-colors mb-1 line-clamp-2`}>
+            <h3 className={cn(
+              getTitleClasses(),
+              "group-hover:text-purple-400 transition-colors mb-1 line-clamp-2"
+            )}>
               {evermark.title}
             </h3>
             
-            <div className="flex items-center gap-3 text-sm text-gray-400 mb-2">
+            <div className={cn(
+              "flex items-center gap-3 text-sm mb-2",
+              isDark ? "text-gray-400" : "text-gray-600"
+            )}>
               <div className="flex items-center min-w-0 flex-1">
                 <User className="h-3 w-3 mr-1 flex-shrink-0" />
                 <span className="truncate">{evermark.author}</span>
@@ -253,13 +281,21 @@ export function EvermarkCard({
                 {evermark.tags.slice(0, 3).map((tag, index) => (
                   <span
                     key={index}
-                    className="text-xs bg-purple-900/30 text-purple-300 px-2 py-1 rounded border border-purple-500/30"
+                    className={cn(
+                      "text-xs px-2 py-1 rounded border",
+                      isDark 
+                        ? "bg-purple-900/30 text-purple-300 border-purple-500/30" 
+                        : "bg-purple-100 text-purple-700 border-purple-300"
+                    )}
                   >
                     {tag}
                   </span>
                 ))}
                 {evermark.tags.length > 3 && (
-                  <span className="text-xs text-gray-500">
+                  <span className={cn(
+                    "text-xs",
+                    isDark ? "text-gray-500" : "text-gray-600"
+                  )}>
                     +{evermark.tags.length - 3} more
                   </span>
                 )}
@@ -267,7 +303,10 @@ export function EvermarkCard({
             )}
           </div>
 
-          <div className="flex items-center justify-between text-xs text-gray-500">
+          <div className={cn(
+            "flex items-center justify-between text-xs",
+            isDark ? "text-gray-500" : "text-gray-600"
+          )}>
             <div className="flex items-center gap-3">
               <span>{Formatters.formatRelativeTime(evermark.createdAt)}</span>
               {showViews && evermark.viewCount !== undefined && (

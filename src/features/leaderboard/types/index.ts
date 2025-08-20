@@ -1,6 +1,13 @@
 // src/features/leaderboard/types/index.ts
 // Fixed types with consistent pagination
 
+export const LEADERBOARD_CONSTANTS = {
+  DEFAULT_PERIOD: 'season',
+  DEFAULT_PAGE_SIZE: 50,
+  MAX_PAGE_SIZE: 100,
+  MIN_PAGE_SIZE: 10
+} as const;
+
 export interface LeaderboardEntry {
   id: string;
   evermarkId: string;
@@ -148,15 +155,6 @@ export const RANKING_PERIODS: RankingPeriod[] = [
   }
 ];
 
-export const LEADERBOARD_CONSTANTS = {
-  DEFAULT_PERIOD: '1',
-  DEFAULT_PAGE_SIZE: 20,
-  MAX_PAGE_SIZE: 100,
-  CACHE_DURATION: 60 * 1000, // 1 minute
-  REFRESH_INTERVAL: 30 * 1000, // 30 seconds
-  AUTO_REFRESH: true,
-  MIN_VOTE_THRESHOLD: '0.01'
-} as const;
 
 export const LEADERBOARD_ERRORS = {
   NETWORK_ERROR: 'NETWORK_ERROR',

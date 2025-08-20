@@ -114,7 +114,7 @@ export default function AboutPage() {
             About
           </h1>
           <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-            On-chain content preservation and curation powered by community governance
+            On-chain content preservation and curation powered by community voting
           </p>
         </div>
 
@@ -165,7 +165,7 @@ export default function AboutPage() {
               "leading-relaxed",
               isDark ? "text-gray-300" : "text-gray-700"
             )}>
-              Through community governance and staking mechanisms, the platform curates high-quality 
+              Through community voting and staking mechanisms, the platform curates high-quality 
               content while rewarding contributors and voters who help surface the most valuable information.
             </p>
           </div>
@@ -217,7 +217,7 @@ export default function AboutPage() {
                 "text-sm",
                 isDark ? "text-gray-400" : "text-gray-600"
               )}>
-                Stake tokens to vote on content quality and participate in platform governance decisions.
+                Stake tokens to vote on content quality and participate in content curation.
               </p>
             </div>
             <div className={cn(
@@ -261,7 +261,7 @@ export default function AboutPage() {
             <ContractCard
               title="$EMARK Token"
               address={contracts.emark}
-              description="Main utility token for governance, rewards, and platform fees"
+              description="Main utility token for content curation, rewards, and platform fees"
               icon={CoinsIcon}
             />
             

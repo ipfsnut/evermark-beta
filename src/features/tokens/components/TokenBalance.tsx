@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useTokenState } from '../hooks/useTokenState';
 import { TokenService } from '../services/TokenService';
+import { useTheme } from '../../../providers/ThemeProvider';
 import { cn } from '@/utils/responsive';
 
 interface TokenBalanceProps {
@@ -35,6 +36,7 @@ export function TokenBalance({
 }: TokenBalanceProps) {
   const [showDetails, setShowDetails] = useState(false);
   const [copied, setCopied] = useState(false);
+  const { isDark } = useTheme();
   
   const {
     tokenInfo,
@@ -99,11 +101,25 @@ export function TokenBalance({
 
   if (!isConnected) {
     return (
-      <div className={cn("bg-gray-800/50 border border-gray-700 rounded-lg p-6", className)}>
+      <div className={cn(
+        "border rounded-lg p-6",
+        isDark 
+          ? "bg-gray-800/50 border-gray-700" 
+          : "bg-white border-gray-300",
+        className
+      )}>
         <div className="text-center">
-          <CoinsIcon className="mx-auto h-12 w-12 text-gray-500 mb-4" />
-          <h3 className="text-lg font-medium text-white mb-2">Connect Wallet</h3>
-          <p className="text-gray-400">Connect your wallet to view token balance</p>
+          <CoinsIcon className={cn(
+            "mx-auto h-12 w-12 mb-4",
+            isDark ? "text-gray-500" : "text-gray-400"
+          )} />
+          <h3 className={cn(
+            "text-lg font-medium mb-2",
+            isDark ? "text-white" : "text-gray-900"
+          )}>Connect Wallet</h3>
+          <p className={cn(
+            isDark ? "text-gray-400" : "text-gray-600"
+          )}>Connect your wallet to view token balance</p>
         </div>
       </div>
     );
@@ -113,11 +129,17 @@ export function TokenBalance({
     return (
       <div className={cn("flex items-center space-x-2", className)}>
         <CoinsIcon className="h-4 w-4 text-purple-400" />
-        <span className="text-sm font-medium text-white">
+        <span className={cn(
+          "text-sm font-medium",
+          isDark ? "text-white" : "text-gray-900"
+        )}>
           {isLoading ? '...' : tokenBalance?.formattedBalance || '0'} EMARK
         </span>
         {isLoading && (
-          <RefreshCwIcon className="h-3 w-3 text-gray-400 animate-spin" />
+          <RefreshCwIcon className={cn(
+            "h-3 w-3 animate-spin",
+            isDark ? "text-gray-400" : "text-gray-500"
+          )} />
         )}
       </div>
     );
@@ -125,15 +147,32 @@ export function TokenBalance({
 
   if (variant === 'compact') {
     return (
-      <div className={cn("bg-gray-800/50 border border-gray-700 rounded-lg p-4", className)}>
+      <div className={cn(
+        "border rounded-lg p-4",
+        isDark 
+          ? "bg-gray-800/50 border-gray-700" 
+          : "bg-white border-gray-300",
+        className
+      )}>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-purple-900/30 border border-purple-500/30 rounded-lg">
+            <div className={cn(
+              "p-2 border rounded-lg",
+              isDark 
+                ? "bg-purple-900/30 border-purple-500/30" 
+                : "bg-purple-100/50 border-purple-300"
+            )}>
               <CoinsIcon className="h-5 w-5 text-purple-400" />
             </div>
             <div>
-              <div className="text-sm text-gray-400">EMARK Balance</div>
-              <div className="text-lg font-bold text-white">
+              <div className={cn(
+                "text-sm",
+                isDark ? "text-gray-400" : "text-gray-600"
+              )}>EMARK Balance</div>
+              <div className={cn(
+                "text-lg font-bold",
+                isDark ? "text-white" : "text-gray-900"
+              )}>
                 {isLoading ? '...' : tokenBalance?.formattedBalance || '0'}
               </div>
             </div>
@@ -142,7 +181,12 @@ export function TokenBalance({
           <button
             onClick={handleRefresh}
             disabled={isLoading}
-            className="p-2 text-gray-400 hover:text-white transition-colors"
+            className={cn(
+              "p-2 transition-colors",
+              isDark 
+                ? "text-gray-400 hover:text-white" 
+                : "text-gray-600 hover:text-gray-900"
+            )}
           >
             <RefreshCwIcon className={cn("h-4 w-4", isLoading && "animate-spin")} />
           </button>
@@ -153,17 +197,37 @@ export function TokenBalance({
 
   // Full variant
   return (
-    <div className={cn("bg-gray-800/50 border border-gray-700 rounded-lg shadow-lg", className)}>
+    <div className={cn(
+      "border rounded-lg shadow-lg",
+      isDark 
+        ? "bg-gray-800/50 border-gray-700" 
+        : "bg-white border-gray-300",
+      className
+    )}>
       {/* Header */}
-      <div className="p-6 border-b border-gray-700">
+      <div className={cn(
+        "p-6 border-b",
+        isDark ? "border-gray-700" : "border-gray-200"
+      )}>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="p-3 bg-purple-900/30 border border-purple-500/30 rounded-lg">
+            <div className={cn(
+              "p-3 border rounded-lg",
+              isDark 
+                ? "bg-purple-900/30 border-purple-500/30" 
+                : "bg-purple-100/50 border-purple-300"
+            )}>
               <CoinsIcon className="h-6 w-6 text-purple-400" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white">EMARK Token</h3>
-              <p className="text-sm text-gray-400">Evermark governance token</p>
+              <h3 className={cn(
+                "text-lg font-bold",
+                isDark ? "text-white" : "text-gray-900"
+              )}>EMARK Token</h3>
+              <p className={cn(
+                "text-sm",
+                isDark ? "text-gray-400" : "text-gray-600"
+              )}>Evermark curation token</p>
             </div>
           </div>
           
@@ -352,8 +416,8 @@ export function TokenBalance({
           <InfoIcon className="h-4 w-4 text-blue-400 mr-2 mt-0.5 flex-shrink-0" />
           <div className="text-sm text-blue-200">
             <p>
-              <strong className="text-blue-300">EMARK tokens</strong> are used for staking and governance in the Evermark protocol. 
-              Approve tokens to enable staking and earn voting power.
+              <strong className="text-blue-300">EMARK tokens</strong> are used for staking and content curation in the Evermark protocol. 
+              Approve tokens to enable staking and earn voting power for content ranking.
             </p>
           </div>
         </div>

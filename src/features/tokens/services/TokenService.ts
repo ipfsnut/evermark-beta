@@ -20,32 +20,28 @@ import {
 export class TokenService {
   
   /**
-   * Format token amount for display
+   * Format token amount for display (whole numbers only)
    */
-  static formatTokenAmount(amount: bigint, decimals = 2): string {
+  static formatTokenAmount(amount: bigint, useShortFormat = true): string {
     try {
       if (amount === BigInt(0)) return '0';
       
       const formatted = formatUnits(amount, TOKEN_CONSTANTS.DECIMALS);
-      const number = parseFloat(formatted);
+      const number = Math.floor(parseFloat(formatted)); // Always whole numbers
       
-      // Handle very small amounts
-      if (number < 0.001 && number > 0) {
-        return '< 0.001';
+      if (useShortFormat) {
+        // Use short format for large numbers to prevent overflow
+        if (number >= 1000000000) {
+          return `${(number / 1000000000).toFixed(1)}B`;
+        } else if (number >= 1000000) {
+          return `${(number / 1000000).toFixed(1)}M`;
+        } else if (number >= 1000) {
+          return `${(number / 1000).toFixed(1)}K`;
+        }
       }
       
-      // Handle large amounts with appropriate formatting
-      if (number >= 1000000) {
-        return `${(number / 1000000).toFixed(decimals)}M`;
-      } else if (number >= 1000) {
-        return `${(number / 1000).toFixed(decimals)}K`;
-      }
-      
-      // Round to specified decimals
-      return number.toLocaleString('en-US', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: decimals
-      });
+      // Return whole number with commas for readability
+      return number.toLocaleString('en-US');
     } catch (error) {
       console.error('Error formatting token amount:', error);
       return '0';
@@ -142,8 +138,8 @@ export class TokenService {
     return {
       emarkBalance,
       allowanceForStaking,
-      formattedBalance: this.formatTokenAmount(emarkBalance, 4),
-      formattedAllowance: this.formatTokenAmount(allowanceForStaking, 4),
+      formattedBalance: this.formatTokenAmount(emarkBalance, true),
+      formattedAllowance: this.formatTokenAmount(allowanceForStaking, true),
       hasBalance: emarkBalance > BigInt(0),
       hasAllowance: allowanceForStaking > BigInt(0),
       canStake: emarkBalance > BigInt(0) && allowanceForStaking > BigInt(0)
@@ -451,7 +447,7 @@ spender: string, amount: bigint, isUnlimited = false  ): {
     return {
       status: receipt.status === 1 ? 'success' : 'failed',
       hash: receipt.transactionHash,
-      gasUsed: receipt.gasUsed ? this.formatTokenAmount(BigInt(receipt.gasUsed), 0) : 'Unknown',
+      gasUsed: receipt.gasUsed ? this.formatTokenAmount(BigInt(receipt.gasUsed), false) : 'Unknown',
       blockNumber: receipt.blockNumber || 0,
       confirmations: receipt.confirmations || 0
     };

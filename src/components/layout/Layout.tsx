@@ -26,7 +26,7 @@ export function Layout({ children }: LayoutProps) {
   return (
     <div className={cn(
       "min-h-screen transition-colors duration-200",
-      isDark ? "bg-black text-white" : "bg-yellow-50 text-gray-900"
+      isDark ? "bg-black text-white" : "bg-gray-50 text-gray-900"
     )}>
       {/* Header - optimized for mobile */}
       <Header />

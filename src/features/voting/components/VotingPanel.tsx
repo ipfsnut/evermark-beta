@@ -13,6 +13,7 @@ import {
 import { useVotingState } from '../hooks/useVotingState';
 import { VotingService } from '../services/VotingService';
 import { DelegateButton } from './DelegateButton';
+import { useTheme } from '../../../providers/ThemeProvider';
 import { cn } from '@/utils/responsive';
 import type { VotingPanelProps } from '../types';
 
@@ -23,6 +24,7 @@ export function VotingPanel({
 }: VotingPanelProps) {
   const [voteAmount, setVoteAmount] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const { isDark } = useTheme();
   
   const {
     votingPower,
@@ -62,7 +64,7 @@ export function VotingPanel({
   // Handle max button click
   const handleMaxClick = useCallback(() => {
     if (votingPower?.available) {
-      const maxAmount = formatVoteAmount(votingPower.available, 6);
+      const maxAmount = formatVoteAmount(votingPower.available, false);
       setVoteAmount(maxAmount);
     }
   }, [votingPower?.available, formatVoteAmount]);
@@ -75,11 +77,26 @@ export function VotingPanel({
 
   if (!isConnected) {
     return (
-      <div className={cn("bg-gray-800/50 border border-gray-700 rounded-lg shadow-lg p-4 sm:p-6 backdrop-blur-sm", className)}>
+      <div className={cn(
+        "border rounded-lg shadow-lg p-4 sm:p-6 backdrop-blur-sm",
+        isDark 
+          ? "bg-gray-800/50 border-gray-700" 
+          : "bg-white border-gray-300",
+        className
+      )}>
         <div className="text-center py-6 sm:py-8">
-          <VoteIcon className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-gray-500 mb-4" />
-          <h3 className="text-base sm:text-lg font-medium text-white mb-2">Connect to Vote</h3>
-          <p className="text-sm sm:text-base text-gray-400">Connect your wallet to delegate voting power to this Evermark</p>
+          <VoteIcon className={cn(
+            "mx-auto h-10 w-10 sm:h-12 sm:w-12 mb-4",
+            isDark ? "text-gray-500" : "text-gray-400"
+          )} />
+          <h3 className={cn(
+            "text-base sm:text-lg font-medium mb-2",
+            isDark ? "text-white" : "text-gray-900"
+          )}>Connect to Vote</h3>
+          <p className={cn(
+            "text-sm sm:text-base",
+            isDark ? "text-gray-400" : "text-gray-600"
+          )}>Connect your wallet to delegate voting power to this Evermark</p>
         </div>
       </div>
     );
@@ -101,25 +118,46 @@ export function VotingPanel({
   }
 
   return (
-    <div className={cn("bg-gray-800/50 border border-gray-700 rounded-lg shadow-lg backdrop-blur-sm", className)}>
+    <div className={cn(
+      "border rounded-lg shadow-lg backdrop-blur-sm",
+      isDark 
+        ? "bg-gray-800/50 border-gray-700" 
+        : "bg-white border-gray-300",
+      className
+    )}>
       {/* Header */}
-      <div className="p-4 sm:p-6 border-b border-gray-700">
+      <div className={cn(
+        "p-4 sm:p-6 border-b",
+        isDark ? "border-gray-700" : "border-gray-200"
+      )}>
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-purple-500 to-blue-600 rounded-full flex items-center justify-center mr-3 shadow-lg shadow-purple-500/30">
               <VoteIcon className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-semibold text-white">Voting Power</h3>
-              <p className="text-xs sm:text-sm text-gray-400">Delegate wEMARK to support quality content</p>
+              <h3 className={cn(
+                "text-base sm:text-lg font-semibold",
+                isDark ? "text-white" : "text-gray-900"
+              )}>Voting Power</h3>
+              <p className={cn(
+                "text-xs sm:text-sm",
+                isDark ? "text-gray-400" : "text-gray-600"
+              )}>Delegate wEMARK to support quality content</p>
             </div>
           </div>
           
           {/* Cycle info */}
           {currentCycle && (
             <div className="text-right">
-              <div className="text-xs sm:text-sm text-gray-400">Cycle {currentCycle.cycleNumber}</div>
-              <div className="flex items-center text-xs text-gray-500">
+              <div className={cn(
+                "text-xs sm:text-sm",
+                isDark ? "text-gray-400" : "text-gray-600"
+              )}>Cycle {currentCycle.cycleNumber}</div>
+              <div className={cn(
+                "flex items-center text-xs",
+                isDark ? "text-gray-500" : "text-gray-500"
+              )}>
                 <ClockIcon className="h-3 w-3 mr-1" />
                 {VotingService.formatTimeRemaining(timeRemaining)}
               </div>
@@ -237,9 +275,9 @@ export function VotingPanel({
 
               {/* Balance Display */}
               <div className="mt-2 flex justify-between text-xs text-gray-400">
-                <span>Available: {formatVoteAmount(votingPower.available, 4)} wEMARK</span>
+                <span>Available: {formatVoteAmount(votingPower.available, true)} wEMARK</span>
                 {userVotes > BigInt(0) && (
-                  <span>Currently delegated: {formatVoteAmount(userVotes, 4)} wEMARK</span>
+                  <span>Currently delegated: {formatVoteAmount(userVotes, true)} wEMARK</span>
                 )}
               </div>
             </div>
@@ -299,19 +337,19 @@ export function VotingPanel({
               {votingPower.available > BigInt(0) && (
                 <>
                   <button
-                    onClick={() => setVoteAmount(formatVoteAmount(votingPower.available / BigInt(4), 6))}
+                    onClick={() => setVoteAmount(formatVoteAmount(votingPower.available / BigInt(4), false))}
                     className="px-3 py-1 text-xs bg-gray-700/30 border border-gray-600/50 rounded text-gray-300 hover:text-white hover:border-gray-500/50 transition-colors"
                   >
                     25%
                   </button>
                   <button
-                    onClick={() => setVoteAmount(formatVoteAmount(votingPower.available / BigInt(2), 6))}
+                    onClick={() => setVoteAmount(formatVoteAmount(votingPower.available / BigInt(2), false))}
                     className="px-3 py-1 text-xs bg-gray-700/30 border border-gray-600/50 rounded text-gray-300 hover:text-white hover:border-gray-500/50 transition-colors"
                   >
                     50%
                   </button>
                   <button
-                    onClick={() => setVoteAmount(formatVoteAmount(votingPower.available * BigInt(3) / BigInt(4), 6))}
+                    onClick={() => setVoteAmount(formatVoteAmount(votingPower.available * BigInt(3) / BigInt(4), false))}
                     className="px-3 py-1 text-xs bg-gray-700/30 border border-gray-600/50 rounded text-gray-300 hover:text-white hover:border-gray-500/50 transition-colors"
                   >
                     75%
@@ -354,7 +392,7 @@ export function VotingPanel({
                       <span className="text-gray-400">Your Voting Power Usage:</span>
                       <span className="text-cyan-400">
                         {votingPower.available > BigInt(0) 
-                          ? ((Number(VotingService.parseVoteAmount(voteAmount)) / Number(votingPower.available)) * 100).toFixed(1)
+                          ? ((parseFloat(voteAmount) / Number(votingPower.available / BigInt(10 ** 18))) * 100).toFixed(1)
                           : '0'
                         }%
                       </span>

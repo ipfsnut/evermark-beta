@@ -14,10 +14,10 @@ interface DocItem {
 
 const DOCS_ITEMS: DocItem[] = [
   {
-    id: 'readme',
-    title: 'Getting Started',
-    description: 'Introduction to Evermark Beta, setup instructions, and quick start guide',
-    filename: 'README.md',
+    id: 'alpha-retirement',
+    title: 'Alpha Retirement Notice',
+    description: 'Important information about Alpha contract retirement and user fund refunds',
+    filename: 'alpha-retirement.md',
     type: 'md'
   },
   {
@@ -36,8 +36,8 @@ const DOCS_ITEMS: DocItem[] = [
   },
   {
     id: 'governance-voting',
-    title: 'Governance & Voting',
-    description: 'How voting power works and governance participation',
+    title: 'Curation & Voting',
+    description: 'How voting power works for content curation and ranking',
     filename: 'governance-voting.md',
     type: 'md'
   },

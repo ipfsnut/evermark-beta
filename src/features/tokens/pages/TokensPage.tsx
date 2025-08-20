@@ -195,7 +195,7 @@ export default function TokensPage() {
                 <div className="text-sm text-blue-200 space-y-2">
                   <p>
                     <strong className="text-blue-300">EMARK Tokens:</strong> The native utility token of the Evermark protocol. 
-                    Use EMARK for staking, voting, and governance participation.
+                    Use EMARK for staking and voting power in content curation.
                   </p>
                   <p>
                     <strong className="text-blue-300">Token Management:</strong> Send tokens to other addresses, track your transaction history, 

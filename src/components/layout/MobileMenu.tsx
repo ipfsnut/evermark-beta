@@ -9,7 +9,7 @@ import {
   BookOpenIcon,
   InfoIcon,
   ArrowUpDownIcon,
-  StackIcon,
+  LayersIcon,
   XIcon,
   ExternalLinkIcon
 } from 'lucide-react';
@@ -51,7 +51,7 @@ const MAIN_NAV_ITEMS: NavItem[] = [
   {
     to: '/staking',
     label: 'Staking',
-    icon: StackIcon,
+    icon: LayersIcon,
     requireAuth: true,
   },
   {
@@ -109,7 +109,7 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
             "flex items-center space-x-3 p-4 rounded-lg transition-colors",
             isDark
               ? "text-gray-300 hover:text-white hover:bg-gray-800"
-              : "text-gray-700 hover:text-gray-900 hover:bg-yellow-100"
+              : "text-gray-700 hover:text-gray-900 hover:bg-gray-100"
           )}
         >
           <Icon className="h-5 w-5" />
@@ -147,7 +147,7 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
                 : "bg-purple-100/80 text-purple-700 border border-purple-200")
             : (isDark
                 ? "text-gray-300 hover:text-white hover:bg-gray-800"
-                : "text-gray-700 hover:text-gray-900 hover:bg-yellow-100")
+                : "text-gray-700 hover:text-gray-900 hover:bg-gray-100")
         )}
       >
         <Icon className="h-5 w-5" />
@@ -173,12 +173,12 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
         isOpen ? "translate-x-0" : "-translate-x-full",
         isDark 
           ? "bg-gray-900 border-r border-gray-800" 
-          : "bg-yellow-50 border-r border-yellow-200"
+          : "bg-gray-50 border-r border-gray-200"
       )}>
         {/* Header */}
         <div className={cn(
           "flex items-center justify-between p-6 border-b",
-          isDark ? "border-gray-800" : "border-yellow-200"
+          isDark ? "border-gray-800" : "border-gray-200"
         )}>
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 bg-gradient-to-r from-purple-400 to-cyan-500 rounded-lg flex items-center justify-center">
@@ -197,7 +197,7 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
               "p-2 rounded-lg transition-colors",
               isDark 
                 ? "text-gray-400 hover:text-white hover:bg-gray-800" 
-                : "text-gray-600 hover:text-gray-900 hover:bg-yellow-100"
+                : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
             )}
             aria-label="Close menu"
           >
@@ -209,7 +209,7 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
         {isAuthenticated && user && (
           <div className={cn(
             "p-6 border-b",
-            isDark ? "border-gray-800" : "border-yellow-200"
+            isDark ? "border-gray-800" : "border-gray-200"
           )}>
             <div className="flex items-center space-x-3">
               {user.pfpUrl ? (
@@ -288,7 +288,7 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
         {/* Footer */}
         <div className={cn(
           "p-6 border-t",
-          isDark ? "border-gray-800" : "border-yellow-200"
+          isDark ? "border-gray-800" : "border-gray-200"
         )}>
           <div className={cn(
             "text-center text-xs",
