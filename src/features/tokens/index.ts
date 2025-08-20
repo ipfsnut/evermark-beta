@@ -198,7 +198,7 @@ export const tokensUtils = {
    * Format balance with appropriate units
    */
   formatBalanceWithUnits: (balance: bigint): string => {
-    const formatted = TokenService.formatTokenAmount(balance, true);
+    const formatted = TokenService.formatTokenAmount(balance, 18);
     return `${formatted} EMARK`;
   },
   

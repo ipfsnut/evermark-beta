@@ -36,7 +36,7 @@ export function DelegateButton({
     votingPower,
     isDelegating,
     isUndelegating,
-    getUserVotes,
+    getUserVotesForEvermark,
     delegateVotes,
     undelegateVotes,
     validateVoteAmount,
@@ -48,10 +48,10 @@ export function DelegateButton({
 
   // Load user's current votes for this evermark
   useEffect(() => {
-    async function loadUserVotes() {
+    function loadUserVotes() {
       if (isConnected && evermarkId) {
         try {
-          const votes = await getUserVotes(evermarkId);
+          const votes = getUserVotesForEvermark(evermarkId);
           setUserVotes(votes);
         } catch (error) {
           console.error('Failed to load user votes:', error);
@@ -60,7 +60,7 @@ export function DelegateButton({
     }
     
     loadUserVotes();
-  }, [evermarkId, isConnected, getUserVotes]);
+  }, [evermarkId, isConnected, getUserVotesForEvermark]);
 
   // Handle delegation
   const handleDelegate = useCallback(async () => {
@@ -85,7 +85,7 @@ export function DelegateButton({
       setLocalSuccess(`Successfully delegated ${amount} wEMARK!`);
       
       // Reload user votes
-      const newVotes = await getUserVotes(evermarkId);
+      const newVotes = getUserVotesForEvermark(evermarkId);
       setUserVotes(newVotes);
       
       onSuccess?.(transaction);
@@ -96,7 +96,7 @@ export function DelegateButton({
     } finally {
       setLocalLoading(false);
     }
-  }, [amount, isConnected, isOwner, validateVoteAmount, evermarkId, delegateVotes, getUserVotes, onSuccess]);
+  }, [amount, isConnected, isOwner, validateVoteAmount, evermarkId, delegateVotes, getUserVotesForEvermark, onSuccess]);
 
   // Handle undelegation
   const handleUndelegate = useCallback(async () => {
@@ -121,7 +121,7 @@ export function DelegateButton({
       setLocalSuccess(`Successfully undelegated ${amount} wEMARK!`);
       
       // Reload user votes
-      const newVotes = await getUserVotes(evermarkId);
+      const newVotes = getUserVotesForEvermark(evermarkId);
       setUserVotes(newVotes);
       
       onSuccess?.(transaction);
@@ -132,7 +132,7 @@ export function DelegateButton({
     } finally {
       setLocalLoading(false);
     }
-  }, [amount, isConnected, isOwner, userVotes, undelegateVotes, evermarkId, getUserVotes, onSuccess]);
+  }, [amount, isConnected, isOwner, userVotes, undelegateVotes, evermarkId, getUserVotesForEvermark, onSuccess]);
 
   // Quick delegate button (for compact variant)
   const handleQuickDelegate = useCallback(async () => {
@@ -154,7 +154,7 @@ export function DelegateButton({
       setLocalSuccess(`Quick delegation successful!`);
       
       // Reload user votes
-      const newVotes = await getUserVotes(evermarkId);
+      const newVotes = getUserVotesForEvermark(evermarkId);
       setUserVotes(newVotes);
       
       onSuccess?.(transaction);
@@ -165,7 +165,7 @@ export function DelegateButton({
     } finally {
       setLocalLoading(false);
     }
-  }, [votingPower?.available, isConnected, isOwner, delegateVotes, evermarkId, getUserVotes, onSuccess]);
+  }, [votingPower?.available, isConnected, isOwner, delegateVotes, evermarkId, getUserVotesForEvermark, onSuccess]);
 
   // Clear messages after delay
   useEffect(() => {
@@ -245,7 +245,7 @@ export function DelegateButton({
           
           {userVotes > BigInt(0) && (
             <span className="px-2 py-1 text-xs bg-cyan-600/20 border border-cyan-500/30 rounded text-cyan-400">
-              {formatVoteAmount(userVotes, true)}
+              {formatVoteAmount(userVotes, 18)}
             </span>
           )}
         </div>

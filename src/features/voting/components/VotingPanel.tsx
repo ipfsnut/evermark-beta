@@ -32,7 +32,7 @@ export function VotingPanel({
     error,
     success,
     getEvermarkVotes,
-    getUserVotes,
+    getUserVotesForEvermark,
     validateVoteAmount,
     formatVoteAmount,
     getTimeRemainingInCycle,
@@ -43,7 +43,7 @@ export function VotingPanel({
 
   // Get data for this specific evermark
   const totalVotes = getEvermarkVotes(evermarkId);
-  const userVotes = getUserVotes(evermarkId);
+  const userVotes = getUserVotesForEvermark(evermarkId);
   const timeRemaining = getTimeRemainingInCycle();
   
   // Clear messages after delay
@@ -64,7 +64,7 @@ export function VotingPanel({
   // Handle max button click
   const handleMaxClick = useCallback(() => {
     if (votingPower?.available) {
-      const maxAmount = formatVoteAmount(votingPower.available, false);
+      const maxAmount = formatVoteAmount(votingPower.available, 18);
       setVoteAmount(maxAmount);
     }
   }, [votingPower?.available, formatVoteAmount]);
@@ -275,9 +275,9 @@ export function VotingPanel({
 
               {/* Balance Display */}
               <div className="mt-2 flex justify-between text-xs text-gray-400">
-                <span>Available: {formatVoteAmount(votingPower.available, true)} wEMARK</span>
+                <span>Available: {formatVoteAmount(votingPower.available, 18)} wEMARK</span>
                 {userVotes > BigInt(0) && (
-                  <span>Currently delegated: {formatVoteAmount(userVotes, true)} wEMARK</span>
+                  <span>Currently delegated: {formatVoteAmount(userVotes, 18)} wEMARK</span>
                 )}
               </div>
             </div>
@@ -337,19 +337,19 @@ export function VotingPanel({
               {votingPower.available > BigInt(0) && (
                 <>
                   <button
-                    onClick={() => setVoteAmount(formatVoteAmount(votingPower.available / BigInt(4), false))}
+                    onClick={() => setVoteAmount(formatVoteAmount(votingPower.available / BigInt(4), 18))}
                     className="px-3 py-1 text-xs bg-gray-700/30 border border-gray-600/50 rounded text-gray-300 hover:text-white hover:border-gray-500/50 transition-colors"
                   >
                     25%
                   </button>
                   <button
-                    onClick={() => setVoteAmount(formatVoteAmount(votingPower.available / BigInt(2), false))}
+                    onClick={() => setVoteAmount(formatVoteAmount(votingPower.available / BigInt(2), 18))}
                     className="px-3 py-1 text-xs bg-gray-700/30 border border-gray-600/50 rounded text-gray-300 hover:text-white hover:border-gray-500/50 transition-colors"
                   >
                     50%
                   </button>
                   <button
-                    onClick={() => setVoteAmount(formatVoteAmount(votingPower.available * BigInt(3) / BigInt(4), false))}
+                    onClick={() => setVoteAmount(formatVoteAmount(votingPower.available * BigInt(3) / BigInt(4), 18))}
                     className="px-3 py-1 text-xs bg-gray-700/30 border border-gray-600/50 rounded text-gray-300 hover:text-white hover:border-gray-500/50 transition-colors"
                   >
                     75%
@@ -431,7 +431,7 @@ export function VotingPanel({
           <div className="text-xs text-blue-200 leading-relaxed">
             <p>
               <strong className="text-blue-300">Voting Power:</strong> Delegate your wEMARK tokens to support quality content and influence rankings.
-              {currentCycle && !currentCycle.isFinalized && (
+              {currentCycle && currentCycle.isActive && (
                 <span className="ml-1">Current cycle ends {currentCycle.endTime.toLocaleDateString()}.</span>
               )}
             </p>

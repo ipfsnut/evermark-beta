@@ -641,11 +641,13 @@ export class VotingService {
     try {
       const votingContract = getEvermarkVotingContract();
       
-      const gasEstimate = await estimateGas({
+      const transaction = prepareContractCall({
         contract: votingContract,
         method: "function voteForEvermark(uint256 evermarkId, uint256 votes) payable",
         params: [BigInt(evermarkId), amount]
       });
+
+      const gasEstimate = await estimateGas({ transaction });
 
       return gasEstimate;
     } catch (error) {

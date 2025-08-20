@@ -4,7 +4,7 @@ import { DelegateButton } from './components/DelegateButton';
 import { VotingPanel } from './components/VotingPanel';
 import { useVotingState } from './hooks/useVotingState';
 import { VotingService } from './services/VotingService';
-import { BatchVotingRequest, EvermarkRanking, VOTING_CONSTANTS, VotingAnalytics, VotingError, VotingErrorCode, VotingFeatureFlags, VotingNotification, VotingPerformanceMetrics, VotingPower, VotingTheme, VotingTransaction, VotingValidation } from './types';
+import { BatchVotingRequest, EvermarkRanking, VOTING_CONSTANTS, VotingAnalytics, VotingError, VotingErrorCode, VotingFeatureFlags, VotingNotification, VotingPerformanceMetrics, VotingPower, VotingTheme, VotingTransaction, VotingValidation, Vote } from './types';
 
 // Types - Export all public interfaces
 export type {
@@ -159,7 +159,7 @@ export const votingUtils = {
     userAddress?: string
   ): VotingValidation => {
     // Fixed: Removed the extra creatorAddress parameter
-    return VotingService.validateVoteAmount(amount, availablePower, evermarkId, userAddress);
+    return VotingService.validateVoteAmount(amount, evermarkId, userAddress);
   },
   
   /**
@@ -186,32 +186,29 @@ export const votingUtils = {
   /**
    * Calculate time remaining from end time
    */
-  getTimeRemaining: (endTime: Date): number => {
-    return VotingService.getTimeRemainingInCycle(endTime);
+  getTimeRemaining: async (endTime: Date): Promise<number> => {
+    return await VotingService.getTimeRemainingInCycle();
   },
   
   /**
    * Check if user can vote in current cycle
    */
-  canVoteInCycle: (cycleEndTime: Date, userVotingPower: bigint, isConnected: boolean): boolean => {
-    return VotingService.canVoteInCycle(cycleEndTime, userVotingPower, isConnected);
+  canVoteInCycle: (cycleNumber: number): boolean => {
+    return VotingService.canVoteInCycle(cycleNumber);
   },
   
   /**
    * Calculate voting power efficiency
    */
-  calculateEfficiency: (delegatedPower: bigint, totalVotingPower: bigint): number => {
-    return VotingService.calculateVotingEfficiency(delegatedPower, totalVotingPower);
+  calculateEfficiency: (userVotes: Vote[]): number => {
+    return VotingService.calculateVotingEfficiency(userVotes);
   },
   
   /**
    * Generate voting recommendations
    */
-  getRecommendations: (
-    availablePower: bigint,
-    userGoal: 'maximize_rewards' | 'support_quality' | 'diversify' = 'support_quality'
-  ) => {
-    return VotingService.generateVotingRecommendations(availablePower, userGoal);
+  getRecommendations: (availablePower: bigint) => {
+    return VotingService.generateVotingRecommendations(availablePower);
   },
   
   /**
@@ -222,28 +219,28 @@ export const votingUtils = {
     targetEvermarks: string[],
     strategy: 'equal' | 'weighted' | 'concentrated' = 'equal'
   ): Record<string, bigint> => {
-    return VotingService.calculateOptimalDistribution(availablePower, targetEvermarks, strategy);
+    return VotingService.calculateOptimalDistribution(targetEvermarks, availablePower);
   },
   
   /**
    * Validate batch voting request
    */
-  validateBatchVoting: (request: BatchVotingRequest, availablePower: bigint): VotingValidation => {
-    return VotingService.validateBatchVoting(request, availablePower);
+  validateBatchVoting: (request: BatchVotingRequest): VotingValidation => {
+    return VotingService.validateBatchVoting(request.delegations);
   },
   
   /**
    * Calculate delegation impact on ranking
    */
-  calculateImpact: (currentVotes: bigint, newVotes: bigint, totalVotes: bigint) => {
-    return VotingService.calculateDelegationImpact(currentVotes, newVotes, totalVotes);
+  calculateImpact: (evermarkId: string, amount: bigint) => {
+    return VotingService.calculateDelegationImpact(evermarkId, amount);
   },
   
   /**
    * Estimate delegation rewards
    */
-  estimateRewards: (delegatedAmount: bigint, evermarkPerformance: number, cycleDuration?: number) => {
-    return VotingService.estimateDelegationRewards(delegatedAmount, evermarkPerformance, cycleDuration);
+  estimateRewards: (evermarkId: string, delegatedAmount: bigint) => {
+    return VotingService.estimateDelegationRewards(evermarkId, delegatedAmount);
   },
   
   /**
@@ -268,36 +265,28 @@ export const votingUtils = {
     message: string,
     details?: Record<string, any>
   ): VotingError => {
-    return VotingService.createError(code, message, details);
+    return VotingService.createError(code, message);
   },
   
   /**
    * Generate transaction summary
    */
-  generateSummary: (
-    type: 'delegate' | 'undelegate',
-    evermarkId: string,
-    amount: bigint,
-    currentDelegation?: bigint
-  ) => {
-    return VotingService.generateDelegationSummary(type, evermarkId, amount, currentDelegation);
+  generateSummary: (delegations: any[]) => {
+    return VotingService.generateDelegationSummary(delegations);
   },
   
   /**
    * Calculate Evermark rankings from vote data
    */
-  calculateRankings: (
-    evermarkVotes: Array<{ evermarkId: string; votes: bigint }>,
-    totalVotes: bigint
-  ): EvermarkRanking[] => {
-    return VotingService.calculateEvermarkRanking(evermarkVotes, totalVotes);
+  calculateRankings: (evermarkId: string): EvermarkRanking => {
+    return VotingService.calculateEvermarkRanking(evermarkId);
   },
   
   /**
    * Get gas cost estimates
    */
-  getGasCosts: () => {
-    return VotingService.estimateVotingGas();
+  getGasCosts: async (evermarkId: string, amount: bigint): Promise<bigint> => {
+    return await VotingService.estimateVotingGas(evermarkId, amount);
   },
   
   /**
