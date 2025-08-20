@@ -1,5 +1,5 @@
 import { formatDistanceToNow } from 'date-fns/formatDistanceToNow';
-import format from 'date-fns/format';
+import { format } from 'date-fns';
 import { parseISO } from 'date-fns/parseISO';
 
 export class Formatters {
