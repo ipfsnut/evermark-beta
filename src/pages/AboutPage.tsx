@@ -40,7 +40,7 @@ export default function AboutPage() {
     title: string; 
     address: string | undefined; 
     description: string; 
-    icon: React.ElementType;
+    icon: React.ComponentType<{ className?: string }>;
   }) => (
     <div className={cn(
       "rounded-lg p-6 border transition-colors",

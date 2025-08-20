@@ -191,8 +191,7 @@ const ExploreContent: React.FC<{
   // Show the actual EvermarkFeed component
   return (
     <EvermarkFeed 
-      viewMode={viewMode as any}
-      showPagination={true}
+      variant={viewMode}
       showFilters={false} // We have filters above
       className="space-y-4"
     />

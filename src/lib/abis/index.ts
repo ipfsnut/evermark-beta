@@ -1,5 +1,5 @@
 // Import ABIs from their respective feature directories
-import CardCatalogABI from '../../features/staking/abis/CardCatalog.json';
+import WemarkABI from '../../features/staking/abis/WEMARK.abi.json';
 import EvermarkVotingABI from '../../features/voting/abis/EvermarkVoting.json';
 import EvermarkLeaderboardABI from '../../features/leaderboard/abis/EvermarkLeaderboard.json';
 import FeeCollectorABI from './FeeCollector.json'; // Keep in lib since it's shared
@@ -9,7 +9,7 @@ import EvermarkNFTABI from '../../features/evermarks/abis/EvermarkNFT.json';
 import EvermarkRewardsABI from '../../features/tokens/abis/EvermarkRewards.json';
 
 // Main contract ABIs - properly typed exports
-export const CARD_CATALOG_ABI = CardCatalogABI;
+export const WEMARK_ABI = WemarkABI;
 export const EMARK_TOKEN_ABI = EMARKABI;
 export const EVERMARK_NFT_ABI = EvermarkNFTABI;
 export const EVERMARK_VOTING_ABI = EvermarkVotingABI;
@@ -20,7 +20,7 @@ export const NFT_STAKING_ABI = NFTStakingABI;
 
 // Named exports for backward compatibility
 export {
-  CardCatalogABI,
+  WemarkABI,
   EvermarkNFTABI,
   EvermarkRewardsABI,
   EvermarkVotingABI,

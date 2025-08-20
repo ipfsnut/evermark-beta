@@ -106,8 +106,8 @@ export function useStakingState(userAddress?: string): UseStakingStateReturn {
   }, [stakingInfo]);
 
   // ✅ Utility functions
-  const formatTokenAmount = useCallback((amount: bigint, decimals = 2): string => {
-    return StakingService.formatTokenAmount(amount, decimals);
+  const formatTokenAmount = useCallback((amount: bigint, useShortFormat = true): string => {
+    return StakingService.formatTokenAmount(amount, useShortFormat);
   }, []);
 
   const formatTimeRemaining = useCallback((seconds: number): string => {

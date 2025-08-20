@@ -57,8 +57,8 @@ export function useVotingState(): UseVotingStateReturn {
     return stakedAmount; // 1:1 ratio for now
   }, []);
 
-  const formatVoteAmount = useCallback((amount: bigint, decimals = 2): string => {
-    return VotingService.formatVoteAmount(amount, decimals);
+  const formatVoteAmount = useCallback((amount: bigint, useShortFormat = true): string => {
+    return VotingService.formatVoteAmount(amount, useShortFormat);
   }, []);
 
   const getTimeRemainingInSeason = useCallback((): number => {
