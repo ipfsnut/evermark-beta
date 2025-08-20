@@ -9,11 +9,11 @@ export { CHAIN };
 
 // Contract addresses with validation
 export const CONTRACTS = {
-  EMARK_TOKEN: import.meta.env.VITE_EMARK_TOKEN_ADDRESS || '',
-  CARD_CATALOG: import.meta.env.VITE_CARD_CATALOG_ADDRESS || '',
+  EMARK_TOKEN: import.meta.env.VITE_EMARK_ADDRESS || '',
+  WEMARK: import.meta.env.VITE_WEMARK_ADDRESS || '',
   EVERMARK_NFT: import.meta.env.VITE_EVERMARK_NFT_ADDRESS || '',
   EVERMARK_VOTING: import.meta.env.VITE_EVERMARK_VOTING_ADDRESS || '',
-  EVERMARK_LEADERBOARD: import.meta.env.VITE_EVERMARK_LEADERBOARD_ADDRESS || '',
+  NFT_STAKING: import.meta.env.VITE_NFT_STAKING_ADDRESS || '',
   EVERMARK_REWARDS: import.meta.env.VITE_EVERMARK_REWARDS_ADDRESS || '',
   FEE_COLLECTOR: import.meta.env.VITE_FEE_COLLECTOR_ADDRESS || '',
 } as const;
@@ -42,14 +42,14 @@ export function getEmarkTokenContract() {
   });
 }
 
-export function getCardCatalogContract() {
-  if (!CONTRACTS.CARD_CATALOG) {
-    throw new Error('CARD_CATALOG address not configured');
+export function getWEMARKContract() {
+  if (!CONTRACTS.WEMARK) {
+    throw new Error('WEMARK address not configured');
   }
   return getContract({
     client,
     chain: CHAIN,
-    address: CONTRACTS.CARD_CATALOG,
+    address: CONTRACTS.WEMARK,
     abi: PLACEHOLDER_ABI, // Will be replaced with actual ABI from features
   });
 }
@@ -78,14 +78,14 @@ export function getEvermarkVotingContract() {
   });
 }
 
-export function getEvermarkLeaderboardContract() {
-  if (!CONTRACTS.EVERMARK_LEADERBOARD) {
-    throw new Error('EVERMARK_LEADERBOARD address not configured');
+export function getNFTStakingContract() {
+  if (!CONTRACTS.NFT_STAKING) {
+    throw new Error('NFT_STAKING address not configured');
   }
   return getContract({
     client,
     chain: CHAIN,
-    address: CONTRACTS.EVERMARK_LEADERBOARD,
+    address: CONTRACTS.NFT_STAKING,
     abi: PLACEHOLDER_ABI, // Will be replaced with actual ABI from features
   });
 }

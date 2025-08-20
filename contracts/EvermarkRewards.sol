@@ -76,10 +76,6 @@ contract EvermarkRewards is
     event EthPoolFunded(uint256 amount, address indexed from);
     event EmarkPoolFunded(uint256 amount, address indexed from);
 
-    constructor() {
-        _disableInitializers();
-    }
-
     function initialize(
         address _emarkToken,           
         address _stakingToken,

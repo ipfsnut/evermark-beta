@@ -59,10 +59,6 @@ contract EvermarkNFT is
         _;
     }
 
-    constructor() {
-        _disableInitializers();
-    }
-
     function initialize() external initializer {
         __ERC721_init("Evermark", "EVERMARK");
         __AccessControl_init();

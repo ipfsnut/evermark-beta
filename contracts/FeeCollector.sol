@@ -109,13 +109,13 @@ contract FeeCollector {
     function forwardAllWethToRewards() external onlyOwner {
         uint256 balance = wethToken.balanceOf(address(this));
         require(balance > 0, "No WETH to forward");
-        forwardWethToRewards(balance);
+        this.forwardWethToRewards(balance);
     }
     
     function forwardAllEmarkToRewards() external onlyOwner {
         uint256 balance = emarkToken.balanceOf(address(this));
         require(balance > 0, "No EMARK to forward");
-        forwardEmarkToRewards(balance);
+        this.forwardEmarkToRewards(balance);
     }
     
     function setRewardsContract(address _rewardsContract) external onlyOwner {

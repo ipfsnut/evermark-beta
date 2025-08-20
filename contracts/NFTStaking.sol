@@ -51,10 +51,6 @@ contract NFTStaking is
         _;
     }
 
-    constructor() {
-        _disableInitializers();
-    }
-
     function initialize(address _evermarkNFT) external initializer {
         require(_evermarkNFT != address(0), "Invalid NFT address");
         
