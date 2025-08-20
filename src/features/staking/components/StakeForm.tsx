@@ -61,7 +61,7 @@ export function StakeForm({ stakingState, onSuccess, className = '' }: StakeForm
   // Handle max button click
   const handleMaxClick = useCallback(() => {
     if (stakingInfo?.emarkBalance) {
-      const maxAmount = formatTokenAmount(stakingInfo.emarkBalance, false);
+      const maxAmount = formatTokenAmount(stakingInfo.emarkBalance, 18);
       setAmount(maxAmount);
     }
   }, [stakingInfo?.emarkBalance, formatTokenAmount]);
@@ -104,7 +104,7 @@ export function StakeForm({ stakingState, onSuccess, className = '' }: StakeForm
       // The stake method handles approval internally
       await stakingState.stake(amountWei);
       
-      setLocalSuccess(`Successfully staked ${formatTokenAmount(amountWei, true)} EMARK!`);
+      setLocalSuccess(`Successfully staked ${formatTokenAmount(amountWei, 18)} EMARK!`);
       setAmount('');
       setApprovedAmount(null);
       onSuccess?.();
@@ -225,7 +225,7 @@ export function StakeForm({ stakingState, onSuccess, className = '' }: StakeForm
           {/* Balance Display */}
           <div className="mt-2 flex justify-between text-xs text-gray-400">
             <span>
-              Available: {stakingInfo ? formatTokenAmount(stakingInfo.emarkBalance, true) : '0'} EMARK
+              Available: {stakingInfo ? formatTokenAmount(stakingInfo.emarkBalance, 18) : '0'} EMARK
             </span>
             {amount && validation.isValid && (
               <span>
@@ -259,14 +259,14 @@ export function StakeForm({ stakingState, onSuccess, className = '' }: StakeForm
         )}
 
         {/* Approval Status */}
-        {approvedAmount && (
+        {approvedAmount && approvedAmount > 0n ? (
           <div className="p-3 bg-green-900/20 border border-green-500/30 rounded-lg flex items-center">
             <CheckCircleIcon className="h-4 w-4 text-green-400 mr-2" />
             <span className="text-green-200 text-sm">
-              Approved {formatTokenAmount(approvedAmount, true)} EMARK for staking
+              Approved {formatTokenAmount(approvedAmount)} EMARK for staking
             </span>
           </div>
-        )}
+        ) : null}
 
         {/* Action Buttons */}
         <div className="space-y-2">
@@ -291,7 +291,7 @@ export function StakeForm({ stakingState, onSuccess, className = '' }: StakeForm
             </button>
           ) : null}
 
-          {approvedAmount && (
+          {approvedAmount && approvedAmount > 0n ? (
             <form onSubmit={handleStake}>
               <button
                 type="submit"
@@ -311,7 +311,7 @@ export function StakeForm({ stakingState, onSuccess, className = '' }: StakeForm
                 )}
               </button>
             </form>
-          )}
+          ) : null}
         </div>
       </div>
 

@@ -1,5 +1,6 @@
 // src/pages/DocsPage.tsx - Documentation display page
-import { useState } from 'react';
+/** @jsxImportSource react */
+import React, { useState } from 'react';
 import { BookOpenIcon, FileTextIcon, ExternalLinkIcon, XIcon } from 'lucide-react';
 import { cn } from '@/utils/responsive';
 import { useTheme } from '@/providers/ThemeProvider';

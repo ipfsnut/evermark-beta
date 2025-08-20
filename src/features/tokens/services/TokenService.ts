@@ -22,7 +22,8 @@ export class TokenService {
   /**
    * Format token amount for display (whole numbers only)
    */
-  static formatTokenAmount(amount: bigint, useShortFormat = true): string {
+  static formatTokenAmount(amount: bigint, decimals?: number): string {
+    const useShortFormat = decimals !== 18;
     try {
       if (amount === BigInt(0)) return '0';
       
@@ -138,8 +139,8 @@ export class TokenService {
     return {
       emarkBalance,
       allowanceForStaking,
-      formattedBalance: this.formatTokenAmount(emarkBalance, true),
-      formattedAllowance: this.formatTokenAmount(allowanceForStaking, true),
+      formattedBalance: this.formatTokenAmount(emarkBalance, 18),
+      formattedAllowance: this.formatTokenAmount(allowanceForStaking, 18),
       hasBalance: emarkBalance > BigInt(0),
       hasAllowance: allowanceForStaking > BigInt(0),
       canStake: emarkBalance > BigInt(0) && allowanceForStaking > BigInt(0)
@@ -447,7 +448,7 @@ spender: string, amount: bigint, isUnlimited = false  ): {
     return {
       status: receipt.status === 1 ? 'success' : 'failed',
       hash: receipt.transactionHash,
-      gasUsed: receipt.gasUsed ? this.formatTokenAmount(BigInt(receipt.gasUsed), false) : 'Unknown',
+      gasUsed: receipt.gasUsed ? this.formatTokenAmount(BigInt(receipt.gasUsed), 18) : 'Unknown',
       blockNumber: receipt.blockNumber || 0,
       confirmations: receipt.confirmations || 0
     };

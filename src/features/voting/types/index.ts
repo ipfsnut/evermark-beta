@@ -12,15 +12,24 @@ export interface Vote {
   type: 'vote';
 }
 
-// Delegation removed - now using direct voting
-// export interface Delegation {
-//   evermarkId: string;
-//   amount: bigint;
-//   season: number;
-//   timestamp: Date;
-//   transactionHash?: string;
-//   isActive: boolean;
-// }
+export interface Delegation {
+  evermarkId: string;
+  amount: bigint;
+  season: number;
+  timestamp: Date;
+  transactionHash?: string;
+  isActive: boolean;
+}
+
+export interface VotingCycle {
+  cycleNumber: number;
+  startTime: Date;
+  endTime: Date;
+  totalVotes: bigint;
+  totalVoters: number;
+  isActive: boolean;
+  activeEvermarksCount: number;
+}
 
 export interface VotingSeason {
   seasonNumber: number;
@@ -96,26 +105,47 @@ export interface UseVotingStateReturn {
   userVotes: Vote[];
   votingHistory: Vote[];
   currentSeason: VotingSeason | null;
+  currentCycle: VotingCycle | null;
   votingStats: VotingStats | null;
   
   // Evermark-specific data
   getEvermarkVotes: (evermarkId: string) => bigint;
   getUserVotesForEvermark: (evermarkId: string) => bigint;
+  getUserVotes: (userAddress: string) => Vote[];
   
   // UI State
   isLoading: boolean;
   isVoting: boolean;
+  isDelegating: boolean;
+  isUndelegating: boolean;
   error: VotingError | null;
   success: string | null;
   
   // Actions
   voteForEvermark: (evermarkId: string, amount: bigint) => Promise<VotingTransaction>;
+  delegateVotes: (evermarkId: string, amount: bigint) => Promise<VotingTransaction>;
+  undelegateVotes: (evermarkId: string, amount: bigint) => Promise<VotingTransaction>;
   
   // Utilities
   validateVoteAmount: (amount: string, evermarkId?: string) => VotingValidation;
   calculateVotingPower: (stakedAmount: bigint) => bigint;
   formatVoteAmount: (amount: bigint, decimals?: number) => string;
   getTimeRemainingInSeason: () => number;
+  getTimeRemainingInCycle: () => number;
+  canVoteInCycle: (cycleNumber: number) => boolean;
+  calculateVotingEfficiency: (userVotes: Vote[]) => number;
+  generateVotingRecommendations: (availablePower: bigint) => Array<{evermarkId: string; suggestedAmount: bigint}>;
+  calculateOptimalDistribution: (evermarkIds: string[], totalAmount: bigint) => Record<string, bigint>;
+  validateBatchVoting: (votes: Array<{evermarkId: string; amount: bigint}>) => VotingValidation;
+  calculateDelegationImpact: (evermarkId: string, amount: bigint) => {rankChange: number; powerIncrease: number};
+  estimateDelegationRewards: (evermarkId: string, amount: bigint) => bigint;
+  parseContractError: (error: any) => VotingError;
+  createError: (code: string, message: string) => VotingError;
+  generateDelegationSummary: (delegations: Delegation[]) => {totalAmount: bigint; activeCount: number; topDelegate: string};
+  calculateEvermarkRanking: (evermarkId: string) => EvermarkRanking;
+  estimateVotingGas: (evermarkId: string, amount: bigint) => Promise<bigint>;
+  createVotingPowerSummary: (votingPower: VotingPower) => {efficiency: number; utilization: number};
+  formatVotingTransaction: (transaction: VotingTransaction) => string;
   
   // State management
   clearErrors: () => void;
@@ -146,6 +176,7 @@ export const VOTING_CONSTANTS = {
   MIN_VOTE_AMOUNT: BigInt(1), // 1 wEMARK minimum
   MAX_VOTE_AMOUNT: BigInt(1000000), // 1M wEMARK maximum
   SEASON_DURATION: 7 * 24 * 60 * 60, // 7 days in seconds
+  CYCLE_DURATION: 7 * 24 * 60 * 60, // 7 days in seconds (alias for consistency)
   TRANSACTION_TIMEOUT: 60000, // 60 seconds
   RETRY_ATTEMPTS: 3,
   CACHE_DURATION: 30000, // 30 seconds

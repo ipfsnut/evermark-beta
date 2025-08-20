@@ -93,6 +93,7 @@ export interface StakingStats {
   
   // Performance metrics
   aprEstimate: number; // estimated APR
+  realTimeAPR: number; // real-time APR calculation
   stakingYield: number; // yield percentage
 }
 
@@ -171,6 +172,7 @@ export interface StakingContractCall {
 // Configuration and constants
 export const STAKING_CONSTANTS = {
   MIN_STAKE_AMOUNT: BigInt(1), // 1 wei minimum (effectively no minimum)
+  MAX_STAKE_AMOUNT: BigInt("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"), // Max uint256
   DECIMALS: 18, // EMARK has 18 decimal places
   UNBONDING_PERIOD_SECONDS: 7 * 24 * 60 * 60, // 7 days default
   DEFAULT_SLIPPAGE: 0.01, // 1%

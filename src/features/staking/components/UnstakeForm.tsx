@@ -57,7 +57,7 @@ export function UnstakeForm({ stakingState, onSuccess, className = '' }: Unstake
   // Handle max button click
   const handleMaxClick = useCallback(() => {
     if (stakingInfo?.wEmarkBalance) {
-      const maxAmount = formatTokenAmount(stakingInfo.wEmarkBalance, false);
+      const maxAmount = formatTokenAmount(stakingInfo.wEmarkBalance, 18);
       setAmount(maxAmount);
     }
   }, [stakingInfo?.wEmarkBalance, formatTokenAmount]);
@@ -171,7 +171,7 @@ export function UnstakeForm({ stakingState, onSuccess, className = '' }: Unstake
           {/* Balance Display */}
           <div className="mt-2 flex justify-between text-xs text-gray-400">
             <span>
-              Staked: {stakingInfo ? formatTokenAmount(stakingInfo.wEmarkBalance, true) : '0'} wEMARK
+              Staked: {stakingInfo ? formatTokenAmount(stakingInfo.wEmarkBalance, 18) : '0'} wEMARK
             </span>
             {amount && validation.isValid && (
               <span>

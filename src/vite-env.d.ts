@@ -1,4 +1,6 @@
 /// <reference types="vite/client" />
+/// <reference types="react" />
+/// <reference types="react-dom" />
 
 interface ImportMetaEnv {
   // Blockchain
@@ -66,7 +68,22 @@ declare global {
     interface IntrinsicElements {
       [elemName: string]: any;
     }
+    interface Element extends React.ReactElement<any, any> { }
+    interface ElementClass extends React.Component<any> {
+      render(): React.ReactNode;
+    }
+    interface ElementAttributesProperty { props: {}; }
+    interface ElementChildrenAttribute { children: {}; }
   }
+}
+
+// Ensure React JSX runtime is available
+declare module 'react/jsx-runtime' {
+  export * from 'react/jsx-runtime';
+}
+
+declare module 'react/jsx-dev-runtime' {
+  export * from 'react/jsx-dev-runtime';
 }
 
 // Module declarations for external libraries

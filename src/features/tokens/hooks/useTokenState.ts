@@ -329,8 +329,8 @@ export function useTokenState(): UseTokenStateReturn {
   }, [userAddress, stakingContractAddress, stakingAllowance, emarkToken]);
 
   // Utility functions
-  const formatTokenAmount = useCallback((amount: bigint, useShortFormat = true): string => {
-    return TokenService.formatTokenAmount(amount, useShortFormat);
+  const formatTokenAmount = useCallback((amount: bigint, decimals?: number): string => {
+    return TokenService.formatTokenAmount(amount, decimals);
   }, []);
 
   const parseTokenAmount = useCallback((amount: string): bigint => {

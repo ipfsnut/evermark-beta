@@ -15,7 +15,6 @@
     "jsx": "react-jsx",
 
     /* React 19 specific settings */
-    "types": ["vite/client"],
     "moduleDetection": "force",
 
     /* Linting - Relaxed for React 19 compatibility */

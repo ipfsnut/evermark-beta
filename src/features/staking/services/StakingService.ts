@@ -122,7 +122,8 @@ export class StakingService {
   /**
    * Format token amount for display (whole numbers only)
    */
-  static formatTokenAmount(amount: bigint, useShortFormat = true): string {
+  static formatTokenAmount(amount: bigint, decimals?: number): string {
+    const useShortFormat = decimals !== 18;
     try {
       if (amount === BigInt(0)) return '0';
       
