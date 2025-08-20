@@ -87,7 +87,7 @@ contract FeeCollector {
         uint256 balance = wethToken.balanceOf(address(this));
         require(balance >= amount, "Insufficient WETH balance");
         
-        wethToken.safeTransfer(rewardsContract, amount);
+        wethToken.safeApprove(rewardsContract, amount);
         IEvermarkRewards(rewardsContract).fundWethRewards(amount);
         
         emit TokensForwardedToRewards(address(wethToken), amount);
@@ -100,7 +100,7 @@ contract FeeCollector {
         uint256 balance = emarkToken.balanceOf(address(this));
         require(balance >= amount, "Insufficient EMARK balance");
         
-        emarkToken.safeTransfer(rewardsContract, amount);
+        emarkToken.safeApprove(rewardsContract, amount);
         IEvermarkRewards(rewardsContract).fundEmarkRewards(amount);
         
         emit TokensForwardedToRewards(address(emarkToken), amount);

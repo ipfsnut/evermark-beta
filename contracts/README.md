@@ -54,8 +54,7 @@ This directory contains the complete Evermark smart contract system for on-chain
 - `mintEvermark(string metadataURI, string title, address creator)` - Mint new Evermark
 - `mintEvermarkWithReferral(...)` - Mint with referral fee sharing
 - `exists(uint256 tokenId)` - Check if NFT exists
-- `setFeeCollector(address)` - Update fee collection address
-- `setMintingFee(uint256)` - Update minting fee (admin only)
+- `setFeeCollector(address)` - Update fee collector address (admin only)
 
 **Key Features:**
 - **Minting Fee:** 0.00007 ETH per NFT
@@ -196,7 +195,7 @@ graph TB
 
 ### Configuration Steps
 1. **FeeCollector:** Set EvermarkRewards contract address + grant DISTRIBUTOR_ROLE
-2. **EvermarkNFT:** Set fee collector address and minting fee
+2. **EvermarkNFT:** Set fee collector address (minting fee is constant 0.00007 ETH)
 3. **EvermarkVoting:** Start first voting season
 4. **EvermarkRewards:** Fund initial reward pools (optional)
 

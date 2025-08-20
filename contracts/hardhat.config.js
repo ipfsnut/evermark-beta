@@ -39,7 +39,7 @@ module.exports = {
         }
       },
       {
-        network: "baseSepolia",
+        network: "baseSepolia", 
         chainId: 84532,
         urls: {
           apiURL: "https://api-sepolia.basescan.org/api",
@@ -47,11 +47,5 @@ module.exports = {
         }
       }
     ]
-  },
-  paths: {
-    sources: "./contracts",
-    tests: "./test",
-    cache: "./cache",
-    artifacts: "./artifacts"
   }
 };
