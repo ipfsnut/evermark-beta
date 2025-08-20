@@ -2,6 +2,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import App from './App';
 import '../index.css';
 import './styles/mobile-first.css';
@@ -59,9 +60,11 @@ const root = ReactDOM.createRoot(rootElement);
 try {
   root.render(
     // Remove React.StrictMode temporarily to test
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
+    <HelmetProvider>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </HelmetProvider>
   );
 } catch (error) {
   console.error('Failed to render app:', error);

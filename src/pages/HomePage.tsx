@@ -22,6 +22,7 @@ import { devLog } from '../utils/debug';
 
 // Evermarks feature
 import { useEvermarksState, EvermarkFeed } from '../features/evermarks';
+import { FarcasterMeta } from '../components/FarcasterMeta';
 
 
 // Real Protocol Stats using the evermarks hook
@@ -284,6 +285,16 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen transition-colors duration-200 bg-gray-50 text-gray-900 dark:bg-black dark:text-white">
+      {/* Default Farcaster Mini App Meta Tags for Homepage */}
+      <FarcasterMeta
+        title="Evermark Protocol"
+        description="Discover amazing content online and earn rewards by sharing Evermarks through community curation"
+        imageUrl="https://evermarks.net/og-image.png"
+        url="https://evermarks.net"
+        buttonText="🚀 Open Evermark"
+        buttonAction="link"
+      />
+      
       {/* Hero Section */}
       <div className="relative overflow-hidden transition-colors duration-200 bg-gradient-to-br from-white via-gray-50 to-gray-100 dark:from-gray-900 dark:via-black dark:to-gray-900">
         {/* Animated background effects - responsive sizing */}

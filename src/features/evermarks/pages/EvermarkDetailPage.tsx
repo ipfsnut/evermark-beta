@@ -26,6 +26,7 @@ import { SimpleEvermarkImage } from '@/components/images/SimpleEvermarkImage';
 import { VotingPanel } from '@/features/voting';
 import { useAppAuth } from '@/providers/AppContext';
 import { useFarcasterUser } from '@/lib/farcaster';
+import { EvermarkMeta } from '@/components/FarcasterMeta';
 
 // Utility function for responsive classes
 function cn(...classes: (string | undefined | null | false)[]): string {
@@ -252,6 +253,16 @@ export default function EvermarkDetailPage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
+      {/* Dynamic Farcaster Mini App Meta Tags */}
+      <EvermarkMeta evermark={{
+        id: evermark.id,
+        title: evermark.title,
+        description: evermark.description,
+        image: evermark.image,
+        author: evermark.author,
+        createdAt: evermark.createdAt
+      }} />
+      
       {/* Header */}
       <div className="bg-gray-900/50 border-b border-gray-700 sticky top-0 z-40 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4">

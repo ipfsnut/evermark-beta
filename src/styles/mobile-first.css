@@ -31,13 +31,29 @@
   body, html {
     overflow-x: hidden;
     width: 100%;
+    max-width: 100vw;
   }
   
   /* Ensure proper viewport sizing */
   #root {
     width: 100vw;
+    max-width: 100vw;
     min-height: 100vh;
     position: relative;
+    overflow-x: hidden;
+  }
+  
+  /* Force all containers to respect viewport width */
+  .container {
+    max-width: 100vw !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+  
+  /* Prevent grid/flex overflow */
+  .grid, .flex {
+    min-width: 0;
+    overflow: hidden;
   }
 }
 

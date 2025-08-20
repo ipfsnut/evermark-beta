@@ -334,6 +334,39 @@
     .mobile-compact {
       @apply text-sm px-3 py-2;
     }
+    
+    /* Fix container overflow on mobile */
+    .container {
+      width: 100%;
+      max-width: 100vw;
+      margin-left: auto;
+      margin-right: auto;
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+    
+    /* Prevent any element from overflowing */
+    * {
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+    
+    /* Specific fixes for common overflow sources */
+    pre, code {
+      overflow-x: auto;
+      word-wrap: break-word;
+    }
+    
+    img {
+      max-width: 100%;
+      height: auto;
+    }
+    
+    /* Ensure grids don't overflow */
+    .grid {
+      width: 100%;
+      overflow: hidden;
+    }
   }
   
   /* Touch gestures and interactions */
@@ -358,6 +391,12 @@
     /* Adjust for missing browser chrome */
     .pwa-header {
       padding-top: env(safe-area-inset-top, 0);
+    }
+    
+    /* Ensure proper container padding in PWA mode */
+    .container {
+      padding-left: max(1rem, env(safe-area-inset-left, 0));
+      padding-right: max(1rem, env(safe-area-inset-right, 0));
     }
   }
   
@@ -410,6 +449,34 @@
     .card-mobile {
       @apply p-3;
     }
+    
+    /* Extra small screens need more aggressive padding */
+    .container {
+      padding-left: 0.75rem;
+      padding-right: 0.75rem;
+    }
+  }
+  
+  /* Mobile container utility class */
+  .mobile-container {
+    width: 100%;
+    max-width: 100vw;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    box-sizing: border-box;
+  }
+  
+  /* Safe mobile container that accounts for PWA safe areas */
+  .safe-mobile-container {
+    width: 100%;
+    max-width: 100vw;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: max(1rem, env(safe-area-inset-left, 0));
+    padding-right: max(1rem, env(safe-area-inset-right, 0));
+    box-sizing: border-box;
   }
 }
 
