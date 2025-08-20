@@ -23,112 +23,6 @@ import { devLog } from '../utils/debug';
 // Evermarks feature
 import { useEvermarksState, EvermarkFeed } from '../features/evermarks';
 
-// Quick Supabase Test Component
-const QuickSupabaseTest = () => {
-  const [testResult, setTestResult] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const testConnection = async () => {
-      try {
-        // Test if supabase client exists and can connect
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-        
-        devLog('Environment check:', {
-          hasUrl: !!supabaseUrl,
-          hasKey: !!supabaseKey,
-          url: supabaseUrl?.substring(0, 30) + '...'
-        });
-
-        if (!supabaseUrl || !supabaseKey) {
-          setTestResult({ 
-            success: false, 
-            error: 'Missing Supabase environment variables',
-            hasUrl: !!supabaseUrl,
-            hasKey: !!supabaseKey
-          });
-          return;
-        }
-
-        // Use existing singleton client to avoid multiple instances
-        const { supabase } = await import('../lib/supabase');
-        if (!supabase) {
-          throw new Error('Supabase client not initialized');
-        }
-        
-        // Test query
-        const { data, error, count } = await supabase
-          .from('evermarks')
-          .select('*', { count: 'exact' })
-          .limit(3);
-
-        setTestResult({
-          success: !error,
-          error: error?.message,
-          count,
-          sampleData: data?.slice(0, 2), // Just first 2 records
-          hasData: (data?.length || 0) > 0
-        });
-
-      } catch (error) {
-        console.error('Supabase test failed:', error);
-        setTestResult({
-          success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    testConnection();
-  }, []);
-
-  if (isLoading) {
-    return (
-      <div className="bg-yellow-900/30 border border-yellow-500/50 rounded-lg p-4 mb-4">
-        <p className="text-yellow-300">🔍 Testing Supabase connection...</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className={`border rounded-lg p-4 mb-4 ${
-      testResult?.success 
-        ? 'bg-green-900/30 border-green-500/50' 
-        : 'bg-red-900/30 border-red-500/50'
-    }`}>
-      <h3 className={`font-semibold mb-2 ${
-        testResult?.success ? 'text-green-300' : 'text-red-300'
-      }`}>
-        🔍 Supabase Connection Test
-      </h3>
-      
-      {testResult?.success ? (
-        <div className="text-green-200 space-y-2">
-          <p>✅ Successfully connected to Supabase!</p>
-          <p>📊 Found {testResult.count || 0} evermarks in database</p>
-          {testResult.hasData && (
-            <div>
-              <p>📝 Sample data:</p>
-              <pre className="text-xs bg-gray-800 p-2 rounded mt-2 overflow-auto max-h-32">
-                {JSON.stringify(testResult.sampleData, null, 2)}
-              </pre>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="text-red-200 space-y-2">
-          <p>❌ Supabase connection failed</p>
-          <p className="text-sm">Error: {testResult?.error}</p>
-          {!testResult?.hasUrl && <p className="text-sm">• Missing VITE_SUPABASE_URL</p>}
-          {!testResult?.hasKey && <p className="text-sm">• Missing VITE_SUPABASE_ANON_KEY</p>}
-        </div>
-      )}
-    </div>
-  );
-};
 
 // Real Protocol Stats using the evermarks hook
 const ProtocolStats: React.FC = () => {
@@ -484,13 +378,6 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Supabase Test (temporary) */}
-      <div className={cn(
-        "container mx-auto px-4",
-        isMobile ? "py-4" : "py-6"
-      )}>
-        <QuickSupabaseTest />
-      </div>
 
       {/* Protocol Stats */}
       <div className={cn(
