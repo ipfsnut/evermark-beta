@@ -26,6 +26,7 @@ import {
 import { Formatters } from '../../../utils/formatters';
 import { useTheme } from '../../../providers/ThemeProvider';
 import { cn } from '../../../utils/responsive';
+import { themeClasses } from '../../../utils/theme';
 
 import useLeaderboardState from '../hooks/useLeaderboardState';
 import { LeaderboardService } from '../services/LeaderboardService';
@@ -120,13 +121,13 @@ export function LeaderboardTable({
   const getRankingChangeIcon = (change: RankingChange) => {
     switch (change.direction) {
       case 'up':
-        return <TrendingUp className="h-3 w-3 text-green-400" />;
+        return <TrendingUp className="h-3 w-3 text-app-brand-success" />;
       case 'down':
-        return <TrendingDown className="h-3 w-3 text-red-400" />;
+        return <TrendingDown className="h-3 w-3 text-app-brand-error" />;
       case 'new':
-        return <Star className="h-3 w-3 text-blue-400" />;
+        return <Star className="h-3 w-3 text-app-brand-primary" />;
       default:
-        return <Minus className="h-3 w-3 text-gray-500" />;
+        return <Minus className="h-3 w-3 text-app-text-muted" />;
     }
   };
 
@@ -136,17 +137,17 @@ export function LeaderboardTable({
       <div className="flex items-center space-x-2">
         <span className={cn(
           "text-lg font-bold",
-          entry.rank === 1 && "text-yellow-400",
-          entry.rank === 2 && "text-gray-300",
-          entry.rank === 3 && "text-amber-600",
-          entry.rank > 3 && "text-white"
+          entry.rank === 1 && "text-app-brand-warning",
+          entry.rank === 2 && "text-app-text-secondary",
+          entry.rank === 3 && "text-app-brand-warning",
+          entry.rank > 3 && "text-app-text-primary"
         )}>
           #{entry.rank}
         </span>
         <div className="flex items-center space-x-1">
           {getRankingChangeIcon(entry.change)}
           {entry.change.direction !== 'same' && entry.change.direction !== 'new' && (
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-app-text-muted">
               {entry.change.positions}
             </span>
           )}
@@ -168,22 +169,15 @@ export function LeaderboardTable({
         className
       )}>
         <div className="text-center">
-          <h3 className={cn(
-            "font-medium mb-2",
-            isDark ? "text-red-300" : "text-red-700"
-          )}>Error Loading Leaderboard</h3>
-          <p className={cn(
-            "text-sm mb-4",
-            isDark ? "text-red-400" : "text-red-600"
-          )}>{error}</p>
+          <h3 className="font-medium mb-2 text-app-brand-error">
+            Error Loading Leaderboard
+          </h3>
+          <p className="text-sm mb-4 text-app-brand-error">
+            {error}
+          </p>
           <button
             onClick={refresh}
-            className={cn(
-              "px-4 py-2 rounded-lg transition-colors",
-              isDark 
-                ? "bg-red-600/20 hover:bg-red-600/30 text-red-300" 
-                : "bg-red-200 hover:bg-red-300 text-red-700"
-            )}
+            className={themeClasses.btnSecondary}
           >
             Try Again
           </button>
@@ -197,24 +191,15 @@ export function LeaderboardTable({
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h2 className={cn(
-            "text-2xl sm:text-3xl font-bold mb-2",
-            isDark ? "text-white" : "text-gray-900"
-          )}>
+          <h2 className={`${themeClasses.headingMedium} mb-2`}>
             Leaderboard
             {totalCount > 0 && (
-              <span className={cn(
-                "ml-2 text-base font-normal",
-                isDark ? "text-gray-400" : "text-gray-600"
-              )}>
+              <span className="ml-2 text-base font-normal text-app-text-muted">
                 ({totalCount.toLocaleString()})
               </span>
             )}
           </h2>
-          <div className={cn(
-            "flex items-center space-x-4 text-sm",
-            isDark ? "text-gray-400" : "text-gray-600"
-          )}>
+          <div className="flex items-center space-x-4 text-sm text-app-text-secondary">
             <span>Period: {currentPeriod.label}</span>
             {lastUpdated && (
               <span>Updated {Formatters.formatRelativeTime(lastUpdated)}</span>
@@ -226,17 +211,11 @@ export function LeaderboardTable({
           <button
             onClick={refresh}
             disabled={isRefreshing}
-            className={cn(
-              "p-2 rounded-lg border transition-colors disabled:opacity-50",
-              isDark 
-                ? "bg-gray-800 hover:bg-gray-700 border-gray-600" 
-                : "bg-white hover:bg-gray-50 border-gray-300"
-            )}
+            className={`${themeClasses.btnSecondary} disabled:opacity-50`}
             title="Refresh leaderboard"
           >
             <RefreshCw className={cn(
-              "h-4 w-4", 
-              isDark ? "text-gray-300" : "text-gray-700",
+              "h-4 w-4 text-app-text-primary",
               isRefreshing && "animate-spin"
             )} />
           </button>
@@ -251,21 +230,13 @@ export function LeaderboardTable({
             {/* Search */}
             <form onSubmit={handleSearch} className="flex-1">
               <div className="relative">
-                <Search className={cn(
-                  "absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4",
-                  isDark ? "text-gray-400" : "text-gray-500"
-                )} />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-app-text-muted" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search evermarks..."
-                  className={cn(
-                    "w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-opacity-20 transition-colors",
-                    isDark 
-                      ? "bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-cyan-400" 
-                      : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-purple-400 focus:ring-purple-400"
-                  )}
+                  className={themeClasses.input}
                 />
               </div>
             </form>
@@ -279,10 +250,8 @@ export function LeaderboardTable({
                   className={cn(
                     "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
                     period.id === currentPeriod.id
-                      ? (isDark ? "bg-cyan-600 text-white" : "bg-purple-600 text-white")
-                      : (isDark 
-                          ? "bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white" 
-                          : "bg-gray-200 text-gray-700 hover:bg-gray-300 hover:text-gray-900")
+                      ? themeClasses.btnPrimary
+                      : themeClasses.btnSecondary
                   )}
                 >
                   {period.label}
@@ -294,21 +263,13 @@ export function LeaderboardTable({
           {/* Active filters */}
           {isFiltered && (
             <div className="flex items-center justify-between">
-              <div className={cn(
-                "flex items-center space-x-2 text-sm",
-                isDark ? "text-gray-400" : "text-gray-600"
-              )}>
+              <div className="flex items-center space-x-2 text-sm text-app-text-secondary">
                 <Filter className="h-4 w-4" />
                 <span>Filters active</span>
               </div>
               <button
                 onClick={clearFilters}
-                className={cn(
-                  "text-sm transition-colors",
-                  isDark 
-                    ? "text-cyan-400 hover:text-cyan-300" 
-                    : "text-purple-600 hover:text-purple-700"
-                )}
+                className="text-sm transition-colors text-app-text-accent hover:text-app-brand-primary"
               >
                 Clear all
               </button>
@@ -320,27 +281,27 @@ export function LeaderboardTable({
       {/* Stats Summary */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
-            <div className="text-sm text-gray-400 mb-1">Total Evermarks</div>
-            <div className="text-xl font-bold text-white">
+          <div className={themeClasses.card}>
+            <div className="text-sm text-app-text-secondary mb-1">Total Evermarks</div>
+            <div className="text-xl font-bold text-app-text-primary">
               {stats.totalEvermarks.toLocaleString()}
             </div>
           </div>
-          <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
-            <div className="text-sm text-gray-400 mb-1">Total Votes</div>
-            <div className="text-xl font-bold text-cyan-400">
+          <div className={themeClasses.card}>
+            <div className="text-sm text-app-text-secondary mb-1">Total Votes</div>
+            <div className="text-xl font-bold text-app-text-accent">
               {LeaderboardService.formatVoteAmount(stats.totalVotes)}
             </div>
           </div>
-          <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
-            <div className="text-sm text-gray-400 mb-1">Active Voters</div>
-            <div className="text-xl font-bold text-green-400">
+          <div className={themeClasses.card}>
+            <div className="text-sm text-app-text-secondary mb-1">Active Voters</div>
+            <div className="text-xl font-bold text-app-brand-success">
               {stats.activeVoters.toLocaleString()}
             </div>
           </div>
-          <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
-            <div className="text-sm text-gray-400 mb-1">Participation</div>
-            <div className="text-xl font-bold text-purple-400">
+          <div className={themeClasses.card}>
+            <div className="text-sm text-app-text-secondary mb-1">Participation</div>
+            <div className="text-xl font-bold text-app-brand-secondary">
               {(stats.participationRate * 100).toFixed(1)}%
             </div>
           </div>
@@ -351,12 +312,12 @@ export function LeaderboardTable({
       {isLoading && (
         <div className="space-y-4">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="bg-gray-800/30 border border-gray-700 rounded-lg p-4 animate-pulse">
+            <div key={i} className="bg-app-bg-card border border-app-border rounded-lg p-4 animate-pulse">
               <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-gray-700 rounded-lg"></div>
+                <div className="w-12 h-12 bg-app-bg-secondary rounded-lg"></div>
                 <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-gray-700 rounded w-3/4"></div>
-                  <div className="h-3 bg-gray-700 rounded w-1/2"></div>
+                  <div className="h-4 bg-app-bg-secondary rounded w-3/4"></div>
+                  <div className="h-3 bg-app-bg-secondary rounded w-1/2"></div>
                 </div>
               </div>
             </div>
@@ -367,11 +328,11 @@ export function LeaderboardTable({
       {/* Empty state */}
       {isEmpty && !isLoading && (
         <div className="text-center py-12">
-          <TrendingUp className="mx-auto h-12 w-12 text-gray-500 mb-4" />
-          <h3 className="text-lg font-medium text-gray-300 mb-2">
+          <TrendingUp className="mx-auto h-12 w-12 text-app-text-muted mb-4" />
+          <h3 className="text-lg font-medium text-app-text-primary mb-2">
             {isFiltered ? 'No results found' : 'No evermarks yet'}
           </h3>
-          <p className="text-gray-500 mb-4">
+          <p className="text-app-text-secondary mb-4">
             {isFiltered 
               ? 'Try adjusting your filters or search terms'
               : 'Be the first to create and vote on evermarks!'
@@ -380,7 +341,7 @@ export function LeaderboardTable({
           {isFiltered && (
             <button
               onClick={clearFilters}
-              className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors"
+              className={themeClasses.btnPrimary}
             >
               Clear filters
             </button>
@@ -396,8 +357,8 @@ export function LeaderboardTable({
               key={entry.id}
               onClick={() => handleEntryClick(entry)}
               className={cn(
-                "bg-gray-800/50 border border-gray-700 rounded-lg p-4 transition-all duration-200 cursor-pointer group",
-                "hover:border-cyan-400/50 hover:shadow-lg hover:shadow-cyan-500/20 backdrop-blur-sm",
+                themeClasses.cardInteractive,
+                "cursor-pointer group backdrop-blur-sm",
                 compactMode ? "p-3" : "p-4"
               )}
             >
@@ -409,7 +370,7 @@ export function LeaderboardTable({
 
                 {/* Content type icon */}
                 <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-gray-700 rounded-lg flex items-center justify-center text-gray-400">
+                  <div className="w-8 h-8 bg-app-bg-secondary rounded-lg flex items-center justify-center text-app-text-secondary">
                     {getContentTypeIcon(entry.contentType)}
                   </div>
                 </div>
@@ -418,11 +379,11 @@ export function LeaderboardTable({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between">
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-lg font-semibold text-white group-hover:text-cyan-300 transition-colors truncate">
+                      <h3 className="text-lg font-semibold text-app-text-on-card group-hover:text-app-text-accent transition-colors truncate">
                         {entry.title}
                       </h3>
                       
-                      <div className="flex items-center space-x-3 text-sm text-gray-400 mt-1">
+                      <div className="flex items-center space-x-3 text-sm text-app-text-secondary mt-1">
                         <div className="flex items-center">
                           <User className="h-3 w-3 mr-1" />
                           <span className="truncate">{entry.creator}</span>
@@ -434,7 +395,7 @@ export function LeaderboardTable({
                         </div>
                         
                         {entry.verified && (
-                          <div className="flex items-center text-green-400">
+                          <div className="flex items-center text-app-brand-success">
                             <Star className="h-3 w-3" />
                           </div>
                         )}
@@ -442,7 +403,7 @@ export function LeaderboardTable({
 
                       {/* Description (if not compact) */}
                       {!compactMode && entry.description && (
-                        <p className="text-sm text-gray-300 mt-2 line-clamp-2">
+                        <p className="text-sm text-app-text-on-card mt-2 line-clamp-2">
                           {entry.description}
                         </p>
                       )}
@@ -450,18 +411,18 @@ export function LeaderboardTable({
                       {/* Tags */}
                       {entry.tags.length > 0 && (
                         <div className="flex items-center space-x-2 mt-2">
-                          <Tag className="h-3 w-3 text-gray-500" />
+                          <Tag className="h-3 w-3 text-app-text-muted" />
                           <div className="flex flex-wrap gap-1">
                             {entry.tags.slice(0, 3).map((tag, index) => (
                               <span
                                 key={index}
-                                className="text-xs bg-gray-700/50 text-gray-300 px-2 py-1 rounded border border-gray-600"
+                                className="text-xs bg-app-bg-secondary text-app-text-secondary px-2 py-1 rounded border border-app-border"
                               >
                                 {tag}
                               </span>
                             ))}
                             {entry.tags.length > 3 && (
-                              <span className="text-xs text-gray-500">
+                              <span className="text-xs text-app-text-muted">
                                 +{entry.tags.length - 3} more
                               </span>
                             )}
@@ -472,14 +433,14 @@ export function LeaderboardTable({
 
                     {/* Vote information */}
                     <div className="flex-shrink-0 text-right ml-4">
-                      <div className="text-xl font-bold text-cyan-400 mb-1">
+                      <div className="text-xl font-bold text-app-text-accent mb-1">
                         {LeaderboardService.formatVoteAmount(entry.totalVotes)}
                       </div>
-                      <div className="text-xs text-gray-400">
+                      <div className="text-xs text-app-text-secondary">
                         {entry.voteCount} voter{entry.voteCount !== 1 ? 's' : ''}
                       </div>
                       {entry.percentageOfTotal > 0 && (
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-app-text-muted">
                           {entry.percentageOfTotal.toFixed(1)}% of total
                         </div>
                       )}
@@ -490,7 +451,7 @@ export function LeaderboardTable({
                 {/* External link indicator */}
                 {entry.sourceUrl && (
                   <div className="flex-shrink-0">
-                    <ExternalLink className="h-4 w-4 text-gray-500 group-hover:text-cyan-400 transition-colors" />
+                    <ExternalLink className="h-4 w-4 text-app-text-secondary group-hover:text-app-text-accent transition-colors" />
                   </div>
                 )}
               </div>
@@ -502,7 +463,7 @@ export function LeaderboardTable({
       {/* Pagination */}
       {showPagination && totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-400">
+          <div className="text-sm text-app-text-secondary">
             Showing {((pagination.page - 1) * pagination.pageSize) + 1} to{' '}
             {Math.min(pagination.page * pagination.pageSize, totalCount)} of{' '}
             {totalCount.toLocaleString()} evermarks
@@ -512,19 +473,19 @@ export function LeaderboardTable({
             <button
               onClick={() => handlePageChange(pagination.page - 1)}
               disabled={!hasPreviousPage}
-              className="p-2 rounded-lg bg-gray-800 border border-gray-600 text-gray-300 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className={`${themeClasses.btnSecondary} disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
 
-            <span className="px-3 py-2 text-sm text-gray-300">
+            <span className="px-3 py-2 text-sm text-app-text-primary">
               Page {pagination.page} of {totalPages}
             </span>
 
             <button
               onClick={() => handlePageChange(pagination.page + 1)}
               disabled={!hasNextPage}
-              className="p-2 rounded-lg bg-gray-800 border border-gray-600 text-gray-300 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className={`${themeClasses.btnSecondary} disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               <ChevronRight className="h-4 w-4" />
             </button>

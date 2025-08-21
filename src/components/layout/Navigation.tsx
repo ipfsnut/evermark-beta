@@ -22,7 +22,7 @@ interface NavItem {
   badge?: string | number;
 }
 
-// Define navigation structure without profile
+// Main navigation items
 const navigationItems: NavItem[] = [
   {
     to: '/',
@@ -33,11 +33,6 @@ const navigationItems: NavItem[] = [
     to: '/explore',
     label: 'Explore',
     icon: CompassIcon,
-  },
-  {
-    to: '/about',
-    label: 'About',
-    icon: InfoIcon,
   },
   {
     to: '/leaderboard',
@@ -57,6 +52,20 @@ const actionItems: NavItem[] = [
     to: '/create',
     label: 'Create Evermark',
     icon: PlusIcon,
+  },
+];
+
+// Info section items
+const infoItems: NavItem[] = [
+  {
+    to: '/about',
+    label: 'About',
+    icon: InfoIcon,
+  },
+  {
+    to: '/docs',
+    label: 'Docs',
+    icon: BookOpenIcon,
   },
 ];
 
@@ -152,12 +161,29 @@ export function Navigation() {
       {/* Action items */}
       <div className="space-y-1">
         <h3 className={cn(
-        "text-xs font-semibold uppercase tracking-wider mb-3",
-        isDark ? "text-gray-500" : "text-gray-400"
-      )}>
+          "text-xs font-semibold uppercase tracking-wider mb-3",
+          isDark ? "text-gray-500" : "text-gray-400"
+        )}>
           Actions
         </h3>
         {actionItems.map(item => renderNavItem(item, 'action'))}
+      </div>
+
+      {/* Divider */}
+      <div className={cn(
+        "border-t",
+        isDark ? "border-gray-800" : "border-gray-200"
+      )} />
+
+      {/* Info section */}
+      <div className="space-y-1">
+        <h3 className={cn(
+          "text-xs font-semibold uppercase tracking-wider mb-3",
+          isDark ? "text-gray-500" : "text-gray-400"
+        )}>
+          Info
+        </h3>
+        {infoItems.map(item => renderNavItem(item))}
       </div>
 
       {/* Auth prompt for non-authenticated users */}

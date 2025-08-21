@@ -5,13 +5,12 @@ import { useStakingState } from '@/features/staking';
 import { useContractsStatus } from '@/hooks/core/useContracts';
 import { TrendingUpIcon, CoinsIcon, AlertCircleIcon, CheckCircleIcon } from 'lucide-react';
 import { cn, useIsMobile } from '@/utils/responsive';
-import { useTheme } from '@/providers/ThemeProvider';
+import { themeClasses } from '@/utils/theme';
 
 export default function StakePage() {
   const stakingState = useStakingState();
   const contractsStatus = useContractsStatus();
   const isMobile = useIsMobile();
-  const { isDark } = useTheme();
   
   const requiredContracts = ['emarkToken', 'wemark'];
   const missingRequiredContracts = requiredContracts.filter(contract => 
@@ -19,16 +18,11 @@ export default function StakePage() {
   );
 
   return (
-    <div className={cn(
-      "min-h-screen transition-colors duration-200",
-      isDark ? "bg-black text-white" : "bg-yellow-50 text-gray-900"
-    )}>
+    <div className={themeClasses.page}>
       {/* Header */}
       <div className={cn(
-        "border-b border-purple-400/30",
-        isDark 
-          ? "bg-gradient-to-r from-gray-900 via-black to-gray-900" 
-          : "bg-gradient-to-r from-yellow-100 via-yellow-50 to-yellow-100"
+        themeClasses.section,
+        "border-b border-purple-400/30"
       )}>
         <div className="container mx-auto px-4 py-8">
           <div className="text-center space-y-6">
@@ -36,14 +30,14 @@ export default function StakePage() {
               <div className="w-12 h-12 bg-gradient-to-r from-purple-400 to-cyan-500 rounded-full flex items-center justify-center shadow-lg shadow-purple-500/50">
                 <TrendingUpIcon className="h-7 w-7 text-black" />
               </div>
-              <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-purple-400 via-cyan-400 to-green-500 bg-clip-text text-transparent">
+              <h1 className={themeClasses.headingHero}>
                 STAKING CENTER <span className="text-2xl md:text-3xl text-cyan-400 font-normal">[BETA]</span>
               </h1>
             </div>
             
             <p className={cn(
               "max-w-3xl mx-auto text-lg",
-              isDark ? "text-gray-300" : "text-gray-600"
+              themeClasses.textSecondary
             )}>
               Stake your EMARK tokens to receive wEMARK voting power for content curation.
             </p>
@@ -54,25 +48,25 @@ export default function StakePage() {
       <div className="container mx-auto px-4 py-8">
         {/* Contract Status Warning */}
         {missingRequiredContracts.length > 0 && (
-          <div className="mb-8 bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-6">
+          <div className={cn(themeClasses.card, "mb-8 bg-amber-500/10 border-amber-500/30")}>
             <div className="flex items-start gap-3">
-              <AlertCircleIcon className="w-6 h-6 text-yellow-400 flex-shrink-0 mt-0.5" />
+              <AlertCircleIcon className="w-6 h-6 text-amber-400 flex-shrink-0 mt-0.5" />
               <div>
-                <h3 className="text-lg font-semibold text-yellow-400 mb-2">
+                <h3 className="text-lg font-semibold text-amber-400 mb-2">
                   Beta Configuration Required
                 </h3>
-                <p className="text-yellow-200 text-sm mb-3">
+                <p className="text-amber-200 text-sm mb-3">
                   Some staking contracts are not configured. Please check your environment variables:
                 </p>
-                <ul className="text-yellow-200 text-sm space-y-1">
+                <ul className="text-amber-200 text-sm space-y-1">
                   {missingRequiredContracts.includes('emarkToken') && (
-                    <li>• <code className="bg-yellow-500/20 px-1 rounded">VITE_EMARK_TOKEN_ADDRESS</code> - EMARK Token contract</li>
+                    <li>• <code className="bg-amber-500/20 px-1 rounded">VITE_EMARK_TOKEN_ADDRESS</code> - EMARK Token contract</li>
                   )}
                   {missingRequiredContracts.includes('wemark') && (
-                    <li>• <code className="bg-yellow-500/20 px-1 rounded">VITE_WEMARK_ADDRESS</code> - WEMARK Token contract</li>
+                    <li>• <code className="bg-amber-500/20 px-1 rounded">VITE_WEMARK_ADDRESS</code> - WEMARK Token contract</li>
                   )}
                 </ul>
-                <p className="text-yellow-200 text-xs mt-3">
+                <p className="text-amber-200 text-xs mt-3">
                   Staking features will be limited until all contracts are configured.
                 </p>
               </div>
@@ -177,9 +171,9 @@ export default function StakePage() {
             )}
 
             {/* Help Section */}
-            <div className="bg-yellow-900/30 border border-yellow-500/30 rounded-lg p-6">
-              <h4 className="text-yellow-300 font-medium mb-3">💡 Pro Tips</h4>
-              <div className="text-sm text-yellow-200 space-y-2">
+            <div className={cn(themeClasses.card, "bg-blue-500/10 border-blue-500/30")}>
+              <h4 className="text-blue-300 font-medium mb-3">💡 Pro Tips</h4>
+              <div className="text-sm text-blue-200 space-y-2">
                 <p>• Stake more tokens to get higher voting power multipliers</p>
                 <p>• wEMARK can be used to vote on quality content for rewards</p>
                 <p>• Unstaking has a 7-day waiting period for security</p>

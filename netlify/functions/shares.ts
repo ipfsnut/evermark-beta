@@ -134,10 +134,23 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
           };
         }
 
+        // Get evermark details for notification
+        const { data: evermarkData, error: evermarkError } = await supabase
+          .from('evermarks')
+          .select('title, author, processed_image_url')
+          .eq('token_id', shareData.token_id)
+          .single();
+
+        const response = {
+          ...share,
+          // Include evermark data for potential notification triggers on frontend
+          evermark: evermarkError ? null : evermarkData
+        };
+
         return {
           statusCode: 201,
           headers,
-          body: JSON.stringify(share),
+          body: JSON.stringify(response),
         };
 
       default:

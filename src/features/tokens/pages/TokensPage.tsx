@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useTokenState } from '../hooks/useTokenState';
 import { useStakingState } from '@/features/staking';
+import { themeClasses } from '@/utils/theme';
 import { TokenMetrics } from '../components/TokenMetrics';
 import { TokenTransfer } from '../components/TokenTransfer';
 import { TokenHistory } from '../components/TokenHistory';
@@ -56,7 +57,7 @@ export default function TokensPage() {
               <div className="w-12 h-12 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center shadow-lg shadow-blue-500/50">
                 <Coins className="h-7 w-7 text-black" />
               </div>
-              <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-cyan-500 bg-clip-text text-transparent">
+              <h1 className={themeClasses.headingHero}>
                 TOKEN MANAGER
               </h1>
             </div>

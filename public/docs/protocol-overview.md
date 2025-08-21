@@ -23,9 +23,12 @@ Evermark Protocol is a decentralized system for creating permanent, verifiable r
 
 ## How It Works
 
-1. **Create**: Submit a URL or Farcaster cast to create an Evermark
-2. **Store**: Metadata is stored on IPFS, reference recorded on-chain
+1. **Create**: Submit a DOI, ISBN, URL, Farcaster cast, or Custom Object to create an Evermark
+
+2. **Store**: Metadata is stored on IPFS, reference recorded on-chain, and served via Supabase to create a reliable user experience with robust Web3 resiliency
+
 3. **Share**: Your Evermark becomes part of the permanent web
+
 4. **Discover**: Browse and collect Evermarks from the community
 
 ## Smart Contracts

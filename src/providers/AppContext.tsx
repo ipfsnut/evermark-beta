@@ -4,6 +4,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useActiveAccount, useActiveWallet } from 'thirdweb/react';
 import { useIntegratedUser } from './IntegratedUserProvider'; // NEW: Import integrated user
+import { NotificationService } from '../services/NotificationService';
 
 interface User {
   address?: string;
@@ -21,11 +22,14 @@ interface User {
 
 interface Notification {
   id: string;
-  type: 'success' | 'error' | 'warning' | 'info';
+  type: 'success' | 'error' | 'warning' | 'info' | 'share' | 'vote';
   title: string;
   message?: string;
   timestamp: number;
   read?: boolean;
+  evermarkId?: string;
+  userAddress?: string;
+  metadata?: any;
 }
 
 type Theme = 'dark' | 'light' | 'system';
@@ -342,6 +346,19 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   // Calculate unread count
   const unreadCount = notifications.filter(n => !n.read).length;
+
+  // Initialize notification service
+  useEffect(() => {
+    NotificationService.initialize(addNotification);
+    
+    // Add test notifications in development
+    if (import.meta.env.DEV) {
+      // Trigger test notifications after 3 seconds to demo the system
+      setTimeout(() => {
+        NotificationService.triggerTestNotifications();
+      }, 3000);
+    }
+  }, []);
 
   // NEW: Enhanced identity information
   const identityScore = getIdentityScore();

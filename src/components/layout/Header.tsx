@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useState } from 'react';
 import { 
   MenuIcon, 
   BellIcon, 
@@ -10,6 +11,7 @@ import { useFarcasterUser } from '../../lib/farcaster';
 import { useTheme } from '../../providers/ThemeProvider';
 import { ThemeToggle } from '../ui/ThemeToggle';
 import { WalletConnect } from '../ConnectButton';
+import { NotificationDropdown } from '../notifications/NotificationDropdown';
 import { cn, useIsMobile } from '../../utils/responsive';
 
 export function Header() {
@@ -18,11 +20,12 @@ export function Header() {
   const { isInFarcaster } = useFarcasterUser();
   const { isDark } = useTheme();
   const isMobile = useIsMobile();
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
-    <header className="sticky top-0 z-50 border-b transition-colors duration-200 bg-white/95 backdrop-blur-sm border-gray-200 dark:bg-gray-900/95 dark:border-gray-800">
+    <header className="sticky top-0 z-50 border-b transition-colors duration-200 bg-app-bg-secondary backdrop-blur-sm border-app-border">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Left section */}
@@ -84,14 +87,24 @@ export function Header() {
             <ThemeToggle size="sm" />
 
             {/* Notifications */}
-            <button className="relative p-2 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-800">
-              <BellIcon className="h-5 w-5" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              )}
-            </button>
+            <div className="relative">
+              <button 
+                onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                className="relative p-2 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                <BellIcon className="h-5 w-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+              
+              <NotificationDropdown 
+                isOpen={isNotificationOpen}
+                onClose={() => setIsNotificationOpen(false)}
+              />
+            </div>
 
             {/* User info or wallet connect */}
             {isAuthenticated && user ? (

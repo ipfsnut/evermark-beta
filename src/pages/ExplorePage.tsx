@@ -17,8 +17,9 @@ import {
 
 import { useAppAuth } from '@/providers/AppContext';
 import { useFarcasterUser } from '@/lib/farcaster';
+import { themeClasses, cn } from '@/utils/theme';
 import { useTheme } from '@/providers/ThemeProvider';
-import { cn, useIsMobile } from '@/utils/responsive';
+import { useIsMobile } from '@/utils/responsive';
 
 // Import real Evermarks functionality
 import { useEvermarksState, EvermarkFeed } from '@/features/evermarks';
@@ -71,8 +72,8 @@ const ExploreStats: React.FC<{
       label: 'Verified',
       value: isLoading ? '...' : verifiedCount.toLocaleString(),
       icon: <StarIcon className="h-5 w-5" />,
-      gradient: 'from-yellow-400 to-yellow-600',
-      glow: 'shadow-yellow-500/20'
+      gradient: 'from-amber-400 to-amber-600',
+      glow: 'shadow-amber-500/20'
     }
   ];
 
@@ -88,7 +89,7 @@ const ExploreStats: React.FC<{
             "rounded-lg p-4 text-center transition-all duration-300",
             isDark 
               ? "bg-gray-800/50 border border-gray-700 hover:border-gray-600" 
-              : "bg-white/80 border border-yellow-200 hover:border-yellow-300",
+              : "bg-app-bg-card border border-app-border hover:border-app-border-hover",
             stat.glow
           )}
         >
@@ -132,7 +133,7 @@ const ExploreContent: React.FC<{
         "rounded-lg p-8 text-center border",
         isDark 
           ? "bg-gray-800/30 border-gray-700" 
-          : "bg-white/60 border-yellow-200"
+          : "bg-app-bg-card border-app-border"
       )}>
         <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full flex items-center justify-center animate-pulse">
           <CompassIcon className="h-8 w-8 text-black" />
@@ -157,7 +158,7 @@ const ExploreContent: React.FC<{
         "rounded-lg p-8 text-center border",
         isDark 
           ? "bg-gray-800/30 border-gray-700" 
-          : "bg-white/60 border-yellow-200"
+          : "bg-app-bg-card border-app-border"
       )}>
         <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full flex items-center justify-center">
           {viewMode === 'grid' ? <GridIcon className="h-8 w-8 text-black" /> : <ListIcon className="h-8 w-8 text-black" />}
@@ -227,16 +228,13 @@ export default function ExplorePage() {
   };
 
   return (
-    <div className={cn(
-      "min-h-screen transition-colors duration-200",
-      isDark ? "bg-black text-white" : "bg-yellow-50 text-gray-900"
-    )}>
+    <div className={themeClasses.page}>
       {/* Header */}
       <div className={cn(
         "border-b border-cyan-400/30",
         isDark 
           ? "bg-gradient-to-r from-gray-900 via-black to-gray-900" 
-          : "bg-gradient-to-r from-yellow-100 via-yellow-50 to-yellow-100"
+          : themeClasses.section
       )}>
         <div className="container mx-auto px-4 py-8">
           <div className="text-center space-y-6">
@@ -244,7 +242,7 @@ export default function ExplorePage() {
               <div className="w-12 h-12 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full flex items-center justify-center shadow-lg shadow-cyan-500/50">
                 <CompassIcon className="h-7 w-7 text-black" />
               </div>
-              <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-500 bg-clip-text text-transparent">
+              <h1 className={themeClasses.headingHero}>
                 EXPLORE EVERMARK BETA
               </h1>
             </div>
@@ -282,7 +280,7 @@ export default function ExplorePage() {
                 "w-full pl-12 pr-4 py-4 border rounded-lg transition-colors focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-20",
                 isDark 
                   ? "bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-cyan-400"
-                  : "bg-white border-yellow-300 text-gray-900 placeholder-gray-500 focus:border-purple-400"
+                  : "bg-app-bg-input border-app-border text-app-text-on-card placeholder-gray-500 focus:border-app-border-focus"
               )}
             />
           </div>
@@ -298,7 +296,7 @@ export default function ExplorePage() {
                 "flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors",
                 isDark 
                   ? "bg-gray-800 border-gray-600 text-white hover:bg-gray-700"
-                  : "bg-white border-yellow-300 text-gray-900 hover:bg-yellow-50"
+                  : "bg-app-bg-card border-app-border text-app-text-on-card hover:bg-app-bg-card-hover"
               )}>
                 <FilterIcon className="h-4 w-4" />
                 Filters
@@ -309,7 +307,7 @@ export default function ExplorePage() {
                 "px-4 py-2 border rounded-lg transition-colors focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-20",
                 isDark 
                   ? "bg-gray-800 border-gray-600 text-white hover:bg-gray-700 focus:border-cyan-400"
-                  : "bg-white border-yellow-300 text-gray-900 hover:bg-yellow-50 focus:border-purple-400"
+                  : "bg-app-bg-card border-app-border text-app-text-on-card hover:bg-app-bg-card-hover focus:border-purple-400"
               )}>
                 <option value="newest">Newest First</option>
                 <option value="oldest">Oldest First</option>
@@ -387,7 +385,7 @@ export default function ExplorePage() {
                 "rounded-lg p-6 text-center border",
                 isDark 
                   ? "bg-gray-800/50 border-gray-700" 
-                  : "bg-white/80 border-yellow-200"
+                  : "bg-app-bg-card border-app-border"
               )}>
                 <TagIcon className={cn(
                   "mx-auto h-12 w-12 mb-4",
@@ -427,7 +425,7 @@ export default function ExplorePage() {
                 "rounded-lg p-6 text-center border",
                 isDark 
                   ? "bg-gray-800/50 border-gray-700" 
-                  : "bg-white/80 border-yellow-200"
+                  : "bg-app-bg-card border-app-border"
               )}>
                 <TagIcon className={cn(
                   "mx-auto h-12 w-12 mb-4",
@@ -453,7 +451,7 @@ export default function ExplorePage() {
               "rounded-lg p-6 border",
               isDark 
                 ? "bg-gray-800/50 border-gray-700" 
-                : "bg-white/80 border-yellow-200"
+                : "bg-app-bg-card border-app-border"
             )}>
               <h3 className={cn(
                 "font-semibold mb-4",
@@ -466,11 +464,11 @@ export default function ExplorePage() {
                     "w-full flex items-center justify-between p-3 rounded-lg transition-colors group",
                     isDark 
                       ? "bg-gray-700/50 hover:bg-gray-700" 
-                      : "bg-yellow-100/50 hover:bg-yellow-200/50"
+                      : "bg-app-bg-secondary hover:bg-app-bg-tertiary"
                   )}
                 >
                   <div className="flex items-center">
-                    <TrendingUpIcon className="h-4 w-4 text-yellow-400 mr-3" />
+                    <TrendingUpIcon className="h-4 w-4 text-amber-400 mr-3" />
                     <span className={cn(
                       isDark ? "text-white" : "text-gray-900"
                     )}>View Leaderboard</span>
@@ -489,7 +487,7 @@ export default function ExplorePage() {
                     "w-full flex items-center justify-between p-3 rounded-lg transition-colors group",
                     isDark 
                       ? "bg-gray-700/50 hover:bg-gray-700" 
-                      : "bg-yellow-100/50 hover:bg-yellow-200/50"
+                      : "bg-app-bg-secondary hover:bg-app-bg-tertiary"
                   )}
                 >
                   <div className="flex items-center">
@@ -513,7 +511,7 @@ export default function ExplorePage() {
               "rounded-lg p-6 border",
               isDark 
                 ? "bg-gradient-to-r from-gray-800/50 to-gray-900/50 border-gray-700" 
-                : "bg-gradient-to-r from-yellow-100/50 to-white/50 border-yellow-200"
+                : "bg-app-bg-card border-app-border"
             )}>
               <h3 className={cn(
                 "font-semibold mb-4",

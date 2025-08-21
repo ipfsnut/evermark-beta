@@ -1,4 +1,4 @@
-# Governance & Voting
+# Curation Voting
 
 Evermark Protocol features a democratic voting system where community members use wEMARK tokens to curate content through seasonal voting cycles.
 

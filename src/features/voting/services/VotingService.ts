@@ -4,6 +4,7 @@ import { readContract, getContractEvents, estimateGas, getGasPrice, prepareEvent
 import { client } from '@/lib/thirdweb';
 import { base } from 'thirdweb/chains';
 import { getEvermarkVotingContract, getWEMARKContract } from '@/lib/contracts';
+import { NotificationService } from '../../../services/NotificationService';
 
 // Local constants to avoid @/lib/contracts dependency
 const CHAIN = base;
@@ -122,6 +123,16 @@ export class VotingService {
         method: "function voteForEvermark(uint256 evermarkId, uint256 votes) payable",
         params: [BigInt(evermarkId), votes]
       });
+
+      // Trigger notification for the vote (simulate for now)
+      // In a real implementation, this would be called after successful transaction
+      setTimeout(() => {
+        NotificationService.onVoteCast({
+          evermarkId,
+          voterAddress: userAddress,
+          voteAmount: votes
+        });
+      }, 1000);
 
       // Return transaction info
       return {

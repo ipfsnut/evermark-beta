@@ -6,7 +6,9 @@ The Evermark Alpha contracts have been officially retired and all user funds hav
 
 ## What Happened to Alpha
 
-The Alpha contracts were **experimental prototypes** designed to test the feasibility of the Evermark concept. After extensive testing and community feedback, we determined that the Alpha architecture had limitations that would prevent it from scaling effectively for long-term use.
+The Alpha contracts were **experimental prototypes** designed to test the feasibility of the Evermark concept. After extensive testing and community feedback, we determined that the Alpha architecture had limitations that would prevent it from scaling effectively for long-term use. Alpha Evermark NFTs will no longer be supported, and the Alpha UI has been deprecated. 
+
+The Alpha $EMARK staking contract was destroyed during an upgrade and all funds were lost. Due to the nature of the Alpha contracts, we are unable to recover any funds from the destroyed contract, but we are committed to returning all user funds from Alpha staking as liquid $EMARK tokens to the original stakers. Web3 is a rapidly evolving space, and we learned valuable lessons from the Alpha phase that will inform the future of Evermark, beginning with the Beta contracts--which have been designed to be more robust, secure, and user-friendly while also minimizing risk. Upgrade protocol can be followed correctly in the future and we will ensure that all future contracts are built with security and user experience in mind and a new, simplified architecture featuring a modular design that allows for easy upgrades without requiring fund migration.
 
 ### Key Alpha Limitations
 - **Smart contract architecture** was not optimized for gas efficiency
@@ -16,12 +18,13 @@ The Alpha contracts were **experimental prototypes** designed to test the feasib
 
 ## Fund Security & Refunds
 
-**All user funds are safe and will be returned.** If you had staked $EMARK tokens in the Alpha contracts:
+**All user funds from Alpha staking will be returned.** If you had staked $EMARK tokens in the Alpha contracts:
 
 - ✅ Your staked tokens will be **manually refunded** as liquid $EMARK
-- ⏳ Refunds are being processed individually by the team
+- ⏳ Refunds are being processed individually by the dev (will be completed by 9/1/2025)
 - ✅ All refunds will be sent to the same wallet addresses used for staking
 - ✅ Your token balance will reflect the full amount you originally staked once processed
+- ✅ You will receive an Alpha Tester NFT as a token of appreciation for your support
 
 ### Checking Your Refund
 1. Connect your wallet to the Beta application
@@ -114,7 +117,3 @@ If you have questions about the Alpha retirement or Beta transition:
 Thank you to all Alpha participants who helped us test and improve the Evermark protocol. Your feedback was invaluable in designing the Beta contracts to be more robust, efficient, and user-friendly.
 
 The Alpha phase served its purpose as a **proof of concept** and **testing ground**. The Beta phase represents the **foundation for long-term success**.
-
----
-
-*This document will be updated as the Beta testing phase progresses toward production launch.*

@@ -1,5 +1,6 @@
 // src/pages/NotFoundPage.tsx - 404 error page with cyber theme
 import { Link, useNavigate } from 'react-router-dom';
+import { themeClasses } from '../utils/theme';
 import { 
   HomeIcon, 
   CompassIcon, 
@@ -18,7 +19,7 @@ import { cn, useIsMobile } from '@/utils/responsive';
 const Animated404: React.FC = () => {
   return (
     <div className="relative">
-      <div className="text-8xl md:text-9xl font-bold bg-gradient-to-r from-red-400 via-red-500 to-red-600 bg-clip-text text-transparent mb-4 animate-pulse">
+      <div className={themeClasses.errorCodeHuge}>
         404
       </div>
       

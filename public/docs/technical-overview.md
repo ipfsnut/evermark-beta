@@ -5,7 +5,7 @@ Evermark Protocol is built on modern blockchain infrastructure to ensure permane
 ## Core Infrastructure
 
 ### Blockchain Layer
-- **Base Network**: Layer 2 solution built on Ethereum
+- **Base Network**: Layer 2 solution built on Ethereum, Base, and the OP Stack
 - **Low Fees**: Cost-effective transactions for all users
 - **Fast Finality**: Quick confirmation times
 - **Ethereum Security**: Inherits base layer security guarantees

@@ -7,6 +7,7 @@ import { useAppUI } from '../../providers/AppContext';
 import { useFarcasterUser } from '../../lib/farcaster';
 import { useTheme } from '../../providers/ThemeProvider';
 import { cn } from '../../utils/responsive';
+import { themeClasses } from '../../utils/theme';
 import { useIsMobileDevice } from '../../utils/device-detection';
 
 interface LayoutProps {
@@ -24,10 +25,7 @@ export function Layout({ children }: LayoutProps) {
   const showMobileMenu = isMobile;
 
   return (
-    <div className={cn(
-      "min-h-screen transition-colors duration-200",
-      isDark ? "bg-black text-white" : "bg-gray-50 text-gray-900"
-    )}>
+    <div className={themeClasses.page}>
       {/* Header - optimized for mobile */}
       <Header />
       

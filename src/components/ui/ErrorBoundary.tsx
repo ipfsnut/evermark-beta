@@ -1,6 +1,7 @@
 // src/components/ui/ErrorBoundary.tsx - Error boundary for graceful error handling
 import { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangleIcon, RefreshCwIcon, HomeIcon } from 'lucide-react';
+import { themeClasses } from '../../utils/theme';
 
 interface Props {
   children: ReactNode;
@@ -65,7 +66,7 @@ export class ErrorBoundary extends Component<Props, State> {
             </div>
 
             {/* Error message */}
-            <h1 className="text-2xl font-bold mb-2 bg-gradient-to-r from-red-400 to-red-600 bg-clip-text text-transparent">
+            <h1 className={themeClasses.errorHeading}>
               Something went wrong
             </h1>
             <p className="text-gray-400 mb-6">

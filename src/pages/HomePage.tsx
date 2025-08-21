@@ -18,6 +18,7 @@ import {
 import { useAppAuth } from '../providers/AppContext';
 import { useFarcasterUser } from '../lib/farcaster';
 import { useTheme } from '../providers/ThemeProvider';
+import { themeClasses } from '../utils/theme';
 import { cn, useIsMobile } from '../utils/responsive';
 import { devLog } from '../utils/debug';
 
@@ -285,7 +286,7 @@ export default function HomePage() {
   const isMobile = useIsMobile();
 
   return (
-    <div className="min-h-screen transition-colors duration-200 bg-gray-50 text-gray-900 dark:bg-black dark:text-white">
+    <div className={themeClasses.page}>
       {/* Default Farcaster Mini App Meta Tags for Homepage */}
       <FarcasterMeta
         title="Evermark Protocol"

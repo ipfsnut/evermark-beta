@@ -2,6 +2,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LeaderboardTable } from '../components/LeaderboardTable';
+import { themeClasses } from '../../../utils/theme';
 import type { LeaderboardEntry } from '../types';
 
 interface LeaderboardPageProps {
@@ -17,8 +18,8 @@ export const LeaderboardPage: React.FC<LeaderboardPageProps> = ({ className }) =
   };
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 ${className || ''}`}>
-      <div className="container mx-auto px-4 py-8">
+    <div className={`${themeClasses.page} ${className || ''}`}>
+      <div className={themeClasses.container}>
         <LeaderboardTable
           onEvermarkClick={handleEvermarkClick}
           showFilters={true}

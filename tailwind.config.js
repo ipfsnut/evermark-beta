@@ -12,76 +12,78 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Dark mode cyber theme colors
+        // App theme colors using CSS variables
+        // These automatically switch between dark/light modes
+        app: {
+          // Backgrounds
+          'bg-primary': 'var(--app-bg-primary)',
+          'bg-secondary': 'var(--app-bg-secondary)', 
+          'bg-tertiary': 'var(--app-bg-tertiary)',
+          'bg-card': 'var(--app-bg-card)',
+          'bg-card-hover': 'var(--app-bg-card-hover)',
+          'bg-input': 'var(--app-bg-input)',
+          
+          // Text colors
+          'text-primary': 'var(--app-text-primary)',
+          'text-secondary': 'var(--app-text-secondary)',
+          'text-muted': 'var(--app-text-muted)',
+          'text-on-card': 'var(--app-text-on-card)',
+          'text-accent': 'var(--app-text-accent)',
+          
+          // Borders
+          'border': 'var(--app-border)',
+          'border-hover': 'var(--app-border-hover)',
+          'border-focus': 'var(--app-border-focus)',
+          
+          // Brand colors (theme-aware)
+          'brand-primary': 'var(--app-brand-primary)',
+          'brand-secondary': 'var(--app-brand-secondary)',
+          'brand-success': 'var(--app-brand-success)',
+          'brand-warning': 'var(--app-brand-warning)',
+          'brand-error': 'var(--app-brand-error)',
+        },
+        
+        // Keep existing cyber theme for backwards compatibility
         'cyber-primary': '#00ff41',
         'cyber-secondary': '#0080ff', 
         'cyber-accent': '#ff0080',
         
-        // Evermark brand colors (used in both themes)
-        'evermark': {
-          // Primary cyan/teal spectrum
-          'primary': {
-            50: '#ecfeff',
-            100: '#cffafe',
-            200: '#a5f3fc',
-            300: '#67e8f9',
-            400: '#22d3ee',
-            500: '#06b6d4',
-            600: '#0891b2',
-            700: '#0e7490',
-            800: '#155e75',
-            900: '#164e63',
-          },
-          // Secondary purple spectrum
-          'secondary': {
-            50: '#faf5ff',
-            100: '#f3e8ff',
-            200: '#e9d5ff',
-            300: '#d8b4fe',
-            400: '#c084fc',
-            500: '#a855f7',
-            600: '#9333ea',
-            700: '#7e22ce',
-            800: '#6b21a8',
-            900: '#581c87',
-          },
-          // Accent amber spectrum
-          'accent': {
-            50: '#fffbeb',
-            100: '#fef3c7',
-            200: '#fde68a',
-            300: '#fcd34d',
-            400: '#fbbf24',
-            500: '#f59e0b',
-            600: '#d97706',
-            700: '#b45309',
-            800: '#92400e',
-            900: '#78350f',
-          },
+        // Evermark brand color palette
+        'evermark-primary': {
+          50: '#ecfeff',
+          100: '#cffafe',
+          200: '#a5f3fc',
+          300: '#67e8f9',
+          400: '#22d3ee',
+          500: '#06b6d4',
+          600: '#0891b2',
+          700: '#0e7490',
+          800: '#155e75',
+          900: '#164e63',
         },
-        
-        // Light mode specific colors
-        'light': {
-          'bg-primary': '#ffffff',
-          'bg-secondary': '#f9fafb',
-          'bg-tertiary': '#f3f4f6',
-          'text-primary': '#111827',
-          'text-secondary': '#4b5563',
-          'text-muted': '#6b7280',
-          'border': '#e5e7eb',
-          'border-hover': '#d1d5db',
+        'evermark-secondary': {
+          50: '#faf5ff',
+          100: '#f3e8ff',
+          200: '#e9d5ff',
+          300: '#d8b4fe',
+          400: '#c084fc',
+          500: '#a855f7',
+          600: '#9333ea',
+          700: '#7c3aed',
+          800: '#6b21a8',
+          900: '#581c87',
         },
-        
-        // Dark mode specific colors (for consistency)
-        'dark': {
-          'bg-primary': '#000000',
-          'bg-secondary': '#111827',
-          'bg-tertiary': '#1f2937',
-          'text-primary': '#ffffff',
-          'text-secondary': '#d1d5db',
-          'text-muted': '#9ca3af',
-          'border': '#374151',
-          'border-hover': '#4b5563',
+        'evermark-accent': {
+          50: '#fdf2f8',
+          100: '#fce7f3',
+          200: '#fbcfe8',
+          300: '#f9a8d4',
+          400: '#f472b6',
+          500: '#ec4899',
+          600: '#db2777',
+          700: '#be185d',
+          800: '#9d174d',
+          900: '#831843',
         },
       },
       boxShadow: {

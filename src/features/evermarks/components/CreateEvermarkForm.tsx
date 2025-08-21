@@ -21,6 +21,7 @@ import { useAppAuth } from '@/providers/AppContext';
 import { useUserForEvermarks } from '@/providers/IntegratedUserProvider';
 import { useTheme } from '@/providers/ThemeProvider';
 import { cn } from '@/utils/responsive';
+import { themeClasses } from '@/utils/theme';
 
 // Simple mobile detection hook
 function useIsMobile(): boolean {
@@ -275,7 +276,7 @@ export function CreateEvermarkForm({
       
       setSelectedImage(file);
       setImagePreview(previewUrl);
-      console.log('✅ Image selected with preview:', file.name, file.size, 'bytes');
+      console.log('✅ Image selected with preview:', file.name, file.size, 'bytes', 'Preview URL:', previewUrl);
     }
   }, [imagePreview]);
 
@@ -401,7 +402,7 @@ export function CreateEvermarkForm({
               <div className="w-12 h-12 bg-gradient-to-r from-green-400 to-purple-500 rounded-full flex items-center justify-center shadow-lg shadow-green-500/50">
                 <PlusIcon className="h-7 w-7 text-black" />
               </div>
-              <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-green-400 via-cyan-400 to-purple-500 bg-clip-text text-transparent">
+              <h1 className={themeClasses.headingHero}>
                 CREATE EVERMARK
               </h1>
               <button
@@ -812,21 +813,28 @@ export function CreateEvermarkForm({
                         </button>
                       </div>
                       
-                      {/* Image Preview */}
-                      {imagePreview && (
+                      {/* Image Preview - matches EvermarkCard dimensions */}
+                      {imagePreview ? (
                         <div className="mb-3">
-                          <img 
-                            src={imagePreview} 
-                            alt="Selected image preview"
-                            className="max-w-full max-h-48 rounded-lg border border-blue-500/30 object-contain bg-gray-800/50"
-                          />
+                          <div className="relative w-full h-48 sm:h-56 rounded-lg overflow-hidden border-2 border-blue-500/50 bg-gray-800">
+                            <img 
+                              src={imagePreview} 
+                              alt="Selected image preview"
+                              className="absolute inset-0 w-full h-full object-cover"
+                              onLoad={() => console.log('Image loaded successfully')}
+                              onError={(e) => console.error('Image failed to load:', e)}
+                            />
+                          </div>
                         </div>
+                      ) : (
+                        <div className="mb-3 text-xs text-gray-500">No preview available</div>
                       )}
                       
                       <div className="text-xs text-blue-400 space-y-1">
                         <div>File: {selectedImage.name}</div>
                         <div>Size: {Math.round(selectedImage.size / 1024)} KB</div>
                         <div>Type: {selectedImage.type}</div>
+                        {imagePreview && <div>Preview URL: {imagePreview.substring(0, 50)}...</div>}
                       </div>
                     </div>
                   )}
@@ -947,14 +955,18 @@ export function CreateEvermarkForm({
                         <span className="text-sm text-blue-300">Image Selected for IPFS Upload</span>
                       </div>
                       
-                      {/* Image Preview in Sidebar */}
+                      {/* Image Preview in Sidebar - matches EvermarkCard dimensions */}
                       {imagePreview && (
                         <div className="mb-2">
-                          <img 
-                            src={imagePreview} 
-                            alt="Selected image preview"
-                            className="w-full max-h-32 rounded border border-blue-500/30 object-cover bg-gray-800/50"
-                          />
+                          <div className="relative w-full h-48 rounded overflow-hidden border-2 border-blue-500/50 bg-gray-800">
+                            <img 
+                              src={imagePreview} 
+                              alt="Selected image preview"
+                              className="absolute inset-0 w-full h-full object-cover"
+                              onLoad={() => console.log('Sidebar image loaded successfully')}
+                              onError={(e) => console.error('Sidebar image failed to load:', e)}
+                            />
+                          </div>
                         </div>
                       )}
                       

@@ -2,8 +2,8 @@
 /** @jsxImportSource react */
 import React, { useState } from 'react';
 import { BookOpenIcon, FileTextIcon, ExternalLinkIcon, XIcon } from 'lucide-react';
-import { cn } from '@/utils/responsive';
-import { useTheme } from '@/providers/ThemeProvider';
+import { themeClasses, cn } from '@/utils/theme';
+import { useTheme } from '../providers/ThemeProvider';
 
 interface DocItem {
   id: string;
@@ -25,8 +25,8 @@ const DOCS_ITEMS: DocItem[] = [
     id: 'protocol-overview',
     title: 'Protocol Overview',
     description: 'Complete overview of the Evermark protocol architecture and features',
-    filename: 'protocol-overview.html',
-    type: 'html'
+    filename: 'protocol-overview.md',
+    type: 'md'
   },
   {
     id: 'token-economics',
@@ -36,10 +36,10 @@ const DOCS_ITEMS: DocItem[] = [
     type: 'md'
   },
   {
-    id: 'governance-voting',
+    id: 'curation-voting',
     title: 'Curation & Voting',
     description: 'How voting power works for content curation and ranking',
-    filename: 'governance-voting.md',
+    filename: 'curation-voting.md',
     type: 'md'
   },
   {
@@ -55,37 +55,44 @@ const DOCS_ITEMS: DocItem[] = [
     description: 'Smart contract architecture and technical implementation details',
     filename: 'technical-overview.md',
     type: 'md'
-  },
-  {
-    id: 'dropped-features',
-    title: 'Beta vs Alpha Changes',
-    description: 'Features that were modified or removed in the Beta version',
-    filename: 'dropped-features.md',
-    type: 'md'
   }
 ];
 
 export default function DocsPage() {
+  const { isDark } = useTheme();
   const [selectedDoc, setSelectedDoc] = useState<DocItem | null>(null);
   const [content, setContent] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
-  const { isDark } = useTheme();
 
   const loadDocContent = async (docItem: DocItem) => {
     setLoading(true);
     setError('');
     
     try {
-      const response = await fetch(`/docs/${docItem.filename}`);
+      const url = `/docs/${docItem.filename}`;
+      console.log('Loading doc from:', url);
+      
+      // Add cache-busting and no-cache headers
+      const response = await fetch(url, {
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
+      
       if (!response.ok) {
-        throw new Error(`Failed to load ${docItem.title}`);
+        throw new Error(`Failed to load ${docItem.title} (${response.status} ${response.statusText})`);
       }
       
       const text = await response.text();
+      console.log('Loaded doc content, length:', text.length);
+      
       setContent(text);
       setSelectedDoc(docItem);
     } catch (err) {
+      console.error('Error loading doc:', err);
       setError(err instanceof Error ? err.message : 'Failed to load documentation');
       setContent('');
     } finally {
@@ -97,34 +104,97 @@ export default function DocsPage() {
     // Enhanced markdown to HTML conversion with theme-aware classes
     const headingClass = isDark ? 'text-white' : 'text-gray-900';
     const textClass = isDark ? 'text-gray-300' : 'text-gray-700';
-    const emphasisClass = isDark ? 'text-gray-300' : 'text-gray-600';
-    const codeClass = isDark 
-      ? 'bg-gray-800 text-purple-300' 
-      : 'bg-yellow-100 text-purple-700';
+    const emphasisClass = isDark ? 'text-gray-400' : 'text-gray-600';
+    const codeClass = isDark ? 'bg-gray-800 text-green-400' : 'bg-gray-100 text-gray-800';
+    const linkClass = isDark ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-800';
+    const listClass = isDark ? 'text-gray-300' : 'text-gray-700';
+    const blockquoteClass = isDark ? 'border-gray-600 bg-gray-800/50 text-gray-300' : 'border-gray-300 bg-gray-100/50 text-gray-700';
     
-    return markdown
-      .replace(/^# (.*$)/gim, `<h1 class="text-3xl font-bold ${headingClass} mb-6">$1</h1>`)
-      .replace(/^## (.*$)/gim, `<h2 class="text-2xl font-semibold ${headingClass} mt-8 mb-4">$1</h2>`)
-      .replace(/^### (.*$)/gim, `<h3 class="text-xl font-medium ${headingClass} mt-6 mb-3">$1</h3>`)
-      .replace(/\*\*(.*)\*\*/gim, `<strong class="font-semibold ${headingClass}">$1</strong>`)
-      .replace(/\*(.*)\*/gim, `<em class="italic ${emphasisClass}">$1</em>`)
-      .replace(/`([^`]*)`/gim, `<code class="${codeClass} px-2 py-1 rounded font-mono text-sm">$1</code>`)
-      .replace(/\n\n/gim, `</p><p class="${textClass} mb-4">`)
-      .replace(/^(?!<[h|p])/gim, `<p class="${textClass} mb-4">`)
-      .replace(/\n/gim, '<br />');
+    let html = markdown;
+    
+    // Handle code blocks first (to protect them from other replacements)
+    html = html.replace(/```(\w+)?\n([\s\S]*?)```/gim, (match, lang, code) => {
+      return `<pre class="${codeClass} p-4 rounded-lg overflow-x-auto my-4"><code class="font-mono text-sm">${code.trim()}</code></pre>`;
+    });
+    
+    // Handle headings
+    html = html.replace(/^# (.*$)/gim, `<h1 class="text-3xl font-bold ${headingClass} mb-6 mt-8 first:mt-0">$1</h1>`);
+    html = html.replace(/^## (.*$)/gim, `<h2 class="text-2xl font-semibold ${headingClass} mt-8 mb-4">$1</h2>`);
+    html = html.replace(/^### (.*$)/gim, `<h3 class="text-xl font-medium ${headingClass} mt-6 mb-3">$1</h3>`);
+    html = html.replace(/^#### (.*$)/gim, `<h4 class="text-lg font-medium ${headingClass} mt-4 mb-2">$1</h4>`);
+    
+    // Handle blockquotes
+    html = html.replace(/^> (.*$)/gim, `<blockquote class="border-l-4 ${blockquoteClass} pl-4 py-2 my-4">$1</blockquote>`);
+    
+    // Handle links
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/gim, `<a href="$2" class="${linkClass} underline" target="_blank" rel="noopener noreferrer">$1</a>`);
+    
+    // Handle bold and italic
+    html = html.replace(/\*\*(.*?)\*\*/gim, `<strong class="font-semibold ${headingClass}">$1</strong>`);
+    html = html.replace(/\*(.*?)\*/gim, `<em class="italic ${emphasisClass}">$1</em>`);
+    
+    // Handle inline code
+    html = html.replace(/`([^`]+)`/gim, `<code class="${codeClass} px-2 py-1 rounded font-mono text-sm">$1</code>`);
+    
+    // Handle unordered lists
+    html = html.replace(/^\* (.*$)/gim, `<li class="${listClass} mb-1">$1</li>`);
+    html = html.replace(/^- (.*$)/gim, `<li class="${listClass} mb-1">$1</li>`);
+    
+    // Handle ordered lists
+    html = html.replace(/^\d+\. (.*$)/gim, `<li class="${listClass} mb-1">$1</li>`);
+    
+    // Wrap consecutive list items in ul/ol tags
+    html = html.replace(/(<li[^>]*>.*<\/li>\s*)+/gim, (match) => {
+      return `<ul class="list-disc pl-6 mb-4 space-y-1">${match}</ul>`;
+    });
+    
+    // Handle horizontal rules
+    html = html.replace(/^---$/gim, `<hr class="border-t ${isDark ? 'border-gray-600' : 'border-gray-300'} my-6" />`);
+    
+    // Split into paragraphs and wrap
+    const lines = html.split('\n');
+    const paragraphs: string[] = [];
+    let currentParagraph = '';
+    
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      
+      // Skip empty lines
+      if (!trimmedLine) {
+        if (currentParagraph) {
+          paragraphs.push(currentParagraph);
+          currentParagraph = '';
+        }
+        continue;
+      }
+      
+      // Don't wrap certain elements in paragraphs
+      if (trimmedLine.match(/^<(h[1-6]|ul|ol|pre|blockquote|hr)/)) {
+        if (currentParagraph) {
+          paragraphs.push(`<p class="${textClass} mb-4 leading-relaxed">${currentParagraph}</p>`);
+          currentParagraph = '';
+        }
+        paragraphs.push(trimmedLine);
+      } else {
+        if (currentParagraph) currentParagraph += ' ';
+        currentParagraph += trimmedLine;
+      }
+    }
+    
+    // Add final paragraph if exists
+    if (currentParagraph) {
+      paragraphs.push(`<p class="${textClass} mb-4 leading-relaxed">${currentParagraph}</p>`);
+    }
+    
+    return paragraphs.join('\n');
   };
 
   return (
-    <div className={cn(
-      "min-h-screen transition-colors duration-200",
-      isDark ? "bg-gray-900 text-white" : "bg-yellow-50 text-gray-900"
-    )}>
+    <div className={themeClasses.page}>
       {/* Header */}
       <div className={cn(
-        "border-b border-purple-400/30",
-        isDark 
-          ? "bg-gradient-to-r from-gray-900 via-black to-gray-900" 
-          : "bg-gradient-to-r from-yellow-100 via-yellow-50 to-yellow-100"
+        themeClasses.section,
+        "border-b border-purple-400/30"
       )}>
         <div className="container mx-auto px-4 py-8">
           <div className="text-center space-y-6">
@@ -132,7 +202,7 @@ export default function DocsPage() {
               <div className="w-12 h-12 bg-gradient-to-r from-purple-400 to-cyan-500 rounded-full flex items-center justify-center shadow-lg shadow-purple-500/50">
                 <BookOpenIcon className="h-7 w-7 text-black" />
               </div>
-              <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-purple-400 via-cyan-400 to-green-500 bg-clip-text text-transparent">
+              <h1 className={themeClasses.headingHero}>
                 DOCUMENTATION <span className="text-2xl md:text-3xl text-cyan-400 font-normal">[BETA]</span>
               </h1>
             </div>
@@ -157,10 +227,8 @@ export default function DocsPage() {
                   key={item.id}
                   onClick={() => loadDocContent(item)}
                   className={cn(
-                    "rounded-lg p-6 border transition-all duration-200 cursor-pointer hover:scale-105",
-                    isDark 
-                      ? "bg-gray-800/50 border-gray-700 hover:border-purple-400/50 hover:shadow-lg hover:shadow-purple-500/20" 
-                      : "bg-white/90 border-yellow-200 hover:border-purple-400/50 hover:shadow-lg hover:shadow-purple-500/20"
+                    themeClasses.cardInteractive,
+                    "hover:scale-105"
                   )}
                 >
                   <div className="flex items-start space-x-4">
@@ -174,25 +242,14 @@ export default function DocsPage() {
                       )} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className={cn(
-                        "text-lg font-semibold mb-2",
-                        isDark ? "text-white" : "text-gray-900"
-                      )}>
+                      <h3 className="text-lg font-semibold mb-2 text-app-text-on-card">
                         {item.title}
                       </h3>
-                      <p className={cn(
-                        "text-sm leading-relaxed",
-                        isDark ? "text-gray-400" : "text-gray-600"
-                      )}>
+                      <p className="text-sm leading-relaxed text-app-text-secondary">
                         {item.description}
                       </p>
                       <div className="mt-3 flex items-center">
-                        <span className={cn(
-                          "text-xs px-2 py-1 rounded-full",
-                          isDark 
-                            ? "bg-gray-700 text-gray-300" 
-                            : "bg-yellow-100 text-gray-700"
-                        )}>
+                        <span className="text-xs px-2 py-1 rounded-full bg-app-bg-secondary text-app-text-secondary">
                           {item.type.toUpperCase()}
                         </span>
                       </div>
@@ -203,15 +260,10 @@ export default function DocsPage() {
             </div>
 
             {/* External Resources */}
-            <div className={cn(
-              "rounded-lg p-6 border",
-              isDark 
-                ? "bg-gray-800/30 border-gray-700" 
-                : "bg-white/60 border-yellow-200"
-            )}>
+            <div className={themeClasses.card}>
               <h3 className={cn(
                 "text-lg font-semibold mb-4",
-                isDark ? "text-white" : "text-gray-900"
+                themeClasses.textOnCard
               )}>
                 External Resources
               </h3>
@@ -221,19 +273,14 @@ export default function DocsPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className={cn(
-                    "flex items-center space-x-3 p-4 rounded-lg border transition-colors",
-                    isDark 
-                      ? "bg-gray-700/30 border-gray-600 hover:border-purple-400/50 text-purple-400 hover:text-purple-300" 
-                      : "bg-yellow-50 border-yellow-300 hover:border-purple-400/50 text-purple-600 hover:text-purple-500"
+                    themeClasses.cardInteractive,
+                    "flex items-center space-x-3"
                   )}
                 >
-                  <ExternalLinkIcon className="h-5 w-5" />
+                  <ExternalLinkIcon className="h-5 w-5 text-app-text-on-card" />
                   <div>
-                    <div className="font-medium">Smart Contracts</div>
-                    <div className={cn(
-                      "text-sm",
-                      isDark ? "text-gray-400" : "text-gray-600"
-                    )}>View contract source code</div>
+                    <div className="font-medium text-app-text-on-card">Smart Contracts</div>
+                    <div className="text-sm text-app-text-secondary">View contract source code</div>
                   </div>
                 </a>
                 <a
@@ -241,19 +288,14 @@ export default function DocsPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className={cn(
-                    "flex items-center space-x-3 p-4 rounded-lg border transition-colors",
-                    isDark 
-                      ? "bg-gray-700/30 border-gray-600 hover:border-purple-400/50 text-purple-400 hover:text-purple-300" 
-                      : "bg-yellow-50 border-yellow-300 hover:border-purple-400/50 text-purple-600 hover:text-purple-500"
+                    themeClasses.cardInteractive,
+                    "flex items-center space-x-3"
                   )}
                 >
-                  <ExternalLinkIcon className="h-5 w-5" />
+                  <ExternalLinkIcon className="h-5 w-5 text-app-text-on-card" />
                   <div>
-                    <div className="font-medium">Beta Application</div>
-                    <div className={cn(
-                      "text-sm",
-                      isDark ? "text-gray-400" : "text-gray-600"
-                    )}>Frontend source code</div>
+                    <div className="font-medium text-app-text-on-card">Beta Application</div>
+                    <div className="text-sm text-app-text-secondary">Frontend source code</div>
                   </div>
                 </a>
               </div>
@@ -261,17 +303,9 @@ export default function DocsPage() {
           </div>
         ) : (
           /* Document Viewer */
-          <div className={cn(
-            "rounded-lg shadow-lg border",
-            isDark 
-              ? "bg-gray-800/50 border-gray-700" 
-              : "bg-white/90 border-yellow-200"
-          )}>
+          <div className={themeClasses.cardLarge}>
             {/* Document Header */}
-            <div className={cn(
-              "flex items-center justify-between p-6 border-b",
-              isDark ? "border-gray-700" : "border-yellow-200"
-            )}>
+            <div className="flex items-center justify-between p-6 border-b border-app-border">
               <div className="flex items-center space-x-4">
                 <div className={cn(
                   "p-2 rounded-lg",
@@ -295,12 +329,7 @@ export default function DocsPage() {
               </div>
               <button
                 onClick={() => setSelectedDoc(null)}
-                className={cn(
-                  "p-2 rounded-lg transition-colors",
-                  isDark 
-                    ? "text-gray-400 hover:text-white hover:bg-gray-700" 
-                    : "text-gray-600 hover:text-gray-900 hover:bg-yellow-100"
-                )}
+                className="p-2 rounded-lg transition-colors text-app-text-secondary hover:text-app-text-primary hover:bg-app-bg-secondary"
                 title="Back to documentation list"
               >
                 <XIcon className="h-5 w-5" />

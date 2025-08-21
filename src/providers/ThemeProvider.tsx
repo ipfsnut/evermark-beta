@@ -52,7 +52,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     // Update meta theme-color for mobile browsers and Farcaster frames
     const metaThemeColor = document.querySelector('meta[name="theme-color"]');
     if (metaThemeColor) {
-      metaThemeColor.setAttribute('content', newTheme === 'dark' ? '#0a0a0a' : '#ffffff');
+      metaThemeColor.setAttribute('content', newTheme === 'dark' ? '#0a0a0a' : '#1e293b');
     }
     
     // Also update viewport meta for better mobile experience
@@ -116,23 +116,23 @@ export function useThemeClasses() {
   const { isDark, isLight } = useTheme();
   
   return {
-    // Background classes - clean, professional light theme
+    // Background classes - card-focused design
     bg: {
-      primary: isDark ? 'bg-black' : 'bg-white',
-      secondary: isDark ? 'bg-gray-900' : 'bg-gray-50',
-      tertiary: isDark ? 'bg-gray-800' : 'bg-gray-100',
+      primary: isDark ? 'bg-black' : 'bg-slate-800',
+      secondary: isDark ? 'bg-gray-900' : 'bg-slate-700',
+      tertiary: isDark ? 'bg-gray-800' : 'bg-slate-600',
       card: isDark ? 'bg-gray-900' : 'bg-white',
       hover: isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-50',
       accent: isDark ? 'bg-gradient-to-r from-cyan-500/10 to-purple-500/10' : 'bg-gradient-to-r from-evermark-primary-50 to-evermark-secondary-50'
     },
     
-    // Text classes
+    // Text classes - optimized for card-based design
     text: {
-      primary: isDark ? 'text-white' : 'text-gray-900',
-      secondary: isDark ? 'text-gray-300' : 'text-gray-600',
-      muted: isDark ? 'text-gray-400' : 'text-gray-500',
-      inverse: isDark ? 'text-gray-900' : 'text-white',
-      accent: isDark ? 'text-cyan-400' : 'text-evermark-primary-600'
+      primary: isDark ? 'text-white' : 'text-slate-100',
+      secondary: isDark ? 'text-gray-300' : 'text-slate-300',
+      muted: isDark ? 'text-gray-400' : 'text-slate-400',
+      inverse: isDark ? 'text-gray-900' : 'text-slate-900',
+      accent: isDark ? 'text-cyan-400' : 'text-evermark-primary-400'
     },
     
     // Border classes

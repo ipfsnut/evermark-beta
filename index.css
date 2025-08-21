@@ -2,35 +2,76 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Base styles for cyber theme - Mobile First */
+/* App Theme Variables - Single Source of Truth */
 @layer base {
-  html {
-    -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile */
-    -webkit-touch-callout: none; /* Disable callout on long press */
+  /* Root CSS variables for theme switching */
+  :root {
+    /* Light Mode - High contrast readable components on dark gradient background */
+    --app-bg-primary: #1e293b;      /* not used - page always has gradient */
+    --app-bg-secondary: rgba(203, 213, 225, 0.2);  /* light grey layout sections */
+    --app-bg-tertiary: rgba(203, 213, 225, 0.1);   /* very subtle areas */
+    --app-bg-card: rgba(241, 245, 249, 0.85);      /* softer light cards, less bright */
+    --app-bg-card-hover: rgba(248, 250, 252, 0.90); /* slightly more opaque on hover */
+    --app-bg-input: rgba(248, 250, 252, 0.90);      /* softer inputs, less bright */
+    
+    --app-text-primary: #1e293b;    /* dark text on light gradient background */
+    --app-text-secondary: #475569;  /* dark secondary text on light gradient */
+    --app-text-muted: #64748b;      /* muted dark text on light gradient */
+    --app-text-on-card: #0f172a;    /* midnight black text on light cards ALWAYS */
+    --app-text-accent: #0891b2;     /* cyan accent */
+    
+    --app-border: rgba(148, 163, 184, 0.3);     /* subtle borders */
+    --app-border-hover: rgba(8, 145, 178, 0.6); /* accent borders */
+    --app-border-focus: #0891b2;    /* solid focus rings */
+    
+    --app-brand-primary: #0891b2;   /* cyan-600 */
+    --app-brand-secondary: #7c3aed; /* violet-600 */
+    --app-brand-success: #059669;   /* emerald-600 */
+    --app-brand-warning: #d97706;   /* amber-600 */
+    --app-brand-error: #dc2626;     /* red-600 */
   }
   
-  html.dark {
+  /* Dark Mode - Transparent components that blend with gradient background */
+  .dark {
+    --app-bg-primary: #000000;      /* not used - page always has gradient */
+    --app-bg-secondary: rgba(17, 24, 39, 0.4);     /* light grey layout sections */
+    --app-bg-tertiary: rgba(31, 41, 55, 0.3);      /* very subtle areas */
+    --app-bg-card: rgba(31, 41, 55, 0.5);          /* dark cards in dark mode */
+    --app-bg-card-hover: rgba(31, 41, 55, 0.7);    /* dark card hover */
+    --app-bg-input: rgba(17, 24, 39, 0.7);         /* dark inputs in dark mode */
+    
+    --app-text-primary: #ffffff;    /* white - main text on dark gradient */
+    --app-text-secondary: #d1d5db;  /* gray-300 - secondary text on dark gradient */
+    --app-text-muted: #9ca3af;      /* gray-400 - muted text on dark gradient */
+    --app-text-on-card: #ffffff;    /* white text on dark cards */
+    --app-text-accent: #22d3ee;     /* cyan-400 - accent text */
+    
+    --app-border: rgba(55, 65, 81, 0.6);       /* transparent borders */
+    --app-border-hover: rgba(34, 211, 238, 0.8); /* accent borders */
+    --app-border-focus: #22d3ee;    /* solid focus rings */
+    
+    --app-brand-primary: #22d3ee;   /* cyan-400 */
+    --app-brand-secondary: #a855f7; /* violet-500 */
+    --app-brand-success: #10b981;   /* emerald-500 */
+    --app-brand-warning: #f59e0b;   /* amber-500 */
+    --app-brand-error: #ef4444;     /* red-500 */
+    
     color-scheme: dark;
   }
   
-  html.light {
+  :not(.dark) {
     color-scheme: light;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
   }
 
   body {
     @apply antialiased;
-    
-    /* Dark mode body styles */
-    &.dark {
-      @apply bg-black text-white;
-      @apply selection:bg-cyber-primary selection:bg-opacity-30 selection:text-white;
-    }
-    
-    /* Light mode body styles */
-    &:not(.dark) {
-      @apply bg-white text-gray-900;
-      @apply selection:bg-evermark-primary-200 selection:text-evermark-primary-900;
-    }
+    background-color: var(--app-bg-primary);
+    color: var(--app-text-primary);
     
     /* Prevent overscroll bounce on iOS */
     overscroll-behavior: none;
@@ -41,6 +82,11 @@
     /* Prevent text selection on UI elements */
     user-select: none;
     -webkit-user-select: none;
+  }
+  
+  body ::selection {
+    background-color: var(--app-brand-primary);
+    opacity: 0.3;
   }
   
   /* Allow text selection in content areas */
@@ -118,10 +164,12 @@
   }
   
   :not(.dark) .card-cyber {
-    @apply bg-white backdrop-blur-sm;
-    @apply border border-gray-200 hover:border-evermark-primary-400;
-    @apply transition-all duration-300 shadow-sm;
-    @apply hover:shadow-lg;
+    @apply bg-white rounded-xl p-6;
+    @apply border border-gray-200/50;
+    @apply shadow-xl shadow-black/20;
+    @apply hover:shadow-2xl hover:shadow-black/30 hover:-translate-y-1;
+    @apply transition-all duration-300 ease-out;
+    @apply backdrop-blur-sm;
   }
 
   /* Input field styling */
@@ -133,9 +181,9 @@
   }
   
   :not(.dark) .input-cyber {
-    @apply bg-white border border-gray-300;
+    @apply bg-white/90 border border-cyan-200;
     @apply focus:border-evermark-primary-500 focus:ring-2 focus:ring-evermark-primary-500 focus:ring-opacity-20;
-    @apply text-gray-900 placeholder-gray-400;
+    @apply text-slate-900 placeholder-slate-500;
     @apply transition-all duration-200;
   }
 
@@ -154,8 +202,8 @@
   
   :not(.dark) .nav-link {
     @apply flex items-center px-3 py-2 rounded-lg transition-all duration-200;
-    @apply text-gray-600 hover:text-gray-900 hover:bg-gray-100;
-    @apply border border-transparent hover:border-gray-200;
+    @apply text-slate-700 hover:text-slate-900 hover:bg-cyan-100/60;
+    @apply border border-transparent hover:border-cyan-200;
   }
 
   :not(.dark) .nav-link.active {
@@ -393,10 +441,13 @@
   }
   
   :not(.dark) .card-primary {
-    @apply bg-white backdrop-blur-sm shadow-sm;
-    @apply border border-evermark-primary-200;
-    @apply hover:border-evermark-primary-400 hover:shadow-lg;
-    @apply transition-all duration-300;
+    @apply bg-white rounded-xl p-6;
+    @apply border border-evermark-primary-200/50;
+    @apply shadow-xl shadow-evermark-primary-500/10;
+    @apply hover:shadow-2xl hover:shadow-evermark-primary-500/20 hover:-translate-y-1;
+    @apply hover:border-evermark-primary-400;
+    @apply transition-all duration-300 ease-out;
+    @apply backdrop-blur-sm;
   }
 
   .dark .card-secondary {
@@ -407,10 +458,50 @@
   }
   
   :not(.dark) .card-secondary {
-    @apply bg-white backdrop-blur-sm shadow-sm;
-    @apply border border-evermark-secondary-200;
-    @apply hover:border-evermark-secondary-400 hover:shadow-lg;
-    @apply transition-all duration-300;
+    @apply bg-white rounded-xl p-6;
+    @apply border border-evermark-secondary-200/50;
+    @apply shadow-xl shadow-evermark-secondary-500/10;
+    @apply hover:shadow-2xl hover:shadow-evermark-secondary-500/20 hover:-translate-y-1;
+    @apply hover:border-evermark-secondary-400;
+    @apply transition-all duration-300 ease-out;
+    @apply backdrop-blur-sm;
+  }
+
+  /* Evermark content cards - enhanced card appearance */
+  .dark .evermark-card {
+    @apply bg-gray-900/80 rounded-2xl p-8;
+    @apply border border-gray-700/50;
+    @apply shadow-2xl shadow-black/50;
+    @apply hover:shadow-2xl hover:shadow-cyan-500/25 hover:-translate-y-2;
+    @apply hover:border-cyan-500/50;
+    @apply transition-all duration-500 ease-out;
+    @apply backdrop-blur-md relative overflow-hidden;
+  }
+  
+  :not(.dark) .evermark-card {
+    @apply bg-white rounded-2xl p-8;
+    @apply border border-gray-200/30;
+    @apply shadow-2xl shadow-black/15;
+    @apply hover:shadow-2xl hover:shadow-evermark-primary-500/25 hover:-translate-y-2;
+    @apply hover:border-evermark-primary-300;
+    @apply transition-all duration-500 ease-out;
+    @apply backdrop-blur-md relative overflow-hidden;
+  }
+  
+  /* Card shimmer effect for light mode */
+  :not(.dark) .evermark-card::before {
+    content: '';
+    @apply absolute inset-0 opacity-0 hover:opacity-100;
+    @apply bg-gradient-to-r from-transparent via-evermark-primary-100/20 to-transparent;
+    @apply transition-opacity duration-500 pointer-events-none;
+  }
+  
+  /* Card shimmer effect for dark mode */
+  .dark .evermark-card::before {
+    content: '';
+    @apply absolute inset-0 opacity-0 hover:opacity-100;
+    @apply bg-gradient-to-r from-transparent via-cyan-500/10 to-transparent;
+    @apply transition-opacity duration-500 pointer-events-none;
   }
 
   /* Status indicators */

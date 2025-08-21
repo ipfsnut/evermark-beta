@@ -67,7 +67,7 @@ Period Rate = Annual Rate × (Period Duration / 365 days)
 ### Platform Revenue → Ecosystem
 1. **User Fees**: Platform generates ETH from user activity
 2. **Fee Collection**: FeeCollector converts ETH to WEMARK tokens
-3. **Reward Funding**: Admins fund reward pools with WETH and EMARK
+3. **Reward Funding**: Clanker trading fees fund reward pools with WETH and EMARK
 4. **Distribution**: Rewards flow to wEMARK stakers proportionally
 
 ### Token Utility Cycle

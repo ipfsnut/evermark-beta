@@ -2,7 +2,7 @@
 import { CreateEvermarkForm } from '@/features/evermarks';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeftIcon } from 'lucide-react';
-
+import { themeClasses } from '@/utils/theme';
 
 export default function CreatePage() {
   const navigate = useNavigate();
@@ -16,12 +16,12 @@ export default function CreatePage() {
   };
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className={themeClasses.page}>
       {/* Back navigation */}
       <div className="container mx-auto px-4 py-4">
         <button
           onClick={() => navigate(-1)}
-          className="inline-flex items-center text-sm text-gray-400 hover:text-white transition-colors mb-4"
+          className="inline-flex items-center text-sm text-app-text-secondary hover:text-app-text-primary transition-colors mb-4"
         >
           <ArrowLeftIcon className="w-4 h-4 mr-1" />
           Back

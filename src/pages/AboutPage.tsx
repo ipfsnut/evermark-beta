@@ -10,8 +10,8 @@ import {
   VoteIcon,
   TrendingUpIcon
 } from 'lucide-react';
+import { themeClasses, cn } from '@/utils/theme';
 import { useTheme } from '@/providers/ThemeProvider';
-import { cn } from '@/utils/responsive';
 
 export default function AboutPage() {
   const { isDark } = useTheme();
@@ -46,34 +46,22 @@ export default function AboutPage() {
       "rounded-lg p-6 border transition-colors",
       isDark 
         ? "bg-gray-900 border-gray-800 hover:border-cyan-500/50"
-        : "bg-white/90 border-yellow-200 hover:border-purple-400/50"
+        : "bg-app-bg-card border-app-border hover:border-app-border-hover"
     )}>
       <div className="flex items-start gap-4">
-        <div className={cn(
-          "p-2 rounded-lg flex-shrink-0",
-          isDark ? "bg-cyan-500/10" : "bg-purple-100/80"
-        )}>
-          <Icon className={cn(
-            "w-5 h-5",
-            isDark ? "text-cyan-400" : "text-purple-600"
-          )} />
+        <div className={themeClasses.iconContainer}>
+          <Icon className={themeClasses.iconPrimary} />
         </div>
         <div className="flex-1">
-          <h3 className={cn(
-            "text-lg font-semibold mb-2",
-            isDark ? "text-white" : "text-gray-900"
-          )}>{title}</h3>
-          <p className={cn(
-            "text-sm mb-4",
-            isDark ? "text-gray-400" : "text-gray-600"
-          )}>{description}</p>
+          <h3 className={themeClasses.heading}>{title}</h3>
+          <p className={themeClasses.description}>{description}</p>
           {address ? (
             <div className="space-y-2">
               <div className={cn(
                 "font-mono text-xs p-2 rounded break-all",
                 isDark 
                   ? "text-gray-300 bg-gray-800" 
-                  : "text-gray-700 bg-yellow-100/50"
+                  : "text-app-text-on-card bg-app-bg-secondary"
               )}>
                 {address}
               </div>
@@ -103,14 +91,11 @@ export default function AboutPage() {
   );
 
   return (
-    <div className={cn(
-      "min-h-screen transition-colors duration-200",
-      isDark ? "bg-black text-white" : "bg-yellow-50 text-gray-900"
-    )}>
+    <div className={themeClasses.page}>
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
+          <h1 className={`${themeClasses.headingLarge} mb-4`}>
             About
           </h1>
           <p className="text-xl text-gray-300 max-w-2xl mx-auto">
@@ -128,7 +113,7 @@ export default function AboutPage() {
             "rounded-lg p-6 border",
             isDark 
               ? "bg-gray-900 border-gray-800" 
-              : "bg-white/90 border-yellow-200"
+              : "bg-app-bg-card border-app-border"
           )}>
             <div className={cn(
               "border rounded-lg p-4 mb-6",
@@ -182,7 +167,7 @@ export default function AboutPage() {
               "rounded-lg p-6 border",
               isDark 
                 ? "bg-gray-900 border-gray-800" 
-                : "bg-white/90 border-yellow-200"
+                : "bg-app-bg-card border-app-border"
             )}>
               <BookOpenIcon className={cn(
                 "w-8 h-8 mb-4",
@@ -203,7 +188,7 @@ export default function AboutPage() {
               "rounded-lg p-6 border",
               isDark 
                 ? "bg-gray-900 border-gray-800" 
-                : "bg-white/90 border-yellow-200"
+                : "bg-app-bg-card border-app-border"
             )}>
               <VoteIcon className={cn(
                 "w-8 h-8 mb-4",
@@ -224,7 +209,7 @@ export default function AboutPage() {
               "rounded-lg p-6 border",
               isDark 
                 ? "bg-gray-900 border-gray-800" 
-                : "bg-white/90 border-yellow-200"
+                : "bg-app-bg-card border-app-border"
             )}>
               <TrendingUpIcon className={cn(
                 "w-8 h-8 mb-4",
@@ -315,7 +300,7 @@ export default function AboutPage() {
                 "rounded-lg p-6 border transition-colors group",
                 isDark 
                   ? "bg-gray-900 border-gray-800 hover:border-cyan-500/50"
-                  : "bg-white/90 border-yellow-200 hover:border-purple-400/50"
+                  : "bg-app-bg-card border-app-border hover:border-app-border-hover"
               )}
             >
               <div className="flex items-center gap-4">
@@ -351,7 +336,7 @@ export default function AboutPage() {
                   "rounded-lg p-6 border transition-colors group",
                   isDark 
                     ? "bg-gray-900 border-gray-800 hover:border-cyan-500/50"
-                    : "bg-white/90 border-yellow-200 hover:border-purple-400/50"
+                    : "bg-app-bg-card border-app-border hover:border-app-border-hover"
                 )}
               >
                 <div className="flex items-center gap-4">
@@ -386,7 +371,7 @@ export default function AboutPage() {
                   "rounded-lg p-6 border transition-colors group",
                   isDark 
                     ? "bg-gray-900 border-gray-800 hover:border-cyan-500/50"
-                    : "bg-white/90 border-yellow-200 hover:border-purple-400/50"
+                    : "bg-app-bg-card border-app-border hover:border-app-border-hover"
                 )}
               >
                 <div className="flex items-center gap-4">
@@ -419,7 +404,7 @@ export default function AboutPage() {
         {/* Footer */}
         <div className={cn(
           "text-center pt-8 border-t",
-          isDark ? "border-gray-800" : "border-yellow-200"
+          isDark ? "border-gray-800" : "border-app-border"
         )}>
           <p className={cn(
             "text-sm",
