@@ -14,7 +14,20 @@
     "splashImageUrl": "https://evermarks.net/splash.png",
     "splashBackgroundColor": "#7c3aed",
     "webhookUrl": "https://evermarks.net/.netlify/functions/webhook",
+    "subtitle": "Preserve your content forever",
+    "description": "Create, preserve, and curate digital content on-chain with decentralized voting and rewards. Turn your posts, articles, and ideas into permanent NFT Evermarks.",
+    "primaryCategory": "social",
+    "tags": ["content", "nft", "onchain", "curation", "web3"],
+    "heroImageUrl": "https://evermarks.net/og-image.png",
+    "tagline": "Forever content, onchain",
+    "ogTitle": "Evermark - Content Forever",
+    "ogDescription": "Create, preserve, and curate digital content on-chain with decentralized voting and rewards.",
+    "ogImageUrl": "https://evermarks.net/og-image.png",
     "requiredChains": ["eip155:84532", "eip155:8453"],
+    "requiredCapabilities": [
+      "actions.signIn",
+      "wallet.getEthereumProvider"
+    ],
     "manifestUrl": "https://evermarks.net/manifest.json"
   }
 }
