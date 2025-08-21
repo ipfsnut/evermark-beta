@@ -22,6 +22,7 @@ import { useUserForEvermarks } from '@/providers/IntegratedUserProvider';
 import { useTheme } from '@/providers/ThemeProvider';
 import { cn } from '@/utils/responsive';
 import { themeClasses } from '@/utils/theme';
+import { WalletConnect } from '@/components/ConnectButton';
 
 // Simple mobile detection hook
 function useIsMobile(): boolean {
@@ -351,33 +352,8 @@ export function CreateEvermarkForm({
     navigate
   ]);
 
-  // Show authentication prompt if not connected
-  if (!isAuthenticated) {
-    return (
-      <div className={cn(
-        "border rounded-lg p-12 text-center",
-        isDark 
-          ? "bg-gray-800/30 border-gray-700" 
-          : "bg-white border-gray-300",
-        className
-      )}>
-        <PlusIcon className={cn(
-          "mx-auto h-16 w-16 mb-6",
-          isDark ? "text-gray-500" : "text-gray-400"
-        )} />
-        <h3 className={cn(
-          "text-2xl font-medium mb-4",
-          isDark ? "text-white" : "text-gray-900"
-        )}>Connect to Create</h3>
-        <p className={cn(
-          "mb-6 max-w-md mx-auto",
-          isDark ? "text-gray-400" : "text-gray-600"
-        )}>
-          Please connect your wallet to create an Evermark
-        </p>
-      </div>
-    );
-  }
+  // Add this import at the top if not already imported
+  const isFormDisabled = !isAuthenticated;
 
   // Debug logging removed for cleaner console
 
@@ -552,6 +528,24 @@ export function CreateEvermarkForm({
                 </div>
               </div>
 
+              {/* Wallet Connection Prompt */}
+              {!isAuthenticated && (
+                <div className={cn(
+                  "mb-6 p-4 border rounded-lg bg-amber-500/10 border-amber-500/30"
+                )}>
+                  <div className="flex items-start gap-3">
+                    <AlertCircleIcon className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <h3 className="text-amber-400 font-medium mb-2">Connect Wallet Required</h3>
+                      <p className="text-amber-200 text-sm mb-3">
+                        Connect your wallet to create and mint Evermarks. You can explore the form below, but you'll need to connect to submit.
+                      </p>
+                      <WalletConnect className="inline-flex" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Content Type Selection */}
                 <div className="space-y-3">
@@ -604,8 +598,10 @@ export function CreateEvermarkForm({
                     value={formData.title}
                     onChange={(e) => handleFieldChange('title', e.target.value)}
                     placeholder="Enter a descriptive title..."
+                    disabled={isFormDisabled}
                     className={cn(
                       "w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-opacity-20 transition-colors",
+                      isFormDisabled && "opacity-50 cursor-not-allowed",
                       isDark 
                         ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-cyan-400" 
                         : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-purple-400 focus:ring-purple-400"
@@ -633,8 +629,10 @@ export function CreateEvermarkForm({
                     value={formData.description}
                     onChange={(e) => handleFieldChange('description', e.target.value)}
                     placeholder="Describe this content and why it's worth preserving..."
+                    disabled={isFormDisabled}
                     className={cn(
                       "w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-opacity-20 resize-none transition-colors",
+                      isFormDisabled && "opacity-50 cursor-not-allowed",
                       isDark 
                         ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-cyan-400" 
                         : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-purple-400 focus:ring-purple-400"
@@ -665,8 +663,10 @@ export function CreateEvermarkForm({
                       value={formData.sourceUrl}
                       onChange={(e) => handleFieldChange('sourceUrl', e.target.value)}
                       placeholder="https://example.com/content"
+                      disabled={isFormDisabled}
                       className={cn(
                         "flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-opacity-20 transition-colors",
+                        isFormDisabled && "opacity-50 cursor-not-allowed",
                         isDark 
                           ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-cyan-400" 
                           : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-purple-400 focus:ring-purple-400"
@@ -676,7 +676,11 @@ export function CreateEvermarkForm({
                       <button
                         type="button"
                         onClick={handleAutoDetect}
-                        className="px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                        disabled={isFormDisabled}
+                        className={cn(
+                          "px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors",
+                          isFormDisabled && "opacity-50 cursor-not-allowed"
+                        )}
                         title="Auto-detect content"
                       >
                         <ZapIcon className="h-4 w-4" />
@@ -700,18 +704,19 @@ export function CreateEvermarkForm({
                       onChange={(e) => setTagInput(e.target.value)}
                       onKeyPress={handleTagKeyPress}
                       placeholder="Add tags..."
+                      disabled={isFormDisabled || tags.length >= 10}
                       className={cn(
                         "flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-opacity-20 transition-colors",
+                        (isFormDisabled || tags.length >= 10) && "opacity-50 cursor-not-allowed",
                         isDark 
                           ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-cyan-400" 
                           : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-purple-400 focus:ring-purple-400"
                       )}
-                      disabled={tags.length >= 10}
                     />
                     <button
                       type="button"
                       onClick={handleAddTag}
-                      disabled={!tagInput.trim() || tags.length >= 10}
+                      disabled={isFormDisabled || !tagInput.trim() || tags.length >= 10}
                       className={cn(
                         "px-4 py-3 text-white rounded-lg transition-colors",
                         isDark 

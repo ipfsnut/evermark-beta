@@ -122,13 +122,8 @@
   <!-- Farcaster SDK Initialization -->
   <script>
     (function() {
-      // Only initialize if we detected Farcaster environment
-      if (!window.__evermark_farcaster_detected) {
-        console.log('🖥️ Regular browser - no SDK initialization needed');
-        return;
-      }
-      
-      console.log('📱 Farcaster environment - initializing SDK...');
+      // ALWAYS try to load SDK for Mini Apps, regardless of detection
+      console.log('🔄 Loading Farcaster SDK for Mini App support...');
       
       // Load and initialize Farcaster SDK
       const loadSDK = () => {

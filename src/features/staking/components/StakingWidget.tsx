@@ -13,6 +13,7 @@ import {
 import { StakeForm } from './StakeForm';
 import { StakingService } from '../services/StakingService';
 import type { UseStakingStateReturn } from '../types';
+import { WalletConnect } from '@/components/ConnectButton';
 
 interface StakingWidgetProps {
   stakingState: UseStakingStateReturn;
@@ -122,17 +123,7 @@ export function StakingWidget({ stakingState, className = '' }: StakingWidgetPro
     }
   };
 
-  if (!isConnected) {
-    return (
-      <div className={`bg-gray-800/50 border border-gray-700 rounded-lg p-6 ${className}`}>
-        <div className="text-center py-8">
-          <LockIcon className="mx-auto h-12 w-12 text-gray-500 mb-4" />
-          <h3 className="text-lg font-medium text-white mb-2">Connect Wallet</h3>
-          <p className="text-gray-400">Connect your wallet to access staking features</p>
-        </div>
-      </div>
-    );
-  }
+  const isDisabled = !isConnected;
 
   return (
     <div className={`bg-gray-800/50 border border-gray-700 rounded-lg shadow-lg ${className}`}>
@@ -146,6 +137,22 @@ export function StakingWidget({ stakingState, className = '' }: StakingWidgetPro
           Stake EMARK tokens to receive wEMARK and participate in content curation
         </p>
       </div>
+
+      {/* Wallet Connection Prompt */}
+      {!isConnected && (
+        <div className="p-4 border-b border-gray-700 bg-amber-500/10 border-amber-500/30">
+          <div className="flex items-start gap-3">
+            <LockIcon className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="text-amber-400 font-medium mb-2">Connect Wallet Required</h3>
+              <p className="text-amber-200 text-sm mb-3">
+                Connect your wallet to view your staking balance and stake/unstake EMARK tokens. You can explore the interface below.
+              </p>
+              <WalletConnect className="inline-flex" />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Status Messages */}
       {(localError || localSuccess) && (
@@ -219,6 +226,7 @@ export function StakingWidget({ stakingState, className = '' }: StakingWidgetPro
         {activeTab === 'stake' && (
           <StakeForm 
             stakingState={stakingState}
+            disabled={isDisabled}
             onSuccess={() => {
               setLocalSuccess('Staking transaction submitted successfully!');
               setTimeout(() => setLocalSuccess(null), 5000);
@@ -250,7 +258,7 @@ export function StakingWidget({ stakingState, className = '' }: StakingWidgetPro
                     }}
                     className="w-full px-4 py-3 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 focus:ring-opacity-20 transition-colors pr-24"
                     placeholder="0.0"
-                    disabled={isSubmitting || isUnstaking}
+                    disabled={isDisabled || isSubmitting || isUnstaking}
                   />
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center space-x-2">
                     <span className="text-sm text-gray-400">wEMARK</span>
@@ -258,7 +266,7 @@ export function StakingWidget({ stakingState, className = '' }: StakingWidgetPro
                       type="button"
                       onClick={handleMaxUnstake}
                       className="text-xs text-purple-400 hover:text-purple-300 font-medium transition-colors"
-                      disabled={isSubmitting || isUnstaking}
+                      disabled={isDisabled || isSubmitting || isUnstaking}
                     >
                       MAX
                     </button>
@@ -272,7 +280,7 @@ export function StakingWidget({ stakingState, className = '' }: StakingWidgetPro
 
               <button
                 type="submit"
-                disabled={!unstakeAmount || isSubmitting || isUnstaking}
+                disabled={isDisabled || !unstakeAmount || isSubmitting || isUnstaking}
                 className="w-full flex items-center justify-center px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               >
                 {isSubmitting || isUnstaking ? (
@@ -329,7 +337,7 @@ export function StakingWidget({ stakingState, className = '' }: StakingWidgetPro
                   {stakingInfo.canClaimUnbonding ? (
                     <button
                       onClick={handleCompleteUnstake}
-                      disabled={isSubmitting}
+                      disabled={isDisabled || isSubmitting}
                       className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 font-medium"
                     >
                       {isSubmitting ? 'Processing...' : 'Claim EMARK'}
@@ -337,7 +345,7 @@ export function StakingWidget({ stakingState, className = '' }: StakingWidgetPro
                   ) : (
                     <button
                       onClick={handleCancelUnbonding}
-                      disabled={isSubmitting}
+                      disabled={isDisabled || isSubmitting}
                       className="px-4 py-2 text-orange-400 hover:text-orange-300 hover:bg-orange-900/30 transition-colors disabled:opacity-50 rounded-lg border border-orange-500/30"
                     >
                       <XIcon className="h-4 w-4 inline mr-1" />

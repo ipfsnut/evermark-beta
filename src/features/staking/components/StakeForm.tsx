@@ -17,9 +17,10 @@ interface StakeFormProps {
   stakingState: UseStakingStateReturn;
   onSuccess?: () => void;
   className?: string;
+  disabled?: boolean;
 }
 
-export function StakeForm({ stakingState, onSuccess, className = '' }: StakeFormProps) {
+export function StakeForm({ stakingState, onSuccess, className = '', disabled = false }: StakeFormProps) {
   const [amount, setAmount] = useState('');
   const [validation, setValidation] = useState<StakingValidation>({ 
     isValid: false, 
@@ -207,7 +208,7 @@ export function StakeForm({ stakingState, onSuccess, className = '' }: StakeForm
                   : "bg-white/90 border border-yellow-300 text-gray-900 placeholder-gray-500 focus:border-purple-400"
               )}
               placeholder="0.0"
-              disabled={isSubmitting || isStaking}
+              disabled={disabled || isSubmitting || isStaking}
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center space-x-2">
               <span className="text-sm text-gray-400">EMARK</span>
@@ -215,7 +216,7 @@ export function StakeForm({ stakingState, onSuccess, className = '' }: StakeForm
                 type="button"
                 onClick={handleMaxClick}
                 className="text-xs text-purple-400 hover:text-purple-300 font-medium transition-colors"
-                disabled={isSubmitting || isStaking}
+                disabled={disabled || isSubmitting || isStaking}
               >
                 MAX
               </button>
@@ -274,7 +275,7 @@ export function StakeForm({ stakingState, onSuccess, className = '' }: StakeForm
             <button
               type="button"
               onClick={handleApproval}
-              disabled={!validation.isValid || isApproving || !amount}
+              disabled={disabled || !validation.isValid || isApproving || !amount}
               className="w-full flex items-center justify-center px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
               {isApproving ? (
@@ -295,7 +296,7 @@ export function StakeForm({ stakingState, onSuccess, className = '' }: StakeForm
             <form onSubmit={handleStake}>
               <button
                 type="submit"
-                disabled={!validation.isValid || isSubmitting || isStaking || !amount || !approvedAmount}
+                disabled={disabled || !validation.isValid || isSubmitting || isStaking || !amount || !approvedAmount}
                 className="w-full flex items-center justify-center px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               >
                 {isSubmitting || isStaking ? (

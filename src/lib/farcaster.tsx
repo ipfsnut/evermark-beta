@@ -80,16 +80,14 @@ export function FarcasterProvider({ children }: FarcasterProviderProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Initialize Frame SDK and detect user
+  // Initialize Frame SDK - ALWAYS attempt initialization for Mini Apps
   useEffect(() => {
-    if (!isInFarcaster) return;
-
     const initializeFrameSDK = async () => {
       try {
         setIsLoading(true);
         setError(null);
 
-        // Wait for Frame SDK to be available
+        // Wait for Frame SDK to be available (required for Mini Apps)
         let attempts = 0;
         const maxAttempts = 50;
         
@@ -99,12 +97,23 @@ export function FarcasterProvider({ children }: FarcasterProviderProps) {
         }
 
         if (!window.FrameSDK) {
+          // For Mini Apps, we still call ready() even without SDK detection
           console.warn('⚠️ Frame SDK not available after 5s wait');
           setIsFrameSDKReady(false);
+          
+          // Try importing and calling ready from the modern SDK
+          try {
+            const { sdk } = await import('@farcaster/frame-sdk');
+            await sdk.actions.ready();
+            console.log('✅ Modern Frame SDK ready() called');
+            setIsFrameSDKReady(true);
+          } catch (modernSDKError) {
+            console.warn('⚠️ Modern Frame SDK also not available');
+          }
           return;
         }
 
-        // Initialize SDK
+        // Initialize SDK - ALWAYS call ready() for Mini Apps
         if (window.FrameSDK.actions?.ready) {
           await window.FrameSDK.actions.ready({ 
             disableNativeGestures: true 
@@ -114,17 +123,19 @@ export function FarcasterProvider({ children }: FarcasterProviderProps) {
 
         setIsFrameSDKReady(true);
 
-        // Get frame context
+        // Get frame context (may be empty if not in frame)
         const context: FarcasterFrameContext = window.FrameSDK.context || {};
         setFrameContext(context);
         
         console.log('📱 Frame context:', context);
 
-        // If we have user info from frame context, fetch full profile
-        if (context.user?.fid) {
-          await fetchUserProfile(context.user.fid);
-        } else if (context.user?.username) {
-          await fetchUserByUsername(context.user.username);
+        // Only fetch user profiles if we're actually in Farcaster AND have user info
+        if (isInFarcaster) {
+          if (context.user?.fid) {
+            await fetchUserProfile(context.user.fid);
+          } else if (context.user?.username) {
+            await fetchUserByUsername(context.user.username);
+          }
         }
 
       } catch (err) {
@@ -137,7 +148,7 @@ export function FarcasterProvider({ children }: FarcasterProviderProps) {
 
     const timeout = setTimeout(initializeFrameSDK, 100);
     return () => clearTimeout(timeout);
-  }, [isInFarcaster]);
+  }, []); // Remove isInFarcaster dependency - always try to initialize
 
   // Fetch user profile by FID using our service
   const fetchUserProfile = useCallback(async (fid: number): Promise<void> => {

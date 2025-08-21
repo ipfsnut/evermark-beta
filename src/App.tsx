@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AppProviders } from '../src/providers/AppProviders';
 import { Layout } from '../src/components/layout';
@@ -32,6 +32,25 @@ function PageLoader() {
 
 // App content with routing (separated for clean provider structure)
 function AppContent() {
+  // Fallback Farcaster SDK initialization - ensures ready() is always called
+  useEffect(() => {
+    const initializeFarcasterMiniApp = async () => {
+      try {
+        // Try modern SDK approach first (for Mini Apps)
+        const { sdk } = await import('@farcaster/frame-sdk');
+        await sdk.actions.ready();
+        console.log('✅ Fallback Farcaster SDK ready() called');
+      } catch (error) {
+        // Silently fail - this is expected when not in Farcaster environment
+        console.log('ℹ️ Not in Farcaster environment, no SDK initialization needed');
+      }
+    };
+
+    // Small delay to allow providers to initialize first
+    const timeout = setTimeout(initializeFarcasterMiniApp, 200);
+    return () => clearTimeout(timeout);
+  }, []);
+
   return (
     <>
       <Layout>
