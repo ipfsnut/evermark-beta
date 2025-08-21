@@ -2,8 +2,9 @@
 import { ConnectButton, useActiveAccount } from 'thirdweb/react';
 import { client } from '@/lib/thirdweb';
 import { CHAIN } from '@/lib/contracts';
-import { WalletIcon, UserIcon } from 'lucide-react';
+import { WalletIcon, UserIcon, LogOutIcon } from 'lucide-react';
 import { createWallet, inAppWallet } from 'thirdweb/wallets';
+import { useAppAuth } from '../providers/AppContext';
 
 interface WalletConnectProps {
   className?: string;
@@ -20,6 +21,15 @@ const getWallets = () => [
 
 export function WalletConnect({ className = '', variant = 'default' }: WalletConnectProps) {
   const account = useActiveAccount();
+  const { disconnect } = useAppAuth();
+
+  const handleLogout = async () => {
+    try {
+      await disconnect();
+    } catch (error) {
+      console.error('Failed to disconnect wallet:', error);
+    }
+  };
 
   if (account) {
     const address = account.address;
@@ -31,10 +41,41 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
           <div className="w-6 h-6 bg-gradient-to-r from-cyber-primary to-cyber-secondary rounded-full flex items-center justify-center">
             <UserIcon className="h-3 w-3 text-black" />
           </div>
-          <span className="text-sm font-medium text-white">{shortAddress}</span>
+          <button
+            onClick={handleLogout}
+            className="text-sm font-medium text-white hover:text-cyber-primary transition-colors cursor-pointer"
+            title="Click to logout"
+          >
+            {shortAddress}
+          </button>
         </div>
       );
     }
+  }
+
+  // For the default variant when connected, show a custom wallet display with logout
+  if (account && variant === 'default') {
+    const address = account.address;
+    const shortAddress = `${address.slice(0, 6)}...${address.slice(-4)}`;
+    
+    return (
+      <div className={`flex items-center space-x-2 px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg ${className}`}>
+        <div className="w-8 h-8 bg-gradient-to-r from-cyber-primary to-cyber-secondary rounded-full flex items-center justify-center">
+          <UserIcon className="h-4 w-4 text-black" />
+        </div>
+        <div className="flex flex-col">
+          <button
+            onClick={handleLogout}
+            className="text-sm font-medium text-white hover:text-cyber-primary transition-colors cursor-pointer text-left"
+            title="Click to logout"
+          >
+            {shortAddress}
+          </button>
+          <span className="text-xs text-gray-400">Connected</span>
+        </div>
+        <LogOutIcon className="h-4 w-4 text-gray-400 hover:text-cyber-primary transition-colors cursor-pointer" onClick={handleLogout} />
+      </div>
+    );
   }
 
   return (
@@ -51,11 +92,6 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
         ),
         className: `inline-flex items-center px-4 py-2 bg-gradient-to-r from-cyber-primary to-cyber-secondary text-black font-medium rounded-lg hover:opacity-90 transition-opacity ${className}`
       }}
-      detailsButton={{
-        displayBalanceToken: {
-          [CHAIN.id]: import.meta.env.VITE_EMARK_TOKEN_ADDRESS
-        }
-      }}
     />
   );
 }
@@ -63,6 +99,15 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
 // Alternative simple connect button for basic usage
 export function SimpleConnectButton({ className = '' }: { className?: string }) {
   const account = useActiveAccount();
+  const { disconnect } = useAppAuth();
+
+  const handleLogout = async () => {
+    try {
+      await disconnect();
+    } catch (error) {
+      console.error('Failed to disconnect wallet:', error);
+    }
+  };
 
   if (account) {
     return (
@@ -71,9 +116,13 @@ export function SimpleConnectButton({ className = '' }: { className?: string }) 
           <UserIcon className="h-4 w-4 text-black" />
         </div>
         <div className="flex flex-col">
-          <span className="text-sm font-medium text-white">
+          <button
+            onClick={handleLogout}
+            className="text-sm font-medium text-white hover:text-cyber-primary transition-colors cursor-pointer text-left"
+            title="Click to logout"
+          >
             {`${account.address.slice(0, 6)}...${account.address.slice(-4)}`}
-          </span>
+          </button>
           <span className="text-xs text-gray-400">Connected</span>
         </div>
       </div>

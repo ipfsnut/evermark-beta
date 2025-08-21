@@ -48,7 +48,6 @@ const navigationItems: NavItem[] = [
     to: '/staking',
     label: 'Staking',
     icon: CoinsIcon,
-    requireAuth: true,
   },
 ];
 
@@ -58,7 +57,6 @@ const actionItems: NavItem[] = [
     to: '/create',
     label: 'Create Evermark',
     icon: PlusIcon,
-    requireAuth: true,
   },
 ];
 
@@ -79,11 +77,6 @@ export function Navigation() {
   const renderNavItem = (item: NavItem, variant: 'primary' | 'action' = 'primary') => {
     const Icon = item.icon;
     const isActive = isActiveRoute(item.to);
-    
-    // Hide auth-required items if not authenticated
-    if (item.requireAuth && !isAuthenticated) {
-      return null;
-    }
 
     const baseClasses = cn(
       'flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 group',
@@ -157,17 +150,15 @@ export function Navigation() {
       )} />
 
       {/* Action items */}
-      {isAuthenticated && (
-        <div className="space-y-1">
-          <h3 className={cn(
-          "text-xs font-semibold uppercase tracking-wider mb-3",
-          isDark ? "text-gray-500" : "text-gray-400"
-        )}>
-            Actions
-          </h3>
-          {actionItems.map(item => renderNavItem(item, 'action'))}
-        </div>
-      )}
+      <div className="space-y-1">
+        <h3 className={cn(
+        "text-xs font-semibold uppercase tracking-wider mb-3",
+        isDark ? "text-gray-500" : "text-gray-400"
+      )}>
+          Actions
+        </h3>
+        {actionItems.map(item => renderNavItem(item, 'action'))}
+      </div>
 
       {/* Auth prompt for non-authenticated users */}
       {!isAuthenticated && (
