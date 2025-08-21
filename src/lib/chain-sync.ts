@@ -112,18 +112,28 @@ export async function syncRecentEvermarks(count: number = 10) {
     let needsCache = 0;
 
     for (let tokenId = startId; tokenId <= endId; tokenId++) {
-      // Skip if already exists
+      // Check if already exists and if it needs image data
       const { data: existing } = await supabase
         .from('beta_evermarks')
-        .select('token_id')
+        .select('token_id, ipfs_image_hash, supabase_image_url')
         .eq('token_id', tokenId)
         .single();
 
-      if (existing) continue;
+      // Skip if already exists AND has image data
+      if (existing && (existing.ipfs_image_hash || existing.supabase_image_url)) {
+        console.log(`⏭️ Token ${tokenId} already has image data, skipping`);
+        continue;
+      }
+      
+      const isUpdate = !!existing;
 
       // Get NFT from chain
-      let nft;
-      let metadata;
+      let nft: any;
+      let metadata: any;
+      let ipfsMetadata: any = null;
+      let imageUrl: string | null = null;
+      let ipfsImageHash: string | null = null;
+      
       try {
         nft = await getNFT({ contract, tokenId: BigInt(tokenId) });
         if (!nft.metadata) {
@@ -131,6 +141,50 @@ export async function syncRecentEvermarks(count: number = 10) {
           continue;
         }
         metadata = nft.metadata;
+        
+        // Try to fetch additional IPFS metadata if tokenURI is available
+        if (nft.tokenURI && nft.tokenURI.startsWith('ipfs://')) {
+          try {
+            const ipfsHash = nft.tokenURI.replace('ipfs://', '');
+            console.log(`🔍 Fetching IPFS metadata for token ${tokenId}: ${ipfsHash}`);
+            
+            // Try multiple IPFS gateways
+            const gateways = [
+              `https://gateway.pinata.cloud/ipfs/${ipfsHash}`,
+              `https://ipfs.io/ipfs/${ipfsHash}`,
+              `https://cloudflare-ipfs.com/ipfs/${ipfsHash}`
+            ];
+            
+            for (const gateway of gateways) {
+              try {
+                const response = await fetch(gateway, { 
+                  signal: AbortSignal.timeout(10000) // 10 second timeout
+                });
+                if (response.ok) {
+                  ipfsMetadata = await response.json();
+                  console.log(`✅ Retrieved IPFS metadata from ${gateway}`);
+                  
+                  // Extract image URL
+                  if (ipfsMetadata?.image) {
+                    imageUrl = ipfsMetadata.image;
+                    if (imageUrl?.startsWith('ipfs://')) {
+                      ipfsImageHash = imageUrl.replace('ipfs://', '');
+                      imageUrl = `https://gateway.pinata.cloud/ipfs/${ipfsImageHash}`;
+                    }
+                    console.log(`🖼️ Found image URL: ${imageUrl}`);
+                  }
+                  break;
+                }
+              } catch (gatewayError) {
+                console.warn(`Gateway ${gateway} failed:`, gatewayError instanceof Error ? gatewayError.message : gatewayError);
+                continue;
+              }
+            }
+          } catch (ipfsError) {
+            console.warn(`Failed to fetch IPFS metadata for token ${tokenId}:`, ipfsError instanceof Error ? ipfsError.message : ipfsError);
+          }
+        }
+        
       } catch (error) {
         console.error(`❌ Failed to fetch metadata for token ${tokenId}:`, error instanceof Error ? error.message : error);
         continue;
@@ -139,12 +193,12 @@ export async function syncRecentEvermarks(count: number = 10) {
       // Insert into database - using beta_evermarks schema
       const insertData = {
         token_id: tokenId,
-        title: metadata.name || `Evermark #${tokenId}`,
-        description: metadata.description || '',
-        author: extractFromAttributes(metadata.attributes as any[], 'author') || 'Unknown',
-        owner: extractFromAttributes(metadata.attributes as any[], 'creator') || 'Unknown', // Use owner instead of creator
-        content_type: extractFromAttributes(metadata.attributes as any[], 'content_type') || 'Custom',
-        source_url: extractFromAttributes(metadata.attributes as any[], 'source_url'),
+        title: (ipfsMetadata?.name || (metadata as any)?.name) || `Evermark #${tokenId}`,
+        description: (ipfsMetadata?.description || (metadata as any)?.description) || '',
+        author: extractFromAttributes((ipfsMetadata?.attributes || (metadata as any)?.attributes) as any[], 'author') || 'Unknown',
+        owner: extractFromAttributes((ipfsMetadata?.attributes || (metadata as any)?.attributes) as any[], 'creator') || 'Unknown',
+        content_type: extractFromAttributes((ipfsMetadata?.attributes || (metadata as any)?.attributes) as any[], 'content_type') || 'Custom',
+        source_url: extractFromAttributes((ipfsMetadata?.attributes || (metadata as any)?.attributes) as any[], 'source_url'),
         token_uri: nft.tokenURI || '',
         verified: false,
         metadata_fetched: true,
@@ -153,21 +207,34 @@ export async function syncRecentEvermarks(count: number = 10) {
         metadata_json: metadata ? JSON.stringify(metadata, (key, value) => 
           typeof value === 'bigint' ? value.toString() : value
         ) : undefined,
+        ipfs_metadata: ipfsMetadata ? JSON.stringify(ipfsMetadata) : undefined,
+        ipfs_image_hash: ipfsImageHash || undefined,
+        supabase_image_url: imageUrl || undefined, // Store the resolved image URL directly for now
         // Note: removed fields that don't exist in beta_evermarks
       };
       
-      console.log(`📝 Inserting token ${tokenId}:`, insertData);
+      console.log(`📝 ${isUpdate ? 'Updating' : 'Inserting'} token ${tokenId}:`, insertData);
       
-      const { error } = await supabase
-        .from('beta_evermarks')
-        .insert([insertData]);
+      let error;
+      if (isUpdate) {
+        const { error: updateError } = await supabase
+          .from('beta_evermarks')
+          .update(insertData)
+          .eq('token_id', tokenId);
+        error = updateError;
+      } else {
+        const { error: insertError } = await supabase
+          .from('beta_evermarks')
+          .insert([insertData]);
+        error = insertError;
+      }
 
       if (error) {
-        console.error(`❌ Insert failed for token ${tokenId}:`, error);
+        console.error(`❌ ${isUpdate ? 'Update' : 'Insert'} failed for token ${tokenId}:`, error);
       } else {
-        console.log(`✅ Successfully inserted token ${tokenId}`);
+        console.log(`✅ Successfully ${isUpdate ? 'updated' : 'inserted'} token ${tokenId}`);
         synced++;
-        if (metadata.image) needsCache++;
+        if (imageUrl) needsCache++;
       }
     }
 

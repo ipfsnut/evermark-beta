@@ -107,10 +107,48 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
             };
           }
 
+          // Transform the data to match frontend expectations
+          const transformedEvermark = {
+            ...data,
+            id: data.token_id,
+            tokenId: data.token_id,
+            tags: [],
+            ipfsHash: data.ipfs_image_hash,
+            image: data.supabase_image_url || (data.ipfs_image_hash ? `ipfs://${data.ipfs_image_hash}` : undefined),
+            createdAt: data.created_at || new Date().toISOString(),
+            updatedAt: data.updated_at || data.created_at || new Date().toISOString(),
+            contentType: data.content_type,
+            sourceUrl: data.source_url,
+            tokenUri: data.token_uri,
+            verificationStatus: data.verified ? 'verified' : 'unverified',
+            creator: data.owner || data.author,
+            extendedMetadata: { tags: [] },
+            metadataURI: data.token_uri
+          };
+          
+          // Parse tags from IPFS metadata if available
+          try {
+            if (data.ipfs_metadata) {
+              const metadata = typeof data.ipfs_metadata === 'string' 
+                ? JSON.parse(data.ipfs_metadata) 
+                : data.ipfs_metadata;
+              
+              if (metadata.attributes) {
+                const tags = metadata.attributes
+                  .filter((attr: any) => attr.trait_type === 'Tag')
+                  .map((attr: any) => attr.value);
+                transformedEvermark.tags = tags;
+                transformedEvermark.extendedMetadata.tags = tags;
+              }
+            }
+          } catch (e) {
+            // Failed to parse metadata, keep empty tags
+          }
+
           return {
             statusCode: 200,
             headers,
-            body: JSON.stringify(data),
+            body: JSON.stringify({ evermark: transformedEvermark }),
           };
         } else {
           // Get all evermarks with pagination and filtering

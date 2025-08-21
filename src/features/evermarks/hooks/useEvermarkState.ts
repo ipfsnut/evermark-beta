@@ -107,8 +107,8 @@ const TempEvermarkService = {
   },
   fetchEvermark: async (id: string): Promise<Evermark | null> => {
     try {
-      // Simple API call to get individual evermark
-      const response = await fetch(`/api/evermarks?id=${id}`, {
+      // Simple API call to get individual evermark by token ID
+      const response = await fetch(`/api/evermarks/${id}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
