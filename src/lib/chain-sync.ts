@@ -35,7 +35,7 @@ export async function syncRecentEvermarks(count: number = 10) {
     for (let tokenId = startId; tokenId <= endId; tokenId++) {
       // Skip if already exists
       const { data: existing } = await supabase!
-        .from('evermarks')
+        .from('beta_evermarks')
         .select('token_id')
         .eq('token_id', tokenId)
         .single();
@@ -48,23 +48,24 @@ export async function syncRecentEvermarks(count: number = 10) {
 
       const metadata = nft.metadata;
       
-      // Insert into database
+      // Insert into database - using beta_evermarks schema
       const { error } = await supabase!
-        .from('evermarks')
+        .from('beta_evermarks')
         .insert([{
           token_id: tokenId,
           title: metadata.name || `Evermark #${tokenId}`,
           description: metadata.description || '',
           author: extractFromAttributes(metadata.attributes as any[], 'author') || 'Unknown',
-          creator: extractFromAttributes(metadata.attributes as any[], 'creator') || 'Unknown',
+          owner: extractFromAttributes(metadata.attributes as any[], 'creator') || 'Unknown', // Use owner instead of creator
           content_type: extractFromAttributes(metadata.attributes as any[], 'content_type') || 'Custom',
           source_url: extractFromAttributes(metadata.attributes as any[], 'source_url'),
-          ipfs_image_hash: extractIpfsHash(metadata.image),
-          image_processing_status: metadata.image ? 'pending' : 'none',
+          token_uri: nft.tokenURI || '',
           verified: false,
-          metadata_uri: nft.tokenURI || '',
+          metadata_fetched: true,
           created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          metadata_json: metadata ? JSON.stringify(metadata) : undefined,
+          // Note: removed fields that don't exist in beta_evermarks
         }]);
 
       if (!error) {
@@ -85,7 +86,7 @@ export async function syncRecentEvermarks(count: number = 10) {
  */
 export async function getEvermarksNeedingCache() {
   const { data, error } = await supabase!
-    .from('evermarks')
+    .from('beta_evermarks')
     .select('token_id, ipfs_image_hash')
     .eq('image_processing_status', 'pending')
     .not('ipfs_image_hash', 'is', null)

@@ -292,6 +292,26 @@ export default function AdminPage() {
     }
   };
 
+  const syncFromChain = async () => {
+    try {
+      setActionStatus('Syncing recent Evermarks from chain...');
+      
+      const response = await fetch('/sync?count=20');
+      const result = await response.json();
+      
+      if (result.success) {
+        setActionStatus(`Sync completed! Added ${result.synced} Evermarks to database.`);
+        setTimeout(() => setActionStatus(''), 5000);
+      } else {
+        setActionStatus(`Sync failed: ${result.message}`);
+        setTimeout(() => setActionStatus(''), 5000);
+      }
+    } catch (error) {
+      setActionStatus(`Sync error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setTimeout(() => setActionStatus(''), 5000);
+    }
+  };
+
   const startNewRewardsPeriod = async () => {
     if (!account) return;
     
@@ -660,6 +680,45 @@ export default function AdminPage() {
               <p className="text-sm text-gray-400">
                 Manually trigger new rewards periods and distribute accumulated rewards.
               </p>
+            </div>
+          </div>
+          
+          {/* Database Management - Second Row */}
+          <div className="mt-6 pt-6 border-t border-gray-700">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-cyan-400">Database Management</h3>
+                
+                <button
+                  onClick={syncFromChain}
+                  disabled={isPending}
+                  className="w-full flex items-center justify-center px-6 py-3 bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg transition-colors"
+                >
+                  <RefreshCw className="w-5 h-5 mr-2" />
+                  Sync from Chain
+                </button>
+                
+                <p className="text-sm text-gray-400">
+                  Manually sync the last 20 Evermarks from blockchain to database. Use this if any Evermarks are missing.
+                </p>
+              </div>
+              
+              {/* Placeholder for future tools */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-orange-400">Contract Status</h3>
+                <div className="text-sm text-gray-400">
+                  <p>NFT Contract: {contractStatus?.nft.totalSupply || 0} minted</p>
+                  <p>WEMARK Staked: {contractStatus?.wemark.totalStaked ? `${(Number(contractStatus.wemark.totalStaked) / 1e18).toFixed(2)} EMARK` : '0'}</p>
+                  <p>Season: {contractStatus?.voting.currentSeason || 'N/A'} {contractStatus?.voting.isActive ? '(Active)' : '(Inactive)'}</p>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-red-400">Emergency Controls</h3>
+                <p className="text-sm text-gray-400">
+                  Emergency pause/unpause functions will be available here when needed.
+                </p>
+              </div>
             </div>
           </div>
         </div>

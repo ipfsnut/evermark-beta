@@ -12,7 +12,7 @@ const EVERMARKS_TABLE = 'beta_evermarks';
 // Dev wallet for debug logging
 const DEV_WALLET = '0x3427b4716B90C11F9971e43999a48A47Cf5B571E'.toLowerCase();
 
-// Based on your actual schema
+// Based on your actual beta_evermarks table schema
 interface EvermarkRecord {
   token_id: number;
   title: string;
@@ -23,19 +23,19 @@ interface EvermarkRecord {
   source_url?: string;
   token_uri: string;
   created_at: string;
-  sync_timestamp?: string;
-  metadata_fetched: boolean;
   updated_at?: string;
   verified: boolean;
-  user_id?: string;
-  last_synced_at?: string;
-  processed_image_url?: string;
-  image_processing_status?: string;
-  metadata?: any;
+  metadata_fetched: boolean;
   tx_hash?: string;
   block_number?: number;
+  metadata_json?: string;  // JSON string, not object
+  // Note: removed 'metadata' field as it may not exist in beta_evermarks table
+  user_id?: string;
+  last_synced_at?: string;
+  sync_timestamp?: string;
+  processed_image_url?: string;
+  image_processing_status?: string;
   image_processed_at?: string;
-  metadata_json?: any;
   ipfs_metadata?: any;
 }
 
@@ -223,15 +223,24 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
           wallet: walletAddress
         });
         
-        // Auto-populate user data from wallet address
+        // Auto-populate user data from wallet address - explicitly map fields to avoid schema conflicts
         const newEvermark: Partial<EvermarkRecord> = {
-          ...evermarkData,
+          token_id: evermarkData.token_id,
+          title: evermarkData.title,
           author: evermarkData.author || `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`,
           owner: walletAddress,
+          description: evermarkData.description,
+          content_type: evermarkData.content_type,
+          source_url: evermarkData.source_url,
+          token_uri: evermarkData.token_uri,
+          tx_hash: evermarkData.tx_hash,
+          block_number: evermarkData.block_number,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           metadata_fetched: true, // We have the metadata from IPFS
           verified: false, // Will be verified later
+          // Note: Explicitly excluding 'metadata' field as it may not exist in beta_evermarks table
+          metadata_json: evermarkData.metadata ? JSON.stringify(evermarkData.metadata) : undefined,
         };
 
         const { data: createdData, error: createError } = await supabase
