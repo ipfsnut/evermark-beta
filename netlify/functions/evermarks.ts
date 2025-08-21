@@ -126,23 +126,46 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
             metadataURI: data.token_uri
           };
           
-          // Parse tags from IPFS metadata if available
+          // Parse metadata from IPFS if available
           try {
             if (data.ipfs_metadata) {
               const metadata = typeof data.ipfs_metadata === 'string' 
                 ? JSON.parse(data.ipfs_metadata) 
                 : data.ipfs_metadata;
               
+              // Extract tags from attributes
               if (metadata.attributes) {
                 const tags = metadata.attributes
                   .filter((attr: any) => attr.trait_type === 'Tag')
                   .map((attr: any) => attr.value);
                 transformedEvermark.tags = tags;
                 transformedEvermark.extendedMetadata.tags = tags;
+                
+                // Extract content type from attributes if not set properly
+                const contentTypeAttr = metadata.attributes.find((attr: any) => attr.trait_type === 'Content Type');
+                if (contentTypeAttr && contentTypeAttr.value) {
+                  transformedEvermark.contentType = contentTypeAttr.value;
+                  transformedEvermark.content_type = contentTypeAttr.value;
+                }
+              }
+              
+              // Extract source URL from external_url or evermark metadata
+              if (metadata.external_url) {
+                transformedEvermark.sourceUrl = metadata.external_url;
+                transformedEvermark.source_url = metadata.external_url;
+              } else if (metadata.evermark?.sourceUrl) {
+                transformedEvermark.sourceUrl = metadata.evermark.sourceUrl;
+                transformedEvermark.source_url = metadata.evermark.sourceUrl;
+              }
+              
+              // Use content type from evermark metadata if available
+              if (metadata.evermark?.contentType) {
+                transformedEvermark.contentType = metadata.evermark.contentType;
+                transformedEvermark.content_type = metadata.evermark.contentType;
               }
             }
           } catch (e) {
-            // Failed to parse metadata, keep empty tags
+            // Failed to parse metadata, keep defaults
           }
 
           return {
