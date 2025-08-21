@@ -26,8 +26,8 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 border-b transition-colors duration-200 bg-app-bg-secondary backdrop-blur-sm border-app-border">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
+      <div className="container mx-auto px-2 sm:px-4">
+        <div className="flex items-center justify-between h-12 sm:h-16">
           {/* Left section */}
           <div className="flex items-center space-x-4">
             {/* Sidebar toggle - hidden in Farcaster */}
@@ -72,7 +72,7 @@ export function Header() {
           )}
 
           {/* Right section */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-1 sm:space-x-3">
             {/* Search icon for mobile */}
             {isMobile && (
               <Link 
