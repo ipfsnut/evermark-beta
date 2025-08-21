@@ -185,6 +185,12 @@ export class ShareService {
     };
 
     // Trigger the notification directly
-    NotificationService.triggerShareNotification(testShareData);
+    NotificationService.triggerShareNotification({
+      evermarkId: testShareData.evermarkId,
+      sharerAddress: testShareData.userAddress,
+      platform: testShareData.platform,
+      evermarkTitle: testShareData.evermarkTitle,
+      evermarkOwner: testShareData.evermarkOwner
+    });
   }
 }

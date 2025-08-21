@@ -15,7 +15,7 @@ export interface NotificationTriggerData {
 
 export class NotificationService {
   private static addNotificationCallback: ((notification: {
-    type: string;
+    type: 'success' | 'error' | 'warning' | 'info' | 'share' | 'vote';
     title: string;
     message?: string;
     evermarkId?: string;
@@ -27,7 +27,7 @@ export class NotificationService {
    * Set the callback function for adding notifications
    */
   static setAddNotificationCallback(callback: (notification: {
-    type: string;
+    type: 'success' | 'error' | 'warning' | 'info' | 'share' | 'vote';
     title: string;
     message?: string;
     evermarkId?: string;
@@ -163,7 +163,7 @@ export class NotificationService {
    * Initialize the notification service
    */
   static initialize(addNotificationCallback: (notification: {
-    type: string;
+    type: 'success' | 'error' | 'warning' | 'info' | 'share' | 'vote';
     title: string;
     message?: string;
     evermarkId?: string;
