@@ -1,7 +1,8 @@
 // src/pages/DocsPage.tsx - Documentation display page
 /** @jsxImportSource react */
-import React, { useState } from 'react';
-import { BookOpenIcon, FileTextIcon, ExternalLinkIcon, XIcon } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { BookOpenIcon, FileTextIcon, ExternalLinkIcon, XIcon, ArrowLeftIcon } from 'lucide-react';
 import { themeClasses, cn } from '@/utils/theme';
 import { useTheme } from '../providers/ThemeProvider';
 
@@ -60,12 +61,32 @@ const DOCS_ITEMS: DocItem[] = [
 
 export default function DocsPage() {
   const { isDark } = useTheme();
+  const { docId } = useParams<{ docId?: string }>();
+  const navigate = useNavigate();
   const [selectedDoc, setSelectedDoc] = useState<DocItem | null>(null);
   const [content, setContent] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
 
-  const loadDocContent = async (docItem: DocItem) => {
+  // Load document by ID from URL parameter
+  useEffect(() => {
+    if (docId) {
+      const doc = DOCS_ITEMS.find(item => item.id === docId);
+      if (doc) {
+        loadDocContent(doc, false); // Don't update URL
+      } else {
+        setError(`Document "${docId}" not found`);
+        setLoading(false);
+      }
+    } else {
+      // Clear selection when no docId in URL
+      setSelectedDoc(null);
+      setContent('');
+      setError('');
+    }
+  }, [docId]);
+
+  const loadDocContent = async (docItem: DocItem, updateUrl: boolean = true) => {
     setLoading(true);
     setError('');
     
@@ -91,6 +112,11 @@ export default function DocsPage() {
       
       setContent(text);
       setSelectedDoc(docItem);
+      
+      // Update URL to make it shareable
+      if (updateUrl) {
+        navigate(`/docs/${docItem.id}`, { replace: true });
+      }
     } catch (err) {
       console.error('Error loading doc:', err);
       setError(err instanceof Error ? err.message : 'Failed to load documentation');
@@ -98,6 +124,10 @@ export default function DocsPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleBackToList = () => {
+    navigate('/docs');
   };
 
   const renderMarkdown = (markdown: string) => {
@@ -328,11 +358,12 @@ export default function DocsPage() {
                 </div>
               </div>
               <button
-                onClick={() => setSelectedDoc(null)}
-                className="p-2 rounded-lg transition-colors text-app-text-secondary hover:text-app-text-primary hover:bg-app-bg-secondary"
+                onClick={handleBackToList}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-app-text-secondary hover:text-app-text-primary hover:bg-app-bg-secondary"
                 title="Back to documentation list"
               >
-                <XIcon className="h-5 w-5" />
+                <ArrowLeftIcon className="h-4 w-4" />
+                <span className="text-sm font-medium">Back to Docs</span>
               </button>
             </div>
 

@@ -61,6 +61,7 @@ function AppContent() {
             <Route path="/explore" element={<ExplorePage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/docs" element={<DocsPage />} />
+            <Route path="/docs/:docId" element={<DocsPage />} />
             <Route path="/swap" element={<SwapPage />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
             <Route path="/staking" element={<StakingPage />} />
