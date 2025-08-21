@@ -49,10 +49,10 @@ const getSupabaseClient = () => {
   let supabaseUrl: string = '';
   let supabaseKey: string = '';
   
-  // Try Netlify Functions environment first
+  // Try Netlify Functions environment first (no VITE_ prefix)
   if (typeof process !== 'undefined' && process.env) {
-    supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
-    supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
+    supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+    supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
   }
   
   // Try browser environment if server env didn't work
@@ -66,6 +66,12 @@ const getSupabaseClient = () => {
       // Not in browser environment
     }
   }
+  
+  console.log('🔧 Supabase connection attempt:', { 
+    hasUrl: !!supabaseUrl, 
+    hasKey: !!supabaseKey,
+    urlPrefix: supabaseUrl.substring(0, 30) + '...' 
+  });
   
   if (!supabaseUrl || !supabaseKey) {
     throw new Error('Missing Supabase URL or key');
@@ -116,32 +122,50 @@ export async function syncRecentEvermarks(count: number = 10) {
       if (existing) continue;
 
       // Get NFT from chain
-      const nft = await getNFT({ contract, tokenId: BigInt(tokenId) });
-      if (!nft.metadata) continue;
-
-      const metadata = nft.metadata;
+      let nft;
+      let metadata;
+      try {
+        nft = await getNFT({ contract, tokenId: BigInt(tokenId) });
+        if (!nft.metadata) {
+          console.log(`⚠️ No metadata for token ${tokenId}, skipping`);
+          continue;
+        }
+        metadata = nft.metadata;
+      } catch (error) {
+        console.error(`❌ Failed to fetch metadata for token ${tokenId}:`, error instanceof Error ? error.message : error);
+        continue;
+      }
       
       // Insert into database - using beta_evermarks schema
+      const insertData = {
+        token_id: tokenId,
+        title: metadata.name || `Evermark #${tokenId}`,
+        description: metadata.description || '',
+        author: extractFromAttributes(metadata.attributes as any[], 'author') || 'Unknown',
+        owner: extractFromAttributes(metadata.attributes as any[], 'creator') || 'Unknown', // Use owner instead of creator
+        content_type: extractFromAttributes(metadata.attributes as any[], 'content_type') || 'Custom',
+        source_url: extractFromAttributes(metadata.attributes as any[], 'source_url'),
+        token_uri: nft.tokenURI || '',
+        verified: false,
+        metadata_fetched: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        metadata_json: metadata ? JSON.stringify(metadata, (key, value) => 
+          typeof value === 'bigint' ? value.toString() : value
+        ) : undefined,
+        // Note: removed fields that don't exist in beta_evermarks
+      };
+      
+      console.log(`📝 Inserting token ${tokenId}:`, insertData);
+      
       const { error } = await supabase
         .from('beta_evermarks')
-        .insert([{
-          token_id: tokenId,
-          title: metadata.name || `Evermark #${tokenId}`,
-          description: metadata.description || '',
-          author: extractFromAttributes(metadata.attributes as any[], 'author') || 'Unknown',
-          owner: extractFromAttributes(metadata.attributes as any[], 'creator') || 'Unknown', // Use owner instead of creator
-          content_type: extractFromAttributes(metadata.attributes as any[], 'content_type') || 'Custom',
-          source_url: extractFromAttributes(metadata.attributes as any[], 'source_url'),
-          token_uri: nft.tokenURI || '',
-          verified: false,
-          metadata_fetched: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          metadata_json: metadata ? JSON.stringify(metadata) : undefined,
-          // Note: removed fields that don't exist in beta_evermarks
-        }]);
+        .insert([insertData]);
 
-      if (!error) {
+      if (error) {
+        console.error(`❌ Insert failed for token ${tokenId}:`, error);
+      } else {
+        console.log(`✅ Successfully inserted token ${tokenId}`);
         synced++;
         if (metadata.image) needsCache++;
       }
