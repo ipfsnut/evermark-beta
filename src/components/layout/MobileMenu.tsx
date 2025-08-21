@@ -41,7 +41,6 @@ const MAIN_NAV_ITEMS: NavItem[] = [
     to: '/create',
     label: 'Create',
     icon: PlusIcon,
-    requireAuth: true,
   },
   {
     to: '/swap',
@@ -52,7 +51,6 @@ const MAIN_NAV_ITEMS: NavItem[] = [
     to: '/staking',
     label: 'Staking',
     icon: LayersIcon,
-    requireAuth: true,
   },
   {
     to: '/leaderboard',
