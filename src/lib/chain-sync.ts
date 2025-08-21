@@ -2,16 +2,86 @@
 import { createThirdwebClient, getContract } from 'thirdweb';
 import { base } from 'thirdweb/chains';
 import { getNFT, totalSupply } from 'thirdweb/extensions/erc721';
-import { supabase } from './supabase';
+import { createClient } from '@supabase/supabase-js';
+
+// Environment variables for server-side execution
+const getClientId = () => {
+  // Try Netlify Functions environment first
+  if (typeof process !== 'undefined' && process.env?.VITE_THIRDWEB_CLIENT_ID) {
+    return process.env.VITE_THIRDWEB_CLIENT_ID;
+  }
+  
+  // Try browser environment
+  try {
+    // @ts-ignore - import.meta.env is available in browser
+    if (import.meta?.env?.VITE_THIRDWEB_CLIENT_ID) {
+      // @ts-ignore
+      return import.meta.env.VITE_THIRDWEB_CLIENT_ID;
+    }
+  } catch (e) {
+    // Not in browser environment
+  }
+  
+  throw new Error('Thirdweb Client ID not found');
+};
+
+const getNFTAddress = () => {
+  // Try Netlify Functions environment first
+  if (typeof process !== 'undefined' && process.env?.VITE_EVERMARK_NFT_ADDRESS) {
+    return process.env.VITE_EVERMARK_NFT_ADDRESS;
+  }
+  
+  // Try browser environment
+  try {
+    // @ts-ignore - import.meta.env is available in browser
+    if (import.meta?.env?.VITE_EVERMARK_NFT_ADDRESS) {
+      // @ts-ignore
+      return import.meta.env.VITE_EVERMARK_NFT_ADDRESS;
+    }
+  } catch (e) {
+    // Not in browser environment
+  }
+  
+  throw new Error('Evermark NFT address not found');
+};
+
+const getSupabaseClient = () => {
+  let supabaseUrl: string = '';
+  let supabaseKey: string = '';
+  
+  // Try Netlify Functions environment first
+  if (typeof process !== 'undefined' && process.env) {
+    supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
+    supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
+  }
+  
+  // Try browser environment if server env didn't work
+  if (!supabaseUrl || !supabaseKey) {
+    try {
+      // @ts-ignore - import.meta.env is available in browser
+      supabaseUrl = supabaseUrl || import.meta?.env?.VITE_SUPABASE_URL || '';
+      // @ts-ignore
+      supabaseKey = supabaseKey || import.meta?.env?.VITE_SUPABASE_ANON_KEY || '';
+    } catch (e) {
+      // Not in browser environment
+    }
+  }
+  
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Missing Supabase URL or key');
+  }
+  
+  return createClient(supabaseUrl, supabaseKey);
+};
 
 const client = createThirdwebClient({
-  clientId: process.env.VITE_THIRDWEB_CLIENT_ID || import.meta.env?.VITE_THIRDWEB_CLIENT_ID!
+  clientId: getClientId()
 });
 
 const contract = getContract({
   client,
   chain: base,
-  address: process.env.VITE_EVERMARK_NFT_ADDRESS || import.meta.env?.VITE_EVERMARK_NFT_ADDRESS!
+  address: getNFTAddress()
 });
 
 /**
@@ -19,6 +89,9 @@ const contract = getContract({
  */
 export async function syncRecentEvermarks(count: number = 10) {
   try {
+    // Get dynamic clients
+    const supabase = getSupabaseClient();
+    
     const supply = await totalSupply({ contract });
     const totalSupplyNumber = Number(supply);
     
@@ -34,7 +107,7 @@ export async function syncRecentEvermarks(count: number = 10) {
 
     for (let tokenId = startId; tokenId <= endId; tokenId++) {
       // Skip if already exists
-      const { data: existing } = await supabase!
+      const { data: existing } = await supabase
         .from('beta_evermarks')
         .select('token_id')
         .eq('token_id', tokenId)
@@ -49,7 +122,7 @@ export async function syncRecentEvermarks(count: number = 10) {
       const metadata = nft.metadata;
       
       // Insert into database - using beta_evermarks schema
-      const { error } = await supabase!
+      const { error } = await supabase
         .from('beta_evermarks')
         .insert([{
           token_id: tokenId,
@@ -85,7 +158,8 @@ export async function syncRecentEvermarks(count: number = 10) {
  * Get evermarks that need image caching
  */
 export async function getEvermarksNeedingCache() {
-  const { data, error } = await supabase!
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
     .from('beta_evermarks')
     .select('token_id, ipfs_image_hash')
     .eq('image_processing_status', 'pending')

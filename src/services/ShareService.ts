@@ -29,6 +29,24 @@ export class ShareService {
   }
 
   /**
+   * Generate a Mini App compatible URL for any path (docs, pages, etc.)
+   */
+  static generateMiniAppUrlForPath(path: string, source: 'share' | 'direct' = 'direct'): string {
+    // Ensure path starts with /
+    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+    const baseUrl = `${window.location.origin}${cleanPath}`;
+    
+    // Add Farcaster Mini App context parameters
+    const params = new URLSearchParams();
+    if (source === 'share') {
+      params.set('fc_miniapp', '1');
+      params.set('fc_source', 'share');
+    }
+    
+    return params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;
+  }
+
+  /**
    * Share an Evermark to a platform and record the share
    */
   static async shareEvermark(shareData: ShareData): Promise<void> {
@@ -193,6 +211,86 @@ export class ShareService {
         userAddress,
         evermarkTitle: evermark.title,
         evermarkOwner: evermark.author
+      });
+    } catch (error) {
+      if ((error as Error).name !== 'AbortError') {
+        throw error;
+      }
+    }
+  }
+
+  /**
+   * Share documentation page to Twitter/X
+   */
+  static async shareDocToTwitter(docTitle: string, docId: string): Promise<void> {
+    const isInFarcaster = typeof window !== 'undefined' && 
+                         (window as any).__evermark_farcaster_detected === true;
+    
+    const url = isInFarcaster 
+      ? this.generateMiniAppUrlForPath(`/docs/${docId}`, 'share')
+      : `${window.location.origin}/docs/${docId}`;
+    
+    const text = `Check out this Evermark documentation: "${docTitle}" 📚\n\n${url}\n\n#Evermark #Web3 #Documentation`;
+    
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+    
+    // Open Twitter sharing dialog
+    window.open(twitterUrl, '_blank', 'width=550,height=350');
+  }
+
+  /**
+   * Share documentation page to Farcaster
+   */
+  static async shareDocToFarcaster(docTitle: string, docId: string): Promise<void> {
+    const isInFarcaster = typeof window !== 'undefined' && 
+                         (window as any).__evermark_farcaster_detected === true;
+    
+    const url = isInFarcaster 
+      ? this.generateMiniAppUrlForPath(`/docs/${docId}`, 'share')
+      : `${window.location.origin}/docs/${docId}`;
+    
+    const text = `Check out this Evermark documentation: "${docTitle}" 📚`;
+    
+    const farcasterUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}&embeds[]=${encodeURIComponent(url)}`;
+    
+    // Open Farcaster sharing dialog
+    window.open(farcasterUrl, '_blank', 'width=550,height=600');
+  }
+
+  /**
+   * Copy documentation link to clipboard
+   */
+  static async copyDocLink(docTitle: string, docId: string): Promise<void> {
+    const isInFarcaster = typeof window !== 'undefined' && 
+                         (window as any).__evermark_farcaster_detected === true;
+    
+    const url = isInFarcaster 
+      ? this.generateMiniAppUrlForPath(`/docs/${docId}`, 'share')
+      : `${window.location.origin}/docs/${docId}`;
+    
+    await navigator.clipboard.writeText(url);
+  }
+
+  /**
+   * Share documentation via Web Share API if supported
+   */
+  static async shareDocNative(docTitle: string, docId: string): Promise<void> {
+    if (!navigator.share) {
+      throw new Error('Web Share API not supported');
+    }
+
+    const isInFarcaster = typeof window !== 'undefined' && 
+                         (window as any).__evermark_farcaster_detected === true;
+    
+    const url = isInFarcaster 
+      ? this.generateMiniAppUrlForPath(`/docs/${docId}`, 'share')
+      : `${window.location.origin}/docs/${docId}`;
+    
+    try {
+      await navigator.share({
+        title: `Evermark Docs: ${docTitle}`,
+        text: `Check out this Evermark documentation: "${docTitle}"`,
+        url: url
       });
     } catch (error) {
       if ((error as Error).name !== 'AbortError') {

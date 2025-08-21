@@ -296,7 +296,7 @@ export default function AdminPage() {
     try {
       setActionStatus('Syncing recent Evermarks from chain...');
       
-      const response = await fetch('/sync?count=20');
+      const response = await fetch('/.netlify/functions/sync-now?count=20');
       const result = await response.json();
       
       if (result.success) {

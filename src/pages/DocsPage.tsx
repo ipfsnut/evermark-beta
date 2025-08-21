@@ -5,6 +5,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { BookOpenIcon, FileTextIcon, ExternalLinkIcon, XIcon, ArrowLeftIcon } from 'lucide-react';
 import { themeClasses, cn } from '@/utils/theme';
 import { useTheme } from '../providers/ThemeProvider';
+import { DocShareButton } from '../components/share/DocShareButton';
 
 interface DocItem {
   id: string;
@@ -352,9 +353,17 @@ export default function DocsPage() {
                     isDark ? "text-white" : "text-gray-900"
                   )}>{selectedDoc.title}</h1>
                   <p className={cn(
-                    "text-sm",
+                    "text-sm mb-3",
                     isDark ? "text-gray-400" : "text-gray-600"
                   )}>{selectedDoc.description}</p>
+                  
+                  {/* Share buttons */}
+                  <DocShareButton 
+                    docTitle={selectedDoc.title}
+                    docId={selectedDoc.id}
+                    variant="default"
+                    className="mt-2"
+                  />
                 </div>
               </div>
               <button
@@ -414,6 +423,15 @@ export default function DocsPage() {
           </div>
         )}
       </div>
+      
+      {/* Floating share button for when viewing a specific document */}
+      {selectedDoc && (
+        <DocShareButton 
+          docTitle={selectedDoc.title}
+          docId={selectedDoc.id}
+          variant="floating"
+        />
+      )}
     </div>
   );
 }
