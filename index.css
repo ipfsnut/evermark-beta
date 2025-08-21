@@ -95,46 +95,84 @@
 /* Component styles */
 @layer components {
   /* Cyber-themed button base */
-  .btn-cyber {
+  .dark .btn-cyber {
     @apply px-4 py-2 font-medium transition-all duration-300;
     @apply border border-cyber-primary bg-cyber-primary bg-opacity-10;
     @apply hover:bg-opacity-20 hover:shadow-cyber;
     @apply active:scale-95 transform;
   }
+  
+  :not(.dark) .btn-cyber {
+    @apply px-4 py-2 font-medium transition-all duration-300;
+    @apply border border-evermark-primary-500 bg-evermark-primary-500 bg-opacity-10;
+    @apply hover:bg-opacity-20 hover:shadow-md;
+    @apply active:scale-95 transform;
+  }
 
   /* Cyber card component */
-  .card-cyber {
+  .dark .card-cyber {
     @apply bg-gray-900 bg-opacity-50 backdrop-blur-sm;
     @apply border border-gray-700 hover:border-cyber-primary;
     @apply transition-all duration-300;
     @apply hover:shadow-cyber-lg;
   }
+  
+  :not(.dark) .card-cyber {
+    @apply bg-white backdrop-blur-sm;
+    @apply border border-gray-200 hover:border-evermark-primary-400;
+    @apply transition-all duration-300 shadow-sm;
+    @apply hover:shadow-lg;
+  }
 
   /* Input field styling */
-  .input-cyber {
+  .dark .input-cyber {
     @apply bg-gray-900 border border-gray-700;
     @apply focus:border-cyber-primary focus:ring-2 focus:ring-cyber-primary focus:ring-opacity-20;
     @apply text-white placeholder-gray-400;
     @apply transition-all duration-200;
   }
+  
+  :not(.dark) .input-cyber {
+    @apply bg-white border border-gray-300;
+    @apply focus:border-evermark-primary-500 focus:ring-2 focus:ring-evermark-primary-500 focus:ring-opacity-20;
+    @apply text-gray-900 placeholder-gray-400;
+    @apply transition-all duration-200;
+  }
 
   /* Navigation link styling */
-  .nav-link {
+  .dark .nav-link {
     @apply flex items-center px-3 py-2 rounded-lg transition-all duration-200;
     @apply text-gray-300 hover:text-white hover:bg-gray-800;
     @apply border border-transparent hover:border-gray-600;
   }
 
-  .nav-link.active {
+  .dark .nav-link.active {
     @apply bg-gradient-to-r from-cyber-primary to-cyber-secondary;
     @apply bg-opacity-20 text-cyber-primary border-cyber-primary;
     @apply shadow-cyber;
   }
+  
+  :not(.dark) .nav-link {
+    @apply flex items-center px-3 py-2 rounded-lg transition-all duration-200;
+    @apply text-gray-600 hover:text-gray-900 hover:bg-gray-100;
+    @apply border border-transparent hover:border-gray-200;
+  }
+
+  :not(.dark) .nav-link.active {
+    @apply bg-gradient-to-r from-evermark-primary-50 to-evermark-secondary-50;
+    @apply text-evermark-primary-700 border-evermark-primary-300;
+    @apply shadow-sm;
+  }
 
   /* Loading spinner */
-  .spinner-cyber {
+  .dark .spinner-cyber {
     @apply animate-spin rounded-full border-2 border-gray-700;
     @apply border-t-cyber-primary;
+  }
+  
+  :not(.dark) .spinner-cyber {
+    @apply animate-spin rounded-full border-2 border-gray-200;
+    @apply border-t-evermark-primary-500;
   }
 
   /* Text glow utilities */
@@ -274,8 +312,12 @@
 /* Utility styles */
 @layer utilities {
   /* Focus styles for accessibility */
-  .focus-cyber {
+  .dark .focus-cyber {
     @apply focus:outline-none focus:ring-2 focus:ring-cyber-primary focus:ring-opacity-50;
+  }
+  
+  :not(.dark) .focus-cyber {
+    @apply focus:outline-none focus:ring-2 focus:ring-evermark-primary-500 focus:ring-opacity-50;
   }
 
   /* Backdrop blur utilities */
@@ -284,41 +326,91 @@
   }
 
   /* Gradient text utilities */
-  .text-gradient-cyber {
+  .dark .text-gradient-cyber {
     @apply bg-gradient-to-r from-cyber-primary via-cyber-secondary to-cyber-accent;
+    @apply bg-clip-text text-transparent;
+  }
+  
+  :not(.dark) .text-gradient-cyber {
+    @apply bg-gradient-to-r from-evermark-primary-600 via-evermark-secondary-600 to-evermark-accent-600;
     @apply bg-clip-text text-transparent;
   }
 
   .text-gradient-evermark {
-    @apply bg-gradient-to-r from-evermark-primary via-evermark-secondary to-evermark-accent;
+    @apply bg-gradient-to-r from-evermark-primary-500 via-evermark-secondary-500 to-evermark-accent-500;
     @apply bg-clip-text text-transparent;
   }
 
   /* Button variants */
-  .btn-primary {
-    @apply btn-cyber bg-evermark-primary border-evermark-primary;
-    @apply hover:bg-evermark-primary hover:bg-opacity-20;
+  .dark .btn-primary {
+    @apply px-4 py-2 font-medium transition-all duration-300;
+    @apply bg-cyber-primary border border-cyber-primary bg-opacity-10;
+    @apply hover:bg-opacity-20 hover:shadow-cyber;
+    @apply active:scale-95 transform;
+  }
+  
+  :not(.dark) .btn-primary {
+    @apply px-4 py-2 font-medium transition-all duration-300;
+    @apply bg-evermark-primary-500 text-white border border-evermark-primary-500;
+    @apply hover:bg-evermark-primary-600 hover:shadow-md;
+    @apply active:scale-95 transform;
   }
 
-  .btn-secondary {
-    @apply btn-cyber bg-evermark-secondary border-evermark-secondary;
-    @apply hover:bg-evermark-secondary hover:bg-opacity-20;
+  .dark .btn-secondary {
+    @apply px-4 py-2 font-medium transition-all duration-300;
+    @apply bg-cyber-secondary border border-cyber-secondary bg-opacity-10;
+    @apply hover:bg-opacity-20 hover:shadow-cyber;
+    @apply active:scale-95 transform;
+  }
+  
+  :not(.dark) .btn-secondary {
+    @apply px-4 py-2 font-medium transition-all duration-300;
+    @apply bg-white text-evermark-primary-600 border border-gray-300;
+    @apply hover:bg-gray-50 hover:border-evermark-primary-400 hover:shadow-md;
+    @apply active:scale-95 transform;
   }
 
-  .btn-ghost {
-    @apply btn-cyber bg-transparent border-gray-600;
-    @apply hover:bg-gray-800 hover:border-gray-500;
+  .dark .btn-ghost {
+    @apply px-4 py-2 font-medium transition-all duration-300;
+    @apply bg-transparent border border-gray-600 text-gray-300;
+    @apply hover:bg-gray-800 hover:border-gray-500 hover:text-white;
+    @apply active:scale-95 transform;
+  }
+  
+  :not(.dark) .btn-ghost {
+    @apply px-4 py-2 font-medium transition-all duration-300;
+    @apply bg-transparent border border-gray-300 text-gray-600;
+    @apply hover:bg-gray-100 hover:border-gray-400 hover:text-gray-900;
+    @apply active:scale-95 transform;
   }
 
   /* Card variants */
-  .card-primary {
-    @apply card-cyber border-evermark-primary border-opacity-30;
-    @apply hover:border-opacity-60 hover:shadow-lg hover:shadow-evermark-primary hover:shadow-opacity-20;
+  .dark .card-primary {
+    @apply bg-gray-900 bg-opacity-50 backdrop-blur-sm;
+    @apply border border-cyber-primary border-opacity-30;
+    @apply hover:border-opacity-60 hover:shadow-lg hover:shadow-cyber-primary/20;
+    @apply transition-all duration-300;
+  }
+  
+  :not(.dark) .card-primary {
+    @apply bg-white backdrop-blur-sm shadow-sm;
+    @apply border border-evermark-primary-200;
+    @apply hover:border-evermark-primary-400 hover:shadow-lg;
+    @apply transition-all duration-300;
   }
 
-  .card-secondary {
-    @apply card-cyber border-evermark-secondary border-opacity-30;
-    @apply hover:border-opacity-60 hover:shadow-lg hover:shadow-evermark-secondary hover:shadow-opacity-20;
+  .dark .card-secondary {
+    @apply bg-gray-900 bg-opacity-50 backdrop-blur-sm;
+    @apply border border-cyber-secondary border-opacity-30;
+    @apply hover:border-opacity-60 hover:shadow-lg hover:shadow-cyber-secondary/20;
+    @apply transition-all duration-300;
+  }
+  
+  :not(.dark) .card-secondary {
+    @apply bg-white backdrop-blur-sm shadow-sm;
+    @apply border border-evermark-secondary-200;
+    @apply hover:border-evermark-secondary-400 hover:shadow-lg;
+    @apply transition-all duration-300;
   }
 
   /* Status indicators */
@@ -335,8 +427,14 @@
   }
 
   /* Loading states */
-  .loading-shimmer {
+  .dark .loading-shimmer {
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+  
+  :not(.dark) .loading-shimmer {
+    background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.06), transparent);
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
   }
