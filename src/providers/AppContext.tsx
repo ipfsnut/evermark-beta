@@ -366,8 +366,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const hasMultipleIdentities = (hasWallet && hasFarcaster) || (hasWallet && hasENS) || (hasFarcaster && hasENS);
 
   const value: AppContextType = {
-    // Authentication state - ENHANCED
-    isAuthenticated: isConnected,
+    // Authentication state - ENHANCED - Include both wallet and Farcaster auth
+    isAuthenticated: isConnected || hasFarcaster,
     user,
     
     // NEW: Identity information
