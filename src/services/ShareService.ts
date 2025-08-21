@@ -13,6 +13,22 @@ export interface ShareData {
 
 export class ShareService {
   /**
+   * Generate a Mini App compatible URL for sharing within Farcaster
+   */
+  static generateMiniAppUrl(evermarkId: string, source: 'share' | 'direct' = 'direct'): string {
+    const baseUrl = `${window.location.origin}/evermark/${evermarkId}`;
+    
+    // Add Farcaster Mini App context parameters
+    const params = new URLSearchParams();
+    if (source === 'share') {
+      params.set('fc_miniapp', '1');
+      params.set('fc_source', 'share');
+    }
+    
+    return params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;
+  }
+
+  /**
    * Share an Evermark to a platform and record the share
    */
   static async shareEvermark(shareData: ShareData): Promise<void> {
@@ -94,7 +110,8 @@ export class ShareService {
     author?: string;
     url?: string;
   }, userAddress: string): Promise<void> {
-    const url = evermark.url || `${window.location.origin}/evermark/${evermark.id}`;
+    // Use Mini App compatible URL for Farcaster shares
+    const url = evermark.url || this.generateMiniAppUrl(evermark.id, 'share');
     const text = `Check out this Evermark: "${evermark.title}" 🌟`;
     
     const farcasterUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}&embeds[]=${encodeURIComponent(url)}`;
@@ -121,7 +138,13 @@ export class ShareService {
     author?: string;
     url?: string;
   }, userAddress: string): Promise<void> {
-    const url = evermark.url || `${window.location.origin}/evermark/${evermark.id}`;
+    // Generate different URLs based on context - Mini App URL if in Farcaster
+    const isInFarcaster = typeof window !== 'undefined' && 
+                         (window as any).__evermark_farcaster_detected === true;
+    
+    const url = evermark.url || (isInFarcaster 
+      ? this.generateMiniAppUrl(evermark.id, 'share')
+      : `${window.location.origin}/evermark/${evermark.id}`);
     
     await navigator.clipboard.writeText(url);
     
@@ -148,7 +171,13 @@ export class ShareService {
       throw new Error('Web Share API not supported');
     }
 
-    const url = evermark.url || `${window.location.origin}/evermark/${evermark.id}`;
+    // Use Mini App compatible URL for native sharing in Farcaster context
+    const isInFarcaster = typeof window !== 'undefined' && 
+                         (window as any).__evermark_farcaster_detected === true;
+    
+    const url = evermark.url || (isInFarcaster 
+      ? this.generateMiniAppUrl(evermark.id, 'share')
+      : `${window.location.origin}/evermark/${evermark.id}`);
     
     try {
       await navigator.share({

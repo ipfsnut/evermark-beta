@@ -36,10 +36,27 @@ function AppContent() {
   useEffect(() => {
     const initializeFarcasterMiniApp = async () => {
       try {
+        // Check if this is a Mini App shared link
+        const urlParams = new URLSearchParams(window.location.search);
+        const isMiniAppShare = urlParams.get('fc_miniapp') === '1';
+        const shareSource = urlParams.get('fc_source');
+        
+        if (isMiniAppShare) {
+          console.log('🔗 Opened via Mini App share link:', { shareSource });
+          // Clean up URL parameters for better UX
+          const cleanUrl = window.location.pathname;
+          window.history.replaceState({}, '', cleanUrl);
+        }
+
         // Try modern SDK approach first (for Mini Apps)
         const { sdk } = await import('@farcaster/frame-sdk');
         await sdk.actions.ready();
         console.log('✅ Fallback Farcaster SDK ready() called');
+        
+        // If this was a shared link, we can optionally notify the parent frame
+        if (isMiniAppShare && shareSource === 'share') {
+          console.log('📱 Successfully opened shared content in Mini App');
+        }
       } catch (error) {
         // Silently fail - this is expected when not in Farcaster environment
         console.log('ℹ️ Not in Farcaster environment, no SDK initialization needed');
