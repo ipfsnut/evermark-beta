@@ -298,20 +298,20 @@ export default function DocsPage() {
               )}>
                 External Resources
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
                 <a
                   href="https://github.com/ipfsnut/evermark-contracts"
                   target="_blank"
                   rel="noopener noreferrer"
                   className={cn(
                     themeClasses.cardInteractive,
-                    "flex items-center space-x-3"
+                    "flex items-center space-x-2 sm:space-x-3"
                   )}
                 >
-                  <ExternalLinkIcon className="h-5 w-5 text-app-text-on-card" />
+                  <ExternalLinkIcon className="h-4 w-4 sm:h-5 sm:w-5 text-app-text-on-card" />
                   <div>
-                    <div className="font-medium text-app-text-on-card">Smart Contracts</div>
-                    <div className="text-sm text-app-text-secondary">View contract source code</div>
+                    <div className="font-medium text-app-text-on-card text-sm sm:text-base">Smart Contracts</div>
+                    <div className="text-xs sm:text-sm text-app-text-secondary">View contract source code</div>
                   </div>
                 </a>
                 <a
@@ -320,13 +320,13 @@ export default function DocsPage() {
                   rel="noopener noreferrer"
                   className={cn(
                     themeClasses.cardInteractive,
-                    "flex items-center space-x-3"
+                    "flex items-center space-x-2 sm:space-x-3"
                   )}
                 >
-                  <ExternalLinkIcon className="h-5 w-5 text-app-text-on-card" />
+                  <ExternalLinkIcon className="h-4 w-4 sm:h-5 sm:w-5 text-app-text-on-card" />
                   <div>
-                    <div className="font-medium text-app-text-on-card">Beta Application</div>
-                    <div className="text-sm text-app-text-secondary">Frontend source code</div>
+                    <div className="font-medium text-app-text-on-card text-sm sm:text-base">Beta Application</div>
+                    <div className="text-xs sm:text-sm text-app-text-secondary">Frontend source code</div>
                   </div>
                 </a>
               </div>
@@ -336,24 +336,24 @@ export default function DocsPage() {
           /* Document Viewer */
           <div className={themeClasses.cardLarge}>
             {/* Document Header */}
-            <div className="flex items-center justify-between p-6 border-b border-app-border">
-              <div className="flex items-center space-x-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-6 border-b border-app-border gap-3 sm:gap-0">
+              <div className="flex items-center space-x-2 sm:space-x-4 w-full sm:w-auto">
                 <div className={cn(
-                  "p-2 rounded-lg",
+                  "p-1.5 sm:p-2 rounded-lg flex-shrink-0",
                   isDark ? "bg-purple-900/30 border border-purple-500/30" : "bg-purple-100/80 border border-purple-200"
                 )}>
                   <BookOpenIcon className={cn(
-                    "h-6 w-6",
+                    "h-4 w-4 sm:h-6 sm:w-6",
                     isDark ? "text-purple-400" : "text-purple-600"
                   )} />
                 </div>
                 <div>
                   <h1 className={cn(
-                    "text-2xl font-bold",
+                    "text-lg sm:text-2xl font-bold",
                     isDark ? "text-white" : "text-gray-900"
                   )}>{selectedDoc.title}</h1>
                   <p className={cn(
-                    "text-sm mb-3",
+                    "text-xs sm:text-sm mb-2 sm:mb-3",
                     isDark ? "text-gray-400" : "text-gray-600"
                   )}>{selectedDoc.description}</p>
                   
@@ -361,23 +361,23 @@ export default function DocsPage() {
                   <DocShareButton 
                     docTitle={selectedDoc.title}
                     docId={selectedDoc.id}
-                    variant="default"
-                    className="mt-2"
+                    variant="compact"
+                    className="mt-1 sm:mt-2"
                   />
                 </div>
               </div>
               <button
                 onClick={handleBackToList}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-app-text-secondary hover:text-app-text-primary hover:bg-app-bg-secondary"
+                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-colors text-app-text-secondary hover:text-app-text-primary hover:bg-app-bg-secondary flex-shrink-0"
                 title="Back to documentation list"
               >
-                <ArrowLeftIcon className="h-4 w-4" />
-                <span className="text-sm font-medium">Back to Docs</span>
+                <ArrowLeftIcon className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="text-xs sm:text-sm font-medium">Back to Docs</span>
               </button>
             </div>
 
             {/* Document Content */}
-            <div className="p-8">
+            <div className="p-3 sm:p-6 lg:p-8">
               {loading && (
                 <div className="text-center py-8">
                   <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400"></div>
