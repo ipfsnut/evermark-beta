@@ -1,6 +1,7 @@
 // src/pages/HomePage.tsx - Updated with Supabase test and real evermarks
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import packageJson from '../../package.json';
 import { 
   PlusIcon, 
   TrendingUpIcon, 
@@ -547,7 +548,7 @@ export default function HomePage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Version:</span>
-                  <span className="text-purple-400 font-medium">Beta v2.0</span>
+                  <span className="text-purple-400 font-medium">Beta v{packageJson.version}</span>
                 </div>
               </div>
             </div>
