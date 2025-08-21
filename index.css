@@ -5,14 +5,32 @@
 /* Base styles for cyber theme - Mobile First */
 @layer base {
   html {
-    color-scheme: dark;
     -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile */
     -webkit-touch-callout: none; /* Disable callout on long press */
   }
+  
+  html.dark {
+    color-scheme: dark;
+  }
+  
+  html.light {
+    color-scheme: light;
+  }
 
   body {
-    @apply bg-black text-white antialiased;
-    @apply selection:bg-cyber-primary selection:bg-opacity-30 selection:text-white;
+    @apply antialiased;
+    
+    /* Dark mode body styles */
+    &.dark {
+      @apply bg-black text-white;
+      @apply selection:bg-cyber-primary selection:bg-opacity-30 selection:text-white;
+    }
+    
+    /* Light mode body styles */
+    &:not(.dark) {
+      @apply bg-white text-gray-900;
+      @apply selection:bg-evermark-primary-200 selection:text-evermark-primary-900;
+    }
     
     /* Prevent overscroll bounce on iOS */
     overscroll-behavior: none;
@@ -36,22 +54,41 @@
     @apply w-2;
   }
 
-  ::-webkit-scrollbar-track {
+  /* Dark mode scrollbar */
+  .dark ::-webkit-scrollbar-track {
     @apply bg-gray-900;
   }
 
-  ::-webkit-scrollbar-thumb {
+  .dark ::-webkit-scrollbar-thumb {
     @apply bg-gradient-to-b from-cyber-primary to-cyber-secondary rounded;
   }
 
-  ::-webkit-scrollbar-thumb:hover {
+  .dark ::-webkit-scrollbar-thumb:hover {
     @apply from-cyber-secondary to-cyber-accent;
+  }
+  
+  /* Light mode scrollbar */
+  :not(.dark) ::-webkit-scrollbar-track {
+    @apply bg-gray-100;
+  }
+
+  :not(.dark) ::-webkit-scrollbar-thumb {
+    @apply bg-gradient-to-b from-evermark-primary-400 to-evermark-primary-500 rounded;
+  }
+
+  :not(.dark) ::-webkit-scrollbar-thumb:hover {
+    @apply from-evermark-primary-500 to-evermark-primary-600;
   }
 
   /* Firefox scrollbar */
-  * {
+  .dark * {
     scrollbar-width: thin;
     scrollbar-color: #00ff41 #111827;
+  }
+  
+  :not(.dark) * {
+    scrollbar-width: thin;
+    scrollbar-color: #06b6d4 #f3f4f6;
   }
 }
 
