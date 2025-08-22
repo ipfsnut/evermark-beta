@@ -65,11 +65,19 @@ class FarcasterCastService {
 
       console.log('🔍 Fetching cast data from:', url);
       
-      // Try to get cast by URL directly
+      // Use URL-based lookup which works with truncated hashes in URLs
+      // This is the most reliable method for Farcaster URLs
       const response = await neynarClient.getCastByUrl(url);
       
       if (response?.cast) {
         const cast = response.cast;
+        
+        console.log('✅ Cast found via URL lookup:', {
+          author: cast.author?.username,
+          text: cast.text?.substring(0, 50),
+          fullHash: cast.hash,
+          likes: cast.reactions?.likes_count
+        });
         
         return {
           text: cast.text || '',
@@ -89,32 +97,7 @@ class FarcasterCastService {
         };
       }
       
-      // Fallback: try extracting hash and fetching by hash
-      const { hash } = this.extractCastIdentifier(url);
-      if (hash) {
-        const hashResponse = await neynarClient.getCastByHash(hash);
-        if (hashResponse?.cast) {
-          const cast = hashResponse.cast;
-          
-          return {
-            text: cast.text || '',
-            author: {
-              username: cast.author?.username || 'unknown',
-              display_name: cast.author?.display_name || cast.author?.username || 'Unknown',
-              pfp_url: cast.author?.pfp_url || '',
-              fid: cast.author?.fid || 0
-            },
-            reactions: {
-              likes_count: cast.reactions?.likes_count || 0,
-              recasts_count: cast.reactions?.recasts_count || 0
-            },
-            timestamp: cast.timestamp || new Date().toISOString(),
-            hash: cast.hash || '',
-            embeds: cast.embeds || []
-          };
-        }
-      }
-      
+      console.log('❌ No cast found via URL lookup');
       return null;
     } catch (error) {
       console.error('Failed to fetch cast data:', error);

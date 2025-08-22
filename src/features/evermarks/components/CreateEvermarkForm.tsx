@@ -25,6 +25,8 @@ import { themeClasses } from '@/utils/theme';
 import { WalletConnect } from '@/components/ConnectButton';
 import { farcasterCastService } from '@/services/FarcasterCastService';
 import { castImageGenerator } from '@/services/CastImageGenerator';
+import { doiService } from '@/services/DOIService';
+import { isbnService } from '@/services/ISBNService';
 
 // Simple mobile detection hook
 function useIsMobile(): boolean {
@@ -156,6 +158,9 @@ export function CreateEvermarkForm({
   
   // Form state
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [primaryInput, setPrimaryInput] = useState(''); // The main URL/identifier input
+  const [detectedType, setDetectedType] = useState<'Cast' | 'DOI' | 'ISBN' | 'URL' | 'Custom' | null>(null);
+  const [isFormExpanded, setIsFormExpanded] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -177,6 +182,14 @@ export function CreateEvermarkForm({
   const [castData, setCastData] = useState<any>(null);
   const [isFetchingCast, setIsFetchingCast] = useState(false);
   const [castImageUrl, setCastImageUrl] = useState<string | null>(null);
+  
+  // DOI data state
+  const [doiData, setDoiData] = useState<any>(null);
+  const [isFetchingDOI, setIsFetchingDOI] = useState(false);
+  
+  // ISBN data state
+  const [isbnData, setIsbnData] = useState<any>(null);
+  const [isFetchingISBN, setIsFetchingISBN] = useState(false);
 
   const getAuthor = useCallback(() => {
     return user?.displayName || user?.username || 'Unknown Author';
@@ -216,20 +229,38 @@ export function CreateEvermarkForm({
     }
   }, [handleAddTag]);
 
-  // Auto-detect content from URL
-  const handleAutoDetect = useCallback(async () => {
-    if (!formData.sourceUrl) return;
+  // Smart auto-detect from primary input
+  const handleSmartDetection = useCallback(async (input: string) => {
+    if (!input.trim()) {
+      setDetectedType(null);
+      setIsFormExpanded(false);
+      setCastData(null);
+      setDoiData(null);
+      setIsbnData(null);
+      setFormData(prev => ({ ...prev, title: '', description: '', sourceUrl: '', contentType: 'Custom' }));
+      setTags([]);
+      return;
+    }
     
     try {
-      const url = new URL(formData.sourceUrl);
-      const domain = url.hostname.replace('www.', '');
+      console.log('🔍 Smart detection for input:', input);
+      
+      // Reset previous data
+      setCastData(null);
+      setDoiData(null);
+      setIsbnData(null);
+      setCastImageUrl(null);
+      
+      // Update sourceUrl in formData
+      setFormData(prev => ({ ...prev, sourceUrl: input }));
       
       // Check if it's a Farcaster URL and fetch cast data
-      if (farcasterCastService.isFarcasterUrl(formData.sourceUrl)) {
+      if (farcasterCastService.isFarcasterUrl(input)) {
+        setDetectedType('Cast');
         setIsFetchingCast(true);
-        console.log('🎯 Detected Farcaster URL, fetching cast data...');
+        console.log('💬 Detected Farcaster URL, fetching cast data...');
         
-        const result = await farcasterCastService.fetchCastWithPreview(formData.sourceUrl);
+        const result = await farcasterCastService.fetchCastWithPreview(input);
         
         if (result.success && result.castData) {
           setCastData(result.castData);
@@ -242,18 +273,10 @@ export function CreateEvermarkForm({
             contentType: 'Cast'
           }));
 
-          // Auto-populate tags for Farcaster casts
           setTags(['farcaster', 'cast']);
+          setIsFormExpanded(true);
           
-          // Set author from cast
-          if (result.castData?.author?.display_name) {
-            setFormData(prev => ({ 
-              ...prev, 
-              author: result.castData?.author?.display_name
-            }));
-          }
-          
-          // Generate a cast preview image using Canvas
+          // Generate cast preview image
           if (castImageGenerator) {
             try {
               console.log('🎨 Generating cast preview image...');
@@ -272,7 +295,6 @@ export function CreateEvermarkForm({
                 timestamp: result.castData.timestamp
               });
               
-              // Create preview URL for the generated image
               const previewUrl = URL.createObjectURL(castImageFile);
               setImagePreview(previewUrl);
               setSelectedImage(castImageFile);
@@ -281,56 +303,133 @@ export function CreateEvermarkForm({
               console.log('✅ Cast preview image generated successfully');
             } catch (genError) {
               console.warn('Could not generate cast preview image:', genError);
-              
-              // Fallback: try to use embedded image if available
-              if (result.previewImageUrl) {
-                setCastImageUrl(result.previewImageUrl);
-                setImagePreview(result.previewImageUrl);
-                console.log('📸 Using embedded image as fallback:', result.previewImageUrl);
-                
-                try {
-                  const response = await fetch(result.previewImageUrl);
-                  const blob = await response.blob();
-                  const file = new File([blob], 'cast-image.jpg', { type: 'image/jpeg' });
-                  setSelectedImage(file);
-                } catch (imgError) {
-                  console.warn('Could not convert embedded image to file:', imgError);
-                }
-              }
             }
           }
+          
+          console.log('✅ Cast data fetched and form populated');
         }
         
         setIsFetchingCast(false);
+      } 
+      // Check if it's a DOI URL and fetch paper data
+      else if (doiService.isDOIUrl(input)) {
+        setDetectedType('DOI');
+        setIsFetchingDOI(true);
+        console.log('📄 Detected DOI URL, fetching paper data...');
+        
+        const result = await doiService.fetchDOIMetadata(input);
+        
+        if (result.success && result.metadata) {
+          setDoiData(result.metadata);
+          
+          // Auto-fill form with DOI data
+          setFormData(prev => ({ 
+            ...prev, 
+            title: result.metadata.title,
+            description: result.metadata.title + (result.metadata.authors.length > 0 ? ` by ${result.metadata.authors.join(', ')}` : ''),
+            contentType: 'DOI'
+          }));
+
+          setTags(['academic', 'research', 'paper']);
+          setIsFormExpanded(true);
+          
+          console.log('✅ DOI metadata fetched and form populated');
+        }
+        
+        setIsFetchingDOI(false);
+      }
+      // Check if input contains ISBN and fetch book data
+      else if (isbnService.isISBN(input) || isbnService.findISBNInURL(input)) {
+        setDetectedType('ISBN');
+        setIsFetchingISBN(true);
+        console.log('📚 Detected ISBN, fetching book data...');
+        
+        const isbnToFetch = isbnService.extractISBN(input) || isbnService.findISBNInURL(input);
+        
+        if (isbnToFetch) {
+          const result = await isbnService.fetchISBNMetadata(isbnToFetch);
+          
+          if (result.success && result.metadata) {
+            setIsbnData(result.metadata);
+            
+            // Auto-fill form with ISBN data
+            setFormData(prev => ({ 
+              ...prev, 
+              title: result.metadata.title,
+              description: result.metadata.description || `${result.metadata.title} by ${result.metadata.authors.join(', ')}`,
+              contentType: 'ISBN'
+            }));
+
+            // Auto-populate tags for books
+            const bookTags = ['book'];
+            if (result.metadata.categories && result.metadata.categories.length > 0) {
+              bookTags.push(...result.metadata.categories.slice(0, 3).map(cat => cat.toLowerCase()));
+            }
+            setTags(bookTags);
+            setIsFormExpanded(true);
+            
+            // Set cover image if available
+            if (result.metadata.coverImage) {
+              try {
+                const response = await fetch(result.metadata.coverImage);
+                const blob = await response.blob();
+                const file = new File([blob], 'book-cover.jpg', { type: 'image/jpeg' });
+                setSelectedImage(file);
+                setImagePreview(result.metadata.coverImage);
+                console.log('📸 Using book cover image');
+              } catch (imgError) {
+                console.warn('Could not load book cover image:', imgError);
+              }
+            }
+            
+            console.log('✅ ISBN metadata fetched and form populated');
+          }
+        }
+        
+        setIsFetchingISBN(false);
       } else {
-        // Default auto-detection for non-Farcaster URLs
-        if (!formData.title) {
+        // Handle as URL or allow manual entry
+        try {
+          const url = new URL(input);
+          setDetectedType('URL');
+          const domain = url.hostname.replace('www.', '');
+          
           setFormData(prev => ({ 
             ...prev, 
-            title: `Content from ${domain}` 
+            title: `Content from ${domain}`,
+            description: `Content from ${input}`,
+            contentType: 'URL'
           }));
-        }
-        
-        if (!formData.description) {
+          
+          setTags(['web', 'url']);
+          setIsFormExpanded(true);
+          
+          console.log('✅ URL detected, form expanded for manual entry');
+        } catch (urlError) {
+          // Not a valid URL, allow manual entry
+          setDetectedType('Custom');
           setFormData(prev => ({ 
             ...prev, 
-            description: `Content automatically detected from ${formData.sourceUrl}` 
+            title: '',
+            description: '',
+            contentType: 'Custom'
           }));
-        }
-        
-        // Detect content type
-        if (formData.sourceUrl.includes('doi.org')) {
-          setFormData(prev => ({ ...prev, contentType: 'DOI' }));
-        } else {
-          setFormData(prev => ({ ...prev, contentType: 'URL' }));
+          setTags([]);
+          setIsFormExpanded(true);
+          
+          console.log('✅ Manual entry mode, form expanded');
         }
       }
       
     } catch (error) {
-      console.warn('URL auto-detection failed:', error);
+      console.warn('Smart detection failed:', error);
       setIsFetchingCast(false);
+      setIsFetchingDOI(false);
+      setIsFetchingISBN(false);
+      setDetectedType('Custom');
+      setIsFormExpanded(true);
     }
-  }, [formData.sourceUrl, formData.title, formData.description]);
+  }, []);
 
   const isFormValid = useCallback(() => {
     // For Cast type, only require sourceUrl since title/description will be auto-populated
@@ -449,6 +548,32 @@ export function CreateEvermarkForm({
           { key: 'cast_likes', value: castData.reactions.likes_count.toString() },
           { key: 'cast_recasts', value: castData.reactions.recasts_count.toString() },
           { key: 'cast_timestamp', value: castData.timestamp }
+        ];
+      }
+      
+      // If we have DOI data, include it in metadata
+      if (doiData && formData.contentType === 'DOI') {
+        evermarkMetadata.customFields = [
+          { key: 'doi', value: doiData.doi },
+          { key: 'authors', value: doiData.authors.join('; ') },
+          { key: 'journal', value: doiData.journal || '' },
+          { key: 'publisher', value: doiData.publisher || '' },
+          { key: 'volume', value: doiData.volume || '' },
+          { key: 'issue', value: doiData.issue || '' },
+          { key: 'pages', value: doiData.pages || '' },
+          { key: 'published_date', value: doiData.publishedDate || '' }
+        ];
+      }
+      
+      // If we have ISBN data, include it in metadata
+      if (isbnData && formData.contentType === 'ISBN') {
+        evermarkMetadata.customFields = [
+          { key: 'isbn', value: isbnData.isbn },
+          { key: 'authors', value: isbnData.authors.join('; ') },
+          { key: 'publisher', value: isbnData.publisher || '' },
+          { key: 'published_date', value: isbnData.publishedDate || '' },
+          { key: 'page_count', value: isbnData.pageCount?.toString() || '' },
+          { key: 'categories', value: isbnData.categories?.join('; ') || '' }
         ];
       }
 
@@ -654,42 +779,87 @@ export function CreateEvermarkForm({
               )}
 
               <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Content Type Selection */}
-                <div className="space-y-3">
+                {/* Primary Input Field - The star of the show! */}
+                <div className="space-y-4">
                   <label className={cn(
-                    "block text-sm font-medium",
+                    "block text-lg font-medium text-center",
                     isDark ? "text-cyan-400" : "text-purple-600"
                   )}>
-                    Content Type
+                    Paste URL or Identifier
                   </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {CONTENT_TYPES.map((type) => (
+                  
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={primaryInput}
+                      onChange={(e) => {
+                        setPrimaryInput(e.target.value);
+                        // Debounced auto-detection will be added next
+                      }}
+                      placeholder="Paste Farcaster cast URL, DOI, ISBN, or any URL..."
+                      disabled={isFormDisabled}
+                      className={cn(
+                        "w-full px-6 py-4 text-lg border-2 rounded-xl focus:ring-2 focus:ring-opacity-20 transition-all",
+                        isFormDisabled && "opacity-50 cursor-not-allowed",
+                        // Dynamic border colors based on detection state
+                        detectedType === 'Cast' && "border-purple-400 bg-purple-50",
+                        detectedType === 'DOI' && "border-blue-400 bg-blue-50", 
+                        detectedType === 'ISBN' && "border-green-400 bg-green-50",
+                        detectedType === 'URL' && "border-orange-400 bg-orange-50",
+                        !detectedType && (isDark 
+                          ? "border-gray-600 bg-gray-700 text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-cyan-400" 
+                          : "border-gray-300 bg-white text-gray-900 placeholder-gray-500 focus:border-purple-400 focus:ring-purple-400")
+                      )}
+                    />
+                    
+                    {/* Loading indicator */}
+                    {(isFetchingCast || isFetchingDOI || isFetchingISBN) && (
+                      <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+                        <LoaderIcon className="h-5 w-5 animate-spin text-purple-500" />
+                      </div>
+                    )}
+                    
+                    {/* Detection result badge */}
+                    {detectedType && !isFetchingCast && !isFetchingDOI && !isFetchingISBN && (
+                      <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+                        <div className={cn(
+                          "flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium",
+                          detectedType === 'Cast' && "bg-purple-100 text-purple-700 border border-purple-200",
+                          detectedType === 'DOI' && "bg-blue-100 text-blue-700 border border-blue-200",
+                          detectedType === 'ISBN' && "bg-green-100 text-green-700 border border-green-200",
+                          detectedType === 'URL' && "bg-orange-100 text-orange-700 border border-orange-200",
+                          detectedType === 'Custom' && "bg-gray-100 text-gray-700 border border-gray-200"
+                        )}>
+                          <CheckCircleIcon className="h-4 w-4" />
+                          {detectedType === 'Cast' && '💬 Cast'}
+                          {detectedType === 'DOI' && '📄 Paper'}
+                          {detectedType === 'ISBN' && '📚 Book'}
+                          {detectedType === 'URL' && '🌐 URL'}
+                          {detectedType === 'Custom' && '✨ Custom'}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Manual entry option */}
+                  {!isFormExpanded && (
+                    <div className="text-center">
                       <button
-                        key={type.value}
                         type="button"
-                        onClick={() => handleFieldChange('contentType', type.value)}
+                        onClick={() => {
+                          setDetectedType('Custom');
+                          setIsFormExpanded(true);
+                          setFormData(prev => ({ ...prev, contentType: 'Custom' }));
+                        }}
                         className={cn(
-                          "p-4 rounded-lg border transition-all text-left",
-                          formData.contentType === type.value
-                            ? (isDark 
-                                ? "border-cyan-400 bg-cyan-900/30 text-cyan-300" 
-                                : "border-purple-400 bg-purple-100/50 text-purple-700")
-                            : (isDark 
-                                ? "border-gray-600 bg-gray-700/50 text-gray-300 hover:border-gray-500" 
-                                : "border-gray-300 bg-gray-100/50 text-gray-700 hover:border-gray-400")
+                          "text-sm underline transition-colors",
+                          isDark ? "text-gray-400 hover:text-gray-300" : "text-gray-600 hover:text-gray-700"
                         )}
                       >
-                        <div className="flex items-center gap-3 mb-2">
-                          <span className="text-lg">{type.icon}</span>
-                          <span className="font-medium">{type.label}</span>
-                        </div>
-                        <p className={cn(
-                          "text-xs",
-                          isDark ? "text-gray-400" : "text-gray-600"
-                        )}>{type.description}</p>
+                        Or create custom evermark manually
                       </button>
-                    ))}
-                  </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Cast Mode Indicator */}
@@ -820,14 +990,14 @@ export function CreateEvermarkForm({
                       <button
                         type="button"
                         onClick={handleAutoDetect}
-                        disabled={isFormDisabled || isFetchingCast}
+                        disabled={isFormDisabled || isFetchingCast || isFetchingDOI || isFetchingISBN}
                         className={cn(
                           "px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors",
                           isFormDisabled && "opacity-50 cursor-not-allowed"
                         )}
                         title="Auto-detect content"
                       >
-                        {isFetchingCast ? (
+                        {(isFetchingCast || isFetchingDOI || isFetchingISBN) ? (
                           <LoaderIcon className="h-4 w-4 animate-spin" />
                         ) : (
                           <ZapIcon className="h-4 w-4" />
@@ -835,7 +1005,7 @@ export function CreateEvermarkForm({
                       </button>
                     )}
                   </div>
-                  {/* Show cast data indicator */}
+                  {/* Show detected data indicators */}
                   {castData && formData.contentType === 'Cast' && (
                     <div className={cn(
                       "mt-2 p-3 border rounded-lg text-sm",
@@ -845,11 +1015,60 @@ export function CreateEvermarkForm({
                     )}>
                       <div className="flex items-center gap-2">
                         <CheckCircleIcon className="h-4 w-4" />
-                        <span>Farcaster cast detected: @{castData.author.username}</span>
+                        <span>💬 Farcaster cast detected: @{castData.author.username}</span>
                       </div>
                       {castImageUrl && (
                         <div className="mt-2 text-xs opacity-80">
-                          ✓ Cast image found and will be used
+                          ✓ Cast image generated and will be used
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {doiData && formData.contentType === 'DOI' && (
+                    <div className={cn(
+                      "mt-2 p-3 border rounded-lg text-sm",
+                      isDark 
+                        ? "bg-blue-900/30 border-blue-500/50 text-blue-300" 
+                        : "bg-blue-100/80 border-blue-300 text-blue-700"
+                    )}>
+                      <div className="flex items-center gap-2">
+                        <CheckCircleIcon className="h-4 w-4" />
+                        <span>📄 Academic paper detected: {doiData.journal}</span>
+                      </div>
+                      <div className="mt-2 text-xs opacity-80">
+                        ✓ Authors: {doiData.authors.slice(0, 3).join(', ')}{doiData.authors.length > 3 ? '...' : ''}
+                      </div>
+                      {doiData.publishedDate && (
+                        <div className="text-xs opacity-80">
+                          ✓ Published: {doiData.publishedDate}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {isbnData && formData.contentType === 'ISBN' && (
+                    <div className={cn(
+                      "mt-2 p-3 border rounded-lg text-sm",
+                      isDark 
+                        ? "bg-green-900/30 border-green-500/50 text-green-300" 
+                        : "bg-green-100/80 border-green-300 text-green-700"
+                    )}>
+                      <div className="flex items-center gap-2">
+                        <CheckCircleIcon className="h-4 w-4" />
+                        <span>📚 Book detected: {isbnData.publisher}</span>
+                      </div>
+                      <div className="mt-2 text-xs opacity-80">
+                        ✓ Authors: {isbnData.authors.slice(0, 3).join(', ')}{isbnData.authors.length > 3 ? '...' : ''}
+                      </div>
+                      {isbnData.pageCount && (
+                        <div className="text-xs opacity-80">
+                          ✓ Pages: {isbnData.pageCount}
+                        </div>
+                      )}
+                      {isbnData.coverImage && (
+                        <div className="text-xs opacity-80">
+                          ✓ Cover image found and will be used
                         </div>
                       )}
                     </div>

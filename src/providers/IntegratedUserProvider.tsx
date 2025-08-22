@@ -249,9 +249,9 @@ export function useUserForEvermarks() {
   return {
     authorData: getEvermarkAuthorData(),
     isAuthenticated: isConnected,
-    isWalletAuthenticated: hasWallet, // Simple: just check wallet connection
-    canCreate: hasWallet, // Can create if wallet is connected
-    ensureWalletAuth: async () => hasWallet, // No-op, just return wallet status
+    isWalletAuthenticated: hasWallet,
+    canCreate: hasWallet || hasFarcaster, // Can create if wallet OR Farcaster is connected
+    ensureWalletAuth: async () => hasWallet || hasFarcaster, // Return true if either auth method available
     user,
     hasWallet,
     hasFarcaster,
@@ -297,7 +297,7 @@ export function useAuthenticationState() {
     hasENS,
     isAuthenticated: isConnected,
     isWalletAuthenticated: hasWallet,
-    canUpload: hasWallet, // Simple: can upload if wallet connected
+    canUpload: hasWallet || hasFarcaster, // Can upload if wallet OR Farcaster connected
     primaryIdentity: getPrimaryIdentity(),
     identityScore: getIdentityScore(),
     isHybridUser: (hasWallet && hasFarcaster) || (hasWallet && hasENS) || (hasFarcaster && hasENS),

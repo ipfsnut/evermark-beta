@@ -244,6 +244,105 @@
 [ ] Verify Supabase sync working
 [ ] Check error reporting
 
+## UX IMPROVEMENT: SMART EVERMARK CREATION FORM
+===============================================
+
+### Requirements & Design Complete ✅
+[ ] Comprehensive requirements document created
+    - Core UX flow: Primary input → Auto-detection → Form expansion
+    - Support for Farcaster casts, DOIs, ISBNs, URLs, and manual entry
+    - Visual feedback system with content type badges
+    - Progressive disclosure design pattern
+    - Accessibility and responsive design requirements
+
+### Phase 1: Foundation (HIGH PRIORITY)
+[ ] New form structure and state management
+    - Add primaryInput state for main URL/identifier field
+    - Add detectedType state ('Cast' | 'DOI' | 'ISBN' | 'URL' | 'Custom')
+    - Add isFormExpanded state for progressive disclosure
+    - Add detection loading states (isFetchingCast, isFetchingDOI, isFetchingISBN)
+
+[ ] Input detection framework
+    - Create handleSmartDetection() function with 500ms debouncing
+    - Implement detection priority: Farcaster → DOI → ISBN → URL → Manual
+    - Add input validation and sanitization
+    - Handle concurrent detection attempts gracefully
+
+[ ] Basic UI layout and animations
+    - Large, prominent primary input field at top
+    - Smooth 300ms expand/collapse animations
+    - Color-coded content type indicators
+    - Loading states and progress feedback
+
+### Phase 2: Service Integration (MEDIUM PRIORITY)
+[ ] Enhanced Farcaster cast detection
+    - ✅ Already implemented and fixed (URL-based lookup)
+    - Integrate with new form structure
+    - Auto-populate title, description, tags, and generate image
+
+[ ] DOI academic paper detection  
+    - ✅ DOIService.ts created with Crossref API integration
+    - Auto-populate: title, authors, journal, publication info
+    - Store structured metadata in customFields
+    - Handle DOI extraction from various URL formats
+
+[ ] ISBN book detection
+    - ✅ ISBNService.ts created with Google Books + Open Library APIs
+    - Auto-populate: title, authors, description, categories
+    - Auto-download cover images
+    - Support ISBN-10, ISBN-13, and URLs containing ISBNs
+
+### Phase 3: Polish & Edge Cases (MEDIUM PRIORITY)
+[ ] Error handling and fallbacks
+    - API timeout handling (8s max)
+    - Graceful degradation when APIs fail
+    - Network connectivity detection
+    - Rate limiting respect (especially Crossref)
+
+[ ] Input validation and edge cases
+    - Handle malformed URLs gracefully
+    - Support multiple content types in single URL
+    - Clean paste input (remove formatting/whitespace)
+    - Validate before making API calls
+
+[ ] Performance optimization
+    - Cancel previous requests on new input
+    - Cache API responses for 5 minutes
+    - Lazy load services only when needed
+    - Debounced input to avoid excessive requests
+
+### Phase 4: Accessibility & Testing (LOW PRIORITY)
+[ ] Full accessibility implementation
+    - Complete keyboard navigation support
+    - ARIA labels and live regions
+    - Screen reader announcements for detection results
+    - High contrast mode support
+
+[ ] Comprehensive testing
+    - Unit tests for detection logic
+    - Integration tests for each content type
+    - Manual testing with real URLs
+    - Mobile device testing
+
+### Technical Implementation Notes
+- Services already created: DOIService.ts, ISBNService.ts
+- Farcaster detection already working correctly
+- Form structure partially updated with new state variables
+- Smart detection function drafted but needs integration
+- Visual feedback components need implementation
+
+### User Experience Goals
+- 🎯 90% auto-population success rate for supported content types
+- ⚡ 70% reduction in form completion time
+- 🧠 Zero learning curve - paste and go
+- 💪 Maintain flexibility for custom content
+
+### API Dependencies
+- Neynar API: Farcaster cast metadata (working)
+- Crossref API: DOI academic paper metadata (tested)
+- Google Books API: ISBN book metadata (tested)
+- Open Library API: Fallback for ISBN (tested)
+
 ## NICE TO HAVE (Post-Beta)
 ===========================
 
@@ -255,6 +354,9 @@
 [ ] Implement reward compounding
 [ ] Add governance proposals
 [ ] Create mobile-optimized views
+[ ] Smart form: URL pattern recognition for academic databases
+[ ] Smart form: Bulk import from reading lists/bookmarks
+[ ] Smart form: Browser extension for one-click evermark creation
 
 ## NOTES
 ========
