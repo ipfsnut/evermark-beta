@@ -143,11 +143,21 @@ export const handler: Handler = async (event, context) => {
         const getCustomField = (key: string) => 
           metadata.customFields.find((field: any) => field.key === key)?.value;
         
-        castAuthorUsername = getCustomField('cast_author_username') || castAuthorUsername;
-        castAuthorDisplayName = getCustomField('cast_author_display_name') || castAuthorDisplayName;
+        // Support both old and new field formats
+        castAuthorUsername = getCustomField('cast_author_username') || getCustomField('cast_author') || castAuthorUsername;
+        castAuthorDisplayName = getCustomField('cast_author_display_name') || getCustomField('cast_author') || castAuthorDisplayName;
         castLikes = parseInt(getCustomField('cast_likes') || '0');
         castRecasts = parseInt(getCustomField('cast_recasts') || '0');
         castTimestamp = getCustomField('cast_timestamp') || castTimestamp;
+      }
+      
+      // Also check if there's cast data in the metadata root
+      if (metadata.cast) {
+        castAuthorUsername = metadata.cast.author_username || castAuthorUsername;
+        castAuthorDisplayName = metadata.cast.author_display_name || castAuthorDisplayName;
+        castLikes = metadata.cast.likes || castLikes;
+        castRecasts = metadata.cast.recasts || castRecasts;
+        castTimestamp = metadata.cast.timestamp || castTimestamp;
       }
       
       // Adapt the metadata to cast format using actual cast data
