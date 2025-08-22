@@ -23,6 +23,7 @@ import { useTheme } from '@/providers/ThemeProvider';
 import { cn } from '@/utils/responsive';
 import { themeClasses } from '@/utils/theme';
 import { WalletConnect } from '@/components/ConnectButton';
+import { farcasterCastService } from '@/services/FarcasterCastService';
 
 // Simple mobile detection hook
 function useIsMobile(): boolean {
@@ -170,6 +171,11 @@ export function CreateEvermarkForm({
   // Simple image upload state for IPFS-first approach
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  
+  // Farcaster cast data state
+  const [castData, setCastData] = useState<any>(null);
+  const [isFetchingCast, setIsFetchingCast] = useState(false);
+  const [castImageUrl, setCastImageUrl] = useState<string | null>(null);
 
   const getAuthor = useCallback(() => {
     return user?.displayName || user?.username || 'Unknown Author';
@@ -217,29 +223,78 @@ export function CreateEvermarkForm({
       const url = new URL(formData.sourceUrl);
       const domain = url.hostname.replace('www.', '');
       
-      if (!formData.title) {
-        setFormData(prev => ({ 
-          ...prev, 
-          title: `Content from ${domain}` 
-        }));
-      }
-      
-      if (!formData.description) {
-        setFormData(prev => ({ 
-          ...prev, 
-          description: `Content automatically detected from ${formData.sourceUrl}` 
-        }));
-      }
-      
-      // Detect content type
-      if (domain.includes('farcaster') || domain.includes('warpcast')) {
-        setFormData(prev => ({ ...prev, contentType: 'Cast' }));
-      } else if (formData.sourceUrl.includes('doi.org')) {
-        setFormData(prev => ({ ...prev, contentType: 'DOI' }));
+      // Check if it's a Farcaster URL and fetch cast data
+      if (farcasterCastService.isFarcasterUrl(formData.sourceUrl)) {
+        setIsFetchingCast(true);
+        console.log('🎯 Detected Farcaster URL, fetching cast data...');
+        
+        const result = await farcasterCastService.fetchCastWithPreview(formData.sourceUrl);
+        
+        if (result.success && result.castData) {
+          setCastData(result.castData);
+          
+          // Auto-fill form with cast data
+          setFormData(prev => ({ 
+            ...prev, 
+            title: result.castData.text.substring(0, 100) || `Cast by ${result.castData.author.display_name}`,
+            description: result.castData.text || 'Farcaster cast',
+            contentType: 'Cast'
+          }));
+          
+          // Set author from cast
+          if (result.castData.author.display_name) {
+            setFormData(prev => ({ 
+              ...prev, 
+              author: result.castData.author.display_name
+            }));
+          }
+          
+          // If we found an image in the cast, prepare it for upload
+          if (result.previewImageUrl) {
+            setCastImageUrl(result.previewImageUrl);
+            setImagePreview(result.previewImageUrl);
+            console.log('📸 Found cast image:', result.previewImageUrl);
+            
+            // Try to convert the image URL to a File object for upload
+            try {
+              const response = await fetch(result.previewImageUrl);
+              const blob = await response.blob();
+              const file = new File([blob], 'cast-image.jpg', { type: 'image/jpeg' });
+              setSelectedImage(file);
+            } catch (imgError) {
+              console.warn('Could not convert cast image to file:', imgError);
+            }
+          }
+        }
+        
+        setIsFetchingCast(false);
+      } else {
+        // Default auto-detection for non-Farcaster URLs
+        if (!formData.title) {
+          setFormData(prev => ({ 
+            ...prev, 
+            title: `Content from ${domain}` 
+          }));
+        }
+        
+        if (!formData.description) {
+          setFormData(prev => ({ 
+            ...prev, 
+            description: `Content automatically detected from ${formData.sourceUrl}` 
+          }));
+        }
+        
+        // Detect content type
+        if (formData.sourceUrl.includes('doi.org')) {
+          setFormData(prev => ({ ...prev, contentType: 'DOI' }));
+        } else {
+          setFormData(prev => ({ ...prev, contentType: 'URL' }));
+        }
       }
       
     } catch (error) {
       console.warn('URL auto-detection failed:', error);
+      setIsFetchingCast(false);
     }
   }, [formData.sourceUrl, formData.title, formData.description]);
 
@@ -318,11 +373,24 @@ export function CreateEvermarkForm({
         title: formData.title.trim(),
         description: formData.description.trim(),
         sourceUrl: formData.sourceUrl.trim(),
-        author: getAuthor(),
+        author: castData ? castData.author.display_name : getAuthor(),
         tags,
         contentType: formData.contentType,
-        customFields: []
+        customFields: [],
+        // Include cast URL if it's a Farcaster cast
+        castUrl: formData.contentType === 'Cast' ? formData.sourceUrl.trim() : undefined
       };
+      
+      // If we have cast data, include it in metadata
+      if (castData && formData.contentType === 'Cast') {
+        evermarkMetadata.customFields = [
+          { key: 'cast_author', value: castData.author.username },
+          { key: 'cast_hash', value: castData.hash },
+          { key: 'cast_likes', value: castData.reactions.likes_count.toString() },
+          { key: 'cast_recasts', value: castData.reactions.recasts_count.toString() },
+          { key: 'cast_timestamp', value: castData.timestamp }
+        ];
+      }
 
       const createInput: CreateEvermarkInput = {
         metadata: evermarkMetadata,
@@ -347,6 +415,7 @@ export function CreateEvermarkForm({
     getAuthor, 
     tags, 
     selectedImage,
+    castData,
     createEvermark, 
     onSuccess, 
     navigate
@@ -676,17 +745,40 @@ export function CreateEvermarkForm({
                       <button
                         type="button"
                         onClick={handleAutoDetect}
-                        disabled={isFormDisabled}
+                        disabled={isFormDisabled || isFetchingCast}
                         className={cn(
                           "px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors",
                           isFormDisabled && "opacity-50 cursor-not-allowed"
                         )}
                         title="Auto-detect content"
                       >
-                        <ZapIcon className="h-4 w-4" />
+                        {isFetchingCast ? (
+                          <LoaderIcon className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <ZapIcon className="h-4 w-4" />
+                        )}
                       </button>
                     )}
                   </div>
+                  {/* Show cast data indicator */}
+                  {castData && formData.contentType === 'Cast' && (
+                    <div className={cn(
+                      "mt-2 p-3 border rounded-lg text-sm",
+                      isDark 
+                        ? "bg-purple-900/30 border-purple-500/50 text-purple-300" 
+                        : "bg-purple-100/80 border-purple-300 text-purple-700"
+                    )}>
+                      <div className="flex items-center gap-2">
+                        <CheckCircleIcon className="h-4 w-4" />
+                        <span>Farcaster cast detected: @{castData.author.username}</span>
+                      </div>
+                      {castImageUrl && (
+                        <div className="mt-2 text-xs opacity-80">
+                          ✓ Cast image found and will be used
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Tags */}
