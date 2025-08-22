@@ -189,7 +189,7 @@ class FarcasterCastService {
       return {
         success: true,
         castData,
-        previewImageUrl
+        previewImageUrl: previewImageUrl || undefined
       };
       
     } catch (error) {

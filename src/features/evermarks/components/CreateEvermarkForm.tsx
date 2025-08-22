@@ -237,8 +237,8 @@ export function CreateEvermarkForm({
           // Auto-fill form with cast data
           setFormData(prev => ({ 
             ...prev, 
-            title: result.castData.text.substring(0, 100) || `Cast by ${result.castData.author.display_name}`,
-            description: result.castData.text || 'Farcaster cast',
+            title: result.castData?.text?.substring(0, 100) || `Cast by ${result.castData?.author?.display_name || 'Unknown'}`,
+            description: result.castData?.text || 'Farcaster cast',
             contentType: 'Cast'
           }));
 
@@ -246,10 +246,10 @@ export function CreateEvermarkForm({
           setTags(['farcaster', 'cast']);
           
           // Set author from cast
-          if (result.castData.author.display_name) {
+          if (result.castData?.author?.display_name) {
             setFormData(prev => ({ 
               ...prev, 
-              author: result.castData.author.display_name
+              author: result.castData?.author?.display_name
             }));
           }
           

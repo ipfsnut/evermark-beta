@@ -67,7 +67,7 @@ export const handler: Handler = async (event, context) => {
     };
 
     // Look for embedded images or use author's profile picture
-    let imageUrl = null;
+    let imageUrl: string | null = null;
     let imageHash = null;
     
     // Check for embedded images first
