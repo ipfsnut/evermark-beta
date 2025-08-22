@@ -4,7 +4,7 @@
 # Goal: Align entire codebase with new contract architecture
 
 ## CRITICAL PATH - Must fix before any testing
-==============================================
+======================================yea========
 
 ### 1. CONTRACT INTEGRATION & ABIS
 [ ] Update lib/contracts.ts

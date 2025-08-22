@@ -105,13 +105,13 @@ const HelpModal: React.FC<{
             <h4 className={cn(
               "text-lg font-semibold mb-2",
               isDark ? "text-white" : "text-gray-900"
-            )}>SDK-Powered Storage</h4>
-            <p>Your content is stored using our advanced SDK:</p>
+            )}>Hybrid Storage</h4>
+            <p>Your content is stored using our hybrid approach:</p>
             <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
               <li><strong className="text-green-400">Primary:</strong> Supabase for fast loading</li>
               <li><strong className="text-cyan-400">Backup:</strong> IPFS for permanent decentralized storage</li>
               <li><strong className="text-purple-400">Auto-transfer:</strong> Seamless fallback between sources</li>
-              <li><strong className="text-yellow-400">SDK:</strong> Intelligent image handling and optimization</li>
+              <li><strong className="text-yellow-400">Auto:</strong> Intelligent image handling and optimization</li>
             </ul>
           </div>
         </div>
@@ -134,7 +134,7 @@ export function CreateEvermarkForm({
 }: CreateEvermarkFormProps) {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const { isAuthenticated, user, requireAuth } = useAppAuth();
+  const { user } = useAppAuth();
   const { isDark } = useTheme();
   
   // SIMPLIFIED: Just check wallet connection
@@ -304,14 +304,11 @@ export function CreateEvermarkForm({
       return;
     }
 
-    // SIMPLIFIED: Just check wallet connection
-    if (!canCreate) {
-      console.error('❌ Cannot create evermark without wallet connection');
+    // Check if wallet is connected via app-level wallet provider
+    if (!hasWallet) {
+      console.error('❌ Cannot create evermark without wallet connection from app header');
       return;
     }
-
-    const canProceed = await requireAuth();
-    if (!canProceed) return;
 
     try {
       const evermarkMetadata: EvermarkMetadata = {
@@ -342,7 +339,6 @@ export function CreateEvermarkForm({
     isCreating, 
     isFormValid, 
     canCreate,
-    requireAuth, 
     formData, 
     getAuthor, 
     tags, 
@@ -353,7 +349,7 @@ export function CreateEvermarkForm({
   ]);
 
   // Add this import at the top if not already imported
-  const isFormDisabled = !isAuthenticated;
+  const isFormDisabled = !hasWallet; // Enable form when wallet is connected via app header
 
   // Debug logging removed for cleaner console
 
@@ -399,7 +395,7 @@ export function CreateEvermarkForm({
               "max-w-3xl mx-auto text-lg",
               isDark ? "text-gray-300" : "text-gray-700"
             )}>
-              Transform any content into a permanent reference with our advanced SDK. 
+              Transform any content into a permanent reference with our hybrid storage. 
               <span className="text-green-400 font-bold"> Hybrid storage</span> ensures optimal performance and permanence.
             </p>
           </div>
@@ -442,27 +438,6 @@ export function CreateEvermarkForm({
         )}
 
 
-        {/* ADDED: Auth Status Indicator */}
-        {isAuthenticated && (
-          <div className={cn(
-            "mb-6 p-4 border rounded-lg",
-            isDark 
-              ? "bg-gray-800/50 border-gray-600" 
-              : "bg-white border-gray-300"
-          )}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-green-400" />
-                <span className={cn(
-                  "text-sm",
-                  isDark ? "text-gray-300" : "text-gray-700"
-                )}>
-                  ✅ Wallet connected - Ready to create
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Progress Display */}
         {isCreating && (
@@ -481,7 +456,7 @@ export function CreateEvermarkForm({
                 <p className={cn(
                   "font-medium",
                   isDark ? "text-blue-300" : "text-blue-700"
-                )}>Creating Evermark with SDK...</p>
+                )}>Creating Evermark...</p>
                 <p className={cn(
                   "text-sm",
                   isDark ? "text-blue-400" : "text-blue-600"
@@ -524,12 +499,12 @@ export function CreateEvermarkForm({
                   isDark ? "text-gray-400" : "text-gray-600"
                 )}>
                   <FileTextIcon className="h-4 w-4 mr-2" />
-                  <span>SDK Powered</span>
+                  <span>Blockchain</span>
                 </div>
               </div>
 
-              {/* Wallet Connection Prompt */}
-              {!isAuthenticated && (
+              {/* Wallet Status Message */}
+              {!hasWallet && (
                 <div className={cn(
                   "mb-6 p-4 border rounded-lg bg-amber-500/10 border-amber-500/30"
                 )}>
@@ -537,10 +512,9 @@ export function CreateEvermarkForm({
                     <AlertCircleIcon className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
                     <div className="flex-1">
                       <h3 className="text-amber-400 font-medium mb-2">Connect Wallet Required</h3>
-                      <p className="text-amber-200 text-sm mb-3">
-                        Connect your wallet to create and mint Evermarks. You can explore the form below, but you'll need to connect to submit.
+                      <p className="text-amber-200 text-sm">
+                        Please connect your wallet using the Connect button in the top navigation to create Evermarks.
                       </p>
-                      <WalletConnect className="inline-flex" />
                     </div>
                   </div>
                 </div>
@@ -770,7 +744,7 @@ export function CreateEvermarkForm({
                     <h3 className="font-medium text-cyan-400">Cover Image (Optional)</h3>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-gray-500 bg-green-900/20 px-2 py-1 rounded">
-                        SDK Enhanced
+                        IPFS Ready
                       </span>
                       <span className="text-xs text-green-400 bg-green-900/20 px-2 py-1 rounded">
                         ✅ Wallet Ready
@@ -847,7 +821,7 @@ export function CreateEvermarkForm({
 
                   <div className="bg-green-900/20 border border-green-500/30 p-3 rounded-lg">
                     <p className="text-green-300 text-sm">
-                      ✅ Advanced SDK upload: Direct to Supabase with automatic optimization and thumbnails
+                      ✅ Hybrid upload: IPFS storage with Supabase caching for optimal performance
                     </p>
                   </div>
                 </div>
@@ -873,7 +847,7 @@ export function CreateEvermarkForm({
                       {isCreating ? (
                         <>
                           <LoaderIcon className="animate-spin h-5 w-5 mr-2" />
-                          Creating with SDK...
+                          Creating...
                         </>
                       ) : !canCreate ? (
                         <>
@@ -899,7 +873,7 @@ export function CreateEvermarkForm({
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-medium text-cyan-400">Live Preview</h3>
                 <div className="text-xs text-gray-500 bg-purple-900/20 px-2 py-1 rounded">
-                  SDK Enhanced
+                  Hybrid Storage
                 </div>
               </div>
               
@@ -985,7 +959,7 @@ export function CreateEvermarkForm({
 
               {/* SDK Architecture Info */}
               <div className="mt-6 pt-4 border-t border-gray-700">
-                <h4 className="text-sm font-medium text-gray-300 mb-3">SDK Architecture</h4>
+                <h4 className="text-sm font-medium text-gray-300 mb-3">Storage Architecture</h4>
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
                     <div className="w-3 h-3 bg-green-400 rounded-full"></div>

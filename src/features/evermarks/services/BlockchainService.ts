@@ -82,6 +82,12 @@ export class EvermarkBlockchainService {
         return { isValid: false, error: 'Contract address is not defined' };
       }
 
+      console.log('🔍 Validating contract address:', {
+        contractAddress,
+        type: typeof contractAddress,
+        length: contractAddress?.length
+      });
+
       if (!this.isValidAddress(contractAddress)) {
         return { 
           isValid: false, 
@@ -338,10 +344,51 @@ export class EvermarkBlockchainService {
       
       const contract = getEvermarkNFTContract();
       
+      // Log all parameters before preparing transaction
+      console.log('📝 Transaction parameters:', {
+        metadataURI: metadataURI,
+        metadataURIType: typeof metadataURI,
+        title: title,
+        titleType: typeof title,
+        creator: creator,
+        creatorType: typeof creator,
+        mintingFee: mintingFee.toString(),
+        mintingFeeType: typeof mintingFee
+      });
+
+      // Ensure all string parameters are properly cleaned and validated
+      const cleanMetadataURI = String(metadataURI).trim();
+      const cleanTitle = String(title).trim().replace(/[^\x20-\x7E]/g, ''); // Remove non-ASCII chars
+      const cleanCreator = String(creator).trim();
+
+      // Additional validation for ethers.js compatibility
+      if (cleanMetadataURI.length === 0) {
+        throw new Error('Metadata URI cannot be empty after cleaning');
+      }
+      if (cleanTitle.length === 0) {
+        throw new Error('Title cannot be empty after cleaning');
+      }
+      if (cleanCreator.length === 0) {
+        throw new Error('Creator cannot be empty after cleaning');
+      }
+
+      // Validate that creator is a valid address format
+      if (!this.isValidAddress(cleanCreator)) {
+        throw new Error(`Creator address is not valid: ${cleanCreator}`);
+      }
+
+      console.log('📝 Cleaned and validated parameters:', {
+        cleanMetadataURI,
+        cleanTitle,
+        cleanCreator,
+        contractAddress: contract.address,
+        creatorIsValidAddress: this.isValidAddress(cleanCreator)
+      });
+
       const transaction = prepareContractCall({
         contract,
         method: "function mintEvermark(string metadataURI, string title, string creator) payable returns (uint256)",
-        params: [metadataURI, title, creator],
+        params: [cleanMetadataURI, cleanTitle, cleanCreator],
         value: mintingFee,
       });
 

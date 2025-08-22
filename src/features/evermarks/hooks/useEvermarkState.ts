@@ -133,6 +133,11 @@ const TempEvermarkService = {
         throw new Error('No wallet connected. Please connect your wallet to create an Evermark.');
       }
 
+      // Ensure we have a proper address string
+      const accountAddress = typeof account.address === 'string' 
+        ? account.address 
+        : String(account.address);
+
       if (!input.metadata?.title) {
         throw new Error('Title is required');
       }
@@ -178,7 +183,7 @@ const TempEvermarkService = {
           },
           {
             trait_type: 'Creator',
-            value: metadata.author || `${account.address.slice(0, 6)}...${account.address.slice(-4)}`
+            value: metadata.author || accountAddress
           },
           {
             trait_type: 'Creation Date',
@@ -221,11 +226,24 @@ const TempEvermarkService = {
       // Step 4: Call blockchain minting
       console.log('📡 Step 4: Minting Evermark NFT on blockchain...');
       
+      // Debug the creator parameter before passing to blockchain service
+      // IMPORTANT: Always use the full accountAddress, never use metadata.author for blockchain calls
+      // metadata.author might be a display name or truncated address
+      const creatorAddress = accountAddress; // Always use full wallet address for blockchain
+      console.log('🔍 Creator address debugging:', {
+        metadataAuthor: metadata.author,
+        accountAddress: accountAddress,
+        finalCreatorAddress: creatorAddress,
+        finalCreatorType: typeof creatorAddress,
+        finalCreatorLength: creatorAddress?.length,
+        note: 'Using accountAddress instead of metadata.author for blockchain calls'
+      });
+
       const mintResult = await EvermarkBlockchainService.mintEvermark(
         account,
         metadataUploadResult.url,
         metadata.title,
-        metadata.author || `${account.address.slice(0, 6)}...${account.address.slice(-4)}`
+        creatorAddress
       );
       
       if (!mintResult.success) {
@@ -245,7 +263,7 @@ const TempEvermarkService = {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'X-Wallet-Address': account.address
+              'X-Wallet-Address': accountAddress
             },
             body: JSON.stringify({
               token_id: parseInt(mintResult.tokenId),
@@ -255,7 +273,7 @@ const TempEvermarkService = {
               content_type: metadata.contentType || 'Custom',
               source_url: metadata.sourceUrl || metadata.url || metadata.castUrl,
               token_uri: metadataUploadResult.url,
-              author: metadata.author || `${account.address.slice(0, 6)}...${account.address.slice(-4)}`,
+              author: metadata.author || accountAddress,
               metadata: JSON.stringify({
                 tags: metadata.tags || [],
                 customFields: metadata.customFields || [],
