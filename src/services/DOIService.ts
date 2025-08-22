@@ -60,6 +60,30 @@ class DOIService {
   }
 
   /**
+   * Attempt to find DOI from academic URL by trying common patterns
+   */
+  private async tryExtractDOIFromAcademicUrl(url: string): Promise<string | null> {
+    try {
+      // For psycnet.apa.org URLs, try to extract from the URL path
+      if (url.includes('psycnet.apa.org')) {
+        // Pattern: /fulltext/YYYY-NNNNN-NNN.html
+        const match = url.match(/fulltext\/(\d{4}-\d{5}-\d{3})/);
+        if (match) {
+          // This might correspond to a DOI pattern, but we'd need to fetch the page
+          // For now, return null and let it fall back to URL detection
+          return null;
+        }
+      }
+      
+      // Could add more academic URL patterns here
+      return null;
+    } catch (error) {
+      console.warn('Failed to extract DOI from academic URL:', error);
+      return null;
+    }
+  }
+
+  /**
    * Fetch metadata for a DOI from Crossref API
    */
   async fetchDOIMetadata(doiOrUrl: string): Promise<DOIFetchResult> {
@@ -67,12 +91,24 @@ class DOIService {
       console.log('🔍 Fetching DOI metadata for:', doiOrUrl);
       
       // Extract DOI if URL is provided
-      const doi = this.extractDOI(doiOrUrl) || doiOrUrl;
+      let doi = this.extractDOI(doiOrUrl);
       
+      // If no direct DOI found, try to extract from academic URL
+      if (!doi && this.isDOIUrl(doiOrUrl)) {
+        doi = await this.tryExtractDOIFromAcademicUrl(doiOrUrl);
+      }
+      
+      // If still no DOI, use the input as-is (might be a direct DOI)
       if (!doi) {
+        doi = doiOrUrl;
+      }
+      
+      // Validate that we have something that looks like a DOI
+      if (!doi.includes('/') || !doi.match(/10\.\d{4}/)) {
+        console.warn('❌ Invalid DOI format:', doi);
         return {
           success: false,
-          error: 'Invalid DOI format'
+          error: 'Could not extract valid DOI from input'
         };
       }
 
@@ -91,12 +127,19 @@ class DOIService {
       }
 
       const data = await response.json();
+      console.log('📊 Crossref API response received:', { status: response.status, hasMessage: !!data.message });
       
       if (!data.message) {
+        console.error('❌ Invalid Crossref response:', data);
         throw new Error('Invalid response from Crossref API');
       }
 
       const work = data.message;
+      console.log('📋 Paper data from Crossref:', { 
+        title: work.title?.[0], 
+        authorCount: work.author?.length || 0,
+        doi: work.DOI 
+      });
 
       // Extract and format metadata
       const metadata: DOIMetadata = {
@@ -178,13 +221,40 @@ class DOIService {
   }
 
   /**
-   * Check if a URL appears to be a DOI
+   * Check if a URL appears to be a DOI or academic paper URL
    */
   isDOIUrl(url: string): boolean {
     try {
       const urlObj = new URL(url);
-      return urlObj.hostname.includes('doi.org') || 
-             this.extractDOI(url) !== null;
+      
+      // Direct DOI URLs
+      if (urlObj.hostname.includes('doi.org')) {
+        return true;
+      }
+      
+      // Try to extract DOI from URL
+      if (this.extractDOI(url) !== null) {
+        return true;
+      }
+      
+      // Check for academic domains that often contain DOIs
+      const academicDomains = [
+        'psycnet.apa.org',
+        'pubmed.ncbi.nlm.nih.gov',
+        'scholar.google.com',
+        'arxiv.org',
+        'nature.com',
+        'science.org',
+        'sciencedirect.com',
+        'springer.com',
+        'ieee.org',
+        'acm.org',
+        'jstor.org',
+        'plos.org'
+      ];
+      
+      const hostname = urlObj.hostname.toLowerCase();
+      return academicDomains.some(domain => hostname.includes(domain));
     } catch {
       return false;
     }

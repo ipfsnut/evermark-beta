@@ -204,6 +204,7 @@ export function CreateEvermarkForm({
     };
   }, [imagePreview]);
 
+
   const handleFieldChange = useCallback((field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     clearCreateError();
@@ -245,11 +246,14 @@ export function CreateEvermarkForm({
     try {
       console.log('🔍 Smart detection for input:', input);
       
-      // Reset previous data
+      // Reset previous data (but preserve user-uploaded images)
       setCastData(null);
       setDoiData(null);
       setIsbnData(null);
       setCastImageUrl(null);
+      
+      // Remember if user has already uploaded an image
+      const hasUserImage = selectedImage !== null;
       
       // Update sourceUrl in formData
       setFormData(prev => ({ ...prev, sourceUrl: input }));
@@ -276,8 +280,8 @@ export function CreateEvermarkForm({
           setTags(['farcaster', 'cast']);
           setIsFormExpanded(true);
           
-          // Generate cast preview image
-          if (castImageGenerator) {
+          // Generate cast preview image only if user hasn't uploaded one
+          if (castImageGenerator && !hasUserImage) {
             try {
               console.log('🎨 Generating cast preview image...');
               
@@ -304,6 +308,8 @@ export function CreateEvermarkForm({
             } catch (genError) {
               console.warn('Could not generate cast preview image:', genError);
             }
+          } else if (hasUserImage) {
+            console.log('👤 Preserving user-uploaded image over cast preview');
           }
           
           console.log('✅ Cast data fetched and form populated');
@@ -368,8 +374,8 @@ export function CreateEvermarkForm({
             setTags(bookTags);
             setIsFormExpanded(true);
             
-            // Set cover image if available
-            if (result.metadata.coverImage) {
+            // Set cover image if available and user hasn't uploaded one
+            if (result.metadata.coverImage && !hasUserImage) {
               try {
                 const response = await fetch(result.metadata.coverImage);
                 const blob = await response.blob();
@@ -380,6 +386,8 @@ export function CreateEvermarkForm({
               } catch (imgError) {
                 console.warn('Could not load book cover image:', imgError);
               }
+            } else if (hasUserImage) {
+              console.log('👤 Preserving user-uploaded image over book cover');
             }
             
             console.log('✅ ISBN metadata fetched and form populated');
@@ -429,7 +437,20 @@ export function CreateEvermarkForm({
       setDetectedType('Custom');
       setIsFormExpanded(true);
     }
-  }, []);
+  }, [setDetectedType, setIsFormExpanded, setCastData, setDoiData, setIsbnData, setFormData, setTags, setIsFetchingCast, setIsFetchingDOI, setIsFetchingISBN, setCastImageUrl, castImageGenerator, setImagePreview, setSelectedImage]);
+
+  // Debounced smart detection effect
+  useEffect(() => {
+    if (!primaryInput.trim()) {
+      return;
+    }
+    
+    const timeoutId = setTimeout(() => {
+      handleSmartDetection(primaryInput);
+    }, 500); // 500ms debounce delay
+    
+    return () => clearTimeout(timeoutId);
+  }, [primaryInput, handleSmartDetection]);
 
   const isFormValid = useCallback(() => {
     // For Cast type, only require sourceUrl since title/description will be auto-populated
@@ -862,6 +883,94 @@ export function CreateEvermarkForm({
                   )}
                 </div>
 
+                {/* Expanded Form Section - Only shows after detection/manual selection */}
+                {isFormExpanded && (
+                  <div className={cn(
+                    "space-y-6 animate-in slide-in-from-top-4 duration-300",
+                    isDark ? "border-t border-gray-700 pt-6" : "border-t border-gray-200 pt-6"
+                  )}>
+                    
+                    {/* Detection Success Banner */}
+                    {detectedType && detectedType !== 'Custom' && (
+                      <div className={cn(
+                        "p-4 rounded-lg border",
+                        detectedType === 'Cast' && "bg-purple-50 border-purple-200",
+                        detectedType === 'DOI' && "bg-blue-50 border-blue-200", 
+                        detectedType === 'ISBN' && "bg-green-50 border-green-200",
+                        detectedType === 'URL' && "bg-orange-50 border-orange-200"
+                      )}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={cn(
+                              "w-8 h-8 rounded-full flex items-center justify-center",
+                              detectedType === 'Cast' && "bg-purple-100",
+                              detectedType === 'DOI' && "bg-blue-100",
+                              detectedType === 'ISBN' && "bg-green-100", 
+                              detectedType === 'URL' && "bg-orange-100"
+                            )}>
+                              {detectedType === 'Cast' && '💬'}
+                              {detectedType === 'DOI' && '📄'}
+                              {detectedType === 'ISBN' && '📚'}
+                              {detectedType === 'URL' && '🌐'}
+                            </div>
+                            <div>
+                              <h3 className={cn(
+                                "font-medium",
+                                detectedType === 'Cast' && "text-purple-800",
+                                detectedType === 'DOI' && "text-blue-800",
+                                detectedType === 'ISBN' && "text-green-800",
+                                detectedType === 'URL' && "text-orange-800"
+                              )}>
+                                {detectedType === 'Cast' && 'Farcaster Cast Detected'}
+                                {detectedType === 'DOI' && 'Academic Paper Detected'}
+                                {detectedType === 'ISBN' && 'Book Detected'}
+                                {detectedType === 'URL' && 'URL Detected'}
+                              </h3>
+                              <p className={cn(
+                                "text-sm",
+                                detectedType === 'Cast' && "text-purple-600",
+                                detectedType === 'DOI' && "text-blue-600",
+                                detectedType === 'ISBN' && "text-green-600",
+                                detectedType === 'URL' && "text-orange-600"
+                              )}>
+                                Form auto-populated with detected metadata. Review and edit as needed.
+                              </p>
+                            </div>
+                          </div>
+                          
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsFormExpanded(false);
+                              setDetectedType(null);
+                              setPrimaryInput('');
+                              setFormData({
+                                title: '',
+                                description: '',
+                                content: '',
+                                sourceUrl: '',
+                                category: '',
+                                contentType: 'Custom'
+                              });
+                              setTags([]);
+                              setCastData(null);
+                              setDoiData(null);
+                              setIsbnData(null);
+                            }}
+                            className={cn(
+                              "text-xs px-3 py-1 rounded-full border transition-colors",
+                              detectedType === 'Cast' && "border-purple-300 text-purple-700 hover:bg-purple-100",
+                              detectedType === 'DOI' && "border-blue-300 text-blue-700 hover:bg-blue-100",
+                              detectedType === 'ISBN' && "border-green-300 text-green-700 hover:bg-green-100",
+                              detectedType === 'URL' && "border-orange-300 text-orange-700 hover:bg-orange-100"
+                            )}
+                          >
+                            Start Over
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                 {/* Cast Mode Indicator */}
                 {formData.contentType === 'Cast' && (
                   <div className={cn(
@@ -989,7 +1098,7 @@ export function CreateEvermarkForm({
                     {formData.sourceUrl && (
                       <button
                         type="button"
-                        onClick={handleAutoDetect}
+                        onClick={() => handleSmartDetection(formData.sourceUrl)}
                         disabled={isFormDisabled || isFetchingCast || isFetchingDOI || isFetchingISBN}
                         className={cn(
                           "px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors",
@@ -1347,6 +1456,8 @@ export function CreateEvermarkForm({
                     </button>
                   </div>
                 </div>
+                  </div>
+                )}
               </form>
             </div>
           </div>
