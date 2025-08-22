@@ -24,6 +24,7 @@ import { cn } from '@/utils/responsive';
 import { themeClasses } from '@/utils/theme';
 import { WalletConnect } from '@/components/ConnectButton';
 import { farcasterCastService } from '@/services/FarcasterCastService';
+import { castImageGenerator } from '@/services/CastImageGenerator';
 
 // Simple mobile detection hook
 function useIsMobile(): boolean {
@@ -240,6 +241,9 @@ export function CreateEvermarkForm({
             description: result.castData.text || 'Farcaster cast',
             contentType: 'Cast'
           }));
+
+          // Auto-populate tags for Farcaster casts
+          setTags(['farcaster', 'cast']);
           
           // Set author from cast
           if (result.castData.author.display_name) {
@@ -249,20 +253,50 @@ export function CreateEvermarkForm({
             }));
           }
           
-          // If we found an image in the cast, prepare it for upload
-          if (result.previewImageUrl) {
-            setCastImageUrl(result.previewImageUrl);
-            setImagePreview(result.previewImageUrl);
-            console.log('📸 Found cast image:', result.previewImageUrl);
-            
-            // Try to convert the image URL to a File object for upload
+          // Generate a cast preview image using Canvas
+          if (castImageGenerator) {
             try {
-              const response = await fetch(result.previewImageUrl);
-              const blob = await response.blob();
-              const file = new File([blob], 'cast-image.jpg', { type: 'image/jpeg' });
-              setSelectedImage(file);
-            } catch (imgError) {
-              console.warn('Could not convert cast image to file:', imgError);
+              console.log('🎨 Generating cast preview image...');
+              
+              const castImageFile = await castImageGenerator.generateCastImageFile({
+                text: result.castData.text,
+                author: {
+                  username: result.castData.author.username,
+                  displayName: result.castData.author.display_name,
+                  pfpUrl: result.castData.author.pfp_url
+                },
+                reactions: {
+                  likes: result.castData.reactions.likes_count,
+                  recasts: result.castData.reactions.recasts_count
+                },
+                timestamp: result.castData.timestamp
+              });
+              
+              // Create preview URL for the generated image
+              const previewUrl = URL.createObjectURL(castImageFile);
+              setImagePreview(previewUrl);
+              setSelectedImage(castImageFile);
+              setCastImageUrl(previewUrl);
+              
+              console.log('✅ Cast preview image generated successfully');
+            } catch (genError) {
+              console.warn('Could not generate cast preview image:', genError);
+              
+              // Fallback: try to use embedded image if available
+              if (result.previewImageUrl) {
+                setCastImageUrl(result.previewImageUrl);
+                setImagePreview(result.previewImageUrl);
+                console.log('📸 Using embedded image as fallback:', result.previewImageUrl);
+                
+                try {
+                  const response = await fetch(result.previewImageUrl);
+                  const blob = await response.blob();
+                  const file = new File([blob], 'cast-image.jpg', { type: 'image/jpeg' });
+                  setSelectedImage(file);
+                } catch (imgError) {
+                  console.warn('Could not convert embedded image to file:', imgError);
+                }
+              }
             }
           }
         }
@@ -299,9 +333,14 @@ export function CreateEvermarkForm({
   }, [formData.sourceUrl, formData.title, formData.description]);
 
   const isFormValid = useCallback(() => {
+    // For Cast type, only require sourceUrl since title/description will be auto-populated
+    if (formData.contentType === 'Cast') {
+      return formData.sourceUrl.trim().length > 0;
+    }
+    // For other types, require title and description
     return formData.title.trim().length > 0 && 
            formData.description.trim().length > 0;
-  }, [formData.title, formData.description]);
+  }, [formData.title, formData.description, formData.sourceUrl, formData.contentType]);
 
   // FIXED: Handle SDK upload completion with auth check
   // Simple file selection handler with preview - no upload until form submission
@@ -369,12 +408,35 @@ export function CreateEvermarkForm({
     if (!canProceed) return;
 
     try {
+      // For Cast type, auto-generate title and description if not provided
+      let title = formData.title.trim();
+      let description = formData.description.trim();
+      let author = getAuthor();
+      let finalTags = [...tags];
+
+      if (formData.contentType === 'Cast') {
+        // Auto-populate tags for Cast type
+        finalTags = ['farcaster', 'cast'];
+        
+        if (castData) {
+          // Use cast data if available
+          title = castData.text.substring(0, 100) || `Cast by ${castData.author.display_name}`;
+          description = castData.text || 'Farcaster cast';
+          author = castData.author.display_name;
+        } else {
+          // Fallback titles for Cast type
+          const url = new URL(formData.sourceUrl);
+          title = `Cast from ${url.hostname}`;
+          description = `Farcaster cast preserved from ${formData.sourceUrl}`;
+        }
+      }
+
       const evermarkMetadata: EvermarkMetadata = {
-        title: formData.title.trim(),
-        description: formData.description.trim(),
+        title,
+        description,
         sourceUrl: formData.sourceUrl.trim(),
-        author: castData ? castData.author.display_name : getAuthor(),
-        tags,
+        author,
+        tags: finalTags,
         contentType: formData.contentType,
         customFields: [],
         // Include cast URL if it's a Farcaster cast
@@ -654,85 +716,122 @@ export function CreateEvermarkForm({
                   </div>
                 </div>
 
-                {/* Title */}
-                <div className="space-y-2">
-                  <label className={cn(
-                    "block text-sm font-medium",
-                    isDark ? "text-cyan-400" : "text-purple-600"
-                  )}>
-                    Title *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.title}
-                    onChange={(e) => handleFieldChange('title', e.target.value)}
-                    placeholder="Enter a descriptive title..."
-                    disabled={isFormDisabled}
-                    className={cn(
-                      "w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-opacity-20 transition-colors",
-                      isFormDisabled && "opacity-50 cursor-not-allowed",
-                      isDark 
-                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-cyan-400" 
-                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-purple-400 focus:ring-purple-400"
-                    )}
-                    maxLength={100}
-                    required
-                  />
+                {/* Cast Mode Indicator */}
+                {formData.contentType === 'Cast' && (
                   <div className={cn(
-                    "text-xs text-right",
-                    isDark ? "text-gray-500" : "text-gray-600"
+                    "p-4 border rounded-lg",
+                    isDark 
+                      ? "bg-purple-900/30 border-purple-500/50" 
+                      : "bg-purple-100/80 border-purple-300"
                   )}>
-                    {formData.title.length}/100
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">💬</span>
+                      <div>
+                        <h4 className={cn(
+                          "font-medium",
+                          isDark ? "text-purple-300" : "text-purple-700"
+                        )}>
+                          Cast Mode - Simplified Form
+                        </h4>
+                        <p className={cn(
+                          "text-sm",
+                          isDark ? "text-purple-400" : "text-purple-600"
+                        )}>
+                          Just provide the Farcaster cast URL. Title, description, and tags will be auto-populated when you fetch the cast data.
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* Description */}
+                {/* Title - Simplified for Cast content type */}
+                {formData.contentType !== 'Cast' && (
+                  <div className="space-y-2">
+                    <label className={cn(
+                      "block text-sm font-medium",
+                      isDark ? "text-cyan-400" : "text-purple-600"
+                    )}>
+                      Title *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.title}
+                      onChange={(e) => handleFieldChange('title', e.target.value)}
+                      placeholder="Enter a descriptive title..."
+                      disabled={isFormDisabled}
+                      className={cn(
+                        "w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-opacity-20 transition-colors",
+                        isFormDisabled && "opacity-50 cursor-not-allowed",
+                        isDark 
+                          ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-cyan-400" 
+                          : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-purple-400 focus:ring-purple-400"
+                      )}
+                      maxLength={100}
+                      required
+                    />
+                    <div className={cn(
+                      "text-xs text-right",
+                      isDark ? "text-gray-500" : "text-gray-600"
+                    )}>
+                      {formData.title.length}/100
+                    </div>
+                  </div>
+                )}
+
+                {/* Description - Simplified for Cast content type */}
+                {formData.contentType !== 'Cast' && (
+                  <div className="space-y-2">
+                    <label className={cn(
+                      "block text-sm font-medium",
+                      isDark ? "text-cyan-400" : "text-purple-600"
+                    )}>
+                      Description *
+                    </label>
+                    <textarea
+                      value={formData.description}
+                      onChange={(e) => handleFieldChange('description', e.target.value)}
+                      placeholder="Describe this content and why it's worth preserving..."
+                      disabled={isFormDisabled}
+                      className={cn(
+                        "w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-opacity-20 resize-none transition-colors",
+                        isFormDisabled && "opacity-50 cursor-not-allowed",
+                        isDark 
+                          ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-cyan-400" 
+                          : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-purple-400 focus:ring-purple-400"
+                      )}
+                      rows={4}
+                      maxLength={1000}
+                      required
+                    />
+                    <div className={cn(
+                      "text-xs text-right",
+                      isDark ? "text-gray-500" : "text-gray-600"
+                    )}>
+                      {formData.description.length}/1000
+                    </div>
+                  </div>
+                )}
+
+                {/* Source URL - Required for Cast type */}
                 <div className="space-y-2">
                   <label className={cn(
                     "block text-sm font-medium",
                     isDark ? "text-cyan-400" : "text-purple-600"
                   )}>
-                    Description *
-                  </label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => handleFieldChange('description', e.target.value)}
-                    placeholder="Describe this content and why it's worth preserving..."
-                    disabled={isFormDisabled}
-                    className={cn(
-                      "w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-opacity-20 resize-none transition-colors",
-                      isFormDisabled && "opacity-50 cursor-not-allowed",
-                      isDark 
-                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-cyan-400" 
-                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-purple-400 focus:ring-purple-400"
-                    )}
-                    rows={4}
-                    maxLength={1000}
-                    required
-                  />
-                  <div className={cn(
-                    "text-xs text-right",
-                    isDark ? "text-gray-500" : "text-gray-600"
-                  )}>
-                    {formData.description.length}/1000
-                  </div>
-                </div>
-
-                {/* Source URL */}
-                <div className="space-y-2">
-                  <label className={cn(
-                    "block text-sm font-medium",
-                    isDark ? "text-cyan-400" : "text-purple-600"
-                  )}>
-                    Source URL (Optional)
+                    {formData.contentType === 'Cast' ? 'Farcaster Cast URL *' : 'Source URL (Optional)'}
                   </label>
                   <div className="flex gap-2">
                     <input
                       type="url"
                       value={formData.sourceUrl}
                       onChange={(e) => handleFieldChange('sourceUrl', e.target.value)}
-                      placeholder="https://example.com/content"
+                      placeholder={
+                        formData.contentType === 'Cast' 
+                          ? "https://warpcast.com/username/0x12345..." 
+                          : "https://example.com/content"
+                      }
                       disabled={isFormDisabled}
+                      required={formData.contentType === 'Cast'}
                       className={cn(
                         "flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-opacity-20 transition-colors",
                         isFormDisabled && "opacity-50 cursor-not-allowed",
@@ -781,44 +880,45 @@ export function CreateEvermarkForm({
                   )}
                 </div>
 
-                {/* Tags */}
-                <div className="space-y-3">
-                  <label className={cn(
-                    "block text-sm font-medium",
-                    isDark ? "text-cyan-400" : "text-purple-600"
-                  )}>
-                    Tags (Optional)
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={tagInput}
-                      onChange={(e) => setTagInput(e.target.value)}
-                      onKeyPress={handleTagKeyPress}
-                      placeholder="Add tags..."
-                      disabled={isFormDisabled || tags.length >= 10}
-                      className={cn(
-                        "flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-opacity-20 transition-colors",
-                        (isFormDisabled || tags.length >= 10) && "opacity-50 cursor-not-allowed",
-                        isDark 
-                          ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-cyan-400" 
-                          : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-purple-400 focus:ring-purple-400"
-                      )}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddTag}
-                      disabled={isFormDisabled || !tagInput.trim() || tags.length >= 10}
-                      className={cn(
-                        "px-4 py-3 text-white rounded-lg transition-colors",
-                        isDark 
-                          ? "bg-gray-600 hover:bg-gray-500 disabled:bg-gray-800 disabled:text-gray-500" 
-                          : "bg-gray-500 hover:bg-gray-400 disabled:bg-gray-300 disabled:text-gray-500"
-                      )}
-                    >
-                      <TagIcon className="h-4 w-4" />
-                    </button>
-                  </div>
+                {/* Tags - Simplified for Cast content type */}
+                {formData.contentType !== 'Cast' && (
+                  <div className="space-y-3">
+                    <label className={cn(
+                      "block text-sm font-medium",
+                      isDark ? "text-cyan-400" : "text-purple-600"
+                    )}>
+                      Tags (Optional)
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={tagInput}
+                        onChange={(e) => setTagInput(e.target.value)}
+                        onKeyPress={handleTagKeyPress}
+                        placeholder="Add tags..."
+                        disabled={isFormDisabled || tags.length >= 10}
+                        className={cn(
+                          "flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-opacity-20 transition-colors",
+                          (isFormDisabled || tags.length >= 10) && "opacity-50 cursor-not-allowed",
+                          isDark 
+                            ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-cyan-400" 
+                            : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-purple-400 focus:ring-purple-400"
+                        )}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddTag}
+                        disabled={isFormDisabled || !tagInput.trim() || tags.length >= 10}
+                        className={cn(
+                          "px-4 py-3 text-white rounded-lg transition-colors",
+                          isDark 
+                            ? "bg-gray-600 hover:bg-gray-500 disabled:bg-gray-800 disabled:text-gray-500" 
+                            : "bg-gray-500 hover:bg-gray-400 disabled:bg-gray-300 disabled:text-gray-500"
+                        )}
+                      >
+                        <TagIcon className="h-4 w-4" />
+                      </button>
+                    </div>
                   
                   {tags.length > 0 && (
                     <div className="flex flex-wrap gap-2">
@@ -848,13 +948,50 @@ export function CreateEvermarkForm({
                     </div>
                   )}
                   
-                  <p className={cn(
-                    "text-xs",
-                    isDark ? "text-gray-500" : "text-gray-600"
-                  )}>
-                    {tags.length}/10 tags • Press Enter to add
-                  </p>
-                </div>
+                    <p className={cn(
+                      "text-xs",
+                      isDark ? "text-gray-500" : "text-gray-600"
+                    )}>
+                      {tags.length}/10 tags • Press Enter to add
+                    </p>
+                  </div>
+                )}
+
+                {/* Show auto-populated tags for Cast content type */}
+                {formData.contentType === 'Cast' && (
+                  <div className="space-y-3">
+                    <label className={cn(
+                      "block text-sm font-medium",
+                      isDark ? "text-cyan-400" : "text-purple-600"
+                    )}>
+                      Tags (Auto-populated)
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      <span className={cn(
+                        "inline-flex items-center px-3 py-1 rounded-full border",
+                        isDark 
+                          ? "bg-green-900/30 text-green-300 border-green-500/30" 
+                          : "bg-green-100 text-green-700 border-green-300"
+                      )}>
+                        farcaster
+                      </span>
+                      <span className={cn(
+                        "inline-flex items-center px-3 py-1 rounded-full border",
+                        isDark 
+                          ? "bg-green-900/30 text-green-300 border-green-500/30" 
+                          : "bg-green-100 text-green-700 border-green-300"
+                      )}>
+                        cast
+                      </span>
+                    </div>
+                    <p className={cn(
+                      "text-xs",
+                      isDark ? "text-gray-500" : "text-gray-600"
+                    )}>
+                      ✓ Auto-populated from cast data
+                    </p>
+                  </div>
+                )}
 
                 {/* FIXED: SDK Image Upload with proper error handling */}
                 <div className="space-y-4">
