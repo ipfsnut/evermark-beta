@@ -41,6 +41,107 @@ function useIsMobile(): boolean {
   return isMobile;
 }
 
+// Image Preview Component with Aspect Ratio Detection
+const ImagePreviewWithAspectRatio: React.FC<{
+  src: string;
+  alt: string;
+  containerClassName?: string;
+}> = ({ src, alt, containerClassName }) => {
+  const [dimensions, setDimensions] = useState<{
+    aspectRatio: number;
+    isTall: boolean;
+    isPortrait: boolean;
+    isSquare: boolean;
+    isWide: boolean;
+  } | null>(null);
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    const aspectRatio = img.naturalWidth / img.naturalHeight;
+    
+    setDimensions({
+      aspectRatio,
+      isTall: aspectRatio < 0.75,
+      isPortrait: aspectRatio < 0.95,
+      isSquare: aspectRatio >= 0.95 && aspectRatio <= 1.05,
+      isWide: aspectRatio > 1.05
+    });
+    
+    setImageLoaded(true);
+    console.log('📐 Preview image aspect ratio:', {
+      ratio: aspectRatio.toFixed(2),
+      type: aspectRatio < 0.75 ? 'tall/book' : aspectRatio < 0.95 ? 'portrait' : aspectRatio <= 1.05 ? 'square' : 'wide'
+    });
+  };
+
+  // Get dynamic padding based on aspect ratio
+  const getDynamicPadding = () => {
+    if (!dimensions) return '';
+    
+    if (dimensions.isTall) {
+      // Book covers need horizontal padding
+      return 'px-8 sm:px-12 md:px-16';
+    } else if (dimensions.isPortrait) {
+      return 'px-4 sm:px-6';
+    } else if (dimensions.isWide) {
+      return 'py-4 sm:py-6';
+    }
+    return 'p-2';
+  };
+
+  const getObjectFit = () => {
+    if (!dimensions) return 'object-cover';
+    // For tall images (books), use contain to show full cover
+    return dimensions.isTall || dimensions.isPortrait ? 'object-contain' : 'object-cover';
+  };
+
+  const getBackgroundPattern = () => {
+    if (!dimensions) return 'bg-gray-800';
+    // Add subtle gradient for book covers
+    return dimensions.isTall 
+      ? 'bg-gradient-to-b from-gray-900/50 via-gray-800/30 to-gray-900/50' 
+      : 'bg-gray-800/30';
+  };
+
+  return (
+    <div 
+      className={cn(
+        containerClassName,
+        'flex items-center justify-center',
+        getBackgroundPattern(),
+        getDynamicPadding()
+      )}
+    >
+      <img 
+        src={src} 
+        alt={alt}
+        className={cn(
+          'max-w-full max-h-full transition-opacity duration-300',
+          getObjectFit(),
+          imageLoaded ? 'opacity-100' : 'opacity-0'
+        )}
+        onLoad={handleImageLoad}
+        onError={(e) => console.error('Image failed to load:', e)}
+      />
+      
+      {/* Loading indicator */}
+      {!imageLoaded && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+        </div>
+      )}
+      
+      {/* Book cover indicator */}
+      {dimensions?.isTall && (
+        <div className="absolute bottom-2 left-2 bg-purple-900/60 backdrop-blur-sm text-purple-200 text-xs px-2 py-1 rounded">
+          📖 Book Cover
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Content types configuration
 const CONTENT_TYPES = [
   { value: 'Custom', label: 'Custom Content', icon: '✨', description: 'Any type of content with flexible metadata' },
@@ -792,18 +893,14 @@ export function CreateEvermarkForm({
                         </button>
                       </div>
                       
-                      {/* Image Preview - matches EvermarkCard dimensions */}
+                      {/* Enhanced Image Preview with book cover support */}
                       {imagePreview ? (
                         <div className="mb-3">
-                          <div className="relative w-full h-48 sm:h-56 rounded-lg overflow-hidden border-2 border-blue-500/50 bg-gray-800">
-                            <img 
-                              src={imagePreview} 
-                              alt="Selected image preview"
-                              className="absolute inset-0 w-full h-full object-cover"
-                              onLoad={() => console.log('Image loaded successfully')}
-                              onError={(e) => console.error('Image failed to load:', e)}
-                            />
-                          </div>
+                          <ImagePreviewWithAspectRatio
+                            src={imagePreview}
+                            alt="Selected image preview"
+                            containerClassName="relative w-full h-48 sm:h-56 rounded-lg overflow-hidden border-2 border-blue-500/50"
+                          />
                         </div>
                       ) : (
                         <div className="mb-3 text-xs text-gray-500">No preview available</div>
@@ -934,18 +1031,14 @@ export function CreateEvermarkForm({
                         <span className="text-sm text-blue-300">Image Selected for IPFS Upload</span>
                       </div>
                       
-                      {/* Image Preview in Sidebar - matches EvermarkCard dimensions */}
+                      {/* Enhanced Image Preview in Sidebar with book cover support */}
                       {imagePreview && (
                         <div className="mb-2">
-                          <div className="relative w-full h-48 rounded overflow-hidden border-2 border-blue-500/50 bg-gray-800">
-                            <img 
-                              src={imagePreview} 
-                              alt="Selected image preview"
-                              className="absolute inset-0 w-full h-full object-cover"
-                              onLoad={() => console.log('Sidebar image loaded successfully')}
-                              onError={(e) => console.error('Sidebar image failed to load:', e)}
-                            />
-                          </div>
+                          <ImagePreviewWithAspectRatio
+                            src={imagePreview}
+                            alt="Selected image preview"
+                            containerClassName="relative w-full h-48 rounded overflow-hidden border-2 border-blue-500/50"
+                          />
                         </div>
                       )}
                       
