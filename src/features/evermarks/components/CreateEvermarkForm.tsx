@@ -331,8 +331,10 @@ export function CreateEvermarkForm({
           // Auto-fill form with DOI data
           setFormData(prev => ({ 
             ...prev, 
-            title: result.metadata.title,
-            description: result.metadata.title + (result.metadata.authors.length > 0 ? ` by ${result.metadata.authors.join(', ')}` : ''),
+            title: result.metadata?.title || 'Unknown Title',
+            description: result.metadata?.title ? 
+              result.metadata.title + (result.metadata.authors && result.metadata.authors.length > 0 ? ` by ${result.metadata.authors.join(', ')}` : '') :
+              'Academic paper',
             contentType: 'DOI'
           }));
 
@@ -361,21 +363,24 @@ export function CreateEvermarkForm({
             // Auto-fill form with ISBN data
             setFormData(prev => ({ 
               ...prev, 
-              title: result.metadata.title,
-              description: result.metadata.description || `${result.metadata.title} by ${result.metadata.authors.join(', ')}`,
+              title: result.metadata?.title || 'Unknown Title',
+              description: result.metadata?.description || 
+                (result.metadata?.title && result.metadata?.authors ? 
+                  `${result.metadata.title} by ${result.metadata.authors.join(', ')}` : 
+                  'Book description'),
               contentType: 'ISBN'
             }));
 
             // Auto-populate tags for books
             const bookTags = ['book'];
-            if (result.metadata.categories && result.metadata.categories.length > 0) {
+            if (result.metadata?.categories && result.metadata.categories.length > 0) {
               bookTags.push(...result.metadata.categories.slice(0, 3).map(cat => cat.toLowerCase()));
             }
             setTags(bookTags);
             setIsFormExpanded(true);
             
             // Set cover image if available and user hasn't uploaded one
-            if (result.metadata.coverImage && !hasUserImage) {
+            if (result.metadata?.coverImage && !hasUserImage) {
               try {
                 const response = await fetch(result.metadata.coverImage);
                 const blob = await response.blob();
