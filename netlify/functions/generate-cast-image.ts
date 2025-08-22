@@ -7,97 +7,89 @@ const supabase = createClient(
   process.env.SUPABASE_SECRET_KEY!
 );
 
-// We'll use a Canvas library that works in Node.js
-const { createCanvas, registerFont } = require('canvas');
+import sharp from 'sharp';
 
-function generateCastImage(castData: any): Buffer {
-  const canvas = createCanvas(800, 400);
-  const ctx = canvas.getContext('2d');
-
-  // Clear canvas with white background
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, 800, 400);
-
-  // Draw purple header bar (Farcaster brand color)
-  ctx.fillStyle = '#8b5cf6';
-  ctx.fillRect(0, 0, 800, 60);
-
-  // Draw "Farcaster" label
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 24px Arial';
-  ctx.fillText('Farcaster Cast', 20, 40);
-
-  // Draw author info
-  ctx.fillStyle = '#1f2937';
-  ctx.font = 'bold 20px Arial';
-  ctx.fillText(castData.author_display_name || castData.author_username, 30, 100);
-  
-  ctx.fillStyle = '#6b7280';
-  ctx.font = '16px Arial';
-  ctx.fillText(`@${castData.author_username}`, 30, 125);
-
-  // Draw cast text (with word wrapping)
-  ctx.fillStyle = '#111827';
-  ctx.font = '18px Arial';
-  wrapText(ctx, castData.text, 30, 160, 740, 25);
-
-  // Draw engagement metrics at bottom
-  if (castData.likes !== undefined && castData.recasts !== undefined) {
-    ctx.fillStyle = '#6b7280';
-    ctx.font = '14px Arial';
-    const metricsText = `❤️ ${castData.likes} likes  •  🔄 ${castData.recasts} recasts`;
-    ctx.fillText(metricsText, 30, 360);
-  }
-
-  // Draw timestamp if available
-  if (castData.timestamp) {
-    ctx.fillStyle = '#9ca3af';
-    ctx.font = '12px Arial';
-    const date = new Date(castData.timestamp);
-    const dateStr = date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
-    });
-    ctx.fillText(dateStr, 30, 380);
-  }
-
-  // Add border
-  ctx.strokeStyle = '#e5e7eb';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(1, 1, 798, 398);
-
-  return canvas.toBuffer('image/png');
+function escapeXml(unsafe: string): string {
+  return unsafe.replace(/[<>&'"]/g, function (c) {
+    switch (c) {
+      case '<': return '&lt;';
+      case '>': return '&gt;';
+      case '&': return '&amp;';
+      case '\'': return '&apos;';
+      case '"': return '&quot;';
+    }
+    return c;
+  });
 }
 
-function wrapText(ctx: any, text: string, x: number, y: number, maxWidth: number, lineHeight: number) {
+function wrapText(text: string, maxLength: number = 80): string[] {
   const words = text.split(' ');
-  let line = '';
-  let currentY = y;
+  const lines: string[] = [];
+  let currentLine = '';
 
-  for (let i = 0; i < words.length; i++) {
-    const testLine = line + words[i] + ' ';
-    const metrics = ctx.measureText(testLine);
-    const testWidth = metrics.width;
-
-    if (testWidth > maxWidth && i > 0) {
-      ctx.fillText(line, x, currentY);
-      line = words[i] + ' ';
-      currentY += lineHeight;
-      
-      // Stop if we're getting too close to the bottom
-      if (currentY > 320) {
-        ctx.fillText('...', x, currentY);
-        break;
-      }
+  for (const word of words) {
+    if ((currentLine + word).length > maxLength && currentLine.length > 0) {
+      lines.push(currentLine.trim());
+      currentLine = word + ' ';
     } else {
-      line = testLine;
+      currentLine += word + ' ';
     }
   }
   
-  if (currentY <= 320) {
-    ctx.fillText(line, x, currentY);
+  if (currentLine.trim()) {
+    lines.push(currentLine.trim());
   }
+  
+  return lines.slice(0, 8); // Limit to 8 lines
+}
+
+async function generateCastImage(castData: any): Promise<Buffer> {
+  const wrappedText = wrapText(castData.text || 'No text available', 70);
+  const textLines = wrappedText.map((line, index) => 
+    `<text x="30" y="${160 + index * 25}" font-family="Arial, sans-serif" font-size="18" fill="#111827">${escapeXml(line)}</text>`
+  ).join('\n    ');
+
+  const date = castData.timestamp ? new Date(castData.timestamp) : new Date();
+  const dateStr = date.toLocaleDateString('en-US', { 
+    month: 'short', 
+    day: 'numeric', 
+    year: 'numeric' 
+  });
+
+  const svg = `
+<svg width="800" height="400" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="800" height="400" fill="white"/>
+  
+  <!-- Header bar -->
+  <rect width="800" height="60" fill="#8b5cf6"/>
+  
+  <!-- Farcaster label -->
+  <text x="20" y="40" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="white">Farcaster Cast</text>
+  
+  <!-- Author info -->
+  <text x="30" y="100" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#1f2937">${escapeXml(castData.author_display_name || castData.author_username || 'Unknown')}</text>
+  <text x="30" y="125" font-family="Arial, sans-serif" font-size="16" fill="#6b7280">@${escapeXml(castData.author_username || 'unknown')}</text>
+  
+  <!-- Cast text -->
+  ${textLines}
+  
+  <!-- Engagement metrics -->
+  ${castData.likes !== undefined && castData.recasts !== undefined ? 
+    `<text x="30" y="360" font-family="Arial, sans-serif" font-size="14" fill="#6b7280">❤️ ${castData.likes} likes  •  🔄 ${castData.recasts} recasts</text>` : 
+    ''
+  }
+  
+  <!-- Timestamp -->
+  <text x="30" y="380" font-family="Arial, sans-serif" font-size="12" fill="#9ca3af">${escapeXml(dateStr)}</text>
+  
+  <!-- Border -->
+  <rect x="1" y="1" width="798" height="398" fill="none" stroke="#e5e7eb" stroke-width="2"/>
+</svg>`;
+
+  return await sharp(Buffer.from(svg))
+    .png()
+    .toBuffer();
 }
 
 export const handler: Handler = async (event, context) => {
@@ -137,8 +129,8 @@ export const handler: Handler = async (event, context) => {
     });
 
     // Generate the cast preview image
-    console.log('🖼️ Generating canvas image...');
-    const imageBuffer = generateCastImage(castData);
+    console.log('🖼️ Generating SVG image...');
+    const imageBuffer = await generateCastImage(castData);
 
     // Upload to Supabase storage
     const fileName = `evermarks/${tokenId}-cast-preview.png`;
