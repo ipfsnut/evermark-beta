@@ -93,14 +93,27 @@ async function generateCastImage(castData: any): Promise<Buffer> {
 }
 
 export const handler: Handler = async (event, context) => {
-  console.log('🎨 Generating cast preview image for Evermark #3');
-
   try {
-    const tokenId = 3;
+    // Get token_id from query parameters or request body
+    const tokenId = event.queryStringParameters?.token_id || 
+                   (event.body ? JSON.parse(event.body).token_id : null);
+    
+    if (!tokenId) {
+      return {
+        statusCode: 400,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          success: false,
+          error: 'token_id parameter is required'
+        })
+      };
+    }
+
+    console.log(`🎨 Generating cast preview image for Evermark #${tokenId}`);
     
     // Get the current evermark data
     const { data: evermark, error: fetchError } = await supabase
-      .from('beta_evermarks')
+      .from('evermarks')
       .select('*')
       .eq('token_id', tokenId)
       .single();
@@ -113,10 +126,41 @@ export const handler: Handler = async (event, context) => {
     let castData;
     try {
       const metadata = JSON.parse(evermark.metadata_json || '{}');
-      castData = metadata.cast;
-      if (!castData) {
-        throw new Error('No cast data found in metadata');
+      console.log('📊 Raw metadata:', {
+        hasMetadata: !!evermark.metadata_json,
+        metadataKeys: Object.keys(metadata),
+        metadata: metadata
+      });
+      
+      // Extract cast data from customFields if available
+      let castAuthorUsername = 'unknown';
+      let castAuthorDisplayName = 'Unknown';
+      let castLikes = 0;
+      let castRecasts = 0;
+      let castTimestamp = new Date().toISOString();
+      
+      if (metadata.customFields && Array.isArray(metadata.customFields)) {
+        const getCustomField = (key: string) => 
+          metadata.customFields.find((field: any) => field.key === key)?.value;
+        
+        castAuthorUsername = getCustomField('cast_author_username') || castAuthorUsername;
+        castAuthorDisplayName = getCustomField('cast_author_display_name') || castAuthorDisplayName;
+        castLikes = parseInt(getCustomField('cast_likes') || '0');
+        castRecasts = parseInt(getCustomField('cast_recasts') || '0');
+        castTimestamp = getCustomField('cast_timestamp') || castTimestamp;
       }
+      
+      // Adapt the metadata to cast format using actual cast data
+      castData = {
+        text: metadata.description || metadata.name || 'Farcaster Cast',
+        author_display_name: castAuthorDisplayName,
+        author_username: castAuthorUsername,
+        likes: castLikes,
+        recasts: castRecasts,
+        timestamp: castTimestamp
+      };
+      
+      console.log('📦 Adapted cast data from NFT metadata:', castData);
     } catch (parseError) {
       throw new Error(`Failed to parse metadata: ${parseError}`);
     }
@@ -152,7 +196,7 @@ export const handler: Handler = async (event, context) => {
 
     // Update the evermark with the new image URL
     const { error: updateError } = await supabase
-      .from('beta_evermarks')
+      .from('evermarks')
       .update({
         supabase_image_url: urlData.publicUrl,
         ipfs_image_hash: null, // Clear old IPFS hash
@@ -171,7 +215,7 @@ export const handler: Handler = async (event, context) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         success: true,
-        message: 'Cast preview image generated for Evermark #3',
+        message: `Cast preview image generated for Evermark #${tokenId}`,
         imageUrl: urlData.publicUrl,
         imageSize: imageBuffer.length
       })

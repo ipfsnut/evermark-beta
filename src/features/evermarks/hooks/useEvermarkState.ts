@@ -137,7 +137,8 @@ const TempEvermarkService = {
         throw new Error('Title is required');
       }
 
-      if (!input.image) {
+      // Image is required for all types except Cast (which auto-generates images)
+      if (!input.image && input.metadata.contentType !== 'Cast') {
         throw new Error('Image is required for evermark creation');
       }
 
@@ -153,15 +154,27 @@ const TempEvermarkService = {
 
       const { metadata } = input;
       
-      console.log('📡 Step 1: Uploading image to IPFS...');
+      let imageUploadResult;
       
-      // Step 1: Upload image to IPFS
-      const imageUploadResult = await pinataService.uploadImage(input.image);
-      if (!imageUploadResult.success || !imageUploadResult.hash) {
-        throw new Error(`Image upload failed: ${imageUploadResult.error}`);
+      if (input.image) {
+        console.log('📡 Step 1: Uploading image to IPFS...');
+        
+        // Step 1: Upload image to IPFS
+        imageUploadResult = await pinataService.uploadImage(input.image);
+        if (!imageUploadResult.success || !imageUploadResult.hash) {
+          throw new Error(`Image upload failed: ${imageUploadResult.error}`);
+        }
+        
+        console.log('✅ Image uploaded to IPFS:', imageUploadResult.hash);
+      } else {
+        // For Cast types without image, we'll generate it after creation
+        console.log('📡 Step 1: Cast type - skipping image upload (will auto-generate)');
+        imageUploadResult = { 
+          success: true, 
+          hash: null, 
+          url: null 
+        };
       }
-      
-      console.log('✅ Image uploaded to IPFS:', imageUploadResult.hash);
       
       console.log('📡 Step 2: Creating and uploading metadata...');
       
@@ -169,7 +182,7 @@ const TempEvermarkService = {
       const nftMetadata = {
         name: metadata.title,
         description: metadata.description || '',
-        image: `ipfs://${imageUploadResult.hash}`,
+        image: imageUploadResult.hash ? `ipfs://${imageUploadResult.hash}` : 'placeholder',
         external_url: metadata.sourceUrl || metadata.url || metadata.castUrl,
         attributes: [
           {
@@ -268,33 +281,52 @@ const TempEvermarkService = {
                 issue: metadata.issue,
                 pages: metadata.pages
               }),
-              ipfs_image_hash: imageUploadResult.hash
+              ipfs_image_hash: imageUploadResult.hash || null
             })
           });
           
           if (dbSyncResponse.ok) {
             console.log('✅ Database sync completed');
             
-            // Step 6: Trigger image caching immediately after successful database sync
-            console.log('📡 Step 6: Triggering image caching...');
+            // Step 6: Trigger image processing after successful database sync
+            console.log('📡 Step 6: Triggering image processing...');
             try {
-              const cachingResponse = await fetch('/.netlify/functions/cache-images', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                  trigger: 'creation',
-                  tokenIds: [parseInt(mintResult.tokenId)]
-                })
-              });
-              
-              if (cachingResponse.ok) {
-                console.log('✅ Image caching triggered successfully');
+              if (metadata.contentType === 'Cast') {
+                // For Cast types, trigger cast image generation
+                console.log('🎨 Triggering cast image generation...');
+                const castImageResponse = await fetch('/.netlify/functions/generate-cast-image', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ 
+                    token_id: parseInt(mintResult.tokenId)
+                  })
+                });
+                
+                if (castImageResponse.ok) {
+                  console.log('✅ Cast image generation triggered successfully');
+                } else {
+                  console.warn('⚠️ Cast image generation failed, but evermark created successfully');
+                }
               } else {
-                console.warn('⚠️ Image caching trigger failed, but evermark created successfully');
+                // For other types, trigger regular image caching
+                const cachingResponse = await fetch('/.netlify/functions/cache-images', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ 
+                    trigger: 'creation',
+                    tokenIds: [parseInt(mintResult.tokenId)]
+                  })
+                });
+                
+                if (cachingResponse.ok) {
+                  console.log('✅ Image caching triggered successfully');
+                } else {
+                  console.warn('⚠️ Image caching trigger failed, but evermark created successfully');
+                }
               }
-            } catch (cacheError) {
-              console.warn('⚠️ Image caching trigger error:', cacheError);
-              // Don't fail the whole operation if caching fails
+            } catch (imageError) {
+              console.warn('⚠️ Image processing trigger error:', imageError);
+              // Don't fail the whole operation if image processing fails
             }
           } else {
             console.warn('⚠️ Database sync failed, but blockchain mint succeeded');

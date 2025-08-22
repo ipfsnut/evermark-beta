@@ -446,7 +446,8 @@ export function CreateEvermarkForm({
       // If we have cast data, include it in metadata
       if (castData && formData.contentType === 'Cast') {
         evermarkMetadata.customFields = [
-          { key: 'cast_author', value: castData.author.username },
+          { key: 'cast_author_username', value: castData.author.username },
+          { key: 'cast_author_display_name', value: castData.author.display_name },
           { key: 'cast_hash', value: castData.hash },
           { key: 'cast_likes', value: castData.reactions.likes_count.toString() },
           { key: 'cast_recasts', value: castData.reactions.recasts_count.toString() },
@@ -456,7 +457,8 @@ export function CreateEvermarkForm({
 
       const createInput: CreateEvermarkInput = {
         metadata: evermarkMetadata,
-        image: selectedImage || undefined
+        // For Cast types, don't include image - it will be auto-generated after creation
+        image: formData.contentType === 'Cast' ? undefined : (selectedImage || undefined)
       };
       
       const result = await createEvermark(createInput);
@@ -993,10 +995,11 @@ export function CreateEvermarkForm({
                   </div>
                 )}
 
-                {/* FIXED: SDK Image Upload with proper error handling */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-medium text-cyan-400">Cover Image (Optional)</h3>
+                {/* FIXED: SDK Image Upload with proper error handling - Hidden for Cast types */}
+                {formData.contentType !== 'Cast' && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium text-cyan-400">Cover Image (Optional)</h3>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-gray-500 bg-green-900/20 px-2 py-1 rounded">
                         SDK Enhanced
@@ -1074,12 +1077,45 @@ export function CreateEvermarkForm({
                   )}
 
 
-                  <div className="bg-green-900/20 border border-green-500/30 p-3 rounded-lg">
-                    <p className="text-green-300 text-sm">
-                      ✅ Advanced SDK upload: Direct to Supabase with automatic optimization and thumbnails
-                    </p>
+                    <div className="bg-green-900/20 border border-green-500/30 p-3 rounded-lg">
+                      <p className="text-green-300 text-sm">
+                        ✅ Advanced SDK upload: Direct to Supabase with automatic optimization and thumbnails
+                      </p>
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {/* Cast Image Auto-Generation Info */}
+                {formData.contentType === 'Cast' && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium text-cyan-400">Cast Preview Image</h3>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-green-400 bg-green-900/20 px-2 py-1 rounded">
+                          ✅ Auto-Generated
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-purple-900/20 border border-purple-500/30 p-4 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-lg">🎨</span>
+                        <span className="font-medium text-purple-300">Automatic Image Generation</span>
+                      </div>
+                      <p className="text-purple-200 text-sm mb-3">
+                        Cast images are automatically generated from the cast content. No manual upload needed!
+                      </p>
+                      {castImageUrl && (
+                        <div className="bg-green-900/20 border border-green-500/30 p-3 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <CheckCircleIcon className="h-4 w-4 text-green-400" />
+                            <span className="text-sm text-green-300">Cast preview generated successfully</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Submit Button */}
                 <div className="pt-6 border-t border-gray-700">
