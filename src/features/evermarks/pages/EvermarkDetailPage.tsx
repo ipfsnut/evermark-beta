@@ -22,7 +22,7 @@ import { Formatters } from '../../../utils/formatters';
 
 // Feature imports
 import { useEvermarksState, type Evermark } from '@/features/evermarks';
-import { SimpleEvermarkImage } from '@/components/images/SimpleEvermarkImage';
+import { ResponsiveEvermarkImage } from '@/components/images/ResponsiveEvermarkImage';
 import { VotingPanel } from '@/features/voting';
 import { useAppAuth } from '@/providers/AppContext';
 import { useFarcasterUser } from '@/lib/farcaster';
@@ -351,16 +351,18 @@ export default function EvermarkDetailPage() {
               </div>
             </div>
 
-            {/* Featured Image */}
+            {/* Featured Image with responsive handling for book covers */}
             {(evermark.image || evermark.supabaseImageUrl) && (
               <div className="relative">
-                <SimpleEvermarkImage
+                <ResponsiveEvermarkImage
                   tokenId={evermark.tokenId}
                   ipfsHash={evermark.ipfsHash}
                   originalUrl={evermark.supabaseImageUrl}
                   variant="hero"
                   alt={evermark.title}
-                  className="w-full h-64 md:h-96 object-cover rounded-lg border border-gray-700"
+                  className="w-full h-64 md:h-96 rounded-lg border border-gray-700"
+                  maintainContainer={true}
+                  detectAspectRatio={true}
                 />
                 {evermark.imageStatus !== 'processed' && (
                   <div className="absolute bottom-4 left-4 bg-black/80 text-white px-3 py-1 rounded-full text-sm backdrop-blur-sm">

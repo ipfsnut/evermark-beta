@@ -17,8 +17,8 @@ import { Formatters } from '../../../utils/formatters';
 import { useTheme } from '../../../providers/ThemeProvider';
 import { cn } from '../../../utils/responsive';
 
-// Use SimpleEvermarkImage instead of the old SDK-based component
-import { SimpleEvermarkImage } from '../../../components/images/SimpleEvermarkImage';
+// Use ResponsiveEvermarkImage for better aspect ratio handling (especially for book covers)
+import { ResponsiveEvermarkImage } from '../../../components/images/ResponsiveEvermarkImage';
 import { type Evermark } from '../types';
 
 // TODO: Replace SDK-based performance monitoring with simple alternatives
@@ -231,14 +231,16 @@ export function EvermarkCard({
         className={`${getVariantClasses()} ${className}`}
         onClick={handleClick}
       >
-        {/* FIXED: SDK Image Component */}
+        {/* FIXED: Responsive Image Component with dynamic borders */}
         {showImage && (
           <div className="relative overflow-hidden rounded-lg w-24 h-24 sm:w-32 sm:h-32 flex-shrink-0">
-            <SimpleEvermarkImage
+            <ResponsiveEvermarkImage
               tokenId={evermark.tokenId}
               ipfsHash={evermark.ipfsHash}
               originalUrl={evermark.supabaseImageUrl}
               variant="list"
+              maintainContainer={true}
+              detectAspectRatio={true}
               onLoad={() => {
                 if (showPerformanceInfo) {
                   console.log(`✅ List image loaded for evermark #${evermark.tokenId}`);
@@ -334,14 +336,16 @@ export function EvermarkCard({
       className={`${getVariantClasses()} ${className} flex flex-col h-full`}
       onClick={handleClick}
     >
-      {/* FIXED: SDK Image Component */}
+      {/* FIXED: Responsive Image Component with dynamic borders for book covers */}
       {showImage && (
         <div className={`relative overflow-hidden rounded-t-xl ${variant === 'hero' ? 'h-64 sm:h-80' : 'h-48 sm:h-56'}`}>
-          <SimpleEvermarkImage
+          <ResponsiveEvermarkImage
             tokenId={evermark.tokenId}
             ipfsHash={evermark.ipfsHash}
             originalUrl={evermark.supabaseImageUrl}
             variant={variant}
+            maintainContainer={true}
+            detectAspectRatio={true}
             onLoad={() => {
               if (showPerformanceInfo) {
                 console.log(`✅ Card image loaded for evermark #${evermark.tokenId}`);
