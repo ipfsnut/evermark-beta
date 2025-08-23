@@ -103,7 +103,7 @@ export function FarcasterProvider({ children }: FarcasterProviderProps) {
           
           // Try importing and calling ready from the modern SDK
           try {
-            const { sdk } = await import('@farcaster/frame-sdk');
+            const { sdk } = await import('@farcaster/miniapp-sdk');
             await sdk.actions.ready();
             console.log('✅ Modern Frame SDK ready() called');
             setIsFrameSDKReady(true);

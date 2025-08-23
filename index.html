@@ -109,7 +109,7 @@
       console.log('📱 Preloading Farcaster SDK...');
       const link = document.createElement('link');
       link.rel = 'preload';
-      link.href = 'https://cdn.jsdelivr.net/npm/@farcaster/frame-sdk@latest/dist/index.min.js';
+      link.href = 'https://cdn.jsdelivr.net/npm/@farcaster/miniapp-sdk@latest/dist/index.min.js';
       link.as = 'script';
       link.crossOrigin = 'anonymous';
       document.head.appendChild(link);
@@ -135,7 +135,7 @@
           }
           
           const script = document.createElement('script');
-          script.src = 'https://cdn.jsdelivr.net/npm/@farcaster/frame-sdk@latest/dist/index.min.js';
+          script.src = 'https://cdn.jsdelivr.net/npm/@farcaster/miniapp-sdk@latest/dist/index.min.js';
           script.crossOrigin = 'anonymous';
           script.async = true;
           

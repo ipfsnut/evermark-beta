@@ -49,7 +49,7 @@ function AppContent() {
         }
 
         // Try modern SDK approach first (for Mini Apps)
-        const { sdk } = await import('@farcaster/frame-sdk');
+        const { sdk } = await import('@farcaster/miniapp-sdk');
         await sdk.actions.ready();
         console.log('✅ Fallback Farcaster SDK ready() called');
         
