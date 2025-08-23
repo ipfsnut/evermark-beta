@@ -20,24 +20,8 @@ declare global {
     type IntrinsicElements = React.JSX.IntrinsicElements;
   }
 
-  // Farcaster Frame SDK globals
+  // Farcaster detection flag
   interface Window {
-    FrameSDK?: {
-      actions?: {
-        ready?: (options?: { disableNativeGestures?: boolean }) => Promise<void>;
-        openUrl?: (url: string) => void;
-        close?: () => void;
-      };
-      context?: {
-        user?: {
-          fid?: number;
-          username?: string;
-          displayName?: string;
-          pfpUrl?: string;
-        };
-        location?: string;
-      };
-    };
     __evermark_farcaster_detected?: boolean;
   }
 
