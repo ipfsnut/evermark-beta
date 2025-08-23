@@ -95,7 +95,21 @@ export function FarcasterProvider({ children }: FarcasterProviderProps) {
         setIsFrameSDKReady(true);
         
         // Get context from the SDK (it's async)
-        const context = await sdk.context;
+        const miniappContext = await sdk.context;
+        
+        // Map MiniAppContext to our FarcasterFrameContext interface
+        const context: FarcasterFrameContext = {
+          user: miniappContext.user ? {
+            fid: miniappContext.user.fid,
+            username: miniappContext.user.username,
+            displayName: miniappContext.user.displayName,
+            pfpUrl: miniappContext.user.pfpUrl
+          } : undefined,
+          location: typeof miniappContext.location === 'string' 
+            ? miniappContext.location 
+            : miniappContext.location?.type
+        };
+        
         setFrameContext(context);
         console.log('📱 Miniapp context:', context);
         
