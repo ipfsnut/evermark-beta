@@ -103,7 +103,7 @@ export function FarcasterProvider({ children }: FarcasterProviderProps) {
           
           // Try importing and calling ready from the miniapp SDK (2025 official way)
           try {
-            const { sdk } = await import('@farcaster/miniapp-sdk');
+            const sdk = (await import('@farcaster/miniapp-sdk')).default;
             
             // Call ready() to hide splash screen - official 2025 method
             await sdk.actions.ready();

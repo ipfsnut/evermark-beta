@@ -25,19 +25,17 @@
     }
   ],
   "farcaster": {
-    "version": "1.0.0",
-    "image": "https://evermarks.net/og-image.png",
+    "version": "1",
     "imageUrl": "https://evermarks.net/og-image.png",
-    "aspectRatio": "1.91:1",
     "button": {
       "title": "📖 Open Evermark",
-      "action": "launch"
-    },
-    "embed": {
-      "version": "1.0.0",
-      "imageUrl": "https://evermarks.net/og-image.png",
-      "aspectRatio": "1.91:1",
-      "button": "📖 Open Evermark"
+      "action": {
+        "type": "launch_miniapp",
+        "name": "Evermark Beta",
+        "url": "https://evermarks.net",
+        "splashImageUrl": "https://evermarks.net/og-image.png",
+        "splashBackgroundColor": "#000000"
+      }
     }
   },
   "shortcuts": [

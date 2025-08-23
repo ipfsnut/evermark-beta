@@ -36,6 +36,8 @@ function AppContent() {
   useEffect(() => {
     const initializeFarcasterMiniApp = async () => {
       try {
+        console.log('🎬 Starting Farcaster miniapp initialization...');
+        
         // Check if this is a Mini App shared link
         const urlParams = new URLSearchParams(window.location.search);
         const isMiniAppShare = urlParams.get('fc_miniapp') === '1';
@@ -48,26 +50,65 @@ function AppContent() {
           window.history.replaceState({}, '', cleanUrl);
         }
 
+        // Wait for document ready state if needed
+        if (document.readyState !== 'complete') {
+          console.log('⏳ Waiting for document to be ready...');
+          await new Promise(resolve => {
+            if (document.readyState === 'complete') {
+              resolve(undefined);
+            } else {
+              window.addEventListener('load', () => resolve(undefined), { once: true });
+            }
+          });
+        }
+
         // Import and initialize the miniapp SDK (2025 official way)
+        console.log('📦 Importing Farcaster miniapp SDK...');
         const { sdk } = await import('@farcaster/miniapp-sdk');
-        console.log('📱 Farcaster miniapp SDK imported');
+        console.log('📱 Farcaster miniapp SDK imported successfully');
         
-        // Call ready() to hide splash screen - official 2025 method
+        // Check if we're actually in a Farcaster context
+        const inFarcaster = window !== window.parent || 
+                           window.location.search.includes('farcaster=true') ||
+                           navigator.userAgent.includes('farcaster-');
+        
+        console.log('🔍 Environment check:', {
+          inFarcaster,
+          isFrame: window !== window.parent,
+          userAgent: navigator.userAgent.substring(0, 50),
+          url: window.location.href
+        });
+        
+        // Always call ready() but with environment context
+        console.log('🚀 Calling sdk.actions.ready()...');
         await sdk.actions.ready();
-        console.log('✅ Farcaster miniapp SDK ready() called - splash screen hidden');
+        console.log('✅ Farcaster miniapp SDK ready() called successfully - splash screen should be hidden');
+        
+        // Additional context logging
+        if (typeof sdk.context !== 'undefined') {
+          console.log('📱 SDK Context available:', sdk.context);
+        } else {
+          console.log('📱 SDK Context not available (normal for non-Farcaster environment)');
+        }
         
         // If this was a shared link, we can optionally notify the parent frame
         if (isMiniAppShare && shareSource === 'share') {
           console.log('📱 Successfully opened shared content in Mini App');
         }
       } catch (error) {
-        // Log the actual error for debugging
-        console.warn('⚠️ Farcaster SDK initialization error:', error);
+        // More detailed error logging
+        console.error('❌ Farcaster SDK initialization error details:', {
+          error: error,
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+          name: error instanceof Error ? error.name : undefined
+        });
       }
     };
 
-    // Small delay to allow providers to initialize first
-    const timeout = setTimeout(initializeFarcasterMiniApp, 200);
+    // Immediate initialization if document is ready, otherwise small delay
+    const delay = document.readyState === 'complete' ? 0 : 100;
+    const timeout = setTimeout(initializeFarcasterMiniApp, delay);
     return () => clearTimeout(timeout);
   }, []);
 
