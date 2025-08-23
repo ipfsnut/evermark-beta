@@ -48,18 +48,35 @@ function AppContent() {
           window.history.replaceState({}, '', cleanUrl);
         }
 
-        // Try modern SDK approach first (for Mini Apps)
-        const { sdk } = await import('@farcaster/miniapp-sdk');
-        await sdk.actions.ready();
-        console.log('✅ Fallback Farcaster SDK ready() called');
+        // Import and initialize the new miniapp SDK
+        const miniappSdk = await import('@farcaster/miniapp-sdk');
+        console.log('📱 Miniapp SDK imported:', miniappSdk);
+        
+        // Call ready with the sdk default export
+        if (miniappSdk.default?.actions?.ready) {
+          await miniappSdk.default.actions.ready();
+          console.log('✅ Miniapp SDK ready() called via default export');
+        } else if (miniappSdk.sdk?.actions?.ready) {
+          await miniappSdk.sdk.actions.ready();
+          console.log('✅ Miniapp SDK ready() called via sdk export');
+        } else {
+          // Try direct call as last resort
+          const { ready } = miniappSdk;
+          if (ready) {
+            await ready();
+            console.log('✅ Miniapp SDK ready() called directly');
+          } else {
+            console.warn('⚠️ Could not find ready() method in miniapp SDK');
+          }
+        }
         
         // If this was a shared link, we can optionally notify the parent frame
         if (isMiniAppShare && shareSource === 'share') {
           console.log('📱 Successfully opened shared content in Mini App');
         }
       } catch (error) {
-        // Silently fail - this is expected when not in Farcaster environment
-        console.log('ℹ️ Not in Farcaster environment, no SDK initialization needed');
+        // Log the actual error for debugging
+        console.warn('⚠️ Farcaster SDK initialization error:', error);
       }
     };
 

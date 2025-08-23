@@ -101,14 +101,28 @@ export function FarcasterProvider({ children }: FarcasterProviderProps) {
           console.warn('⚠️ Frame SDK not available after 5s wait');
           setIsFrameSDKReady(false);
           
-          // Try importing and calling ready from the modern SDK
+          // Try importing and calling ready from the miniapp SDK
           try {
-            const { sdk } = await import('@farcaster/miniapp-sdk');
-            await sdk.actions.ready();
-            console.log('✅ Modern Frame SDK ready() called');
-            setIsFrameSDKReady(true);
+            const miniappSdk = await import('@farcaster/miniapp-sdk');
+            
+            // Try different export patterns
+            if (miniappSdk.default?.actions?.ready) {
+              await miniappSdk.default.actions.ready();
+              console.log('✅ Miniapp SDK ready() called via default export');
+              setIsFrameSDKReady(true);
+            } else if (miniappSdk.sdk?.actions?.ready) {
+              await miniappSdk.sdk.actions.ready();
+              console.log('✅ Miniapp SDK ready() called via sdk export');
+              setIsFrameSDKReady(true);
+            } else if (miniappSdk.ready) {
+              await miniappSdk.ready();
+              console.log('✅ Miniapp SDK ready() called directly');
+              setIsFrameSDKReady(true);
+            } else {
+              console.warn('⚠️ Could not find ready() in miniapp SDK');
+            }
           } catch (modernSDKError) {
-            console.warn('⚠️ Modern Frame SDK also not available');
+            console.warn('⚠️ Miniapp SDK error:', modernSDKError);
           }
           return;
         }

@@ -126,79 +126,21 @@
 <body class="bg-black text-white">
   <div id="root"></div>
 
-  <!-- Farcaster SDK Initialization -->
+  <!-- Farcaster Mini App SDK will be loaded via npm package in the app -->
   <script>
-    (function() {
-      // ALWAYS try to load SDK for Mini Apps, regardless of detection
-      console.log('🔄 Loading Farcaster SDK for Mini App support...');
-      
-      // Load and initialize Farcaster SDK
-      const loadSDK = () => {
-        return new Promise((resolve, reject) => {
-          if (window.FrameSDK) {
-            console.log('✅ SDK already available');
-            resolve(true);
-            return;
-          }
-          
-          const script = document.createElement('script');
-          script.src = 'https://cdn.jsdelivr.net/npm/@farcaster/miniapp-sdk@latest/dist/index.min.js';
-          script.crossOrigin = 'anonymous';
-          script.async = true;
-          
-          script.onload = () => {
-            console.log('✅ SDK loaded');
-            resolve(true);
-          };
-          
-          script.onerror = (error) => {
-            console.error('❌ SDK load failed:', error);
-            reject(error);
-          };
-          
-          document.head.appendChild(script);
-        });
-      };
-      
-      // Initialize SDK with timeout
-      const initSDK = async () => {
-        try {
-          await loadSDK();
-          
-          // Wait for SDK with reasonable timeout
-          let attempts = 0;
-          while (!window.FrameSDK && attempts < 30) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-            attempts++;
-          }
-          
-          if (window.FrameSDK?.actions?.ready) {
-            await window.FrameSDK.actions.ready({ disableNativeGestures: true });
-            console.log('✅ SDK ready');
-          } else {
-            console.log('⚠️ SDK not available');
-          }
-          
-        } catch (error) {
-          console.error('❌ SDK init failed:', error);
-        }
-      };
-      
-      // Initialize after DOM is ready
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initSDK);
-      } else {
-        setTimeout(initSDK, 100);
+    // Simple Farcaster detection for development
+    console.log('🔍 Farcaster Mini App environment check:', {
+      inFrame: window !== window.parent,
+      url: window.location.href,
+      referrer: document.referrer
+    });
+    
+    // Message handler for Farcaster events
+    window.addEventListener('message', function(event) {
+      if (event.data?.type === 'frameEvent' || event.data?.source === 'farcaster') {
+        console.log('📨 Farcaster message:', event.data.type);
       }
-      
-      // Simple message handler
-      window.addEventListener('message', function(event) {
-        if (event.data?.type === 'frameEvent' || event.data?.source === 'farcaster') {
-          console.log('📨 Farcaster message:', event.data.type);
-        }
-      }, false);
-      
-    })();
+    }, false);
   </script>
 
   <script type="module" src="/src/main.tsx"></script>
