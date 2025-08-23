@@ -60,11 +60,11 @@ function AppContent() {
           await miniappSdk.sdk.actions.ready();
           console.log('✅ Miniapp SDK ready() called via sdk export');
         } else {
-          // Try direct call as last resort
-          const { ready } = miniappSdk;
-          if (ready) {
-            await ready();
-            console.log('✅ Miniapp SDK ready() called directly');
+          // Try Ready (capitalized) as last resort
+          const { Ready } = miniappSdk;
+          if (Ready) {
+            await Ready();
+            console.log('✅ Miniapp SDK Ready() called directly');
           } else {
             console.warn('⚠️ Could not find ready() method in miniapp SDK');
           }

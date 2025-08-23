@@ -114,9 +114,9 @@ export function FarcasterProvider({ children }: FarcasterProviderProps) {
               await miniappSdk.sdk.actions.ready();
               console.log('✅ Miniapp SDK ready() called via sdk export');
               setIsFrameSDKReady(true);
-            } else if (miniappSdk.ready) {
-              await miniappSdk.ready();
-              console.log('✅ Miniapp SDK ready() called directly');
+            } else if (miniappSdk.Ready) {
+              await miniappSdk.Ready();
+              console.log('✅ Miniapp SDK Ready() called directly');
               setIsFrameSDKReady(true);
             } else {
               console.warn('⚠️ Could not find ready() in miniapp SDK');
