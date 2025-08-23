@@ -24,6 +24,22 @@
       "purpose": "maskable any"
     }
   ],
+  "farcaster": {
+    "version": "1.0.0",
+    "image": "https://evermarks.net/og-image.png",
+    "imageUrl": "https://evermarks.net/og-image.png",
+    "aspectRatio": "1.91:1",
+    "button": {
+      "title": "📖 Open Evermark",
+      "action": "launch"
+    },
+    "embed": {
+      "version": "1.0.0",
+      "imageUrl": "https://evermarks.net/og-image.png",
+      "aspectRatio": "1.91:1",
+      "button": "📖 Open Evermark"
+    }
+  },
   "shortcuts": [
     {
       "name": "Create Evermark",
