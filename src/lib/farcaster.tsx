@@ -103,23 +103,27 @@ export function FarcasterProvider({ children }: FarcasterProviderProps) {
           
           // Try importing and calling ready from the miniapp SDK
           try {
-            const miniappSdk = await import('@farcaster/miniapp-sdk');
+            const sdk = await import('@farcaster/miniapp-sdk');
             
-            // Try different export patterns
-            if (miniappSdk.default?.actions?.ready) {
-              await miniappSdk.default.actions.ready();
-              console.log('✅ Miniapp SDK ready() called via default export');
+            // Try different patterns to call ready()
+            if (sdk.actions?.ready) {
+              await sdk.actions.ready();
+              console.log('✅ Miniapp SDK ready() called via actions');
               setIsFrameSDKReady(true);
-            } else if (miniappSdk.sdk?.actions?.ready) {
-              await miniappSdk.sdk.actions.ready();
-              console.log('✅ Miniapp SDK ready() called via sdk export');
-              setIsFrameSDKReady(true);
-            } else if (miniappSdk.Ready) {
-              await miniappSdk.Ready();
-              console.log('✅ Miniapp SDK Ready() called directly');
+            } else if (typeof sdk.ready === 'function') {
+              await sdk.ready();
+              console.log('✅ Miniapp SDK ready() called directly');
               setIsFrameSDKReady(true);
             } else {
-              console.warn('⚠️ Could not find ready() in miniapp SDK');
+              // Try as a default export or other patterns
+              const actions = (sdk as any).default?.actions || (sdk as any).actions;
+              if (actions?.ready) {
+                await actions.ready();
+                console.log('✅ Miniapp SDK ready() called via default actions');
+                setIsFrameSDKReady(true);
+              } else {
+                console.warn('⚠️ Could not find ready() in miniapp SDK', sdk);
+              }
             }
           } catch (modernSDKError) {
             console.warn('⚠️ Miniapp SDK error:', modernSDKError);

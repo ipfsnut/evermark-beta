@@ -49,24 +49,24 @@ function AppContent() {
         }
 
         // Import and initialize the new miniapp SDK
-        const miniappSdk = await import('@farcaster/miniapp-sdk');
-        console.log('📱 Miniapp SDK imported:', miniappSdk);
+        const sdk = await import('@farcaster/miniapp-sdk');
+        console.log('📱 Miniapp SDK imported');
         
-        // Call ready with the sdk default export
-        if (miniappSdk.default?.actions?.ready) {
-          await miniappSdk.default.actions.ready();
-          console.log('✅ Miniapp SDK ready() called via default export');
-        } else if (miniappSdk.sdk?.actions?.ready) {
-          await miniappSdk.sdk.actions.ready();
-          console.log('✅ Miniapp SDK ready() called via sdk export');
+        // The correct way based on the SDK structure
+        if (sdk.actions?.ready) {
+          await sdk.actions.ready();
+          console.log('✅ Miniapp SDK ready() called');
+        } else if (typeof sdk.ready === 'function') {
+          await sdk.ready();
+          console.log('✅ Miniapp SDK ready() called directly');
         } else {
-          // Try Ready (capitalized) as last resort
-          const { Ready } = miniappSdk;
-          if (Ready) {
-            await Ready();
-            console.log('✅ Miniapp SDK Ready() called directly');
+          // Try as a default export
+          const actions = (sdk as any).default?.actions || (sdk as any).actions;
+          if (actions?.ready) {
+            await actions.ready();
+            console.log('✅ Miniapp SDK ready() called via actions');
           } else {
-            console.warn('⚠️ Could not find ready() method in miniapp SDK');
+            console.warn('⚠️ Could not find ready() method in miniapp SDK', sdk);
           }
         }
         
