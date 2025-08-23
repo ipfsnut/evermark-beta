@@ -94,8 +94,8 @@ export function FarcasterProvider({ children }: FarcasterProviderProps) {
         console.log('✅ Farcaster miniapp SDK ready() called');
         setIsFrameSDKReady(true);
         
-        // Get context from the SDK
-        const context = sdk.context || {};
+        // Get context from the SDK (it's async)
+        const context = await sdk.context;
         setFrameContext(context);
         console.log('📱 Miniapp context:', context);
         
