@@ -48,27 +48,13 @@ function AppContent() {
           window.history.replaceState({}, '', cleanUrl);
         }
 
-        // Import and initialize the new miniapp SDK
-        const sdk = await import('@farcaster/miniapp-sdk');
-        console.log('📱 Miniapp SDK imported');
+        // Import and initialize the miniapp SDK (2025 official way)
+        const { sdk } = await import('@farcaster/miniapp-sdk');
+        console.log('📱 Farcaster miniapp SDK imported');
         
-        // The correct way based on the SDK structure
-        if (sdk.actions?.ready) {
-          await sdk.actions.ready();
-          console.log('✅ Miniapp SDK ready() called');
-        } else if (typeof sdk.ready === 'function') {
-          await sdk.ready();
-          console.log('✅ Miniapp SDK ready() called directly');
-        } else {
-          // Try as a default export
-          const actions = (sdk as any).default?.actions || (sdk as any).actions;
-          if (actions?.ready) {
-            await actions.ready();
-            console.log('✅ Miniapp SDK ready() called via actions');
-          } else {
-            console.warn('⚠️ Could not find ready() method in miniapp SDK', sdk);
-          }
-        }
+        // Call ready() to hide splash screen - official 2025 method
+        await sdk.actions.ready();
+        console.log('✅ Farcaster miniapp SDK ready() called - splash screen hidden');
         
         // If this was a shared link, we can optionally notify the parent frame
         if (isMiniAppShare && shareSource === 'share') {

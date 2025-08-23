@@ -101,32 +101,16 @@ export function FarcasterProvider({ children }: FarcasterProviderProps) {
           console.warn('⚠️ Frame SDK not available after 5s wait');
           setIsFrameSDKReady(false);
           
-          // Try importing and calling ready from the miniapp SDK
+          // Try importing and calling ready from the miniapp SDK (2025 official way)
           try {
-            const sdk = await import('@farcaster/miniapp-sdk');
+            const { sdk } = await import('@farcaster/miniapp-sdk');
             
-            // Try different patterns to call ready()
-            if (sdk.actions?.ready) {
-              await sdk.actions.ready();
-              console.log('✅ Miniapp SDK ready() called via actions');
-              setIsFrameSDKReady(true);
-            } else if (typeof sdk.ready === 'function') {
-              await sdk.ready();
-              console.log('✅ Miniapp SDK ready() called directly');
-              setIsFrameSDKReady(true);
-            } else {
-              // Try as a default export or other patterns
-              const actions = (sdk as any).default?.actions || (sdk as any).actions;
-              if (actions?.ready) {
-                await actions.ready();
-                console.log('✅ Miniapp SDK ready() called via default actions');
-                setIsFrameSDKReady(true);
-              } else {
-                console.warn('⚠️ Could not find ready() in miniapp SDK', sdk);
-              }
-            }
+            // Call ready() to hide splash screen - official 2025 method
+            await sdk.actions.ready();
+            console.log('✅ Farcaster miniapp SDK ready() called successfully');
+            setIsFrameSDKReady(true);
           } catch (modernSDKError) {
-            console.warn('⚠️ Miniapp SDK error:', modernSDKError);
+            console.warn('⚠️ Miniapp SDK ready() error:', modernSDKError);
           }
           return;
         }
