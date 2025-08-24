@@ -18,8 +18,6 @@ const CreatePage = React.lazy(() => import('../src/features/evermarks/pages/Crea
 const AdminPage = React.lazy(() => import('../src/pages/AdminPage'));
 const NotFoundPage = React.lazy(() => import('../src/pages/NotFoundPage'));
 
-// Mini App Router (separate codebase for Farcaster)
-const MiniAppRouter = React.lazy(() => import('./pages/mini/MiniAppRouter'));
 
 // Loading fallback component
 function PageLoader() {
@@ -35,15 +33,21 @@ function PageLoader() {
 
 // App content with routing (separated for clean provider structure)
 function AppContent() {
-  // Handle Mini App shared links (redirect to /mini)
+  // Farcaster Mini App SDK initialization
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const isMiniAppShare = urlParams.get('fc_miniapp') === '1';
-    
-    if (isMiniAppShare) {
-      console.log('🔗 Redirecting to Mini App');
-      window.location.href = '/mini';
-    }
+    const initializeFarcaster = async () => {
+      try {
+        const { default: sdk } = await import('@farcaster/miniapp-sdk');
+        await sdk.actions.ready();
+        console.log('✅ Farcaster SDK ready() called successfully');
+      } catch (error) {
+        // Silent fail - expected outside Farcaster
+        console.log('ℹ️ Not in Farcaster environment');
+      }
+    };
+
+    // Small delay to let providers initialize
+    setTimeout(initializeFarcaster, 100);
   }, []);
 
   return (
@@ -51,9 +55,6 @@ function AppContent() {
       <Layout>
         <Suspense fallback={<PageLoader />}>
           <Routes>
-            {/* Farcaster Mini App - completely separate codebase */}
-            <Route path="/mini/*" element={<MiniAppRouter />} />
-            
             {/* Core web app routes */}
             <Route path="/" element={<HomePage />} />
             <Route path="/explore" element={<ExplorePage />} />
