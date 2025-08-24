@@ -32,13 +32,6 @@ function PageLoader() {
 
 // App content with routing (separated for clean provider structure)
 function AppContent() {
-  // Call ready() as per official Farcaster docs
-  useEffect(() => {
-    import('@farcaster/miniapp-sdk').then(({ default: sdk }) => {
-      sdk.actions.ready();
-    });
-  }, []);
-
   // Handle Mini App shared links
   useEffect(() => {
     const initializeFarcasterMiniApp = async () => {
@@ -153,6 +146,13 @@ function AppContent() {
 
 // Main App component
 function App() {
+  // Call ready() immediately when App renders (earliest possible in React lifecycle)
+  useEffect(() => {
+    import('@farcaster/miniapp-sdk').then(({ default: sdk }) => {
+      sdk.actions.ready();
+    });
+  }, []);
+
   return (
     <ErrorBoundary>
       <AppProviders>
