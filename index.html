@@ -118,21 +118,26 @@
 <body class="bg-black text-white">
   <div id="root"></div>
 
-  <!-- Farcaster Mini App SDK will be loaded via npm package in the app -->
-  <script>
-    // Simple Farcaster detection for development
-    console.log('🔍 Farcaster Mini App environment check:', {
-      inFrame: window !== window.parent,
-      url: window.location.href,
-      referrer: document.referrer
-    });
-    
-    // Message handler for Farcaster events
-    window.addEventListener('message', function(event) {
-      if (event.data?.type === 'frameEvent' || event.data?.source === 'farcaster') {
-        console.log('📨 Farcaster message:', event.data.type);
+  <!-- Immediate Farcaster Mini App SDK initialization (2025) -->
+  <script type="module">
+    // Initialize Farcaster miniapp SDK immediately to dismiss splash screen
+    (async function() {
+      try {
+        console.log('🚀 Initializing Farcaster miniapp SDK immediately...');
+        const { default: sdk } = await import('@farcaster/miniapp-sdk');
+        
+        // Call ready() as soon as possible to hide splash screen
+        await sdk.actions.ready();
+        console.log('✅ Miniapp SDK ready() called - splash screen dismissed');
+        
+        // Store SDK reference for React app to use later
+        window.__farcasterSDK = sdk;
+        window.__farcasterSDKReady = true;
+      } catch (error) {
+        console.warn('⚠️ Early SDK initialization failed (normal outside Farcaster):', error);
+        window.__farcasterSDKReady = false;
       }
-    }, false);
+    })();
   </script>
 
   <script type="module" src="/src/main.tsx"></script>

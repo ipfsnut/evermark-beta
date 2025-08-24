@@ -20,9 +20,11 @@ declare global {
     type IntrinsicElements = React.JSX.IntrinsicElements;
   }
 
-  // Farcaster detection flag
+  // Farcaster globals
   interface Window {
     __evermark_farcaster_detected?: boolean;
+    __farcasterSDK?: any; // Miniapp SDK instance
+    __farcasterSDKReady?: boolean;
   }
 
   // Environment variables
