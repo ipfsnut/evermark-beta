@@ -118,27 +118,6 @@
 <body class="bg-black text-white">
   <div id="root"></div>
 
-  <!-- Immediate Farcaster Mini App SDK initialization (2025) -->
-  <script type="module">
-    // Initialize Farcaster miniapp SDK immediately to dismiss splash screen
-    (async function() {
-      try {
-        console.log('🚀 Initializing Farcaster miniapp SDK immediately...');
-        const { default: sdk } = await import('@farcaster/miniapp-sdk');
-        
-        // Call ready() as soon as possible to hide splash screen
-        await sdk.actions.ready();
-        console.log('✅ Miniapp SDK ready() called - splash screen dismissed');
-        
-        // Store SDK reference for React app to use later
-        window.__farcasterSDK = sdk;
-        window.__farcasterSDKReady = true;
-      } catch (error) {
-        console.warn('⚠️ Early SDK initialization failed (normal outside Farcaster):', error);
-        window.__farcasterSDKReady = false;
-      }
-    })();
-  </script>
 
   <script type="module" src="/src/main.tsx"></script>
 </body>

@@ -32,7 +32,14 @@ function PageLoader() {
 
 // App content with routing (separated for clean provider structure)
 function AppContent() {
-  // Fallback Farcaster SDK initialization - ensures ready() is always called
+  // Call ready() as per official Farcaster docs
+  useEffect(() => {
+    import('@farcaster/miniapp-sdk').then(({ default: sdk }) => {
+      sdk.actions.ready();
+    });
+  }, []);
+
+  // Handle Mini App shared links
   useEffect(() => {
     const initializeFarcasterMiniApp = async () => {
       try {
@@ -79,10 +86,8 @@ function AppContent() {
           url: window.location.href
         });
         
-        // Always call ready() but with environment context
-        console.log('🚀 Calling sdk.actions.ready()...');
-        await sdk.actions.ready();
-        console.log('✅ Farcaster miniapp SDK ready() called successfully - splash screen should be hidden');
+        // Note: ready() is called in index.html for immediate splash screen dismissal
+        console.log('📱 SDK imported in App.tsx (ready already called in index.html)');
         
         // Additional context logging
         if (typeof sdk.context !== 'undefined') {

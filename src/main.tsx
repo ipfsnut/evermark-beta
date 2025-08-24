@@ -10,6 +10,7 @@ import './styles/mobile-first.css';
 // Import dev logging utilities
 import { devLog, prodLog } from './utils/debug';
 
+
 // Register service worker for PWA functionality
 async function registerServiceWorker() {
   if ('serviceWorker' in navigator && import.meta.env.PROD) {

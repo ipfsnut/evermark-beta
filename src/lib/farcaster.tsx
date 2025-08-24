@@ -92,16 +92,11 @@ export function FarcasterProvider({ children }: FarcasterProviderProps) {
         if (window.__farcasterSDK && window.__farcasterSDKReady) {
           console.log('✅ Using pre-initialized Farcaster SDK from index.html');
           sdk = window.__farcasterSDK;
-          setIsFrameSDKReady(true);
         } else {
-          console.log('📦 Importing Farcaster miniapp SDK in React...');
+          console.log('📦 Importing Farcaster miniapp SDK in React (ready() should have been called in index.html)');
           sdk = (await import('@farcaster/miniapp-sdk')).default;
-          
-          // Call ready() to hide splash screen (if not already called)
-          await sdk.actions.ready();
-          console.log('✅ Farcaster miniapp SDK ready() called from React');
-          setIsFrameSDKReady(true);
         }
+        setIsFrameSDKReady(true);
         
         // Get context from the SDK (it's async)
         const miniappContext = await sdk.context;
