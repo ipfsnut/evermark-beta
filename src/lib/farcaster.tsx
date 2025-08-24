@@ -80,22 +80,22 @@ export function FarcasterProvider({ children }: FarcasterProviderProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Initialize Miniapp SDK (2025 standard)
+  // Initialize Miniapp SDK only when in Farcaster
   useEffect(() => {
     const initializeMiniappSDK = async () => {
+      // Only initialize if we're actually in Farcaster
+      if (!isInFarcaster) {
+        setIsFrameSDKReady(false);
+        setIsLoading(false);
+        return;
+      }
+
       try {
         setIsLoading(true);
         setError(null);
 
-        // Check if SDK was already initialized in index.html
-        let sdk;
-        if (window.__farcasterSDK && window.__farcasterSDKReady) {
-          console.log('✅ Using pre-initialized Farcaster SDK from index.html');
-          sdk = window.__farcasterSDK;
-        } else {
-          console.log('📦 Importing Farcaster miniapp SDK in React (ready() should have been called in index.html)');
-          sdk = (await import('@farcaster/miniapp-sdk')).default;
-        }
+        console.log('📦 Importing Farcaster miniapp SDK in React...');
+        const sdk = (await import('@farcaster/miniapp-sdk')).default;
         setIsFrameSDKReady(true);
         
         // Get context from the SDK (it's async)

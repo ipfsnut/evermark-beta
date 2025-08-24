@@ -146,11 +146,23 @@ function AppContent() {
 
 // Main App component
 function App() {
-  // Call ready() immediately when App renders (earliest possible in React lifecycle)
+  // Call ready() only when in Farcaster Mini App
   useEffect(() => {
-    import('@farcaster/miniapp-sdk').then(({ default: sdk }) => {
-      sdk.actions.ready();
-    });
+    // Check if we're actually in Farcaster environment
+    const inFarcaster = window !== window.parent || 
+                       window.location.search.includes('farcaster=true') ||
+                       (window as any).__evermark_farcaster_detected;
+    
+    if (inFarcaster) {
+      // Use async import to avoid blocking the main thread
+      import('@farcaster/miniapp-sdk')
+        .then(({ default: sdk }) => {
+          sdk.actions.ready();
+        })
+        .catch((error) => {
+          console.warn('Farcaster SDK not available:', error);
+        });
+    }
   }, []);
 
   return (
