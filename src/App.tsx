@@ -18,6 +18,9 @@ const CreatePage = React.lazy(() => import('../src/features/evermarks/pages/Crea
 const AdminPage = React.lazy(() => import('../src/pages/AdminPage'));
 const NotFoundPage = React.lazy(() => import('../src/pages/NotFoundPage'));
 
+// Mini App Router (separate codebase for Farcaster)
+const MiniAppRouter = React.lazy(() => import('./pages/mini/MiniAppRouter'));
+
 // Loading fallback component
 function PageLoader() {
   return (
@@ -32,82 +35,15 @@ function PageLoader() {
 
 // App content with routing (separated for clean provider structure)
 function AppContent() {
-  // Handle Mini App shared links
+  // Handle Mini App shared links (redirect to /mini)
   useEffect(() => {
-    const initializeFarcasterMiniApp = async () => {
-      try {
-        console.log('🎬 Starting Farcaster miniapp initialization...');
-        
-        // Check if this is a Mini App shared link
-        const urlParams = new URLSearchParams(window.location.search);
-        const isMiniAppShare = urlParams.get('fc_miniapp') === '1';
-        const shareSource = urlParams.get('fc_source');
-        
-        if (isMiniAppShare) {
-          console.log('🔗 Opened via Mini App share link:', { shareSource });
-          // Clean up URL parameters for better UX
-          const cleanUrl = window.location.pathname;
-          window.history.replaceState({}, '', cleanUrl);
-        }
-
-        // Wait for document ready state if needed
-        if (document.readyState !== 'complete') {
-          console.log('⏳ Waiting for document to be ready...');
-          await new Promise(resolve => {
-            if (document.readyState === 'complete') {
-              resolve(undefined);
-            } else {
-              window.addEventListener('load', () => resolve(undefined), { once: true });
-            }
-          });
-        }
-
-        // Import and initialize the miniapp SDK (2025 official way)
-        console.log('📦 Importing Farcaster miniapp SDK...');
-        const { sdk } = await import('@farcaster/miniapp-sdk');
-        console.log('📱 Farcaster miniapp SDK imported successfully');
-        
-        // Check if we're actually in a Farcaster context
-        const inFarcaster = window !== window.parent || 
-                           window.location.search.includes('farcaster=true') ||
-                           navigator.userAgent.includes('farcaster-');
-        
-        console.log('🔍 Environment check:', {
-          inFarcaster,
-          isFrame: window !== window.parent,
-          userAgent: navigator.userAgent.substring(0, 50),
-          url: window.location.href
-        });
-        
-        // Note: ready() is called in index.html for immediate splash screen dismissal
-        console.log('📱 SDK imported in App.tsx (ready already called in index.html)');
-        
-        // Additional context logging
-        if (typeof sdk.context !== 'undefined') {
-          console.log('📱 SDK Context available:', sdk.context);
-        } else {
-          console.log('📱 SDK Context not available (normal for non-Farcaster environment)');
-        }
-        
-        // If this was a shared link, we can optionally notify the parent frame
-        if (isMiniAppShare && shareSource === 'share') {
-          console.log('📱 Successfully opened shared content in Mini App');
-        }
-      } catch (error) {
-        // More detailed error logging
-        console.error('❌ Farcaster SDK initialization error details:', {
-          error: error,
-          message: error instanceof Error ? error.message : 'Unknown error',
-          stack: error instanceof Error ? error.stack : undefined,
-          name: error instanceof Error ? error.name : undefined
-        });
-      }
-    };
-
-    // Immediate initialization if document is ready, otherwise small delay
-    const delay = document.readyState === 'complete' ? 0 : 100;
-    const timeout = setTimeout(initializeFarcasterMiniApp, delay);
-    return () => clearTimeout(timeout);
+    const urlParams = new URLSearchParams(window.location.search);
+    const isMiniAppShare = urlParams.get('fc_miniapp') === '1';
+    
+    if (isMiniAppShare) {
+      console.log('🔗 Redirecting to Mini App');
+      window.location.href = '/mini';
+    }
   }, []);
 
   return (
@@ -115,7 +51,10 @@ function AppContent() {
       <Layout>
         <Suspense fallback={<PageLoader />}>
           <Routes>
-            {/* Core feature routes */}
+            {/* Farcaster Mini App - completely separate codebase */}
+            <Route path="/mini/*" element={<MiniAppRouter />} />
+            
+            {/* Core web app routes */}
             <Route path="/" element={<HomePage />} />
             <Route path="/explore" element={<ExplorePage />} />
             <Route path="/about" element={<AboutPage />} />
@@ -146,24 +85,6 @@ function AppContent() {
 
 // Main App component
 function App() {
-  // Call ready() only when in Farcaster Mini App
-  useEffect(() => {
-    // Check if we're actually in Farcaster environment
-    const inFarcaster = window !== window.parent || 
-                       window.location.search.includes('farcaster=true') ||
-                       (window as any).__evermark_farcaster_detected;
-    
-    if (inFarcaster) {
-      // Use async import to avoid blocking the main thread
-      import('@farcaster/miniapp-sdk')
-        .then(({ default: sdk }) => {
-          sdk.actions.ready();
-        })
-        .catch((error) => {
-          console.warn('Farcaster SDK not available:', error);
-        });
-    }
-  }, []);
 
   return (
     <ErrorBoundary>
