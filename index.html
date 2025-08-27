@@ -84,21 +84,34 @@
       const devOverride = window.location.search.includes('farcaster=true') || 
                          window.location.search.includes('fc=true');
       
-      // Strong indicators of Farcaster environment
+      // Check for Farcaster SDK availability or frame context
+      const hasFrameSDK = typeof window.FrameSDK !== 'undefined';
+      const inFrame = window.parent !== window;
+      
+      // Strong indicators of Farcaster environment - broader patterns
       const strongIndicators = 
-        ua.includes('farcaster-') ||
-        ua.includes('warpcast-app') ||
+        ua.includes('farcaster') ||
+        ua.includes('warpcast') ||
+        ua.includes('frame') ||
         url.includes('farcaster.xyz') ||
         url.includes('warpcast.com') ||
         window.location.search.includes('inFeed=true') ||
         window.location.search.includes('action_type=share') ||
-        devOverride;
+        hasFrameSDK ||
+        devOverride ||
+        // Check if we're in a frame context (common for Mini Apps)
+        inFrame ||
+        // Check for mobile Safari in Farcaster context (common pattern)
+        (ua.includes('safari') && ua.includes('mobile') && inFrame);
       
       console.log('🔍 Farcaster Detection:', {
         detected: strongIndicators,
-        userAgent: ua.substring(0, 50),
-        url: url.substring(0, 50),
-        devOverride: devOverride
+        userAgent: ua.substring(0, 80),
+        url: url.substring(0, 80),
+        devOverride: devOverride,
+        hasFrameSDK: hasFrameSDK,
+        inFrame: inFrame,
+        isMobileSafari: ua.includes('safari') && ua.includes('mobile')
       });
       
       return strongIndicators;
