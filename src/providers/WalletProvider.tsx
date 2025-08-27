@@ -35,9 +35,22 @@ export function WalletProvider({ children }: WalletProviderProps) {
       // Use the correct Thirdweb v5 connect API
       const connectedWallet = await thirdwebConnect(async () => {
         if (isInFarcaster) {
-          // In Farcaster context, try to connect with embedded wallet first
+          // In Farcaster context, skip wallet popups and use Farcaster's built-in wallet
           try {
-            console.log('🎯 Connecting in Farcaster context...');
+            console.log('🎯 Connecting in Farcaster context with Farcaster SDK...');
+            
+            // Check if Farcaster SDK is available (in Mini App context)
+            if (typeof window !== 'undefined' && window.FrameSDK?.context) {
+              console.log('✅ Farcaster SDK detected, connecting available wallet...');
+              // In Farcaster Mini App context, connect to the available wallet
+              const metamaskWallet = createWallet('io.metamask');
+              await metamaskWallet.connect({ client });
+              prodLog('Connected to wallet in Farcaster context successfully');
+              return metamaskWallet;
+            }
+            
+            // Fallback: try embedded wallet without popup
+            console.log('🔄 Attempting embedded wallet connection...');
             const embeddedWallet = createWallet('embedded');
             await embeddedWallet.connect({ 
               client,
@@ -46,18 +59,16 @@ export function WalletProvider({ children }: WalletProviderProps) {
             prodLog('Connected to Farcaster embedded wallet successfully');
             return embeddedWallet;
           } catch (farcasterError) {
-            console.warn('Farcaster embedded wallet failed, trying in-app wallet:', farcasterError);
-            // Try in-app wallet as fallback
+            console.warn('Farcaster wallet connection failed:', farcasterError);
+            // In Farcaster, still try to connect to available wallet
             try {
-              const inAppWallet = createWallet('inApp');
-              await inAppWallet.connect({
-                client,
-                strategy: 'farcaster'
-              });
-              prodLog('Connected to Farcaster in-app wallet successfully');
-              return inAppWallet;
-            } catch (inAppError) {
-              console.warn('In-app wallet failed, falling back to browser wallets:', inAppError);
+              const metamaskWallet = createWallet('io.metamask');
+              await metamaskWallet.connect({ client });
+              prodLog('Connected to available wallet in Farcaster context');
+              return metamaskWallet;
+            } catch (fallbackError) {
+              console.warn('All Farcaster wallet attempts failed:', fallbackError);
+              throw new Error('Unable to connect wallet in Farcaster context');
             }
           }
         }
