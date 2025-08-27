@@ -33,6 +33,7 @@
     "react-dom": "^18.2.0",
     "react-helmet-async": "^2.0.5",
     "react-router-dom": "^7.6.2",
+    "sharp": "^0.34.3",
     "thirdweb": "^5.101.1",
     "viem": "^2.21.54",
     "wagmi": "^2.15.4"
