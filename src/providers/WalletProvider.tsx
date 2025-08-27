@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useEffect } from 'react';
 import { useActiveAccount, useConnect, useDisconnect, useActiveWallet } from 'thirdweb/react';
 import { createWallet } from 'thirdweb/wallets';
+// Removed frameConnector - using Thirdweb v5 native Farcaster support
 import { client } from '../lib/thirdweb';
 import { setCurrentWallet, prodLog } from '../utils/debug';
 
@@ -28,8 +29,39 @@ export function WalletProvider({ children }: WalletProviderProps) {
 
   const connect = async (): Promise<{ success: boolean; error?: string }> => {
     try {
-      // Use the correct useConnect API signature with browser wallets
+      const isInFarcaster = typeof window !== 'undefined' && 
+                           (window as any).__evermark_farcaster_detected === true;
+      
+      // Use the correct Thirdweb v5 connect API
       const connectedWallet = await thirdwebConnect(async () => {
+        if (isInFarcaster) {
+          // In Farcaster context, try to connect with embedded wallet first
+          try {
+            console.log('🎯 Connecting in Farcaster context...');
+            const embeddedWallet = createWallet('embedded');
+            await embeddedWallet.connect({ 
+              client,
+              strategy: 'farcaster'
+            });
+            prodLog('Connected to Farcaster embedded wallet successfully');
+            return embeddedWallet;
+          } catch (farcasterError) {
+            console.warn('Farcaster embedded wallet failed, trying in-app wallet:', farcasterError);
+            // Try in-app wallet as fallback
+            try {
+              const inAppWallet = createWallet('inApp');
+              await inAppWallet.connect({
+                client,
+                strategy: 'farcaster'
+              });
+              prodLog('Connected to Farcaster in-app wallet successfully');
+              return inAppWallet;
+            } catch (inAppError) {
+              console.warn('In-app wallet failed, falling back to browser wallets:', inAppError);
+            }
+          }
+        }
+        
         // Try MetaMask first (most common browser wallet)
         try {
           const metamaskWallet = createWallet('io.metamask');
@@ -52,12 +84,17 @@ export function WalletProvider({ children }: WalletProviderProps) {
     } catch (error) {
       console.error('Wallet connection failed:', error);
       
+      const isInFarcaster = typeof window !== 'undefined' && 
+                           (window as any).__evermark_farcaster_detected === true;
+      
       let errorMessage = 'Failed to connect wallet';
       if (error instanceof Error) {
         if (error.message.includes('rejected') || error.message.includes('denied')) {
           errorMessage = 'Connection rejected by user';
         } else if (error.message.includes('No wallet')) {
-          errorMessage = 'No wallet extension found. Please install MetaMask or Coinbase Wallet.';
+          errorMessage = isInFarcaster 
+            ? 'Farcaster wallet not available. Please try connecting in a browser with MetaMask.'
+            : 'No wallet extension found. Please install MetaMask or Coinbase Wallet.';
         } else {
           errorMessage = error.message;
         }
@@ -90,6 +127,26 @@ export function WalletProvider({ children }: WalletProviderProps) {
   useEffect(() => {
     setCurrentWallet(account?.address || null);
   }, [account?.address]);
+
+  // Auto-connect to Farcaster wallet when in Farcaster context
+  useEffect(() => {
+    const isInFarcaster = typeof window !== 'undefined' && 
+                         (window as any).__evermark_farcaster_detected === true;
+    
+    // Only auto-connect if we're in Farcaster context and not already connected/connecting
+    if (isInFarcaster && !account?.address && !isConnecting) {
+      console.log('🎯 Auto-connecting to Farcaster wallet...');
+      connect().then((result) => {
+        if (result.success) {
+          prodLog('Auto-connected to Farcaster wallet successfully');
+        } else {
+          console.warn('Auto-connect to Farcaster wallet failed:', result.error);
+        }
+      }).catch((error) => {
+        console.warn('Auto-connect to Farcaster wallet error:', error);
+      });
+    }
+  }, [account?.address, isConnecting]); // Re-run when connection state changes
 
   const value: WalletContextType = {
     isConnected: !!account?.address,
