@@ -51,10 +51,8 @@ export function WalletProvider({ children }: WalletProviderProps) {
               await embeddedWallet.connect({ 
                 client,
                 strategy: 'farcaster',
-                // Skip auth screen on mobile if already in Farcaster
-                auth: {
-                  mode: 'popup' // Use popup mode for better mobile UX
-                }
+                // Use popup mode for better mobile UX
+                mode: 'popup'
               });
               prodLog('Connected to Farcaster embedded wallet on mobile');
               return embeddedWallet;
