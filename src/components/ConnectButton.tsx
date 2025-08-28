@@ -22,6 +22,14 @@ const getWallets = () => [
 export function WalletConnect({ className = '', variant = 'default' }: WalletConnectProps) {
   const account = useActiveAccount();
   const { disconnect } = useAppAuth();
+  
+  // Check if we're in Farcaster context and should auto-connect
+  const isInFarcaster = typeof window !== 'undefined' && 
+                       (window as any).__evermark_farcaster_detected === true;
+  const isMobile = typeof window !== 'undefined' && 
+                  (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile/i.test(navigator.userAgent) ||
+                   window.innerWidth <= 768);
+  const isAutoConnecting = isInFarcaster && isMobile && !account;
 
   const handleLogout = async () => {
     try {
@@ -78,6 +86,18 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
     );
   }
 
+  // If we're auto-connecting in mobile Farcaster, show a loading state instead of connect button
+  if (isAutoConnecting) {
+    return (
+      <div className={`inline-flex items-center px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg ${className}`}>
+        <span className="flex items-center text-gray-400">
+          <WalletIcon className="h-4 w-4 mr-2 animate-pulse" />
+          Connecting...
+        </span>
+      </div>
+    );
+  }
+
   return (
     <ConnectButton
       client={client}
@@ -100,6 +120,14 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
 export function SimpleConnectButton({ className = '' }: { className?: string }) {
   const account = useActiveAccount();
   const { disconnect } = useAppAuth();
+  
+  // Check if we're in Farcaster context and should auto-connect
+  const isInFarcaster = typeof window !== 'undefined' && 
+                       (window as any).__evermark_farcaster_detected === true;
+  const isMobile = typeof window !== 'undefined' && 
+                  (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile/i.test(navigator.userAgent) ||
+                   window.innerWidth <= 768);
+  const isAutoConnecting = isInFarcaster && isMobile && !account;
 
   const handleLogout = async () => {
     try {
@@ -125,6 +153,18 @@ export function SimpleConnectButton({ className = '' }: { className?: string }) 
           </button>
           <span className="text-xs text-gray-400">Connected</span>
         </div>
+      </div>
+    );
+  }
+
+  // If we're auto-connecting in mobile Farcaster, show a loading state instead of connect button
+  if (isAutoConnecting) {
+    return (
+      <div className={`inline-flex items-center px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg ${className}`}>
+        <span className="flex items-center text-gray-400">
+          <WalletIcon className="h-4 w-4 mr-2 animate-pulse" />
+          Connecting...
+        </span>
       </div>
     );
   }

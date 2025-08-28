@@ -32,25 +32,48 @@ export function WalletProvider({ children }: WalletProviderProps) {
       const isInFarcaster = typeof window !== 'undefined' && 
                            (window as any).__evermark_farcaster_detected === true;
       
+      // Check if we're on mobile
+      const isMobile = typeof window !== 'undefined' && 
+                      (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile/i.test(navigator.userAgent) ||
+                       window.innerWidth <= 768);
+      
       // Use the correct Thirdweb v5 connect API
       const connectedWallet = await thirdwebConnect(async () => {
         if (isInFarcaster) {
-          // In Farcaster context, skip wallet popups and use Farcaster's built-in wallet
+          // In Farcaster context, use different strategies for mobile vs desktop
           try {
-            console.log('🎯 Connecting in Farcaster context with Farcaster SDK...');
+            console.log('🎯 Connecting in Farcaster context...', { isMobile, hasFrameSDK: !!window.FrameSDK });
             
-            // Check if Farcaster SDK is available (in Mini App context)
-            if (typeof window !== 'undefined' && window.FrameSDK?.context) {
-              console.log('✅ Farcaster SDK detected, connecting available wallet...');
-              // In Farcaster Mini App context, connect to the available wallet
-              const metamaskWallet = createWallet('io.metamask');
-              await metamaskWallet.connect({ client });
-              prodLog('Connected to wallet in Farcaster context successfully');
-              return metamaskWallet;
+            // For mobile Farcaster, always use embedded wallet with Farcaster strategy
+            if (isMobile) {
+              console.log('📱 Mobile Farcaster detected, using embedded wallet...');
+              const embeddedWallet = createWallet('embedded');
+              await embeddedWallet.connect({ 
+                client,
+                strategy: 'farcaster',
+                // Skip auth screen on mobile if already in Farcaster
+                auth: {
+                  mode: 'popup' // Use popup mode for better mobile UX
+                }
+              });
+              prodLog('Connected to Farcaster embedded wallet on mobile');
+              return embeddedWallet;
             }
             
-            // Fallback: try embedded wallet without popup
-            console.log('🔄 Attempting embedded wallet connection...');
+            // For desktop Farcaster or when SDK is available
+            if (window.FrameSDK?.context) {
+              console.log('✅ Desktop Farcaster SDK detected, using embedded wallet...');
+              const embeddedWallet = createWallet('embedded');
+              await embeddedWallet.connect({ 
+                client,
+                strategy: 'farcaster'
+              });
+              prodLog('Connected to Farcaster embedded wallet on desktop');
+              return embeddedWallet;
+            }
+            
+            // Fallback: standard embedded wallet
+            console.log('🔄 Standard embedded wallet connection...');
             const embeddedWallet = createWallet('embedded');
             await embeddedWallet.connect({ 
               client,
@@ -60,20 +83,22 @@ export function WalletProvider({ children }: WalletProviderProps) {
             return embeddedWallet;
           } catch (farcasterError) {
             console.warn('Farcaster wallet connection failed:', farcasterError);
-            // In Farcaster, still try to connect to available wallet
-            try {
-              const metamaskWallet = createWallet('io.metamask');
-              await metamaskWallet.connect({ client });
-              prodLog('Connected to available wallet in Farcaster context');
-              return metamaskWallet;
-            } catch (fallbackError) {
-              console.warn('All Farcaster wallet attempts failed:', fallbackError);
-              throw new Error('Unable to connect wallet in Farcaster context');
+            // Don't try MetaMask on mobile Farcaster - it won't work
+            if (!isMobile) {
+              try {
+                const metamaskWallet = createWallet('io.metamask');
+                await metamaskWallet.connect({ client });
+                prodLog('Connected to MetaMask in Farcaster context');
+                return metamaskWallet;
+              } catch (fallbackError) {
+                console.warn('MetaMask fallback also failed:', fallbackError);
+              }
             }
+            throw new Error('Unable to connect wallet in Farcaster context');
           }
         }
         
-        // Try MetaMask first (most common browser wallet)
+        // Non-Farcaster context: Try MetaMask first (most common browser wallet)
         try {
           const metamaskWallet = createWallet('io.metamask');
           await metamaskWallet.connect({ client });
