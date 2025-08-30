@@ -66,10 +66,32 @@ interface FarcasterProviderProps {
 }
 
 export function FarcasterProvider({ children }: FarcasterProviderProps) {
-  // Detection state
+  // Simple Farcaster detection - detect or fail clearly
   const [isInFarcaster] = useState(() => {
-    return typeof window !== 'undefined' && 
-           (window as any).__evermark_farcaster_detected === true;
+    if (typeof window === 'undefined') return false;
+    
+    // Check for Frame SDK (primary detection method)
+    const hasFrameSDK = typeof (window as any).FrameSDK !== 'undefined';
+    
+    // Check user agent for Farcaster mobile app
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isFarcasterUA = userAgent.includes('farcaster') || userAgent.includes('warpcast');
+    
+    // Check if in iframe with Farcaster referrer
+    const isInIframe = window.parent !== window;
+    const farcasterReferrer = document.referrer.includes('warpcast.com') || 
+                             document.referrer.includes('farcaster.xyz');
+    
+    const detected = hasFrameSDK || isFarcasterUA || (isInIframe && farcasterReferrer);
+    
+    if (detected) {
+      console.log('🎯 Farcaster detected:', { hasFrameSDK, isFarcasterUA, isInIframe, farcasterReferrer });
+      (window as any).__evermark_farcaster_detected = true;
+    } else {
+      console.log('🌐 Not in Farcaster context');
+    }
+    
+    return detected;
   });
   
   const [isFrameSDKReady, setIsFrameSDKReady] = useState(false);
@@ -86,6 +108,7 @@ export function FarcasterProvider({ children }: FarcasterProviderProps) {
       try {
         setIsLoading(true);
         setError(null);
+
 
         // Wait for Frame SDK to be available (required for Mini Apps)
         let attempts = 0;

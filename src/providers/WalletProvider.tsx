@@ -63,21 +63,22 @@ export function WalletProvider({ children }: WalletProviderProps) {
             prodLog('Connected to Farcaster inAppWallet successfully');
             return wallet;
           } catch (farcasterError) {
-            console.warn('Farcaster wallet connection failed:', farcasterError);
+            console.error('Farcaster wallet connection failed:', farcasterError);
             
-            // Only try MetaMask fallback on desktop, not mobile
-            if (!isMobile) {
-              try {
-                const metamaskWallet = createWallet('io.metamask');
-                await metamaskWallet.connect({ client });
-                prodLog('Connected to MetaMask fallback in Farcaster context');
-                return metamaskWallet;
-              } catch (fallbackError) {
-                console.warn('MetaMask fallback also failed:', fallbackError);
-              }
+            // On mobile in Farcaster, don't try fallbacks - throw clear error
+            if (isMobile) {
+              throw new Error(`Farcaster mobile wallet connection failed: ${farcasterError instanceof Error ? farcasterError.message : 'Unknown error'}`);
             }
             
-            throw new Error('Unable to connect wallet in Farcaster context');
+            // Only try MetaMask fallback on desktop
+            try {
+              const metamaskWallet = createWallet('io.metamask');
+              await metamaskWallet.connect({ client });
+              prodLog('Connected to MetaMask fallback in Farcaster context');
+              return metamaskWallet;
+            } catch (fallbackError) {
+              throw new Error(`Farcaster connection failed and MetaMask fallback also failed: ${fallbackError instanceof Error ? fallbackError.message : 'Unknown error'}`);
+            }
           }
         }
         
