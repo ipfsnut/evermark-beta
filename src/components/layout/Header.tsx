@@ -30,12 +30,12 @@ export function Header() {
         <div className="flex items-center justify-between h-16">
           {/* Left section */}
           <div className="flex items-center space-x-4">
-            {/* Sidebar toggle - hidden in Farcaster */}
-            {!isInFarcaster && (
+            {/* Sidebar toggle - show on mobile, hidden on desktop */}
+            {isMobile && (
               <button
                 onClick={toggleSidebar}
-                className="p-2 rounded-lg transition-colors lg:hidden hover:bg-gray-100 dark:hover:bg-gray-800"
-                aria-label="Toggle sidebar"
+                className="p-2 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+                aria-label="Toggle menu"
               >
                 <MenuIcon className="h-5 w-5" />
               </button>
