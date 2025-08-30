@@ -1,5 +1,5 @@
 // src/providers/WalletProvider.tsx - Fixed based on actual Thirdweb v5 API
-import React, { createContext, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { useActiveAccount, useConnect, useDisconnect, useActiveWallet } from 'thirdweb/react';
 import { createWallet } from 'thirdweb/wallets';
 // Removed frameConnector - using Thirdweb v5 native Farcaster support
@@ -10,6 +10,8 @@ interface WalletContextType {
   isConnected: boolean;
   address: string | null;
   isConnecting: boolean;
+  isAutoConnecting: boolean;
+  autoConnectFailed: boolean;
   connect: () => Promise<{ success: boolean; error?: string }>;
   disconnect: () => Promise<void>;
   requireConnection: () => Promise<{ success: boolean; error?: string }>;
@@ -26,9 +28,18 @@ export function WalletProvider({ children }: WalletProviderProps) {
   const wallet = useActiveWallet();
   const { connect: thirdwebConnect, isConnecting } = useConnect();
   const { disconnect: thirdwebDisconnect } = useDisconnect();
+  
+  // Track auto-connection state
+  const [isAutoConnecting, setIsAutoConnecting] = useState(false);
+  const [autoConnectFailed, setAutoConnectFailed] = useState(false);
+  const autoConnectAttempted = useRef(false);
+  const autoConnectTimeoutRef = useRef<NodeJS.Timeout>();
 
   const connect = async (): Promise<{ success: boolean; error?: string }> => {
     try {
+      // Reset auto-connect state when manually connecting
+      setAutoConnectFailed(false);
+      
       const isInFarcaster = typeof window !== 'undefined' && 
                            (window as any).__evermark_farcaster_detected === true;
       
@@ -164,7 +175,12 @@ export function WalletProvider({ children }: WalletProviderProps) {
 
   // Auto-connect to Farcaster wallet when in Farcaster context
   useEffect(() => {
-    const checkAndConnect = () => {
+    const checkAndConnect = async () => {
+      // Skip if already attempted or connected
+      if (autoConnectAttempted.current || account?.address || isConnecting) {
+        return;
+      }
+
       const isInFarcaster = typeof window !== 'undefined' && 
                            (window as any).__evermark_farcaster_detected === true;
       
@@ -173,27 +189,62 @@ export function WalletProvider({ children }: WalletProviderProps) {
                       (window.location.search.includes('farcaster=true') || 
                        window.location.search.includes('fc=true'));
       
-      const shouldAutoConnect = (isInFarcaster || testMode) && !account?.address && !isConnecting;
+      // Check if we're on mobile
+      const isMobile = typeof window !== 'undefined' && 
+                      (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile/i.test(navigator.userAgent) ||
+                       window.innerWidth <= 768);
+      
+      const shouldAutoConnect = (isInFarcaster || testMode) && isMobile && !account?.address;
       
       console.log('🔍 Auto-connect check:', {
         isInFarcaster,
         testMode,
+        isMobile,
         hasAccount: !!account?.address,
         isConnecting,
-        shouldAutoConnect
+        shouldAutoConnect,
+        attempted: autoConnectAttempted.current
       });
       
       if (shouldAutoConnect) {
+        autoConnectAttempted.current = true;
+        setIsAutoConnecting(true);
+        setAutoConnectFailed(false);
+        
         console.log('🎯 Auto-connecting to Farcaster wallet...');
-        connect().then((result) => {
+        
+        // Set a timeout for auto-connection (5 seconds)
+        autoConnectTimeoutRef.current = setTimeout(() => {
+          console.warn('⏱️ Auto-connect timeout after 5 seconds');
+          setIsAutoConnecting(false);
+          setAutoConnectFailed(true);
+        }, 5000);
+        
+        try {
+          const result = await connect();
+          
+          // Clear timeout if connection succeeded or failed
+          if (autoConnectTimeoutRef.current) {
+            clearTimeout(autoConnectTimeoutRef.current);
+          }
+          
           if (result.success) {
             prodLog('Auto-connected to Farcaster wallet successfully');
+            setIsAutoConnecting(false);
+            setAutoConnectFailed(false);
           } else {
             console.warn('Auto-connect to Farcaster wallet failed:', result.error);
+            setIsAutoConnecting(false);
+            setAutoConnectFailed(true);
           }
-        }).catch((error) => {
+        } catch (error) {
           console.warn('Auto-connect to Farcaster wallet error:', error);
-        });
+          if (autoConnectTimeoutRef.current) {
+            clearTimeout(autoConnectTimeoutRef.current);
+          }
+          setIsAutoConnecting(false);
+          setAutoConnectFailed(true);
+        }
       }
     };
 
@@ -201,13 +252,20 @@ export function WalletProvider({ children }: WalletProviderProps) {
     checkAndConnect();
     const timeoutId = setTimeout(checkAndConnect, 1000);
     
-    return () => clearTimeout(timeoutId);
-  }, [account?.address, isConnecting]); // Re-run when connection state changes
+    return () => {
+      clearTimeout(timeoutId);
+      if (autoConnectTimeoutRef.current) {
+        clearTimeout(autoConnectTimeoutRef.current);
+      }
+    };
+  }, []); // Only run once on mount
 
   const value: WalletContextType = {
     isConnected: !!account?.address,
     address: account?.address || null,
     isConnecting,
+    isAutoConnecting,
+    autoConnectFailed,
     connect,
     disconnect,
     requireConnection,

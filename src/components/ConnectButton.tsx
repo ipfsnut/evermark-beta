@@ -5,6 +5,7 @@ import { CHAIN } from '@/lib/contracts';
 import { WalletIcon, UserIcon, LogOutIcon } from 'lucide-react';
 import { createWallet, inAppWallet } from 'thirdweb/wallets';
 import { useAppAuth } from '../providers/AppContext';
+import { useWalletConnection } from '../providers/WalletProvider';
 
 interface WalletConnectProps {
   className?: string;
@@ -22,14 +23,7 @@ const getWallets = () => [
 export function WalletConnect({ className = '', variant = 'default' }: WalletConnectProps) {
   const account = useActiveAccount();
   const { disconnect } = useAppAuth();
-  
-  // Check if we're in Farcaster context and should auto-connect
-  const isInFarcaster = typeof window !== 'undefined' && 
-                       (window as any).__evermark_farcaster_detected === true;
-  const isMobile = typeof window !== 'undefined' && 
-                  (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile/i.test(navigator.userAgent) ||
-                   window.innerWidth <= 768);
-  const isAutoConnecting = isInFarcaster && isMobile && !account;
+  const { isAutoConnecting, autoConnectFailed } = useWalletConnection();
 
   const handleLogout = async () => {
     try {
@@ -86,7 +80,7 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
     );
   }
 
-  // If we're auto-connecting in mobile Farcaster, show a loading state instead of connect button
+  // If we're auto-connecting, show a loading state
   if (isAutoConnecting) {
     return (
       <div className={`inline-flex items-center px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg ${className}`}>
@@ -94,6 +88,29 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
           <WalletIcon className="h-4 w-4 mr-2 animate-pulse" />
           Connecting...
         </span>
+      </div>
+    );
+  }
+  
+  // If auto-connect failed, show a message with the connect button
+  if (autoConnectFailed && !account) {
+    return (
+      <div className="flex flex-col items-center gap-2">
+        <ConnectButton
+          client={client}
+          wallets={getWallets()}
+          chain={CHAIN}
+          connectButton={{
+            label: (
+              <span className="flex items-center">
+                <WalletIcon className="h-4 w-4 mr-2" />
+                Connect Wallet
+              </span>
+            ),
+            className: `inline-flex items-center px-4 py-2 bg-gradient-to-r from-cyber-primary to-cyber-secondary text-black font-medium rounded-lg hover:opacity-90 transition-opacity ${className}`
+          }}
+        />
+        <span className="text-xs text-gray-400">Auto-connect failed. Please connect manually.</span>
       </div>
     );
   }
@@ -120,14 +137,7 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
 export function SimpleConnectButton({ className = '' }: { className?: string }) {
   const account = useActiveAccount();
   const { disconnect } = useAppAuth();
-  
-  // Check if we're in Farcaster context and should auto-connect
-  const isInFarcaster = typeof window !== 'undefined' && 
-                       (window as any).__evermark_farcaster_detected === true;
-  const isMobile = typeof window !== 'undefined' && 
-                  (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile/i.test(navigator.userAgent) ||
-                   window.innerWidth <= 768);
-  const isAutoConnecting = isInFarcaster && isMobile && !account;
+  const { isAutoConnecting, autoConnectFailed } = useWalletConnection();
 
   const handleLogout = async () => {
     try {
@@ -157,7 +167,7 @@ export function SimpleConnectButton({ className = '' }: { className?: string }) 
     );
   }
 
-  // If we're auto-connecting in mobile Farcaster, show a loading state instead of connect button
+  // If we're auto-connecting, show a loading state
   if (isAutoConnecting) {
     return (
       <div className={`inline-flex items-center px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg ${className}`}>
@@ -165,6 +175,29 @@ export function SimpleConnectButton({ className = '' }: { className?: string }) 
           <WalletIcon className="h-4 w-4 mr-2 animate-pulse" />
           Connecting...
         </span>
+      </div>
+    );
+  }
+  
+  // If auto-connect failed, show a message with the connect button
+  if (autoConnectFailed && !account) {
+    return (
+      <div className="flex flex-col items-center gap-2">
+        <ConnectButton
+          client={client}
+          wallets={getWallets()}
+          chain={CHAIN}
+          connectButton={{
+            label: (
+              <span className="flex items-center">
+                <WalletIcon className="h-4 w-4 mr-2" />
+                Connect Wallet
+              </span>
+            ),
+            className: `inline-flex items-center px-4 py-2 bg-gradient-to-r from-cyber-primary to-cyber-secondary text-black font-medium rounded-lg hover:opacity-90 transition-opacity ${className}`
+          }}
+        />
+        <span className="text-xs text-gray-400">Auto-connect failed. Please connect manually.</span>
       </div>
     );
   }
