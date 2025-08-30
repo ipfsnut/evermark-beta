@@ -28,24 +28,32 @@ export function StakeForm({ stakingState, onSuccess, className = '', disabled = 
     warnings: [] 
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isApproving, setIsApproving] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [localSuccess, setLocalSuccess] = useState<string | null>(null);
-  const [approvedAmount, setApprovedAmount] = useState<bigint | null>(null);
+  const [needsApproval, setNeedsApproval] = useState(false);
   const { isDark } = useTheme();
 
-  const { stakingInfo, isStaking, formatTokenAmount } = stakingState;
+  const { stakingInfo, isStaking, formatTokenAmount, currentAllowance, isApproving, approveStaking } = stakingState;
 
   // Validate amount whenever it changes
   useEffect(() => {
     if (!amount) {
       setValidation({ isValid: false, errors: [], warnings: [] });
+      setNeedsApproval(false);
       return;
     }
 
     const newValidation = stakingState.validateStakeAmount(amount);
     setValidation(newValidation);
-  }, [amount, stakingState]);
+    
+    // Check if approval is needed for this amount
+    if (newValidation.isValid) {
+      const amountWei = toWei(amount);
+      setNeedsApproval(currentAllowance < amountWei);
+    } else {
+      setNeedsApproval(false);
+    }
+  }, [amount, stakingState, currentAllowance]);
 
   // Clear messages after delay
   useEffect(() => {
@@ -67,29 +75,28 @@ export function StakeForm({ stakingState, onSuccess, className = '', disabled = 
     }
   }, [stakingInfo?.emarkBalance, formatTokenAmount]);
 
-  // Handle setting up the stake amount (no actual approval, just UI state)
+  // Handle EMARK approval for staking
   const handleApproval = useCallback(async () => {
     if (!validation.isValid || !amount || isApproving) return;
 
-    setIsApproving(true);
     setLocalError(null);
     setLocalSuccess(null);
 
     try {
       const amountWei = toWei(amount);
       
-      // Just set the approved amount for UI - actual approval happens in stake()
-      setApprovedAmount(amountWei);
-      setLocalSuccess(`Ready to stake ${amount} EMARK - click Stake to proceed!`);
+      // Call the actual blockchain approval
+      await approveStaking(amountWei);
+      
+      setLocalSuccess(`Successfully approved ${amount} EMARK for staking!`);
+      setNeedsApproval(false); // Reset approval state after successful approval
     } catch (error: any) {
-      console.error('Amount validation failed:', error);
-      setLocalError(error.message || 'Amount validation failed.');
-    } finally {
-      setIsApproving(false);
+      console.error('Approval failed:', error);
+      setLocalError(error.message || 'Approval failed. Please try again.');
     }
-  }, [validation.isValid, amount, isApproving]);
+  }, [validation.isValid, amount, isApproving, approveStaking]);
 
-  // Handle staking (with automatic approval)
+  // Handle staking (should only be called after approval)
   const handleStake = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -107,7 +114,6 @@ export function StakeForm({ stakingState, onSuccess, className = '', disabled = 
       
       setLocalSuccess(`Successfully staked ${formatTokenAmount(amountWei, 18)} EMARK!`);
       setAmount('');
-      setApprovedAmount(null);
       onSuccess?.();
     } catch (error: any) {
       console.error('Stake submission failed:', error);
@@ -125,16 +131,8 @@ export function StakeForm({ stakingState, onSuccess, className = '', disabled = 
     if (value === '' || /^\d*\.?\d*$/.test(value)) {
       setAmount(value);
       setLocalError(null);
-      
-      // Reset approved amount if user changes the amount
-      if (approvedAmount) {
-        const newAmountWei = value ? toWei(value) : BigInt(0);
-        if (newAmountWei !== approvedAmount) {
-          setApprovedAmount(null);
-        }
-      }
     }
-  }, [approvedAmount]);
+  }, []);
 
   if (!stakingState.isConnected) {
     return (
@@ -260,18 +258,19 @@ export function StakeForm({ stakingState, onSuccess, className = '', disabled = 
         )}
 
         {/* Approval Status */}
-        {approvedAmount && approvedAmount > 0n ? (
+        {!needsApproval && amount && validation.isValid && (
           <div className="p-3 bg-green-900/20 border border-green-500/30 rounded-lg flex items-center">
             <CheckCircleIcon className="h-4 w-4 text-green-400 mr-2" />
             <span className="text-green-200 text-sm">
-              Approved {formatTokenAmount(approvedAmount)} EMARK for staking
+              EMARK spending approved - ready to stake!
             </span>
           </div>
-        ) : null}
+        )}
 
         {/* Action Buttons */}
         <div className="space-y-2">
-          {!approvedAmount || (amount && toWei(amount) !== approvedAmount) ? (
+          {/* Approval Button - Show if approval is needed */}
+          {needsApproval && (
             <button
               type="button"
               onClick={handleApproval}
@@ -290,14 +289,15 @@ export function StakeForm({ stakingState, onSuccess, className = '', disabled = 
                 </>
               )}
             </button>
-          ) : null}
+          )}
 
-          {approvedAmount && approvedAmount > 0n ? (
+          {/* Stake Button - Show if no approval needed OR approval is done */}
+          {!needsApproval && (
             <form onSubmit={handleStake}>
               <button
                 type="submit"
-                disabled={disabled || !validation.isValid || isSubmitting || isStaking || !amount || !approvedAmount}
-                className="w-full flex items-center justify-center px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                disabled={disabled || !validation.isValid || isSubmitting || isStaking || !amount}
+                className="w-full flex items-center justify-center px-4 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg"
               >
                 {isSubmitting || isStaking ? (
                   <>
@@ -312,7 +312,7 @@ export function StakeForm({ stakingState, onSuccess, className = '', disabled = 
                 )}
               </button>
             </form>
-          ) : null}
+          )}
         </div>
       </div>
 

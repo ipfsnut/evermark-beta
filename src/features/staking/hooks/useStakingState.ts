@@ -118,7 +118,7 @@ export function useStakingState(userAddress?: string): UseStakingStateReturn {
     return stakingStats?.stakingYield || 0;
   }, [stakingStats]);
 
-  // ✅ Enhanced stake action with approval handling
+  // ✅ Stake action (assumes approval already done via UI)
   const stake = useCallback(async (amount: bigint): Promise<void> => {
     if (!stakingInfo) {
       throw StakingService.createError(
@@ -127,17 +127,16 @@ export function useStakingState(userAddress?: string): UseStakingStateReturn {
       );
     }
 
+    // Check if approval is sufficient
+    if (stakingData.stakingAllowance < amount) {
+      throw StakingService.createError(
+        STAKING_ERRORS.INSUFFICIENT_ALLOWANCE,
+        'Please approve EMARK spending first'
+      );
+    }
+
     try {
-      // Check if approval is needed
-      if (stakingData.stakingAllowance < amount) {
-        console.log("🔓 Approval needed before staking");
-        await transactions.approveStaking(amount);
-        
-        // Brief delay to let approval settle
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
-      
-      // Now stake the tokens
+      // Stake the tokens
       await transactions.stake(amount);
     } catch (error: any) {
       console.error('Stake failed:', error);
@@ -245,6 +244,7 @@ export function useStakingState(userAddress?: string): UseStakingStateReturn {
     requestUnstake,
     completeUnstake,
     cancelUnbonding,
+    approveStaking: transactions.approveStaking,
     
     // Utilities
     validateStakeAmount,
@@ -260,6 +260,10 @@ export function useStakingState(userAddress?: string): UseStakingStateReturn {
     
     // Connection status
     isConnected: !!account,
-    hasWalletAccess: !!account
+    hasWalletAccess: !!account,
+    
+    // Approval info
+    currentAllowance: stakingData.stakingAllowance,
+    isApproving: transactions.isApproving
   };
 }

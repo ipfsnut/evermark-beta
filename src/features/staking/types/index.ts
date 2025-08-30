@@ -137,6 +137,7 @@ export interface UseStakingStateReturn {
   requestUnstake: (amount: bigint) => Promise<void>;
   completeUnstake: () => Promise<void>;
   cancelUnbonding: () => Promise<void>;
+  approveStaking: (amount: bigint) => Promise<void>;
   
   // Utilities
   validateStakeAmount: (amount: string) => StakingValidation;
@@ -153,6 +154,10 @@ export interface UseStakingStateReturn {
   // Connection status
   isConnected: boolean;
   hasWalletAccess: boolean;
+  
+  // Approval info
+  currentAllowance: bigint;
+  isApproving: boolean;
 }
 
 // Service layer types
