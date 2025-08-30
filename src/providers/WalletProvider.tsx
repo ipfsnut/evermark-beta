@@ -51,71 +51,32 @@ export function WalletProvider({ children }: WalletProviderProps) {
       // Use the correct Thirdweb v5 connect API
       const connectedWallet = await thirdwebConnect(async () => {
         if (isInFarcaster) {
-          // In Farcaster context, use different strategies for mobile vs desktop
+          // In Farcaster context, use inAppWallet with Farcaster strategy
           try {
             console.log('🎯 Connecting in Farcaster context...', { isMobile, hasFrameSDK: !!window.FrameSDK });
             
-            // For mobile Farcaster, use inAppWallet which works better in mobile contexts
-            if (isMobile) {
-              console.log('📱 Mobile Farcaster detected, trying inAppWallet...');
-              
-              try {
-                // Try inAppWallet first - better for mobile Farcaster apps
-                const inApp = inAppWallet();
-                await inApp.connect({ 
-                  client,
-                  strategy: 'farcaster'
-                });
-                prodLog('Connected to Farcaster inAppWallet on mobile');
-                return inApp;
-              } catch (inAppError) {
-                console.warn('inAppWallet failed, trying embedded:', inAppError);
-                
-                // Fallback to embedded wallet without specific mode
-                const embeddedWallet = createWallet('embedded');
-                await embeddedWallet.connect({ 
-                  client,
-                  strategy: 'farcaster'
-                });
-                prodLog('Connected to Farcaster embedded wallet on mobile (fallback)');
-                return embeddedWallet;
-              }
-            }
-            
-            // For desktop Farcaster or when SDK is available
-            if (window.FrameSDK?.context) {
-              console.log('✅ Desktop Farcaster SDK detected, using embedded wallet...');
-              const embeddedWallet = createWallet('embedded');
-              await embeddedWallet.connect({ 
-                client,
-                strategy: 'farcaster'
-              });
-              prodLog('Connected to Farcaster embedded wallet on desktop');
-              return embeddedWallet;
-            }
-            
-            // Fallback: standard embedded wallet
-            console.log('🔄 Standard embedded wallet connection...');
-            const embeddedWallet = createWallet('embedded');
-            await embeddedWallet.connect({ 
+            const wallet = inAppWallet();
+            await wallet.connect({ 
               client,
               strategy: 'farcaster'
             });
-            prodLog('Connected to Farcaster embedded wallet successfully');
-            return embeddedWallet;
+            prodLog('Connected to Farcaster inAppWallet successfully');
+            return wallet;
           } catch (farcasterError) {
             console.warn('Farcaster wallet connection failed:', farcasterError);
-            // Don't try MetaMask on mobile Farcaster - it won't work
+            
+            // Only try MetaMask fallback on desktop, not mobile
             if (!isMobile) {
               try {
                 const metamaskWallet = createWallet('io.metamask');
                 await metamaskWallet.connect({ client });
-                prodLog('Connected to MetaMask in Farcaster context');
+                prodLog('Connected to MetaMask fallback in Farcaster context');
                 return metamaskWallet;
               } catch (fallbackError) {
                 console.warn('MetaMask fallback also failed:', fallbackError);
               }
             }
+            
             throw new Error('Unable to connect wallet in Farcaster context');
           }
         }
