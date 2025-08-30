@@ -325,6 +325,36 @@ export default function AdminPage() {
     }
   };
 
+  const startNewRewardsCycle = async () => {
+    if (!account) return;
+    
+    try {
+      setActionStatus('Starting new rewards cycle...');
+      
+      const transaction = prepareContractCall({
+        contract: rewardsContract,
+        method: "function manualRebalance()",
+        params: []
+      });
+
+      sendTransaction(transaction, {
+        onSuccess: (result) => {
+          setActionStatus('New rewards cycle started successfully!');
+          setTimeout(() => setActionStatus(''), 3000);
+          // Trigger data refresh
+          window.location.reload();
+        },
+        onError: (error) => {
+          setActionStatus(`Failed to start rewards cycle: ${error.message}`);
+          setTimeout(() => setActionStatus(''), 5000);
+        }
+      });
+    } catch (error) {
+      setActionStatus(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setTimeout(() => setActionStatus(''), 5000);
+    }
+  };
+
   const syncFromChain = async () => {
     try {
       setActionStatus('Syncing recent Evermarks from chain...');
@@ -662,11 +692,20 @@ export default function AdminPage() {
                 className="w-full flex items-center justify-center px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg transition-colors"
               >
                 <PlayCircle className="w-5 h-5 mr-2" />
-                Start New Season
+                Start New Voting Season
+              </button>
+              
+              <button
+                onClick={startNewRewardsCycle}
+                disabled={isPending}
+                className="w-full flex items-center justify-center px-6 py-3 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg transition-colors mt-3"
+              >
+                <RefreshCw className="w-5 h-5 mr-2" />
+                Start New Rewards Cycle
               </button>
               
               <p className="text-sm text-gray-400">
-                Starts a new 7-day voting season. Current season will end automatically.
+                Voting seasons last 7 days. Rewards cycles distribute accumulated fees to stakers.
               </p>
             </div>
 
@@ -749,11 +788,36 @@ export default function AdminPage() {
               
               {/* Placeholder for future tools */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-orange-400">Contract Status</h3>
-                <div className="text-sm text-gray-400">
-                  <p>NFT Contract: {contractStatus?.nft.totalSupply || 0} minted</p>
-                  <p>WEMARK Staked: {contractStatus?.wemark.totalStaked ? `${(Number(contractStatus.wemark.totalStaked) / 1e18).toFixed(2)} EMARK` : '0'}</p>
-                  <p>Season: {contractStatus?.voting.currentSeason || 'N/A'} {contractStatus?.voting.isActive ? '(Active)' : '(Inactive)'}</p>
+                <h3 className="text-lg font-semibold text-orange-400">Debug Info (Copy-Paste Ready)</h3>
+                <div className="bg-gray-800 p-3 rounded text-xs font-mono text-gray-300 space-y-1 max-h-40 overflow-y-auto">
+                  <div>CONTRACTS:</div>
+                  <div>• NFT: {getEvermarkNFTContract().address}</div>
+                  <div>• Voting: {getEvermarkVotingContract().address}</div>
+                  <div>• WEMARK: {getWEMARKContract().address}</div>
+                  <div>• FeeCollector: {getFeeCollectorContract().address}</div>
+                  <div>• Rewards: {getEvermarkRewardsContract().address}</div>
+                  <div className="pt-2">STATUS:</div>
+                  <div>• NFTs Minted: {contractStatus?.nft.totalSupply || 0}</div>
+                  <div>• WEMARK Staked: {contractStatus?.wemark.totalStaked ? `${(Number(contractStatus.wemark.totalStaked) / 1e18).toFixed(2)}` : '0'} EMARK</div>
+                  <div>• Voting Season: #{contractStatus?.voting.currentSeason || 'N/A'} {contractStatus?.voting.isActive ? '(Active)' : '(Inactive)'}</div>
+                  {balances && (
+                    <>
+                      <div className="pt-2">BALANCES:</div>
+                      <div>• FeeCollector WETH: {formatEther(balances.feeCollectorWeth)}</div>
+                      <div>• FeeCollector EMARK: {formatEther(balances.feeCollectorEmark)}</div>
+                      <div>• Pending Referral: {formatEther(balances.pendingReferralPayment)} ETH</div>
+                      <div>• Rewards WETH: {formatEther(balances.rewardsWeth)}</div>
+                      <div>• Rewards EMARK: {formatEther(balances.rewardsEmark)}</div>
+                    </>
+                  )}
+                  {rewardsPeriod && (
+                    <>
+                      <div className="pt-2">REWARDS PERIOD:</div>
+                      <div>• Period: #{rewardsPeriod.currentPeriod}</div>
+                      <div>• Ends: {rewardsPeriod.periodEnd.toLocaleString()}</div>
+                      <div>• Time Left: {Math.floor(rewardsPeriod.timeRemaining / 3600)}h {Math.floor((rewardsPeriod.timeRemaining % 3600) / 60)}m</div>
+                    </>
+                  )}
                 </div>
               </div>
               
