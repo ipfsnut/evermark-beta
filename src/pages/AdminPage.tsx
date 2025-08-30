@@ -25,6 +25,7 @@ import {
   getFeeCollectorContract,
   getEvermarkRewardsContract 
 } from '@/lib/contracts';
+import { EvermarkBlockchainService } from '@/features/evermarks/services/BlockchainService';
 
 interface SeasonInfo {
   seasonNumber: number;
@@ -39,6 +40,7 @@ interface ContractBalances {
   feeCollectorEmark: bigint;
   rewardsWeth: bigint;
   rewardsEmark: bigint;
+  pendingReferralPayment: bigint;
 }
 
 interface RewardsPeriodInfo {
@@ -98,6 +100,13 @@ export default function AdminPage() {
     params: []
   });
 
+  // Read pending referral payment for dev wallet
+  const { data: pendingReferralData } = useReadContract({
+    contract: nftContract,
+    method: "function pendingReferralPayments(address) view returns (uint256)",
+    params: ["0x2B27EA7DaA8Bf1dE98407447b269Dfe280753fe3"]
+  });
+
   // Read WEMARK total staked
   const { data: wemarkTotalStaked } = useReadContract({
     contract: wemarkContract,
@@ -154,7 +163,8 @@ export default function AdminPage() {
             feeCollectorWeth: wethBalance,
             feeCollectorEmark: emarkBalance,
             rewardsWeth,
-            rewardsEmark
+            rewardsEmark,
+            pendingReferralPayment: pendingReferralData ? BigInt(pendingReferralData.toString()) : BigInt(0)
           });
         }
 
@@ -199,7 +209,7 @@ export default function AdminPage() {
     };
 
     loadData();
-  }, [currentSeason, seasonDetails, nftTotalSupply, wemarkTotalStaked, feeCollectorBalances, rewardsPeriodStatus, rewardsBalances]);
+  }, [currentSeason, seasonDetails, nftTotalSupply, wemarkTotalStaked, feeCollectorBalances, rewardsPeriodStatus, rewardsBalances, pendingReferralData]);
 
   // Admin Actions
   const startNewSeason = async () => {
@@ -286,6 +296,29 @@ export default function AdminPage() {
           setTimeout(() => setActionStatus(''), 5000);
         }
       });
+    } catch (error) {
+      setActionStatus(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setTimeout(() => setActionStatus(''), 5000);
+    }
+  };
+
+  const claimReferralPayment = async () => {
+    if (!account) return;
+    
+    try {
+      setActionStatus('Claiming referral payment...');
+      
+      const result = await EvermarkBlockchainService.claimReferralPayment(account);
+      
+      if (result.success) {
+        setActionStatus('Referral payment claimed successfully!');
+        setTimeout(() => setActionStatus(''), 3000);
+        // Trigger data refresh
+        window.location.reload();
+      } else {
+        setActionStatus(`Failed to claim referral payment: ${result.error}`);
+        setTimeout(() => setActionStatus(''), 5000);
+      }
     } catch (error) {
       setActionStatus(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setTimeout(() => setActionStatus(''), 5000);
@@ -580,6 +613,17 @@ export default function AdminPage() {
                       className="mt-2 px-3 py-1 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded text-sm transition-colors"
                     >
                       Forward to Rewards
+                    </button>
+                  </div>
+                  <div>
+                    <p className="text-gray-400 text-sm mb-2">Pending Referral Payment</p>
+                    <p className="text-xl font-bold text-yellow-400">{formatEther(balances.pendingReferralPayment)} ETH</p>
+                    <button
+                      onClick={claimReferralPayment}
+                      disabled={isPending || balances.pendingReferralPayment === BigInt(0)}
+                      className="mt-2 px-3 py-1 bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded text-sm transition-colors"
+                    >
+                      Claim Referral Earnings
                     </button>
                   </div>
                 </div>

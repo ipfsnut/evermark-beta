@@ -91,8 +91,31 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
   try {
     switch (httpMethod) {
       case 'GET':
-        if (tokenId && tokenId !== 'evermarks') {
-          // Get single evermark by token_id
+        // Check for single evermark by query parameter first
+        const singleId = queryStringParameters?.id;
+        if (singleId) {
+          // Get single evermark by token_id via query parameter
+          const { data, error } = await supabase
+            .from(EVERMARKS_TABLE)
+            .select('*')
+            .eq('token_id', parseInt(singleId))
+            .single();
+
+          if (error || !data) {
+            return {
+              statusCode: 404,
+              headers,
+              body: JSON.stringify({ error: 'Evermark not found' }),
+            };
+          }
+
+          return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify({ evermark: data }),
+          };
+        } else if (tokenId && tokenId !== 'evermarks') {
+          // Get single evermark by token_id via URL path
           const { data, error } = await supabase
             .from(EVERMARKS_TABLE)
             .select('*')
@@ -110,7 +133,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
           return {
             statusCode: 200,
             headers,
-            body: JSON.stringify(data),
+            body: JSON.stringify({ evermark: data }),
           };
         } else {
           // Get all evermarks with pagination and filtering

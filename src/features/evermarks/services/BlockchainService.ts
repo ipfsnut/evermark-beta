@@ -663,6 +663,102 @@ export class EvermarkBlockchainService {
   static ethToWei(eth: number): bigint {
     return BigInt(Math.floor(eth * 1e18));
   }
+
+  /**
+   * Get pending referral payment for an address
+   */
+  static async getPendingReferralPayment(address: string): Promise<bigint> {
+    const configValidation = this.validateConfiguration();
+    if (!configValidation.isValid) {
+      throw new StorageError(configValidation.error!, 'CONFIG_ERROR');
+    }
+
+    try {
+      const contract = getEvermarkNFTContract();
+      const result = await readContract({
+        contract,
+        method: "function pendingReferralPayments(address) view returns (uint256)",
+        params: [address]
+      });
+      return result as bigint;
+    } catch (error) {
+      console.warn('Failed to get pending referral payment:', error);
+      throw new StorageError(
+        `Failed to read pending referral payment: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'CONTRACT_ERROR' as any
+      );
+    }
+  }
+
+  /**
+   * Claim pending referral payment
+   */
+  static async claimReferralPayment(account: Account): Promise<MintResult> {
+    const configValidation = this.validateConfiguration();
+    if (!configValidation.isValid) {
+      return {
+        success: false,
+        error: configValidation.error
+      };
+    }
+
+    try {
+      const contract = getEvermarkNFTContract();
+      
+      const transaction = prepareContractCall({
+        contract,
+        method: "function claimPendingReferralPayment()",
+        params: []
+      });
+
+      const txHash = await sendTransaction({
+        transaction,
+        account,
+      });
+
+      const transactionHash = typeof txHash === 'object' && 'transactionHash' in txHash 
+        ? txHash.transactionHash 
+        : String(txHash);
+
+      const txReceipt = await waitForReceipt({
+        client,
+        chain: getEvermarkNFTContract().chain,
+        transactionHash: transactionHash as `0x${string}`,
+      });
+
+      console.log('✅ Referral payment claimed successfully:', {
+        txHash: transactionHash,
+        gasUsed: txReceipt.gasUsed?.toString()
+      });
+
+      return {
+        success: true,
+        txHash: transactionHash
+      };
+
+    } catch (error) {
+      console.error('❌ Referral claim failed:', error);
+      
+      let errorMessage = 'Failed to claim referral payment';
+      
+      if (error instanceof Error) {
+        const message = error.message.toLowerCase();
+        
+        if (message.includes('no pending payment') || message.includes('amount = 0')) {
+          errorMessage = 'No pending referral payments to claim';
+        } else if (message.includes('user rejected') || message.includes('denied')) {
+          errorMessage = 'Transaction was rejected by user';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+
+      return {
+        success: false,
+        error: errorMessage
+      };
+    }
+  }
 }
 
 export default EvermarkBlockchainService;
