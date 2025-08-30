@@ -7,7 +7,8 @@ import {
   PlusIcon,
   TrendingUpIcon,
   UserIcon,
-  Layers
+  Layers,
+  ShareIcon
 } from 'lucide-react';
 import { useAppAuth } from '../../providers/AppContext';
 import { useFarcasterUser } from '../../lib/farcaster';
@@ -44,10 +45,9 @@ const mobileNavItems: NavItem[] = [
     icon: TrendingUpIcon,
   },
   {
-    to: '/staking',
-    label: 'Stake',
-    icon: Layers,
-    requireAuth: true,
+    to: '/referrals',
+    label: 'Refer',
+    icon: ShareIcon,
   },
 ];
 

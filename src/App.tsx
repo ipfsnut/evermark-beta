@@ -15,6 +15,7 @@ const LeaderboardPage = React.lazy(() => import('../src/features/leaderboard/pag
 const StakingPage = React.lazy(() => import('../src/features/staking/pages/StakingPage'));
 const EvermarkDetailPage = React.lazy(() => import('../src/features/evermarks/pages/EvermarkDetailPage'));
 const CreatePage = React.lazy(() => import('../src/features/evermarks/pages/CreatePage'));
+const ReferralsPage = React.lazy(() => import('../src/pages/ReferralsPage'));
 const AdminPage = React.lazy(() => import('../src/pages/AdminPage'));
 const NotFoundPage = React.lazy(() => import('../src/pages/NotFoundPage'));
 
@@ -82,6 +83,7 @@ function AppContent() {
             <Route path="/swap" element={<SwapPage />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
             <Route path="/staking" element={<StakingPage />} />
+            <Route path="/referrals" element={<ReferralsPage />} />
             
             {/* Evermark-specific routes */}
             <Route path="/create" element={<CreatePage />} />

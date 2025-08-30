@@ -243,7 +243,8 @@ const TempEvermarkService = {
         account,
         metadataUploadResult.url,
         metadata.title,
-        creatorAddress
+        creatorAddress,
+        input.referrer
       );
       
       if (!mintResult.success) {
@@ -286,7 +287,8 @@ const TempEvermarkService = {
                 issue: metadata.issue,
                 pages: metadata.pages
               }),
-              ipfs_image_hash: imageUploadResult.hash
+              ipfs_image_hash: imageUploadResult.hash,
+              referrer_address: input.referrer || undefined
             })
           });
           

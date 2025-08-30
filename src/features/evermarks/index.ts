@@ -24,6 +24,8 @@ export { useEvermarksState } from './hooks/useEvermarkState';
 export { EvermarkFeed } from './components/EvermarkFeed';
 export { EvermarkCard } from './components/EvermarkCard';
 export { CreateEvermarkForm } from './components/CreateEvermarkForm';
+export { ReferralPanel } from './components/ReferralPanel';
+export { ReferralEarnings } from './components/ReferralEarnings';
 
 // Feature configuration and utilities
 export const evermarksConfig = {

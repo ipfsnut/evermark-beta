@@ -37,6 +37,7 @@ interface EvermarkRecord {
   image_processing_status?: string;
   image_processed_at?: string;
   ipfs_metadata?: any;
+  referrer_address?: string;
 }
 
 const headers = {
@@ -91,6 +92,39 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
   try {
     switch (httpMethod) {
       case 'GET':
+        // Check for referral stats endpoint
+        const referrals = queryStringParameters?.referrals;
+        const referrerAddress = queryStringParameters?.referrer;
+        
+        if (referrals === 'stats' && referrerAddress && isValidWalletAddress(referrerAddress)) {
+          // Get referral statistics for a specific address
+          const { data: referralData, error: referralError } = await supabase
+            .from(EVERMARKS_TABLE)
+            .select('token_id, created_at, title, referrer_address')
+            .eq('referrer_address', referrerAddress.toLowerCase())
+            .order('created_at', { ascending: false });
+
+          if (referralError) {
+            return {
+              statusCode: 500,
+              headers,
+              body: JSON.stringify({ error: 'Failed to fetch referral stats' }),
+            };
+          }
+
+          const stats = {
+            total_referrals: referralData.length,
+            total_earnings: referralData.length * 0.000007, // 7 gwei per referral
+            referrals: referralData
+          };
+
+          return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify(stats),
+          };
+        }
+        
         // Check for single evermark by query parameter first
         const singleId = queryStringParameters?.id;
         if (singleId) {
@@ -264,6 +298,9 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
           verified: false, // Will be verified later
           // Note: Explicitly excluding 'metadata' field as it may not exist in beta_evermarks table
           metadata_json: evermarkData.metadata ? JSON.stringify(evermarkData.metadata) : undefined,
+          referrer_address: evermarkData.referrer_address && isValidWalletAddress(evermarkData.referrer_address) 
+            ? evermarkData.referrer_address.toLowerCase() 
+            : undefined,
         };
 
         const { data: createdData, error: createError } = await supabase

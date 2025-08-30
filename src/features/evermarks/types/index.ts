@@ -90,6 +90,7 @@ export interface EvermarkMetadata {
 export interface CreateEvermarkInput {
   metadata: EvermarkMetadata;
   image?: File;
+  referrer?: string;
 }
 
 export interface CreateEvermarkResult {

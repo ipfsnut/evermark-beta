@@ -55,6 +55,20 @@ export function WalletProvider({ children }: WalletProviderProps) {
           try {
             console.log('🎯 Connecting in Farcaster context...', { isMobile, hasFrameSDK: !!window.FrameSDK });
             
+            // Wait for Frame SDK if we're on mobile and it's not ready yet
+            if (isMobile && !window.FrameSDK) {
+              console.log('⏳ Waiting for Frame SDK on mobile...');
+              let attempts = 0;
+              while (!window.FrameSDK && attempts < 30) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+              }
+              if (!window.FrameSDK) {
+                throw new Error('Frame SDK not available after 3 seconds - cannot connect wallet on mobile');
+              }
+              console.log('✅ Frame SDK is now available');
+            }
+            
             const wallet = inAppWallet();
             await wallet.connect({ 
               client,

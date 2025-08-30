@@ -7,7 +7,8 @@ import {
   CoinsIcon,
   PlusIcon,
   BookOpenIcon,
-  InfoIcon
+  InfoIcon,
+  ShareIcon
 } from 'lucide-react';
 import { useAppAuth } from '../../providers/AppContext';
 import { useTheme } from '../../providers/ThemeProvider';
@@ -43,6 +44,11 @@ const navigationItems: NavItem[] = [
     to: '/staking',
     label: 'Staking',
     icon: CoinsIcon,
+  },
+  {
+    to: '/referrals',
+    label: 'Referrals',
+    icon: ShareIcon,
   },
 ];
 

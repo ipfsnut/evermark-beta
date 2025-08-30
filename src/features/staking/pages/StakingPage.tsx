@@ -1,6 +1,6 @@
 // src/pages/StakePage.tsx - Staking management page
-import { StakingWidget } from '@/features/staking';
-import { TokenBalance } from '@/features/tokens';
+import { StakingWidget, NFTStakingPanel } from '@/features/staking';
+import { TokenBalance, RewardsClaiming } from '@/features/tokens';
 import { useStakingState } from '@/features/staking';
 import { useContractsStatus } from '@/hooks/core/useContracts';
 import { TrendingUpIcon, CoinsIcon, AlertCircleIcon, CheckCircleIcon } from 'lucide-react';
@@ -147,6 +147,15 @@ export default function StakePage() {
             <StakingWidget
               stakingState={stakingState}
               className="w-full"
+            />
+
+            {/* NFT Staking Panel */}
+            <NFTStakingPanel className="w-full" />
+
+            {/* Rewards Claiming Panel */}
+            <RewardsClaiming 
+              className="w-full" 
+              userStakedAmount={stakingState.stakingInfo?.wEmarkBalance || BigInt(0)}
             />
 
             {/* Quick Stats */}

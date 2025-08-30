@@ -21,6 +21,10 @@ import {
   type UnstakeFormProps
 } from './types';
 
+// ✅ IMPORT NFT STAKING
+import { NFTStakingService, type NFTStakeInfo, type NFTStakingStats } from './services/NFTStakingService';
+import { useNFTStaking, type UseNFTStakingReturn } from './hooks/useNFTStaking';
+
 // ✅ CORE TYPES - Re-export for external use
 export type {
   StakingInfo,
@@ -37,7 +41,11 @@ export type {
   StakingErrorCode,
   StakingWidgetProps,
   StakeFormProps,
-  UnstakeFormProps
+  UnstakeFormProps,
+  // NFT Staking types
+  NFTStakeInfo,
+  NFTStakingStats,
+  UseNFTStakingReturn
 };
 
 // ✅ CONSTANTS - Import and re-export
@@ -45,20 +53,21 @@ export { STAKING_CONSTANTS, STAKING_ERRORS };
 
 // ✅ SERVICES - Core business logic
 import { StakingService } from './services/StakingService';
-export { StakingService };
+export { StakingService, NFTStakingService };
 
 // ✅ HOOKS - Internal feature hooks
 import { useStakingState } from './hooks/useStakingState';
 import { useStakingData } from './hooks/useStakingData';
 import { useStakingStats } from './hooks/useStakingStats';
 import { useStakingTransactions } from './hooks/useStakingTransactions';
-export { useStakingState, useStakingData, useStakingStats, useStakingTransactions };
+export { useStakingState, useStakingData, useStakingStats, useStakingTransactions, useNFTStaking };
 
 // ✅ COMPONENTS - Existing UI components
 import { StakingWidget } from './components/StakingWidget';
 import { StakeForm } from './components/StakeForm';
 import { UnstakeForm } from './components/UnstakeForm';
-export { StakingWidget, StakeForm, UnstakeForm };
+import { NFTStakingPanel } from './components/NFTStakingPanel';
+export { StakingWidget, StakeForm, UnstakeForm, NFTStakingPanel };
 
 // ✅ CORE CONFIGURATION - Simplified and working
 export const stakingConfig = {

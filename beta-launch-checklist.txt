@@ -6,7 +6,90 @@
 # Overall Progress: ~70% Complete - Core features ready, missing revenue features
 
 ## CRITICAL PATH - Must fix before any testing
-======================================yea========
+===============================================
+
+### 0. FARCASTER MOBILE WALLET CONNECTION FIX (URGENT)
+🔴 BLOCKING ISSUE: Mobile wallet auth failing in Farcaster
+
+[ ] Root Cause Analysis (COMPLETED)
+    - ✅ __evermark_farcaster_detected flag never set (now fixed)
+    - ✅ Frame SDK race conditions (now handled)
+    - ❌ Thirdweb inAppWallet + Farcaster strategy still failing
+    - ❌ Complex Frame SDK detection causing issues
+
+[ ] Migrate to Neynar SIWN for Farcaster Authentication
+    STEP 1: Setup Neynar React SDK
+    - [ ] npm install @neynar/react @neynar/nodejs-sdk
+    - [ ] Add NeynarContextProvider to src/providers/AppProviders.tsx
+    - [ ] Configure with existing VITE_NEYNAR_CLIENT_ID from .env.local
+    
+    STEP 2: Replace Farcaster Auth Logic
+    - [ ] Update WalletProvider.tsx Farcaster detection
+    - [ ] Replace inAppWallet() + 'farcaster' strategy with SIWN
+    - [ ] Use NeynarAuthButton for Farcaster context
+    - [ ] Get wallet address from user.verifiedAddresses[0]
+    
+    STEP 3: Simplify Detection Logic  
+    - [ ] Remove complex Frame SDK waiting logic
+    - [ ] Simplify src/lib/farcaster.tsx detection
+    - [ ] Remove __evermark_farcaster_detected flag dependency
+    - [ ] Use useNeynarContext() for Farcaster user state
+    
+    STEP 4: Integration & Testing
+    - [ ] Update existing Farcaster user flows to use SIWN data
+    - [ ] Test authentication in Farcaster mobile app
+    - [ ] Verify wallet transactions work with verified addresses
+    - [ ] Ensure non-Farcaster users still use MetaMask/Coinbase
+
+CURRENT APPROACH ISSUES:
+- Thirdweb v5 + Frame SDK + detection logic = complex, brittle
+- Frame SDK race conditions on mobile
+- inAppWallet() + 'farcaster' strategy unreliable
+
+NEYNAR SIWN BENEFITS:
+- Native mobile support designed for Farcaster
+- No Frame SDK complexity/dependencies  
+- Built-in wallet connection via Farcaster auth
+- Simpler, more reliable implementation
+- Official Farcaster/Neynar recommended approach
+
+TECHNICAL DETAILS:
+Current Environment Already Has:
+- ✅ VITE_NEYNAR_API_KEY=9D3F4D34-83DE-48DB-AEFD-E7C539EADFFF
+- ✅ VITE_NEYNAR_CLIENT_ID=b30a49e4-7f0e-4398-9849-e34c2ebf0998
+- ✅ Neynar client already implemented in src/lib/neynar/neynarClient.ts
+
+Implementation Plan:
+1. Add to AppProviders.tsx:
+   <NeynarContextProvider clientId={VITE_NEYNAR_CLIENT_ID}>
+2. Update WalletProvider.tsx:
+   - Check useNeynarContext() for Farcaster users
+   - Use user.verifiedAddresses[0] as wallet address
+   - Skip Thirdweb wallet connection for Farcaster users
+3. Update UI components:
+   - Show <NeynarAuthButton /> in Farcaster context
+   - Hide regular wallet connect button for Farcaster users
+
+Code Impact:
+- Remove: Frame SDK detection complexity
+- Remove: inAppWallet() + 'farcaster' strategy
+- Add: Simple SIWN integration
+- Keep: Existing wallet logic for non-Farcaster users
+
+NETLIFY COMPATIBILITY:
+✅ Current Netlify setup is SIWN-ready:
+- ✅ api.neynar.com already allowed in CSP
+- ✅ CORS headers configured for API access
+- ✅ Farcaster-friendly headers for Mini Apps
+- ✅ No server-side endpoints required (SIWN is frontend-only)
+- ✅ Existing Netlify Functions won't be affected
+- ✅ Can add optional /api/cast endpoint later if needed
+
+MIGRATION SAFETY:
+- SIWN runs entirely in frontend (React hooks)
+- No changes needed to Netlify Functions
+- No new serverless endpoints required
+- Existing authentication flows remain intact
 
 ### 1. CONTRACT INTEGRATION & ABIS
 [✅] Update lib/contracts.ts
@@ -286,6 +369,7 @@
 5. ✅ FeeCollector integration
 
 🔴 CRITICAL - MUST DO BEFORE BETA:
+0. **Migrate to Neynar SIWN** (fixes mobile wallet auth completely)
 1. Add referral UI components (backend already complete!)
 2. Complete WEMARK unbonding methods
 3. Extend database schema (add columns vs new tables)
@@ -327,12 +411,16 @@ Overall Completion: ~85%
 🔴 Missing Critical: Referral UI, WEMARK Unbonding UI
 🟡 Missing Important: NFT Staking, Dual Rewards UI
 
-READY FOR BETA: 🟡 VERY CLOSE - Mainly UI work remaining!
+READY FOR BETA: 🔴 BLOCKED by mobile wallet auth issue - must fix Neynar SIWN first
 
 REVISED Next steps:
+0. **URGENT: Migrate to Neynar SIWN** (fixes critical mobile wallet issue)
 1. Build referral UI (backend is complete!) 
 2. Complete WEMARK unbonding UI (methods may exist)
 3. Add database columns (not full migrations)
 4. Clean up unused ABI files
 
-KEY INSIGHT: Most "missing" features have working backends - primarily UI work remains!
+KEY INSIGHTS: 
+- Most "missing" features have working backends - primarily UI work remains!
+- **Mobile wallet auth is currently broken** - Neynar SIWN migration will fix this
+- Farcaster users can't connect wallets on mobile = major UX blocker

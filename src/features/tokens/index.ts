@@ -1,8 +1,10 @@
 // features/tokens/index.ts - Public API exports for the Tokens feature - Fixed for Thirdweb v5
 
 import { TokenBalance } from './components/TokenBalance';
+import { RewardsClaiming } from './components/RewardsClaiming';
 import { useTokenState } from './hooks/useTokenState';
 import { TokenService } from './services/TokenService';
+import { RewardsService } from './services/RewardsService';
 import { TOKEN_CONSTANTS, TokenApprovalParams, TokenDisplayInfo } from './types';
 
 // Types - Export all public interfaces
@@ -28,12 +30,14 @@ export { TOKEN_CONSTANTS, TOKEN_ERRORS } from './types';
 
 // Services - Export business logic layer
 export { TokenService } from './services/TokenService';
+export { RewardsService } from './services/RewardsService';
 
 // Hooks - Export main state management hook
 export { useTokenState } from './hooks/useTokenState';
 
 // Components - Export UI components
 export { TokenBalance } from './components/TokenBalance';
+export { RewardsClaiming } from './components/RewardsClaiming';
 
 // Feature configuration and utilities
 export const tokensConfig = {

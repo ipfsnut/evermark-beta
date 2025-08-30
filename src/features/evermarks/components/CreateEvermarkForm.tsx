@@ -267,6 +267,10 @@ export function CreateEvermarkForm({
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   
+  // Referral state
+  const [referrer, setReferrer] = useState('');
+  const [referralFromUrl, setReferralFromUrl] = useState<string | null>(null);
+  
   // FIXED: Store both File and URL data for SDK compatibility
   // Simple image upload state for IPFS-first approach
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -275,6 +279,16 @@ export function CreateEvermarkForm({
   const getAuthor = useCallback(() => {
     return user?.displayName || user?.username || 'Unknown Author';
   }, [user]);
+
+  // Check for referral in URL on mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const refParam = urlParams.get('ref') || urlParams.get('referrer');
+    if (refParam) {
+      setReferrer(refParam);
+      setReferralFromUrl(refParam);
+    }
+  }, []);
 
   // Cleanup preview URL on unmount
   useEffect(() => {
@@ -424,7 +438,8 @@ export function CreateEvermarkForm({
 
       const createInput: CreateEvermarkInput = {
         metadata: evermarkMetadata,
-        image: selectedImage || undefined
+        image: selectedImage || undefined,
+        referrer: referrer.trim() || undefined
       };
       
       const result = await createEvermark(createInput);
@@ -762,6 +777,46 @@ export function CreateEvermarkForm({
                       </button>
                     )}
                   </div>
+                </div>
+
+                {/* Referral Address */}
+                <div className="space-y-2">
+                  <label className={cn(
+                    "block text-sm font-medium",
+                    isDark ? "text-cyan-400" : "text-purple-600"
+                  )}>
+                    Referrer Address (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={referrer}
+                    onChange={(e) => setReferrer(e.target.value)}
+                    placeholder="0x... (Get 10% of minting fee)"
+                    disabled={isFormDisabled}
+                    className={cn(
+                      "w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-opacity-20 transition-colors",
+                      isFormDisabled && "opacity-50 cursor-not-allowed",
+                      isDark 
+                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-cyan-400" 
+                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-purple-400 focus:ring-purple-400"
+                    )}
+                  />
+                  {referralFromUrl && (
+                    <div className={cn(
+                      "text-xs p-2 rounded border",
+                      isDark 
+                        ? "bg-green-900/30 text-green-300 border-green-500/30" 
+                        : "bg-green-100 text-green-700 border-green-300"
+                    )}>
+                      ✅ Referral detected from URL
+                    </div>
+                  )}
+                  <p className={cn(
+                    "text-xs",
+                    isDark ? "text-gray-500" : "text-gray-600"
+                  )}>
+                    The referrer will receive 10% of the minting fee (0.000007 ETH)
+                  </p>
                 </div>
 
                 {/* Tags */}
