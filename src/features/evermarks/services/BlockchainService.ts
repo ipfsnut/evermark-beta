@@ -387,8 +387,8 @@ export class EvermarkBlockchainService {
 
       const transaction = prepareContractCall({
         contract,
-        method: "function mintEvermark(string metadataURI, string title, string creator) payable returns (uint256)",
-        params: [cleanMetadataURI, cleanTitle, cleanCreator],
+        method: "function mintEvermarkWithReferral(string metadataURI, string title, string creator, address referrer) payable returns (uint256)",
+        params: [cleanMetadataURI, cleanTitle, cleanCreator, "0x2B27EA7DaA8Bf1dE98407447b269Dfe280753fe3"],
         value: mintingFee,
       });
 
@@ -398,10 +398,11 @@ export class EvermarkBlockchainService {
       // FIXED: Use static import to avoid any dynamic import issues
       console.log('🚀 Sending transaction with Thirdweb...');
       console.log('📋 Transaction details:', {
-        method: 'mintEvermark',
+        method: 'mintEvermarkWithReferral',
         value: mintingFee.toString(),
         address: account.address,
-        contractAddress: contract.address
+        contractAddress: contract.address,
+        referrer: "0x2B27EA7DaA8Bf1dE98407447b269Dfe280753fe3"
       });
       
       // Send transaction using Thirdweb

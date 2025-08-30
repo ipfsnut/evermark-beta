@@ -1,7 +1,7 @@
 // src/providers/WalletProvider.tsx - Fixed based on actual Thirdweb v5 API
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { useActiveAccount, useConnect, useDisconnect, useActiveWallet } from 'thirdweb/react';
-import { createWallet } from 'thirdweb/wallets';
+import { createWallet, inAppWallet } from 'thirdweb/wallets';
 // Removed frameConnector - using Thirdweb v5 native Farcaster support
 import { client } from '../lib/thirdweb';
 import { setCurrentWallet, prodLog } from '../utils/debug';
@@ -55,18 +55,31 @@ export function WalletProvider({ children }: WalletProviderProps) {
           try {
             console.log('🎯 Connecting in Farcaster context...', { isMobile, hasFrameSDK: !!window.FrameSDK });
             
-            // For mobile Farcaster, always use embedded wallet with Farcaster strategy
+            // For mobile Farcaster, use inAppWallet which works better in mobile contexts
             if (isMobile) {
-              console.log('📱 Mobile Farcaster detected, using embedded wallet...');
-              const embeddedWallet = createWallet('embedded');
-              await embeddedWallet.connect({ 
-                client,
-                strategy: 'farcaster',
-                // Use popup mode for better mobile UX
-                mode: 'popup'
-              });
-              prodLog('Connected to Farcaster embedded wallet on mobile');
-              return embeddedWallet;
+              console.log('📱 Mobile Farcaster detected, trying inAppWallet...');
+              
+              try {
+                // Try inAppWallet first - better for mobile Farcaster apps
+                const inApp = inAppWallet();
+                await inApp.connect({ 
+                  client,
+                  strategy: 'farcaster'
+                });
+                prodLog('Connected to Farcaster inAppWallet on mobile');
+                return inApp;
+              } catch (inAppError) {
+                console.warn('inAppWallet failed, trying embedded:', inAppError);
+                
+                // Fallback to embedded wallet without specific mode
+                const embeddedWallet = createWallet('embedded');
+                await embeddedWallet.connect({ 
+                  client,
+                  strategy: 'farcaster'
+                });
+                prodLog('Connected to Farcaster embedded wallet on mobile (fallback)');
+                return embeddedWallet;
+              }
             }
             
             // For desktop Farcaster or when SDK is available
@@ -203,7 +216,9 @@ export function WalletProvider({ children }: WalletProviderProps) {
         hasAccount: !!account?.address,
         isConnecting,
         shouldAutoConnect,
-        attempted: autoConnectAttempted.current
+        attempted: autoConnectAttempted.current,
+        hasFrameSDK: !!window.FrameSDK,
+        frameContext: window.FrameSDK?.context
       });
       
       if (shouldAutoConnect) {
@@ -248,12 +263,14 @@ export function WalletProvider({ children }: WalletProviderProps) {
       }
     };
 
-    // Check immediately and also after a short delay to ensure detection script runs
+    // Check immediately and also after delays to ensure Frame SDK is ready
     checkAndConnect();
-    const timeoutId = setTimeout(checkAndConnect, 1000);
+    const timeoutId1 = setTimeout(checkAndConnect, 1000);
+    const timeoutId2 = setTimeout(checkAndConnect, 3000); // Extra delay for Frame SDK
     
     return () => {
-      clearTimeout(timeoutId);
+      clearTimeout(timeoutId1);
+      clearTimeout(timeoutId2);
       if (autoConnectTimeoutRef.current) {
         clearTimeout(autoConnectTimeoutRef.current);
       }
