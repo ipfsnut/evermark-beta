@@ -1,6 +1,5 @@
 // src/providers/WalletProvider.tsx - Unified wallet state for all contexts
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useActiveAccount } from 'thirdweb/react';
 import { useAccount } from 'wagmi';
 import { useFarcasterDetection } from '../hooks/useFarcasterDetection';
 
@@ -32,40 +31,72 @@ export function WalletProvider({ children }: WalletProviderProps) {
     window.matchMedia('(display-mode: standalone)').matches;
   const context = isInFarcaster ? 'farcaster' : isPWA ? 'pwa' : 'browser';
 
-  // Farcaster context: Mini App Wagmi only (Neynar removed due to React error)
+  // For Farcaster context, we'll create a separate component that uses wagmi hooks
+  if (isInFarcaster) {
+    return <FarcasterWalletProvider>{children}</FarcasterWalletProvider>;
+  }
   
-  const miniAppAccount = isInFarcaster ? useAccount() : null; // From miniapp-wagmi-connector
-  
-  // Browser/PWA context: Thirdweb
-  const thirdwebAccount = !isInFarcaster ? useActiveAccount() : null;
+  // For Browser/PWA context, we'll create a separate component that uses thirdweb hooks
+  return <BrowserWalletProvider context={context as 'browser' | 'pwa'}>{children}</BrowserWalletProvider>;
+}
 
-  // Unified wallet address (single source per context)
-  const walletAddress = 
-    // Priority 1: Farcaster - use Mini App Wagmi
-    (isInFarcaster && miniAppAccount?.address) ||
-    // Priority 2: Browser/PWA - use Thirdweb
-    (!isInFarcaster && thirdwebAccount?.address) ||
-    null;
+// Farcaster-specific provider using wagmi hooks
+function FarcasterWalletProvider({ children }: { children: React.ReactNode }) {
+  const miniAppAccount = useAccount(); // From miniapp-wagmi-connector
 
+  const walletAddress = miniAppAccount?.address || null;
   const isConnected = !!walletAddress;
-  
-  // Determine connection source for debugging
-  const connectionSource = 
-    (isInFarcaster && miniAppAccount?.address) ? 'miniapp-wagmi' :
-    (!isInFarcaster && thirdwebAccount?.address) ? 'thirdweb' :
-    null;
+  const connectionSource = walletAddress ? 'miniapp-wagmi' : null;
 
-  // Context-specific connection logic
   const connect = async (): Promise<{ success: boolean; error?: string }> => {
-    if (isInFarcaster) {
-      // Farcaster: Connection handled by Neynar SIWN + Mini App
-      console.log('🎯 Farcaster context - connection handled by Neynar/Mini App');
-      return { success: true };
-    } else {
-      // Browser/PWA: Handled by Thirdweb ConnectButton component
-      console.log('🌐 Browser/PWA context - use ConnectButton component');
-      return { success: false, error: 'Use ConnectButton component for manual connection' };
-    }
+    console.log('🎯 Farcaster context - connection handled by Mini App');
+    return { success: true };
+  };
+
+  const disconnect = async (): Promise<void> => {
+    console.log('Disconnect not supported in Farcaster context');
+  };
+
+  // Debug logging
+  useEffect(() => {
+    console.log('💼 Farcaster Wallet Provider State:', {
+      context: 'farcaster',
+      address: walletAddress,
+      isConnected,
+      connectionSource,
+      miniAppAccount: miniAppAccount ? 'present' : 'none'
+    });
+  }, [walletAddress, isConnected, connectionSource]);
+
+  const value: WalletContextType = {
+    address: walletAddress,
+    isConnected,
+    context: 'farcaster',
+    connect,
+    disconnect,
+    connectionSource
+  };
+
+  return (
+    <WalletContext.Provider value={value}>
+      {children}
+    </WalletContext.Provider>
+  );
+}
+
+// Browser/PWA-specific provider using thirdweb hooks
+function BrowserWalletProvider({ children, context }: { children: React.ReactNode; context: 'browser' | 'pwa' }) {
+  // Import thirdweb hook dynamically to avoid issues in Farcaster context
+  const { useActiveAccount } = require('thirdweb/react');
+  const thirdwebAccount = useActiveAccount();
+
+  const walletAddress = thirdwebAccount?.address || null;
+  const isConnected = !!walletAddress;
+  const connectionSource = walletAddress ? 'thirdweb' : null;
+
+  const connect = async (): Promise<{ success: boolean; error?: string }> => {
+    console.log('🌐 Browser/PWA context - use ConnectButton component');
+    return { success: false, error: 'Use ConnectButton component for manual connection' };
   };
 
   const disconnect = async (): Promise<void> => {
@@ -74,13 +105,12 @@ export function WalletProvider({ children }: WalletProviderProps) {
 
   // Debug logging
   useEffect(() => {
-    console.log('💼 Wallet Provider State:', {
+    console.log('💼 Browser/PWA Wallet Provider State:', {
       context,
       address: walletAddress,
       isConnected,
       connectionSource,
-      thirdwebAccount: thirdwebAccount ? 'present' : 'none',
-      miniAppAccount: miniAppAccount ? 'present' : 'none'
+      thirdwebAccount: thirdwebAccount ? 'present' : 'none'
     });
   }, [context, walletAddress, isConnected, connectionSource]);
 

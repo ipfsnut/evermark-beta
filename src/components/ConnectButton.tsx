@@ -1,7 +1,6 @@
 // src/components/ConnectButton.tsx - Context-aware wallet connection
 import React from 'react';
-import { ConnectButton, useActiveAccount } from 'thirdweb/react';
-import { useConnect } from 'wagmi';
+import { ConnectButton } from 'thirdweb/react';
 import { WalletIcon, UserIcon, LogOutIcon } from 'lucide-react';
 import { createWallet, inAppWallet } from 'thirdweb/wallets';
 
