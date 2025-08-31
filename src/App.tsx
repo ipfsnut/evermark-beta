@@ -33,40 +33,25 @@ function PageLoader() {
 
 // App content with routing (separated for clean provider structure)
 function AppContent() {
-  // Call ready() as early as possible for Farcaster Mini Apps
+  // Handle Mini App shared links
   useEffect(() => {
-    const initializeFarcasterMiniApp = async () => {
-      try {
-        // Import SDK and check if we're in Farcaster context
-        const { sdk } = await import('@farcaster/miniapp-sdk');
+    const handleMiniAppLinks = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const isMiniAppShare = urlParams.get('fc_miniapp') === '1';
+      const shareSource = urlParams.get('fc_source');
+      
+      if (isMiniAppShare) {
+        console.log('🔗 Opened via Mini App share link:', { shareSource });
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, '', cleanUrl);
         
-        // Call ready() immediately - it will only work in Farcaster context
-        console.log('🔄 Calling miniapp-sdk ready()...');
-        await sdk.actions.ready();
-        console.log('✅ Miniapp SDK ready() called successfully');
-        
-        // Handle Mini App shared links
-        const urlParams = new URLSearchParams(window.location.search);
-        const isMiniAppShare = urlParams.get('fc_miniapp') === '1';
-        const shareSource = urlParams.get('fc_source');
-        
-        if (isMiniAppShare) {
-          console.log('🔗 Opened via Mini App share link:', { shareSource });
-          const cleanUrl = window.location.pathname;
-          window.history.replaceState({}, '', cleanUrl);
-        }
-        
-        if (isMiniAppShare && shareSource === 'share') {
+        if (shareSource === 'share') {
           console.log('📱 Successfully opened shared content in Mini App');
         }
-      } catch (error) {
-        // This is expected to fail outside of Farcaster context
-        console.log('🌐 Not in Farcaster context - browser/PWA mode');
       }
     };
 
-    // Call immediately on mount
-    initializeFarcasterMiniApp();
+    handleMiniAppLinks();
   }, []);
 
   return (

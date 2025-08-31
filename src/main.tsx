@@ -10,6 +10,18 @@ import './styles/mobile-first.css';
 // Import dev logging utilities
 import { devLog, prodLog } from './utils/debug';
 
+// Initialize Farcaster Mini App SDK as early as possible
+(async () => {
+  try {
+    const { sdk } = await import('@farcaster/miniapp-sdk');
+    console.log('🔄 Calling miniapp-sdk ready() from main.tsx...');
+    await sdk.actions.ready();
+    console.log('✅ Miniapp SDK ready() called successfully');
+  } catch (error) {
+    console.log('🌐 Not in Farcaster context - browser/PWA mode');
+  }
+})();
+
 // Register service worker for PWA functionality
 async function registerServiceWorker() {
   if ('serviceWorker' in navigator && import.meta.env.PROD) {
