@@ -36,61 +36,52 @@ export function NeynarSIWNProvider({ children, clientId }: NeynarSIWNProviderPro
 
   const signIn = useCallback(async () => {
     if (!isInFarcaster) {
-      throw new Error('SIWN only available in Farcaster context');
+      throw new Error('Not in Farcaster context');
     }
 
     setIsLoading(true);
     try {
-      // Try to get current Farcaster user from Frame context
+      // Frame SDK MUST provide user context in Mini App
       const frameSDK = (window as any).FrameSDK;
-      if (frameSDK?.context?.user) {
-        const { fid, username, displayName, pfpUrl } = frameSDK.context.user;
-        
-        // Fetch full user profile including verified addresses using our client
-        try {
-          const userProfile = await neynarClient.getUserByFid(fid);
-          const userData = userProfile.users?.[0];
-          
-          if (userData) {
-            const neynarUser: NeynarUser = {
-              fid: userData.fid,
-              username: userData.username,
-              displayName: userData.display_name || displayName,
-              pfpUrl: userData.pfp_url || pfpUrl,
-              verifiedAddresses: userData.verified_addresses?.eth_addresses || [],
-              custodyAddress: userData.custody_address
-            };
-            
-            setUser(neynarUser);
-            localStorage.setItem('neynar_siwn_user', JSON.stringify(neynarUser));
-            console.log('✅ SIWN authentication successful:', neynarUser);
-            return;
-          }
-        } catch (profileError) {
-          console.warn('Failed to fetch full profile, using Frame context data:', profileError);
-        }
-        
-        // Fallback to Frame context data
-        const fallbackUser: NeynarUser = {
-          fid,
-          username: username || 'unknown',
-          displayName: displayName || username || 'Farcaster User',
-          pfpUrl: pfpUrl || '',
-          verifiedAddresses: [], // Will need to be fetched separately
-          custodyAddress: ''
-        };
-        
-        setUser(fallbackUser);
-        localStorage.setItem('neynar_siwn_user', JSON.stringify(fallbackUser));
-        console.log('✅ SIWN authentication with Frame context:', fallbackUser);
-        return;
+      if (!frameSDK?.context?.user) {
+        throw new Error('Frame SDK user context not available - Mini App not properly initialized');
       }
+
+      const { fid, username, displayName, pfpUrl } = frameSDK.context.user;
+      console.log('🎯 Frame SDK user context:', { fid, username, displayName });
       
-      throw new Error('No Farcaster user context available for SIWN');
+      // Get verified addresses from Neynar API
+      const userProfile = await neynarClient.getUserByFid(fid);
+      const userData = userProfile.users?.[0];
       
-    } catch (error) {
-      console.error('SIWN authentication failed:', error);
-      throw error;
+      if (!userData) {
+        throw new Error(`Failed to fetch user profile for FID ${fid}`);
+      }
+
+      // Prefer verified addresses, use custody address as backup
+      const walletAddresses = userData.verified_addresses?.eth_addresses || [];
+      const custodyAddress = userData.custody_address || frameSDK.context.user.custodyAddress;
+      
+      if (walletAddresses.length === 0 && !custodyAddress) {
+        throw new Error('No wallet addresses available for this Farcaster user');
+      }
+
+      const neynarUser: NeynarUser = {
+        fid: userData.fid,
+        username: userData.username,
+        displayName: userData.display_name || displayName,
+        pfpUrl: userData.pfp_url || pfpUrl,
+        verifiedAddresses: walletAddresses,
+        custodyAddress: custodyAddress
+      };
+      
+      setUser(neynarUser);
+      localStorage.setItem('neynar_siwn_user', JSON.stringify(neynarUser));
+      console.log('✅ SIWN authentication complete:', {
+        addresses: walletAddresses,
+        custody: custodyAddress
+      });
+      
     } finally {
       setIsLoading(false);
     }
@@ -105,20 +96,46 @@ export function NeynarSIWNProvider({ children, clientId }: NeynarSIWNProviderPro
     return user?.verifiedAddresses[0] || user?.custodyAddress || null;
   }, [user]);
 
-  // Restore user from localStorage on mount
+  // Auto-authenticate when Frame SDK context is available (Mini App)
   useEffect(() => {
-    if (isInFarcaster) {
+    const autoAuthenticate = async () => {
+      if (!isInFarcaster) return;
+      
+      // First, try to restore from localStorage
       const stored = localStorage.getItem('neynar_siwn_user');
       if (stored) {
         try {
           setUser(JSON.parse(stored));
+          console.log('✅ Restored SIWN user from localStorage');
+          return;
         } catch (error) {
           console.warn('Failed to restore SIWN user from localStorage:', error);
           localStorage.removeItem('neynar_siwn_user');
         }
       }
-    }
-  }, [isInFarcaster]);
+      
+      // Auto-authenticate with Frame SDK context if available
+      const frameSDK = (window as any).FrameSDK;
+      if (frameSDK?.context?.user) {
+        console.log('🎯 Auto-authenticating with Frame SDK context...');
+        try {
+          await signIn();
+        } catch (error) {
+          console.warn('Auto-authentication failed:', error);
+        }
+      }
+    };
+    
+    // Try immediately and after delays to ensure Frame SDK is ready
+    autoAuthenticate();
+    const timeout1 = setTimeout(autoAuthenticate, 1000);
+    const timeout2 = setTimeout(autoAuthenticate, 3000);
+    
+    return () => {
+      clearTimeout(timeout1);
+      clearTimeout(timeout2);
+    };
+  }, [isInFarcaster, signIn]);
 
   const contextValue: NeynarSIWNContextType = {
     user,

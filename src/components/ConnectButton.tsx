@@ -6,6 +6,7 @@ import { WalletIcon, UserIcon, LogOutIcon } from 'lucide-react';
 import { createWallet, inAppWallet } from 'thirdweb/wallets';
 import { useAppAuth } from '../providers/AppContext';
 import { useWalletConnection } from '../providers/WalletProvider';
+import { useNeynarSIWN, NeynarAuthButton } from '../providers/NeynarSIWNProvider';
 
 interface WalletConnectProps {
   className?: string;
@@ -23,7 +24,12 @@ const getWallets = () => [
 export function WalletConnect({ className = '', variant = 'default' }: WalletConnectProps) {
   const account = useActiveAccount();
   const { disconnect } = useAppAuth();
-  const { isAutoConnecting, autoConnectFailed } = useWalletConnection();
+  const { isAutoConnecting, autoConnectFailed, isConnected, address } = useWalletConnection();
+  const { isAuthenticated: isSIWNAuthenticated, user: siwnUser } = useNeynarSIWN();
+  
+  // Check if we're in Farcaster context
+  const isInFarcaster = typeof window !== 'undefined' && 
+    (window.parent !== window || navigator.userAgent.toLowerCase().includes('farcaster'));
 
   const handleLogout = async () => {
     try {
@@ -33,9 +39,12 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
     }
   };
 
-  if (account) {
-    const address = account.address;
-    const shortAddress = `${address.slice(0, 6)}...${address.slice(-4)}`;
+  // Use the unified wallet connection status from WalletProvider
+  const walletAddress = address; // WalletProvider handles SIWN vs Thirdweb priority
+  const displayName = siwnUser?.displayName || siwnUser?.username;
+
+  if (isConnected && walletAddress) {
+    const shortAddress = `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`;
 
     if (variant === 'compact') {
       return (
@@ -48,7 +57,7 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
             className="text-sm font-medium text-white hover:text-cyber-primary transition-colors cursor-pointer"
             title="Click to logout"
           >
-            {shortAddress}
+            {displayName ? `@${siwnUser?.username}` : shortAddress}
           </button>
         </div>
       );
@@ -56,9 +65,8 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
   }
 
   // For the default variant when connected, show a custom wallet display with logout
-  if (account && variant === 'default') {
-    const address = account.address;
-    const shortAddress = `${address.slice(0, 6)}...${address.slice(-4)}`;
+  if (isConnected && walletAddress && variant === 'default') {
+    const shortAddress = `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`;
     
     return (
       <div className={`flex items-center space-x-2 px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg ${className}`}>
@@ -71,9 +79,11 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
             className="text-sm font-medium text-white hover:text-cyber-primary transition-colors cursor-pointer text-left"
             title="Click to logout"
           >
-            {shortAddress}
+            {displayName ? `@${siwnUser?.username}` : shortAddress}
           </button>
-          <span className="text-xs text-gray-400">Connected</span>
+          <span className="text-xs text-gray-400">
+            {isSIWNAuthenticated ? 'Farcaster' : 'Connected'}
+          </span>
         </div>
         <LogOutIcon className="h-4 w-4 text-gray-400 hover:text-cyber-primary transition-colors cursor-pointer" onClick={handleLogout} />
       </div>

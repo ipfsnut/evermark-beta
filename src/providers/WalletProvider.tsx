@@ -55,36 +55,42 @@ export function WalletProvider({ children }: WalletProviderProps) {
                       (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile/i.test(navigator.userAgent) ||
                        window.innerWidth <= 768);
       
-      // PRIORITY 1: Use Neynar SIWN if in Farcaster context
+      // PRIORITY 1: Farcaster context - use SIWN (work or fail clearly)
       if (isInFarcaster) {
-        console.log('🎯 Farcaster detected - using Neynar SIWN authentication');
+        console.log('🎯 Farcaster context - using SIWN authentication');
         
-        if (!isSIWNAuthenticated) {
-          await siwnSignIn();
-        }
-        
+        // Check if already authenticated
         const siwnAddress = getSIWNAddress();
         if (siwnAddress) {
-          console.log('✅ SIWN authentication successful, address:', siwnAddress);
-          // No need for Thirdweb wallet connection - we have the address from SIWN
+          console.log('✅ Already authenticated via SIWN:', siwnAddress);
           return { success: true };
-        } else {
-          throw new Error('SIWN authentication failed - no verified address available');
         }
+        
+        // Trigger SIWN authentication
+        await siwnSignIn();
+        
+        const newAddress = getSIWNAddress();
+        if (!newAddress) {
+          throw new Error('SIWN authentication failed - no wallet address returned');
+        }
+        
+        console.log('✅ SIWN authentication successful:', newAddress);
+        return { success: true };
       }
       
-      // PRIORITY 2: Non-Farcaster context - use regular wallet connection
+      // PRIORITY 2: Non-Farcaster context - use MetaMask or Coinbase
       const connectedWallet = await thirdwebConnect(async () => {
-        // Try MetaMask first (most common browser wallet)
+        // Try MetaMask first
         try {
           const metamaskWallet = createWallet('io.metamask');
           await metamaskWallet.connect({ client });
+          console.log('✅ Connected to MetaMask');
           return metamaskWallet;
         } catch (metamaskError) {
-          // Fallback to Coinbase Wallet
-          console.warn('MetaMask failed, trying Coinbase:', metamaskError);
+          console.log('MetaMask failed, trying Coinbase Wallet');
           const coinbaseWallet = createWallet('com.coinbase.wallet');
           await coinbaseWallet.connect({ client });
+          console.log('✅ Connected to Coinbase Wallet');
           return coinbaseWallet;
         }
       });
