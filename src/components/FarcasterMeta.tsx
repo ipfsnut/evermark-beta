@@ -20,21 +20,12 @@ export function FarcasterMeta({
 }: FarcasterMetaProps) {
   return (
     <Helmet>
-      {/* Farcaster Mini App Meta Tag (JSON format) */}
-      <meta name="fc:miniapp" content={JSON.stringify({
-        version: "1",
-        imageUrl: imageUrl,
-        button: {
-          title: buttonText,
-          action: {
-            type: "launch_frame",
-            name: title,
-            url: url,
-            splashImageUrl: imageUrl,
-            splashBackgroundColor: "#1a1a1a"
-          }
-        }
-      })} />
+      {/* Farcaster Mini App Embed Meta Tags */}
+      <meta name="fc:miniapp" content="1" />
+      <meta name="fc:miniapp:image" content={imageUrl} />
+      <meta name="fc:miniapp:button:1" content={buttonText} />
+      <meta name="fc:miniapp:button:1:action" content={buttonAction} />
+      <meta name="fc:miniapp:button:1:target" content={url} />
       
       {/* Open Graph Meta Tags */}
       <meta property="og:title" content={title} />

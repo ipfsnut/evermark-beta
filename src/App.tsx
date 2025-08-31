@@ -50,17 +50,19 @@ function AppContent() {
         }
 
         // Try modern SDK approach first (for Mini Apps)
+        console.log('🔄 Loading miniapp-sdk...');
         const { sdk } = await import('@farcaster/miniapp-sdk');
+        console.log('📱 SDK imported, calling ready()...');
         await sdk.actions.ready();
-        console.log('✅ Fallback Farcaster SDK ready() called');
+        console.log('✅ Miniapp SDK ready() called successfully');
         
         // If this was a shared link, we can optionally notify the parent frame
         if (isMiniAppShare && shareSource === 'share') {
           console.log('📱 Successfully opened shared content in Mini App');
         }
       } catch (error) {
-        // Silently fail - this is expected when not in Farcaster environment
-        console.log('ℹ️ Not in Farcaster environment, no SDK initialization needed');
+        console.error('❌ Farcaster SDK initialization failed:', error);
+        // This should only fail when not in Farcaster environment
       }
     };
 
