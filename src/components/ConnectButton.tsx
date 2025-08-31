@@ -7,6 +7,7 @@ import { createWallet, inAppWallet } from 'thirdweb/wallets';
 import { useAppAuth } from '../providers/AppContext';
 import { useWalletConnection } from '../providers/WalletProvider';
 import { useNeynarContext, NeynarAuthButton, SIWN_variant } from '@neynar/react';
+import { useFarcasterDetection } from '../hooks/useFarcasterDetection';
 
 interface WalletConnectProps {
   className?: string;
@@ -36,10 +37,7 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
   
   const isSIWNAuthenticated = !!neynarAuth?.user;
   const siwnUser = neynarAuth?.user;
-  
-  // Check if we're in Farcaster context
-  const isInFarcaster = typeof window !== 'undefined' && 
-    (window.parent !== window || navigator.userAgent.toLowerCase().includes('farcaster'));
+  const { isInFarcaster } = useFarcasterDetection();
 
   const handleLogout = async () => {
     try {
