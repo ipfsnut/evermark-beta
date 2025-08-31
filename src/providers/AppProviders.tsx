@@ -53,28 +53,39 @@ export function AppProviders({ children }: AppProvidersProps) {
     );
   }
 
-  // Farcaster Mini App Provider Stack
+  // Farcaster Mini App Provider Stack  
   if (isInFarcaster) {
     console.log('🎯 Loading Farcaster Mini App providers (Neynar + Mini App Wagmi)');
     
-    // Temporarily disable Neynar to isolate React error
+    const neynarClientId = import.meta.env.VITE_NEYNAR_CLIENT_ID;
+    
+    if (!neynarClientId) {
+      console.error('❌ VITE_NEYNAR_CLIENT_ID is required for Farcaster context');
+      return (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-lg text-red-500">Configuration Error: Missing Neynar Client ID</div>
+        </div>
+      );
+    }
+
     return (
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
-          <div className="text-center p-4 bg-yellow-100 text-yellow-800">
-            Farcaster context detected - Neynar provider temporarily disabled for debugging
-          </div>
-          <WagmiProvider config={miniAppWagmiConfig}>
-            <WalletProvider>
-              <BlockchainProvider>
-                <IntegratedUserProvider>
-                  <AppContextProvider>
-                    {children}
-                  </AppContextProvider>
-                </IntegratedUserProvider>
-              </BlockchainProvider>
-            </WalletProvider>
-          </WagmiProvider>
+          <NeynarContextProvider 
+            settings={neynarClientId}
+          >
+            <WagmiProvider config={miniAppWagmiConfig}>
+              <WalletProvider>
+                <BlockchainProvider>
+                  <IntegratedUserProvider>
+                    <AppContextProvider>
+                      {children}
+                    </AppContextProvider>
+                  </IntegratedUserProvider>
+                </BlockchainProvider>
+              </WalletProvider>
+            </WagmiProvider>
+          </NeynarContextProvider>
         </ThemeProvider>
       </QueryClientProvider>
     );
