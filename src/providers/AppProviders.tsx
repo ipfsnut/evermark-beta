@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThirdwebProvider } from 'thirdweb/react';
 
 import { FarcasterProvider } from '../lib/farcaster';
-import { NeynarSIWNProvider } from './NeynarSIWNProvider';
+import { NeynarContextProvider } from '@neynar/react';
 import { WalletProvider } from './WalletProvider';
 import { BlockchainProvider } from './BlockchainProvider';
 import { IntegratedUserProvider } from './IntegratedUserProvider'; // NOW INCLUDED
@@ -55,7 +55,7 @@ export function AppProviders({ children }: AppProvidersProps) {
       <ThemeProvider>
         <ThirdwebProvider>
           <FarcasterProvider>
-            <NeynarSIWNProvider clientId={import.meta.env.VITE_NEYNAR_CLIENT_ID}>
+            <NeynarContextProvider settings={{ clientId: import.meta.env.VITE_NEYNAR_CLIENT_ID }}>
               <WalletProvider>
                 <BlockchainProvider>
                   <IntegratedUserProvider>
@@ -65,7 +65,7 @@ export function AppProviders({ children }: AppProvidersProps) {
                   </IntegratedUserProvider>
                 </BlockchainProvider>
               </WalletProvider>
-            </NeynarSIWNProvider>
+            </NeynarContextProvider>
           </FarcasterProvider>
         </ThirdwebProvider>
       </ThemeProvider>

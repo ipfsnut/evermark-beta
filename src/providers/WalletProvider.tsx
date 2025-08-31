@@ -4,7 +4,7 @@ import { useActiveAccount, useConnect, useDisconnect, useActiveWallet } from 'th
 import { createWallet, inAppWallet } from 'thirdweb/wallets';
 import { client } from '../lib/thirdweb';
 import { setCurrentWallet, prodLog } from '../utils/debug';
-import { useNeynarSIWN } from './NeynarSIWNProvider';
+import { useNeynarContext } from '@neynar/react';
 
 interface WalletContextType {
   isConnected: boolean;
@@ -29,8 +29,14 @@ export function WalletProvider({ children }: WalletProviderProps) {
   const { connect: thirdwebConnect, isConnecting } = useConnect();
   const { disconnect: thirdwebDisconnect } = useDisconnect();
   
-  // Neynar SIWN integration
-  const { isAuthenticated: isSIWNAuthenticated, getWalletAddress: getSIWNAddress, signIn: siwnSignIn } = useNeynarSIWN();
+  // Neynar authentication integration
+  const neynarAuth = useNeynarContext();
+  
+  // Get SIWN address from Neynar user
+  const getSIWNAddress = () => {
+    return neynarAuth?.user?.verified_addresses?.eth_addresses?.[0] || 
+           neynarAuth?.user?.custody_address || null;
+  };
   
   // Use SIWN address if available, fallback to Thirdweb account
   const walletAddress = getSIWNAddress() || account?.address || null;
@@ -66,16 +72,8 @@ export function WalletProvider({ children }: WalletProviderProps) {
           return { success: true };
         }
         
-        // Trigger SIWN authentication
-        await siwnSignIn();
-        
-        const newAddress = getSIWNAddress();
-        if (!newAddress) {
-          throw new Error('SIWN authentication failed - no wallet address returned');
-        }
-        
-        console.log('✅ SIWN authentication successful:', newAddress);
-        return { success: true };
+        // For Neynar authentication, user needs to use the NeynarAuthButton
+        throw new Error('Please use the "Sign in with Neynar" button for Farcaster authentication');
       }
       
       // PRIORITY 2: Non-Farcaster context - use MetaMask or Coinbase
@@ -175,7 +173,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
         testMode,
         isMobile,
         hasWalletAddress: !!walletAddress,
-        isSIWNAuthenticated,
+        isSIWNAuthenticated: !!neynarAuth?.user,
         isConnecting,
         shouldAutoConnect,
         attempted: autoConnectAttempted.current
@@ -231,7 +229,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
         clearTimeout(autoConnectTimeoutRef.current);
       }
     };
-  }, [isSIWNAuthenticated]); // Re-run when SIWN state changes
+  }, [neynarAuth?.user]); // Re-run when Neynar auth state changes
 
   const value: WalletContextType = {
     isConnected,

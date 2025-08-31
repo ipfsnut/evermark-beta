@@ -6,7 +6,7 @@ import { WalletIcon, UserIcon, LogOutIcon } from 'lucide-react';
 import { createWallet, inAppWallet } from 'thirdweb/wallets';
 import { useAppAuth } from '../providers/AppContext';
 import { useWalletConnection } from '../providers/WalletProvider';
-import { useNeynarSIWN, NeynarAuthButton } from '../providers/NeynarSIWNProvider';
+import { useNeynarContext, NeynarAuthButton, SIWN_variant } from '@neynar/react';
 
 interface WalletConnectProps {
   className?: string;
@@ -25,7 +25,9 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
   const account = useActiveAccount();
   const { disconnect } = useAppAuth();
   const { isAutoConnecting, autoConnectFailed, isConnected, address } = useWalletConnection();
-  const { isAuthenticated: isSIWNAuthenticated, user: siwnUser } = useNeynarSIWN();
+  const neynarAuth = useNeynarContext();
+  const isSIWNAuthenticated = !!neynarAuth?.user;
+  const siwnUser = neynarAuth?.user;
   
   // Check if we're in Farcaster context
   const isInFarcaster = typeof window !== 'undefined' && 
@@ -41,7 +43,7 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
 
   // Use the unified wallet connection status from WalletProvider
   const walletAddress = address; // WalletProvider handles SIWN vs Thirdweb priority
-  const displayName = siwnUser?.displayName || siwnUser?.username;
+  const displayName = siwnUser?.display_name || siwnUser?.username;
 
   if (isConnected && walletAddress) {
     const shortAddress = `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`;
@@ -122,6 +124,16 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
         />
         <span className="text-xs text-gray-400">Auto-connect failed. Please connect manually.</span>
       </div>
+    );
+  }
+
+  // Show Neynar auth button if in Farcaster context
+  if (isInFarcaster) {
+    return (
+      <NeynarAuthButton 
+        label="Sign in with Farcaster"
+        variant={SIWN_variant.FARCASTER}
+      />
     );
   }
 
