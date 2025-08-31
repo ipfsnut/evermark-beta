@@ -72,7 +72,9 @@ export function AppProviders({ children }: AppProvidersProps) {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <NeynarContextProvider 
-            clientId={neynarClientId}
+            settings={{ 
+              clientId: neynarClientId 
+            }}
           >
             <WagmiProvider config={miniAppWagmiConfig}>
               <WalletProvider>
