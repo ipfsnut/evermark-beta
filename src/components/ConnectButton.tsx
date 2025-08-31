@@ -135,8 +135,8 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
     );
   }
 
-  // Show Neynar auth button if in Farcaster context
-  if (isInFarcaster) {
+  // Show Neynar auth button if in Farcaster context and not connected
+  if (isInFarcaster && !isConnected) {
     return (
       <div className={className}>
         <NeynarAuthButton 
@@ -151,6 +151,7 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
       client={client}
       wallets={getWallets()}
       chain={CHAIN}
+      connectModal={{ size: "wide" }}
       connectButton={{
         label: (
           <span className="flex items-center">
@@ -238,6 +239,7 @@ export function SimpleConnectButton({ className = '' }: { className?: string }) 
       client={client}
       wallets={getWallets()}
       chain={CHAIN}
+      connectModal={{ size: "wide" }}
       connectButton={{
         label: (
           <span className="flex items-center">

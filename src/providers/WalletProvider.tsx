@@ -63,10 +63,10 @@ export function WalletProvider({ children }: WalletProviderProps) {
                       (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile/i.test(navigator.userAgent) ||
                        window.innerWidth <= 768);
       
-      // PRIORITY 1: Farcaster context - skip wallet connection for now
+      // PRIORITY 1: Farcaster context - should use Neynar SIWN
       if (isInFarcaster) {
-        console.log('🎯 Farcaster context - skipping wallet connection');
-        throw new Error('Farcaster authentication temporarily disabled');
+        console.log('🎯 Farcaster context - should authenticate via Neynar SIWN');
+        return { success: true }; // Neynar handles auth automatically
       }
       
       // PRIORITY 2: Non-Farcaster context - use MetaMask or Coinbase
@@ -159,14 +159,15 @@ export function WalletProvider({ children }: WalletProviderProps) {
                       (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile/i.test(navigator.userAgent) ||
                        window.innerWidth <= 768);
       
-      const shouldAutoConnect = (isInFarcaster || testMode) && isMobile && !walletAddress;
+      const isNeynarAuthenticated = !!neynarAuth?.user;
+      const shouldAutoConnect = !isNeynarAuthenticated && (isInFarcaster || testMode) && isMobile && !walletAddress;
       
       console.log('🔍 Auto-connect check:', {
         isInFarcaster,
         testMode,
         isMobile,
         hasWalletAddress: !!walletAddress,
-        isNeynarAuthenticated: false,
+        isNeynarAuthenticated,
         isConnecting,
         shouldAutoConnect,
         attempted: autoConnectAttempted.current
