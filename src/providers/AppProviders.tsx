@@ -53,26 +53,26 @@ export function AppProviders({ children }: AppProvidersProps) {
     );
   }
 
-  // Farcaster Mini App Provider Stack  
-  // NOTE: NeynarContextProvider removed due to React Error #31 in production
-  // The miniapp-wagmi-connector provides wallet access directly
+  // Farcaster Mini App Provider Stack with Neynar authentication
   if (isInFarcaster) {
-    console.log('🎯 Loading Farcaster Mini App providers (Mini App Wagmi)');
+    console.log('🎯 Loading Farcaster Mini App providers (Mini App Wagmi + Neynar)');
 
     return (
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
-          <WagmiProvider config={miniAppWagmiConfig}>
-            <WalletProvider>
-              <BlockchainProvider>
-                <IntegratedUserProvider>
-                  <AppContextProvider>
-                    {children}
-                  </AppContextProvider>
-                </IntegratedUserProvider>
-              </BlockchainProvider>
-            </WalletProvider>
-          </WagmiProvider>
+          <NeynarContextProvider settings={{ clientId: import.meta.env.VITE_NEYNAR_CLIENT_ID }}>
+            <WagmiProvider config={miniAppWagmiConfig}>
+              <WalletProvider>
+                <BlockchainProvider>
+                  <IntegratedUserProvider>
+                    <AppContextProvider>
+                      {children}
+                    </AppContextProvider>
+                  </IntegratedUserProvider>
+                </BlockchainProvider>
+              </WalletProvider>
+            </WagmiProvider>
+          </NeynarContextProvider>
         </ThemeProvider>
       </QueryClientProvider>
     );
