@@ -66,27 +66,19 @@ interface FarcasterProviderProps {
 }
 
 export function FarcasterProvider({ children }: FarcasterProviderProps) {
-  // Simple Farcaster detection - detect or fail clearly
+  // Simplified Farcaster detection for SIWN
   const [isInFarcaster] = useState(() => {
     if (typeof window === 'undefined') return false;
     
-    // Check for Frame SDK (primary detection method)
-    const hasFrameSDK = typeof (window as any).FrameSDK !== 'undefined';
-    
-    // Check user agent for Farcaster mobile app
+    // Simple detection - iframe or Farcaster user agent
+    const isInIframe = window.parent !== window;
     const userAgent = navigator.userAgent.toLowerCase();
     const isFarcasterUA = userAgent.includes('farcaster') || userAgent.includes('warpcast');
     
-    // Check if in iframe with Farcaster referrer
-    const isInIframe = window.parent !== window;
-    const farcasterReferrer = document.referrer.includes('warpcast.com') || 
-                             document.referrer.includes('farcaster.xyz');
-    
-    const detected = hasFrameSDK || isFarcasterUA || (isInIframe && farcasterReferrer);
+    const detected = isInIframe || isFarcasterUA;
     
     if (detected) {
-      console.log('🎯 Farcaster detected:', { hasFrameSDK, isFarcasterUA, isInIframe, farcasterReferrer });
-      (window as any).__evermark_farcaster_detected = true;
+      console.log('🎯 Farcaster context detected:', { isInIframe, isFarcasterUA });
     } else {
       console.log('🌐 Not in Farcaster context');
     }

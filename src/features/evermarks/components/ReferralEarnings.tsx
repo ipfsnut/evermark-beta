@@ -154,8 +154,8 @@ export function ReferralEarnings({ className = '' }: ReferralEarningsProps) {
     );
   }
 
-  const hasEarnings = Boolean(earnings && earnings !== '0' && earnings !== BigInt(0));
-  const earningsInEth = hasEarnings ? (Number(earnings) / 1e18).toFixed(8) : '0.00000000';
+  const hasEarnings = Boolean(earnings && typeof earnings === 'string' && earnings !== '0');
+  const earningsInEth = hasEarnings && typeof earnings === 'string' ? (parseInt(earnings) / 1e18).toFixed(8) : '0.00000000';
 
   return (
     <div className={cn(

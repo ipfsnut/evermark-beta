@@ -227,6 +227,32 @@ const TempEvermarkService = {
       console.log('📡 Step 4: Minting Evermark NFT on blockchain...');
       
       // Debug the creator parameter before passing to blockchain service
+      // Step 4: Get user's account referrer setting
+      console.log('👥 Step 4: Checking account referrer...');
+      let accountReferrer: string | undefined;
+      
+      try {
+        const userSettingsResponse = await fetch('/api/user-settings', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Wallet-Address': accountAddress
+          }
+        });
+        
+        if (userSettingsResponse.ok) {
+          const userSettings = await userSettingsResponse.json();
+          accountReferrer = userSettings.settings?.referrer_address;
+          console.log('✅ Account referrer found:', accountReferrer || 'None set');
+        }
+      } catch (error) {
+        console.log('⚠️ Could not fetch account referrer, continuing without');
+      }
+
+      // Use manual referrer if provided, otherwise use account referrer
+      const finalReferrer = input.referrer || accountReferrer;
+      console.log('👥 Final referrer:', finalReferrer || 'None');
+
       // IMPORTANT: Always use the full accountAddress, never use metadata.author for blockchain calls
       // metadata.author might be a display name or truncated address
       const creatorAddress = accountAddress; // Always use full wallet address for blockchain
@@ -244,7 +270,7 @@ const TempEvermarkService = {
         metadataUploadResult.url,
         metadata.title,
         creatorAddress,
-        input.referrer
+        finalReferrer
       );
       
       if (!mintResult.success) {

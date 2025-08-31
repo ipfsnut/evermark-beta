@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThirdwebProvider } from 'thirdweb/react';
 
 import { FarcasterProvider } from '../lib/farcaster';
+import { NeynarSIWNProvider } from './NeynarSIWNProvider';
 import { WalletProvider } from './WalletProvider';
 import { BlockchainProvider } from './BlockchainProvider';
 import { IntegratedUserProvider } from './IntegratedUserProvider'; // NOW INCLUDED
@@ -37,15 +38,16 @@ const queryClient = new QueryClient({
 });
 
 /**
- * AppProviders - UPDATED ORDER with ThemeProvider and IntegratedUserProvider:
+ * AppProviders - UPDATED ORDER with NeynarSIWN and IntegratedUserProvider:
  * 1. React Query (data management)
- * 2. Theme Provider (dark/light mode) ← NEW
+ * 2. Theme Provider (dark/light mode)
  * 3. Thirdweb Provider (blockchain SDK)
  * 4. Farcaster Provider (authentication & context detection)
- * 5. Wallet Provider (wallet connection management)
- * 6. Blockchain Provider (contract interactions)
- * 7. IntegratedUserProvider (UNIFIED USER MANAGEMENT)
- * 8. App Context (app-level state) ← RECEIVES INTEGRATED USER
+ * 5. Neynar SIWN Provider (Farcaster authentication) ← NEW
+ * 6. Wallet Provider (wallet connection management)
+ * 7. Blockchain Provider (contract interactions)
+ * 8. IntegratedUserProvider (UNIFIED USER MANAGEMENT)
+ * 9. App Context (app-level state) ← RECEIVES INTEGRATED USER
  */
 export function AppProviders({ children }: AppProvidersProps) {
   return (
@@ -53,15 +55,17 @@ export function AppProviders({ children }: AppProvidersProps) {
       <ThemeProvider>
         <ThirdwebProvider>
           <FarcasterProvider>
-            <WalletProvider>
-              <BlockchainProvider>
-                <IntegratedUserProvider>
-                  <AppContextProvider>
-                    {children}
-                  </AppContextProvider>
-                </IntegratedUserProvider>
-              </BlockchainProvider>
-            </WalletProvider>
+            <NeynarSIWNProvider clientId={import.meta.env.VITE_NEYNAR_CLIENT_ID}>
+              <WalletProvider>
+                <BlockchainProvider>
+                  <IntegratedUserProvider>
+                    <AppContextProvider>
+                      {children}
+                    </AppContextProvider>
+                  </IntegratedUserProvider>
+                </BlockchainProvider>
+              </WalletProvider>
+            </NeynarSIWNProvider>
           </FarcasterProvider>
         </ThirdwebProvider>
       </ThemeProvider>

@@ -1,10 +1,10 @@
-// src/providers/WalletProvider.tsx - Fixed based on actual Thirdweb v5 API
+// src/providers/WalletProvider.tsx - Updated with Neynar SIWN integration
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { useActiveAccount, useConnect, useDisconnect, useActiveWallet } from 'thirdweb/react';
 import { createWallet, inAppWallet } from 'thirdweb/wallets';
-// Removed frameConnector - using Thirdweb v5 native Farcaster support
 import { client } from '../lib/thirdweb';
 import { setCurrentWallet, prodLog } from '../utils/debug';
+import { useNeynarSIWN } from './NeynarSIWNProvider';
 
 interface WalletContextType {
   isConnected: boolean;
@@ -29,6 +29,13 @@ export function WalletProvider({ children }: WalletProviderProps) {
   const { connect: thirdwebConnect, isConnecting } = useConnect();
   const { disconnect: thirdwebDisconnect } = useDisconnect();
   
+  // Neynar SIWN integration
+  const { isAuthenticated: isSIWNAuthenticated, getWalletAddress: getSIWNAddress, signIn: siwnSignIn } = useNeynarSIWN();
+  
+  // Use SIWN address if available, fallback to Thirdweb account
+  const walletAddress = getSIWNAddress() || account?.address || null;
+  const isConnected = !!walletAddress;
+  
   // Track auto-connection state
   const [isAutoConnecting, setIsAutoConnecting] = useState(false);
   const [autoConnectFailed, setAutoConnectFailed] = useState(false);
@@ -41,62 +48,34 @@ export function WalletProvider({ children }: WalletProviderProps) {
       setAutoConnectFailed(false);
       
       const isInFarcaster = typeof window !== 'undefined' && 
-                           (window as any).__evermark_farcaster_detected === true;
+                           (window.parent !== window || navigator.userAgent.toLowerCase().includes('farcaster'));
       
       // Check if we're on mobile
       const isMobile = typeof window !== 'undefined' && 
                       (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile/i.test(navigator.userAgent) ||
                        window.innerWidth <= 768);
       
-      // Use the correct Thirdweb v5 connect API
-      const connectedWallet = await thirdwebConnect(async () => {
-        if (isInFarcaster) {
-          // In Farcaster context, use inAppWallet with Farcaster strategy
-          try {
-            console.log('🎯 Connecting in Farcaster context...', { isMobile, hasFrameSDK: !!window.FrameSDK });
-            
-            // Wait for Frame SDK if we're on mobile and it's not ready yet
-            if (isMobile && !window.FrameSDK) {
-              console.log('⏳ Waiting for Frame SDK on mobile...');
-              let attempts = 0;
-              while (!window.FrameSDK && attempts < 30) {
-                await new Promise(resolve => setTimeout(resolve, 100));
-                attempts++;
-              }
-              if (!window.FrameSDK) {
-                throw new Error('Frame SDK not available after 3 seconds - cannot connect wallet on mobile');
-              }
-              console.log('✅ Frame SDK is now available');
-            }
-            
-            const wallet = inAppWallet();
-            await wallet.connect({ 
-              client,
-              strategy: 'farcaster'
-            });
-            prodLog('Connected to Farcaster inAppWallet successfully');
-            return wallet;
-          } catch (farcasterError) {
-            console.error('Farcaster wallet connection failed:', farcasterError);
-            
-            // On mobile in Farcaster, don't try fallbacks - throw clear error
-            if (isMobile) {
-              throw new Error(`Farcaster mobile wallet connection failed: ${farcasterError instanceof Error ? farcasterError.message : 'Unknown error'}`);
-            }
-            
-            // Only try MetaMask fallback on desktop
-            try {
-              const metamaskWallet = createWallet('io.metamask');
-              await metamaskWallet.connect({ client });
-              prodLog('Connected to MetaMask fallback in Farcaster context');
-              return metamaskWallet;
-            } catch (fallbackError) {
-              throw new Error(`Farcaster connection failed and MetaMask fallback also failed: ${fallbackError instanceof Error ? fallbackError.message : 'Unknown error'}`);
-            }
-          }
+      // PRIORITY 1: Use Neynar SIWN if in Farcaster context
+      if (isInFarcaster) {
+        console.log('🎯 Farcaster detected - using Neynar SIWN authentication');
+        
+        if (!isSIWNAuthenticated) {
+          await siwnSignIn();
         }
         
-        // Non-Farcaster context: Try MetaMask first (most common browser wallet)
+        const siwnAddress = getSIWNAddress();
+        if (siwnAddress) {
+          console.log('✅ SIWN authentication successful, address:', siwnAddress);
+          // No need for Thirdweb wallet connection - we have the address from SIWN
+          return { success: true };
+        } else {
+          throw new Error('SIWN authentication failed - no verified address available');
+        }
+      }
+      
+      // PRIORITY 2: Non-Farcaster context - use regular wallet connection
+      const connectedWallet = await thirdwebConnect(async () => {
+        // Try MetaMask first (most common browser wallet)
         try {
           const metamaskWallet = createWallet('io.metamask');
           await metamaskWallet.connect({ client });
@@ -159,19 +138,19 @@ export function WalletProvider({ children }: WalletProviderProps) {
 
   // Track wallet address changes for debug logging
   useEffect(() => {
-    setCurrentWallet(account?.address || null);
-  }, [account?.address]);
+    setCurrentWallet(walletAddress);
+  }, [walletAddress]);
 
   // Auto-connect to Farcaster wallet when in Farcaster context
   useEffect(() => {
     const checkAndConnect = async () => {
       // Skip if already attempted or connected
-      if (autoConnectAttempted.current || account?.address || isConnecting) {
+      if (autoConnectAttempted.current || walletAddress || isConnecting) {
         return;
       }
 
       const isInFarcaster = typeof window !== 'undefined' && 
-                           (window as any).__evermark_farcaster_detected === true;
+                           (window.parent !== window || navigator.userAgent.toLowerCase().includes('farcaster'));
       
       // Also check URL parameter for testing
       const testMode = typeof window !== 'undefined' && 
@@ -183,18 +162,17 @@ export function WalletProvider({ children }: WalletProviderProps) {
                       (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile/i.test(navigator.userAgent) ||
                        window.innerWidth <= 768);
       
-      const shouldAutoConnect = (isInFarcaster || testMode) && isMobile && !account?.address;
+      const shouldAutoConnect = (isInFarcaster || testMode) && isMobile && !walletAddress;
       
       console.log('🔍 Auto-connect check:', {
         isInFarcaster,
         testMode,
         isMobile,
-        hasAccount: !!account?.address,
+        hasWalletAddress: !!walletAddress,
+        isSIWNAuthenticated,
         isConnecting,
         shouldAutoConnect,
-        attempted: autoConnectAttempted.current,
-        hasFrameSDK: !!window.FrameSDK,
-        frameContext: window.FrameSDK?.context
+        attempted: autoConnectAttempted.current
       });
       
       if (shouldAutoConnect) {
@@ -251,11 +229,14 @@ export function WalletProvider({ children }: WalletProviderProps) {
         clearTimeout(autoConnectTimeoutRef.current);
       }
     };
-  }, []); // Only run once on mount
+
+    // Check immediately and after delays
+    checkAndConnect();
+  }, [isSIWNAuthenticated]); // Re-run when SIWN state changes
 
   const value: WalletContextType = {
-    isConnected: !!account?.address,
-    address: account?.address || null,
+    isConnected,
+    address: walletAddress,
     isConnecting,
     isAutoConnecting,
     autoConnectFailed,
