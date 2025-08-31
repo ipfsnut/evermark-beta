@@ -49,7 +49,14 @@ interface IntegratedUserProviderProps {
 
 export function IntegratedUserProvider({ children }: IntegratedUserProviderProps) {
   const account = useActiveAccount();
-  const neynarAuth = useNeynarContext();
+  
+  // Try to use Neynar context (only available in Farcaster)
+  let neynarAuth;
+  try {
+    neynarAuth = useNeynarContext();
+  } catch {
+    neynarAuth = null; // Not in Farcaster context - normal browser user
+  }
   
   const [user, setUser] = useState<EnhancedUser | null>(null);
   const [isLoading, setIsLoading] = useState(false);

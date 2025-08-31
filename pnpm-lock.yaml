@@ -13,12 +13,12 @@ importers:
 
   .:
     dependencies:
-      '@farcaster/frame-sdk':
-        specifier: ^0.0.53
-        version: 0.0.53(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@3.25.75)
       '@farcaster/frame-wagmi-connector':
         specifier: ^0.0.42
         version: 0.0.42(@farcaster/frame-sdk@0.0.53(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@3.25.75))(@wagmi/core@2.20.3(@tanstack/query-core@5.85.6)(@types/react@18.3.24)(react@18.3.1)(typescript@5.9.2)(use-sync-external-store@1.5.0(react@18.3.1))(viem@2.36.0(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@3.25.75)))(viem@2.36.0(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@3.25.75))
+      '@farcaster/miniapp-sdk':
+        specifier: ^0.1.9
+        version: 0.1.9(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@3.25.75)
       '@neynar/nodejs-sdk':
         specifier: ^1.52.0
         version: 1.71.0(@types/node@22.18.0)(bufferutil@4.0.9)(typescript@5.9.2)(utf-8-validate@5.0.10)(zod@3.25.75)

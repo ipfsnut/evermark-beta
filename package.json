@@ -20,7 +20,7 @@
     "migrate:dry": "DRY_RUN=true npx tsx fix-legacy-evermarks.ts"
   },
   "dependencies": {
-    "@farcaster/frame-sdk": "^0.0.53",
+    "@farcaster/miniapp-sdk": "^0.1.9",
     "@farcaster/frame-wagmi-connector": "^0.0.42",
     "@neynar/react": "^1.1.0",
     "@neynar/nodejs-sdk": "^1.52.0",

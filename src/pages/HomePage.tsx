@@ -16,7 +16,7 @@ import {
 
 // Providers and utilities
 import { useAppAuth } from '../providers/AppContext';
-import { useFarcasterUser } from '../lib/farcaster';
+import { useFarcasterDetection } from '../hooks/useFarcasterDetection';
 import { useTheme } from '../providers/ThemeProvider';
 import { themeClasses } from '../utils/theme';
 import { cn, useIsMobile } from '../utils/responsive';
@@ -281,7 +281,7 @@ const EvermarksFeed: React.FC = () => {
 // Main HomePage component
 export default function HomePage() {
   const { isAuthenticated } = useAppAuth();
-  const { isInFarcaster } = useFarcasterUser();
+  const { isInFarcaster } = useFarcasterDetection();
   const { isDark } = useTheme();
   const isMobile = useIsMobile();
 

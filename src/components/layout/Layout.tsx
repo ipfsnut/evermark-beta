@@ -4,7 +4,7 @@ import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { MobileMenu } from './MobileMenu';
 import { useAppUI } from '../../providers/AppContext';
-import { useFarcasterUser } from '../../lib/farcaster';
+import { useFarcasterDetection } from '../../hooks/useFarcasterDetection';
 import { useTheme } from '../../providers/ThemeProvider';
 import { cn } from '../../utils/responsive';
 import { themeClasses } from '../../utils/theme';
@@ -16,7 +16,7 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const { sidebarOpen, toggleSidebar } = useAppUI();
-  const { isInFarcaster } = useFarcasterUser();
+  const { isInFarcaster } = useFarcasterDetection();
   const { isDark } = useTheme();
   const isMobile = useIsMobileDevice();
 

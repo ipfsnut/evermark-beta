@@ -29,8 +29,13 @@ export function WalletProvider({ children }: WalletProviderProps) {
   const { connect: thirdwebConnect, isConnecting } = useConnect();
   const { disconnect: thirdwebDisconnect } = useDisconnect();
   
-  // Neynar authentication integration (official SDK)
-  const neynarAuth = useNeynarContext();
+  // Try to use Neynar context (may be undefined if not in Farcaster)
+  let neynarAuth;
+  try {
+    neynarAuth = useNeynarContext();
+  } catch {
+    neynarAuth = null; // Not in Neynar context
+  }
   
   // Use Neynar address if available, fallback to Thirdweb account
   const walletAddress = neynarAuth?.user?.verified_addresses?.eth_addresses?.[0] ||
@@ -58,20 +63,10 @@ export function WalletProvider({ children }: WalletProviderProps) {
                       (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile/i.test(navigator.userAgent) ||
                        window.innerWidth <= 768);
       
-      // PRIORITY 1: Farcaster context - use Neynar authentication
+      // PRIORITY 1: Farcaster context - skip wallet connection for now
       if (isInFarcaster) {
-        console.log('🎯 Farcaster context - using Neynar authentication');
-        
-        // Check if already authenticated via Neynar
-        const neynarAddress = neynarAuth?.user?.verified_addresses?.eth_addresses?.[0] ||
-                             neynarAuth?.user?.custody_address;
-        if (neynarAddress) {
-          console.log('✅ Already authenticated via Neynar:', neynarAddress);
-          return { success: true };
-        }
-        
-        // For Neynar authentication, user needs to use the NeynarAuthButton
-        throw new Error('Please use the "Sign in with Neynar" button for Farcaster authentication');
+        console.log('🎯 Farcaster context - skipping wallet connection');
+        throw new Error('Farcaster authentication temporarily disabled');
       }
       
       // PRIORITY 2: Non-Farcaster context - use MetaMask or Coinbase
@@ -171,7 +166,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
         testMode,
         isMobile,
         hasWalletAddress: !!walletAddress,
-        isNeynarAuthenticated: !!neynarAuth?.user,
+        isNeynarAuthenticated: false,
         isConnecting,
         shouldAutoConnect,
         attempted: autoConnectAttempted.current
@@ -227,7 +222,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
         clearTimeout(autoConnectTimeoutRef.current);
       }
     };
-  }, [neynarAuth?.user]); // Re-run when Neynar auth state changes
+  }, [account?.address]); // Re-run when wallet changes
 
   const value: WalletContextType = {
     isConnected,

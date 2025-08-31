@@ -2,7 +2,6 @@ import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThirdwebProvider } from 'thirdweb/react';
 
-import { FarcasterProvider } from '../lib/farcaster';
 import { NeynarContextProvider } from '@neynar/react';
 import { WalletProvider } from './WalletProvider';
 import { BlockchainProvider } from './BlockchainProvider';
@@ -38,36 +37,46 @@ const queryClient = new QueryClient({
 });
 
 /**
- * AppProviders - UPDATED ORDER with NeynarSIWN and IntegratedUserProvider:
+ * AppProviders - CLEAN DUAL AUTH ARCHITECTURE:
  * 1. React Query (data management)
- * 2. Theme Provider (dark/light mode)
- * 3. Thirdweb Provider (blockchain SDK)
- * 4. Farcaster Provider (authentication & context detection)
- * 5. Neynar SIWN Provider (Farcaster authentication) ← NEW
- * 6. Wallet Provider (wallet connection management)
- * 7. Blockchain Provider (contract interactions)
- * 8. IntegratedUserProvider (UNIFIED USER MANAGEMENT)
- * 9. App Context (app-level state) ← RECEIVES INTEGRATED USER
+ * 2. Theme Provider (dark/light mode)  
+ * 3. Thirdweb Provider (blockchain SDK - always present)
+ * 4. Conditional Neynar Provider (only in Farcaster context)
+ * 5. Wallet Provider (handles both auth types)
+ * 6. Blockchain Provider (contract interactions)
+ * 7. IntegratedUserProvider (unified user management)
+ * 8. App Context (app-level state)
  */
 export function AppProviders({ children }: AppProvidersProps) {
+  // Detect Farcaster context
+  const isInFarcaster = typeof window !== 'undefined' && 
+    (window.parent !== window || navigator.userAgent.toLowerCase().includes('farcaster'));
+
+  const providers = (
+    <ThirdwebProvider>
+      <WalletProvider>
+        <BlockchainProvider>
+          <IntegratedUserProvider>
+            <AppContextProvider>
+              {children}
+            </AppContextProvider>
+          </IntegratedUserProvider>
+        </BlockchainProvider>
+      </WalletProvider>
+    </ThirdwebProvider>
+  );
+
+  // Wrap with Neynar only in Farcaster context
+  const content = isInFarcaster ? (
+    <NeynarContextProvider settings={{ clientId: import.meta.env.VITE_NEYNAR_CLIENT_ID }}>
+      {providers}
+    </NeynarContextProvider>
+  ) : providers;
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <ThirdwebProvider>
-          <FarcasterProvider>
-            <NeynarContextProvider settings={{ clientId: import.meta.env.VITE_NEYNAR_CLIENT_ID }}>
-              <WalletProvider>
-                <BlockchainProvider>
-                  <IntegratedUserProvider>
-                    <AppContextProvider>
-                      {children}
-                    </AppContextProvider>
-                  </IntegratedUserProvider>
-                </BlockchainProvider>
-              </WalletProvider>
-            </NeynarContextProvider>
-          </FarcasterProvider>
-        </ThirdwebProvider>
+        {content}
       </ThemeProvider>
     </QueryClientProvider>
   );

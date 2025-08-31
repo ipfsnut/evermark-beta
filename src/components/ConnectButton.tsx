@@ -25,7 +25,15 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
   const account = useActiveAccount();
   const { disconnect } = useAppAuth();
   const { isAutoConnecting, autoConnectFailed, isConnected, address } = useWalletConnection();
-  const neynarAuth = useNeynarContext();
+  
+  // Try to use Neynar context (only available in Farcaster)
+  let neynarAuth;
+  try {
+    neynarAuth = useNeynarContext();
+  } catch {
+    neynarAuth = null; // Not in Farcaster context
+  }
+  
   const isSIWNAuthenticated = !!neynarAuth?.user;
   const siwnUser = neynarAuth?.user;
   
@@ -132,7 +140,6 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
     return (
       <div className={className}>
         <NeynarAuthButton 
-          label="Sign in with Farcaster"
           variant={SIWN_variant.FARCASTER}
         />
       </div>

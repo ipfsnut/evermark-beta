@@ -11,7 +11,7 @@ import {
   ShareIcon
 } from 'lucide-react';
 import { useAppAuth } from '../../providers/AppContext';
-import { useFarcasterUser } from '../../lib/farcaster';
+import { useFarcasterDetection } from '../../hooks/useFarcasterDetection';
 import { useTheme } from '../../providers/ThemeProvider';
 import { cn } from '../../utils/responsive';
 
@@ -53,7 +53,7 @@ const mobileNavItems: NavItem[] = [
 
 export function MobileNavigation() {
   const { isAuthenticated } = useAppAuth();
-  const { isInFarcaster } = useFarcasterUser();
+  const { isInFarcaster } = useFarcasterDetection();
   const { isDark } = useTheme();
   const location = useLocation();
 

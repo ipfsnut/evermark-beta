@@ -7,7 +7,7 @@ import {
   UserIcon
 } from 'lucide-react';
 import { useAppUI, useAppAuth } from '../../providers/AppContext';
-import { useFarcasterUser } from '../../lib/farcaster';
+import { useFarcasterDetection } from '../../hooks/useFarcasterDetection';
 import { useTheme } from '../../providers/ThemeProvider';
 import { ThemeToggle } from '../ui/ThemeToggle';
 import { WalletConnect } from '../ConnectButton';
@@ -17,7 +17,7 @@ import { cn, useIsMobile } from '../../utils/responsive';
 export function Header() {
   const { toggleSidebar, notifications } = useAppUI();
   const { isAuthenticated, user } = useAppAuth();
-  const { isInFarcaster } = useFarcasterUser();
+  const { isInFarcaster } = useFarcasterDetection();
   const { isDark } = useTheme();
   const isMobile = useIsMobile();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
