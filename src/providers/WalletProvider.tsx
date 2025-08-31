@@ -217,21 +217,14 @@ export function WalletProvider({ children }: WalletProviderProps) {
       }
     };
 
-    // Check immediately and also after delays to ensure Frame SDK is ready
+    // Check immediately when SIWN state changes
     checkAndConnect();
-    const timeoutId1 = setTimeout(checkAndConnect, 1000);
-    const timeoutId2 = setTimeout(checkAndConnect, 3000); // Extra delay for Frame SDK
     
     return () => {
-      clearTimeout(timeoutId1);
-      clearTimeout(timeoutId2);
       if (autoConnectTimeoutRef.current) {
         clearTimeout(autoConnectTimeoutRef.current);
       }
     };
-
-    // Check immediately and after delays
-    checkAndConnect();
   }, [isSIWNAuthenticated]); // Re-run when SIWN state changes
 
   const value: WalletContextType = {

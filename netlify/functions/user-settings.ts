@@ -119,8 +119,8 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
 
         const settingsData: Partial<UserSettings> = {
           wallet_address: walletAddress,
-          referrer_address: requestData.referrer_address?.toLowerCase() || null,
-          referrer_set_at: requestData.referrer_address ? new Date().toISOString() : null,
+          referrer_address: requestData.referrer_address?.toLowerCase() || undefined,
+          referrer_set_at: requestData.referrer_address ? new Date().toISOString() : undefined,
           updated_at: new Date().toISOString()
         };
 

@@ -65,7 +65,7 @@ export function ReferralEarnings({ className = '' }: ReferralEarningsProps) {
   });
 
   const handleClaim = useCallback(async () => {
-    if (!earnings || earnings === '0' || claiming) return;
+    if (!earnings || earnings === 0n || claiming) return;
     
     setClaiming(true);
     setClaimError(null);
