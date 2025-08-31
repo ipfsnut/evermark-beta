@@ -4,6 +4,7 @@ import { AppProviders } from '../src/providers/AppProviders';
 import { Layout } from '../src/components/layout';
 import { ErrorBoundary } from '../src/components/ui';
 import { PWAInstallPrompt } from '../src/components/PWAInstallPrompt';
+import { useFarcasterDetection } from '../src/hooks/useFarcasterDetection';
 
 // Lazy load pages for better performance
 const HomePage = React.lazy(() => import('../src/pages/HomePage'));
@@ -33,43 +34,46 @@ function PageLoader() {
 
 // App content with routing (separated for clean provider structure)
 function AppContent() {
-  // Fallback Farcaster SDK initialization - ensures ready() is always called
+  const { isInFarcaster, isLoading } = useFarcasterDetection();
+
+  // Initialize Farcaster SDK when in Farcaster context
   useEffect(() => {
+    if (isLoading) return; // Wait for detection to complete
+    
     const initializeFarcasterMiniApp = async () => {
+      if (!isInFarcaster) {
+        console.log('🌐 Browser/PWA mode - no SDK initialization needed');
+        return;
+      }
+
       try {
-        // Check if this is a Mini App shared link
+        // Handle Mini App shared links
         const urlParams = new URLSearchParams(window.location.search);
         const isMiniAppShare = urlParams.get('fc_miniapp') === '1';
         const shareSource = urlParams.get('fc_source');
         
         if (isMiniAppShare) {
           console.log('🔗 Opened via Mini App share link:', { shareSource });
-          // Clean up URL parameters for better UX
           const cleanUrl = window.location.pathname;
           window.history.replaceState({}, '', cleanUrl);
         }
 
-        // Try modern SDK approach first (for Mini Apps)
-        console.log('🔄 Loading miniapp-sdk...');
+        // Initialize SDK for Farcaster context
+        console.log('🔄 Initializing miniapp-sdk for Farcaster context...');
         const { sdk } = await import('@farcaster/miniapp-sdk');
-        console.log('📱 SDK imported, calling ready()...');
         await sdk.actions.ready();
         console.log('✅ Miniapp SDK ready() called successfully');
         
-        // If this was a shared link, we can optionally notify the parent frame
         if (isMiniAppShare && shareSource === 'share') {
           console.log('📱 Successfully opened shared content in Mini App');
         }
       } catch (error) {
         console.error('❌ Farcaster SDK initialization failed:', error);
-        // This should only fail when not in Farcaster environment
       }
     };
 
-    // Small delay to allow providers to initialize first
-    const timeout = setTimeout(initializeFarcasterMiniApp, 200);
-    return () => clearTimeout(timeout);
-  }, []);
+    initializeFarcasterMiniApp();
+  }, [isInFarcaster, isLoading]);
 
   return (
     <>
