@@ -7,10 +7,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { FarcasterService } from '../features/evermarks/services/FarcasterService';
 import type { FarcasterCastData } from '../features/evermarks/types';
 
-// Import Neynar client (to be placed at app level, not in evermarks feature)
-import { neynarClient } from './neynar/neynarClient';
-import type { AppFarcasterUser } from './neynar/neynarTypes';
-import { farcasterUserService } from '../services/FarcasterUserService';
+// Removed Neynar imports - handled by official SDK
 
 interface FarcasterFrameContext {
   user?: {
@@ -27,9 +24,9 @@ interface FarcasterContextType {
   isInFarcaster: boolean;
   isFrameSDKReady: boolean;
   
-  // Authentication state (integrates with your AppContext)
+  // Authentication state (simplified - frame context only)
   isAuthenticated: boolean;
-  user: AppFarcasterUser | null;
+  user: null; // Neynar SDK handles user state
   frameContext: FarcasterFrameContext | null;
   
   // Loading states
@@ -88,74 +85,42 @@ export function FarcasterProvider({ children }: FarcasterProviderProps) {
   
   const [isFrameSDKReady, setIsFrameSDKReady] = useState(false);
   
-  // User state
-  const [user, setUser] = useState<AppFarcasterUser | null>(null);
+  // No user state - Neynar SDK handles authentication
   const [frameContext, setFrameContext] = useState<FarcasterFrameContext | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Initialize Frame SDK - ALWAYS attempt initialization for Mini Apps
+  // Simplified Frame SDK initialization for Mini Apps only
   useEffect(() => {
     const initializeFrameSDK = async () => {
+      if (!isInFarcaster) {
+        setIsFrameSDKReady(false);
+        return;
+      }
+
       try {
         setIsLoading(true);
         setError(null);
 
-
-        // Wait for Frame SDK to be available (required for Mini Apps)
-        let attempts = 0;
-        const maxAttempts = 50;
-        
-        while (!window.FrameSDK && attempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-          attempts++;
-        }
-
-        if (!window.FrameSDK) {
-          // For Mini Apps, we still call ready() even without SDK detection
-          console.warn('⚠️ Frame SDK not available after 5s wait');
-          setIsFrameSDKReady(false);
-          
-          // Try importing and calling ready from the modern SDK
-          try {
-            const { sdk } = await import('@farcaster/frame-sdk');
-            await sdk.actions.ready();
-            console.log('✅ Modern Frame SDK ready() called');
-            setIsFrameSDKReady(true);
-          } catch (modernSDKError) {
-            console.warn('⚠️ Modern Frame SDK also not available');
-          }
-          return;
-        }
-
-        // Initialize SDK - ALWAYS call ready() for Mini Apps
-        if (window.FrameSDK.actions?.ready) {
-          await window.FrameSDK.actions.ready({ 
-            disableNativeGestures: true 
-          });
+        // Simple Frame SDK initialization (no complex retry logic)
+        if (window.FrameSDK?.actions?.ready) {
+          await window.FrameSDK.actions.ready({ disableNativeGestures: true });
           console.log('✅ Frame SDK initialized');
-        }
-
-        setIsFrameSDKReady(true);
-
-        // Get frame context (may be empty if not in frame)
-        const context: FarcasterFrameContext = window.FrameSDK.context || {};
-        setFrameContext(context);
-        
-        console.log('📱 Frame context:', context);
-
-        // Only fetch user profiles if we're actually in Farcaster AND have user info
-        if (isInFarcaster) {
-          if (context.user?.fid) {
-            await fetchUserProfile(context.user.fid);
-          } else if (context.user?.username) {
-            await fetchUserByUsername(context.user.username);
-          }
+          setIsFrameSDKReady(true);
+          
+          // Get frame context only (no user profile fetching)
+          const context: FarcasterFrameContext = window.FrameSDK.context || {};
+          setFrameContext(context);
+          console.log('📱 Frame context:', context);
+        } else {
+          console.log('🌐 Frame SDK not available - not in frame context');
+          setIsFrameSDKReady(false);
         }
 
       } catch (err) {
         console.error('❌ Frame SDK initialization failed:', err);
         setError(err instanceof Error ? err.message : 'Frame SDK initialization failed');
+        setIsFrameSDKReady(false);
       } finally {
         setIsLoading(false);
       }
@@ -163,87 +128,35 @@ export function FarcasterProvider({ children }: FarcasterProviderProps) {
 
     const timeout = setTimeout(initializeFrameSDK, 100);
     return () => clearTimeout(timeout);
-  }, []); // Remove isInFarcaster dependency - always try to initialize
+  }, [isInFarcaster]);
 
-  // Fetch user profile by FID using our service
-  const fetchUserProfile = useCallback(async (fid: number): Promise<void> => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      // Use our FarcasterUserService
-      const profile = await farcasterUserService.fetchUserByFid(fid);
-      
-      if (profile) {
-        setUser(profile);
-        console.log('✅ Fetched Farcaster profile:', profile.username);
-      } else {
-        console.warn('⚠️ No profile found for FID:', fid);
-        setError('Unable to load Farcaster profile');
-      }
-    } catch (err) {
-      console.error('❌ Failed to fetch user profile:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load profile');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  // Fetch user profile by username
-  const fetchUserByUsername = useCallback(async (username: string): Promise<void> => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const profile = await farcasterUserService.fetchUserByUsername(username);
-      
-      if (profile) {
-        setUser(profile);
-        console.log('✅ Fetched Farcaster profile by username:', profile.username);
-      } else {
-        console.warn('⚠️ No profile found for username:', username);
-        setError('Unable to load Farcaster profile');
-      }
-    } catch (err) {
-      console.error('❌ Failed to fetch user by username:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load profile');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  // Refresh current user
+  // Simplified refresh - no user profile fetching (Neynar handles this)
   const refreshUser = useCallback(async (): Promise<void> => {
-    if (user?.fid) {
-      await fetchUserProfile(user.fid);
-    } else if (frameContext?.user?.fid) {
-      await fetchUserProfile(frameContext.user.fid);
-    } else if (frameContext?.user?.username) {
-      await fetchUserByUsername(frameContext.user.username);
-    }
-  }, [user, frameContext, fetchUserProfile, fetchUserByUsername]);
+    console.log('🔄 Frame context refresh requested');
+    // Frame context is read-only - just clear any errors
+    setError(null);
+  }, []);
 
   // Clear error
   const clearError = useCallback(() => {
     setError(null);
   }, []);
 
-  // INTEGRATION: Get user data formatted for evermark creation
+  // INTEGRATION: Get user data formatted for evermark creation (from frame context only)
   const getUserForEvermarkCreation = useCallback(() => {
-    if (!user && !frameContext?.user) return null;
+    if (!frameContext?.user) return null;
 
-    const displayName = user?.displayName || frameContext?.user?.displayName || user?.username || 'Farcaster User';
-    const author = user?.username ? `@${user.username}` : displayName;
-    const pfpUrl = user?.pfpUrl || frameContext?.user?.pfpUrl;
-    const verifiedAddress = user?.verifiedAddresses?.[0];
+    const displayName = frameContext.user.displayName || frameContext.user.username || 'Farcaster User';
+    const author = frameContext.user.username ? `@${frameContext.user.username}` : displayName;
+    const pfpUrl = frameContext.user.pfpUrl;
 
     return {
       displayName,
       author,
       pfpUrl,
-      verifiedAddress
+      verifiedAddress: undefined // Neynar SDK provides this separately
     };
-  }, [user, frameContext]);
+  }, [frameContext]);
 
   // INTEGRATION: Delegate cast validation to existing FarcasterService
   const validateCastInput = useCallback((input: string) => {
@@ -255,35 +168,35 @@ export function FarcasterProvider({ children }: FarcasterProviderProps) {
     return await FarcasterService.fetchCastMetadata(input);
   }, []);
 
-  // Utility functions
+  // Simplified utility functions (no user state, just frame context)
   const getPrimaryAddress = useCallback((): string | null => {
-    return user?.verifiedAddresses?.[0] || null;
-  }, [user]);
+    return null; // Neynar SDK handles address resolution
+  }, []);
 
   const getVerifiedAddresses = useCallback((): string[] => {
-    return user?.verifiedAddresses || [];
-  }, [user]);
+    return []; // Neynar SDK handles verified addresses
+  }, []);
 
   const getUserDisplayName = useCallback((): string | null => {
-    return user?.displayName || frameContext?.user?.displayName || user?.username || null;
-  }, [user, frameContext]);
+    return frameContext?.user?.displayName || frameContext?.user?.username || null;
+  }, [frameContext]);
 
   const getUserProfileUrl = useCallback((): string | null => {
-    if (!user?.username) return null;
-    return `https://warpcast.com/${user.username}`;
-  }, [user]);
+    if (!frameContext?.user?.username) return null;
+    return `https://warpcast.com/${frameContext.user.username}`;
+  }, [frameContext]);
 
-  // Calculate authentication state
-  const isAuthenticated = !!(user || frameContext?.user);
+  // Calculate authentication state (frame context only)
+  const isAuthenticated = !!frameContext?.user;
 
   const value: FarcasterContextType = {
     // Detection state
     isInFarcaster,
     isFrameSDKReady,
     
-    // Authentication state
+    // Authentication state (simplified - just frame context)
     isAuthenticated,
-    user,
+    user: null, // No user state - Neynar SDK handles this
     frameContext,
     
     // Loading states
@@ -321,28 +234,25 @@ export function useFarcasterUser(): FarcasterContextType {
   return context;
 }
 
-// Convenience hooks for specific use cases
+// Simplified convenience hooks (frame context only)
 export function useFarcasterAuth() {
-  const { isAuthenticated, user, isLoading } = useFarcasterUser();
-  return { isAuthenticated, user, isLoading };
+  const { isAuthenticated, isLoading } = useFarcasterUser();
+  return { isAuthenticated, user: null, isLoading }; // No user state
 }
 
 export function useFarcasterProfile() {
   const { 
-    user, 
     getUserDisplayName, 
     getUserProfileUrl, 
-    getPrimaryAddress,
-    getVerifiedAddresses,
     refreshUser 
   } = useFarcasterUser();
   
   return {
-    user,
+    user: null, // No user state - use Neynar SDK
     displayName: getUserDisplayName(),
     profileUrl: getUserProfileUrl(),
-    primaryAddress: getPrimaryAddress(),
-    verifiedAddresses: getVerifiedAddresses(),
+    primaryAddress: null, // Neynar SDK handles this
+    verifiedAddresses: [], // Neynar SDK handles this
     refreshProfile: refreshUser
   };
 }
@@ -358,18 +268,18 @@ export function useFarcasterForEvermarks() {
   } = useFarcasterUser();
   
   return {
-    // User data formatted for evermark creation
+    // Frame context data for evermark creation (basic info only)
     farcasterUser: getUserForEvermarkCreation(),
     
-    // Cast handling (delegates to your existing services)
+    // Cast handling (delegates to existing services)
     validateCastInput,
     fetchCastData,
     
     // State
-    isAuthenticated,
+    isAuthenticated, // Frame context available
     isInFarcaster,
     
-    // Helper to check if we should auto-populate forms
+    // Helper to check if we should auto-populate forms (frame context only)
     shouldAutoPopulate: isAuthenticated && isInFarcaster
   };
 }
@@ -386,4 +296,4 @@ export function useFarcasterFrame() {
 }
 
 // Type exports for external use
-export type { AppFarcasterUser, FarcasterFrameContext };
+export type { FarcasterFrameContext };

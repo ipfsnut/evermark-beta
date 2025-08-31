@@ -130,10 +130,12 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
   // Show Neynar auth button if in Farcaster context
   if (isInFarcaster) {
     return (
-      <NeynarAuthButton 
-        label="Sign in with Farcaster"
-        variant={SIWN_variant.FARCASTER}
-      />
+      <div className={className}>
+        <NeynarAuthButton 
+          label="Sign in with Farcaster"
+          variant={SIWN_variant.FARCASTER}
+        />
+      </div>
     );
   }
 

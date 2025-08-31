@@ -29,17 +29,14 @@ export function WalletProvider({ children }: WalletProviderProps) {
   const { connect: thirdwebConnect, isConnecting } = useConnect();
   const { disconnect: thirdwebDisconnect } = useDisconnect();
   
-  // Neynar authentication integration
+  // Neynar authentication integration (official SDK)
   const neynarAuth = useNeynarContext();
   
-  // Get SIWN address from Neynar user
-  const getSIWNAddress = () => {
-    return neynarAuth?.user?.verified_addresses?.eth_addresses?.[0] || 
-           neynarAuth?.user?.custody_address || null;
-  };
-  
-  // Use SIWN address if available, fallback to Thirdweb account
-  const walletAddress = getSIWNAddress() || account?.address || null;
+  // Use Neynar address if available, fallback to Thirdweb account
+  const walletAddress = neynarAuth?.user?.verified_addresses?.eth_addresses?.[0] ||
+                       neynarAuth?.user?.custody_address ||
+                       account?.address || 
+                       null;
   const isConnected = !!walletAddress;
   
   // Track auto-connection state
@@ -61,14 +58,15 @@ export function WalletProvider({ children }: WalletProviderProps) {
                       (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile/i.test(navigator.userAgent) ||
                        window.innerWidth <= 768);
       
-      // PRIORITY 1: Farcaster context - use SIWN (work or fail clearly)
+      // PRIORITY 1: Farcaster context - use Neynar authentication
       if (isInFarcaster) {
-        console.log('🎯 Farcaster context - using SIWN authentication');
+        console.log('🎯 Farcaster context - using Neynar authentication');
         
-        // Check if already authenticated
-        const siwnAddress = getSIWNAddress();
-        if (siwnAddress) {
-          console.log('✅ Already authenticated via SIWN:', siwnAddress);
+        // Check if already authenticated via Neynar
+        const neynarAddress = neynarAuth?.user?.verified_addresses?.eth_addresses?.[0] ||
+                             neynarAuth?.user?.custody_address;
+        if (neynarAddress) {
+          console.log('✅ Already authenticated via Neynar:', neynarAddress);
           return { success: true };
         }
         
@@ -173,7 +171,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
         testMode,
         isMobile,
         hasWalletAddress: !!walletAddress,
-        isSIWNAuthenticated: !!neynarAuth?.user,
+        isNeynarAuthenticated: !!neynarAuth?.user,
         isConnecting,
         shouldAutoConnect,
         attempted: autoConnectAttempted.current

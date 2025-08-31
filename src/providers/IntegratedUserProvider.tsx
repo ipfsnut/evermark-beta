@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useActiveAccount } from 'thirdweb/react';
-import { useFarcasterUser } from '../lib/farcaster';
+import { useNeynarContext } from '@neynar/react';
 import { EnhancedUserService, type EnhancedUser } from '../services';
 
 interface IntegratedUserContextType {
@@ -49,19 +49,19 @@ interface IntegratedUserProviderProps {
 
 export function IntegratedUserProvider({ children }: IntegratedUserProviderProps) {
   const account = useActiveAccount();
-  const farcaster = useFarcasterUser();
+  const neynarAuth = useNeynarContext();
   
   const [user, setUser] = useState<EnhancedUser | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load user profile when wallet or Farcaster changes
+  // Load user profile when wallet or Neynar auth changes
   useEffect(() => {
     loadUserProfile();
-  }, [account?.address, farcaster.user?.fid, farcaster.isAuthenticated]);
+  }, [account?.address, neynarAuth?.user?.fid]);
 
   const loadUserProfile = useCallback(async () => {
-    if (!account?.address && !farcaster.user) {
+    if (!account?.address && !neynarAuth?.user) {
       setUser(null);
       return;
     }
@@ -72,10 +72,10 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
     try {
       let enhancedUser: EnhancedUser | null = null;
 
-      // Priority 1: Farcaster user (best identity data)
-      if (farcaster.user && farcaster.isAuthenticated) {
-        console.log('🎯 Loading profile from Farcaster FID:', farcaster.user.fid);
-        enhancedUser = await EnhancedUserService.getUserByFarcasterFID(farcaster.user.fid);
+      // Priority 1: Neynar user (best identity data)
+      if (neynarAuth?.user?.fid) {
+        console.log('🎯 Loading profile from Neynar FID:', neynarAuth.user.fid);
+        enhancedUser = await EnhancedUserService.getUserByFarcasterFID(neynarAuth.user.fid);
       }
       
       // Priority 2: Wallet address (try to enhance with ENS)
@@ -104,7 +104,7 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
     } finally {
       setIsLoading(false);
     }
-  }, [account?.address, farcaster.user, farcaster.isAuthenticated]);
+  }, [account?.address, neynarAuth?.user]);
 
   const refreshUser = useCallback(async () => {
     EnhancedUserService.clearCache();
