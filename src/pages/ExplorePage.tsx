@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 
 import { useAppAuth } from '@/providers/AppContext';
-import { useFarcasterUser } from '@/lib/farcaster';
+import { useFarcasterDetection } from '@/hooks/useFarcasterDetection';
 import { themeClasses, cn } from '@/utils/theme';
 import { useTheme } from '@/providers/ThemeProvider';
 import { useIsMobile } from '@/utils/responsive';
@@ -203,7 +203,7 @@ const ExploreContent: React.FC<{
 export default function ExplorePage() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAppAuth();
-  const { isInFarcaster } = useFarcasterUser();
+  const { isInFarcaster } = useFarcasterDetection();
   const { isDark } = useTheme();
   const isMobile = useIsMobile();
   

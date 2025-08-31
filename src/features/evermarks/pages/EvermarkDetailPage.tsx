@@ -25,7 +25,7 @@ import { useEvermarksState, type Evermark } from '@/features/evermarks';
 import { ResponsiveEvermarkImage } from '@/components/images/ResponsiveEvermarkImage';
 import { VotingPanel } from '@/features/voting';
 import { useAppAuth } from '@/providers/AppContext';
-import { useFarcasterUser } from '@/lib/farcaster';
+import { useFarcasterDetection } from '@/hooks/useFarcasterDetection';
 import { EvermarkMeta } from '@/components/FarcasterMeta';
 
 // Utility function for responsive classes
@@ -166,7 +166,7 @@ export default function EvermarkDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAuthenticated } = useAppAuth();
-  const { isInFarcaster } = useFarcasterUser();
+  const { isInFarcaster } = useFarcasterDetection();
   const isMobile = useIsMobile();
   
   const [evermark, setEvermark] = useState<Evermark | null>(null);

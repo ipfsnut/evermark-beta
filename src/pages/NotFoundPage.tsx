@@ -11,7 +11,7 @@ import {
   RefreshCwIcon,
   AlertTriangleIcon
 } from 'lucide-react';
-import { useFarcasterUser } from '@/lib/farcaster';
+import { useFarcasterDetection } from '@/hooks/useFarcasterDetection';
 import { useAppAuth } from '@/providers/AppContext';
 import { cn, useIsMobile } from '@/utils/responsive';
 
@@ -76,7 +76,7 @@ const ActionCard: React.FC<{
 
 export default function NotFoundPage() {
   const navigate = useNavigate();
-  const { isInFarcaster } = useFarcasterUser();
+  const { isInFarcaster } = useFarcasterDetection();
   const { isAuthenticated } = useAppAuth();
   const isMobile = useIsMobile();
 

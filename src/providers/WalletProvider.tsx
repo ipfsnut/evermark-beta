@@ -34,7 +34,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
   const context = isInFarcaster ? 'farcaster' : isPWA ? 'pwa' : 'browser';
 
   // Farcaster context: Neynar + Mini App Wagmi
-  let neynarAuth = null;
+  let neynarAuth: any = null;
   try {
     neynarAuth = isInFarcaster ? useNeynarContext() : null;
   } catch {

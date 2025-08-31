@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 
 export function useFarcasterDetection() {
   const [isInFarcaster, setIsInFarcaster] = useState(false);
-  const [miniAppContext, setMiniAppContext] = useState(null);
+  const [miniAppContext, setMiniAppContext] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -11,7 +11,7 @@ export function useFarcasterDetection() {
       try {
         // Try to access miniapp-sdk context
         const { sdk } = await import('@farcaster/miniapp-sdk');
-        const context = sdk.context;
+        const context = await sdk.context;
         
         // Only consider it Farcaster if we have a real user context AND we're not on localhost
         const isLocalhost = typeof window !== 'undefined' && 
