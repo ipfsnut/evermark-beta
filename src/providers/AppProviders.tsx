@@ -54,43 +54,25 @@ export function AppProviders({ children }: AppProvidersProps) {
   }
 
   // Farcaster Mini App Provider Stack  
+  // NOTE: NeynarContextProvider removed due to React Error #31 in production
+  // The miniapp-wagmi-connector provides wallet access directly
   if (isInFarcaster) {
-    console.log('🎯 Loading Farcaster Mini App providers (Neynar + Mini App Wagmi)');
-    
-    const neynarClientId = import.meta.env.VITE_NEYNAR_CLIENT_ID;
-    
-    if (!neynarClientId) {
-      console.error('❌ VITE_NEYNAR_CLIENT_ID is required for Farcaster context');
-      return (
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-lg text-red-500">Configuration Error: Missing Neynar Client ID</div>
-        </div>
-      );
-    }
-
-    // Create settings object with only the required clientId
-    const neynarSettings = {
-      clientId: neynarClientId
-    };
-
-    console.log('🔧 Neynar settings:', neynarSettings);
+    console.log('🎯 Loading Farcaster Mini App providers (Mini App Wagmi)');
 
     return (
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
-          <NeynarContextProvider settings={neynarSettings}>
-            <WagmiProvider config={miniAppWagmiConfig}>
-              <WalletProvider>
-                <BlockchainProvider>
-                  <IntegratedUserProvider>
-                    <AppContextProvider>
-                      {children}
-                    </AppContextProvider>
-                  </IntegratedUserProvider>
-                </BlockchainProvider>
-              </WalletProvider>
-            </WagmiProvider>
-          </NeynarContextProvider>
+          <WagmiProvider config={miniAppWagmiConfig}>
+            <WalletProvider>
+              <BlockchainProvider>
+                <IntegratedUserProvider>
+                  <AppContextProvider>
+                    {children}
+                  </AppContextProvider>
+                </IntegratedUserProvider>
+              </BlockchainProvider>
+            </WalletProvider>
+          </WagmiProvider>
         </ThemeProvider>
       </QueryClientProvider>
     );

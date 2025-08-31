@@ -1,7 +1,6 @@
 // src/providers/WalletProvider.tsx - Unified wallet state for all contexts
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useActiveAccount } from 'thirdweb/react';
-import { useNeynarContext } from '@neynar/react';
 import { useAccount } from 'wagmi';
 import { useFarcasterDetection } from '../hooks/useFarcasterDetection';
 
@@ -33,13 +32,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
     window.matchMedia('(display-mode: standalone)').matches;
   const context = isInFarcaster ? 'farcaster' : isPWA ? 'pwa' : 'browser';
 
-  // Farcaster context: Neynar + Mini App Wagmi
-  let neynarAuth: any = null;
-  try {
-    neynarAuth = isInFarcaster ? useNeynarContext() : null;
-  } catch {
-    neynarAuth = null;
-  }
+  // Farcaster context: Mini App Wagmi only (Neynar removed due to React error)
   
   const miniAppAccount = isInFarcaster ? useAccount() : null; // From miniapp-wagmi-connector
   
@@ -48,11 +41,9 @@ export function WalletProvider({ children }: WalletProviderProps) {
 
   // Unified wallet address (single source per context)
   const walletAddress = 
-    // Priority 1: Farcaster - use custody address from Neynar
-    (isInFarcaster && neynarAuth?.user?.custody_address) ||
-    // Priority 2: Farcaster - fallback to Mini App Wagmi
+    // Priority 1: Farcaster - use Mini App Wagmi
     (isInFarcaster && miniAppAccount?.address) ||
-    // Priority 3: Browser/PWA - use Thirdweb
+    // Priority 2: Browser/PWA - use Thirdweb
     (!isInFarcaster && thirdwebAccount?.address) ||
     null;
 
@@ -60,7 +51,6 @@ export function WalletProvider({ children }: WalletProviderProps) {
   
   // Determine connection source for debugging
   const connectionSource = 
-    (isInFarcaster && neynarAuth?.user?.custody_address) ? 'neynar' :
     (isInFarcaster && miniAppAccount?.address) ? 'miniapp-wagmi' :
     (!isInFarcaster && thirdwebAccount?.address) ? 'thirdweb' :
     null;
@@ -79,19 +69,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
   };
 
   const disconnect = async (): Promise<void> => {
-    try {
-      if (isInFarcaster && neynarAuth) {
-        // Neynar disconnect (if available)
-        console.log('🎯 Disconnecting Neynar auth');
-        // Neynar SDK should handle this
-      } else {
-        // Thirdweb disconnect
-        console.log('🌐 Disconnecting Thirdweb wallet');
-        // Thirdweb disconnect handled by useDisconnect hook in components
-      }
-    } catch (error) {
-      console.error('Failed to disconnect:', error);
-    }
+    console.log('Disconnect requested - handled by ConnectButton component');
   };
 
   // Debug logging
@@ -101,7 +79,6 @@ export function WalletProvider({ children }: WalletProviderProps) {
       address: walletAddress,
       isConnected,
       connectionSource,
-      neynarUser: neynarAuth?.user ? 'present' : 'none',
       thirdwebAccount: thirdwebAccount ? 'present' : 'none',
       miniAppAccount: miniAppAccount ? 'present' : 'none'
     });

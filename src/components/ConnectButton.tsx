@@ -2,7 +2,6 @@
 import React from 'react';
 import { ConnectButton, useActiveAccount } from 'thirdweb/react';
 import { useConnect } from 'wagmi';
-import { NeynarAuthButton, SIWN_variant } from '@neynar/react';
 import { WalletIcon, UserIcon, LogOutIcon } from 'lucide-react';
 import { createWallet, inAppWallet } from 'thirdweb/wallets';
 
@@ -95,13 +94,16 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
 
   // Not connected - show appropriate connection method
   
-  // Farcaster context - use Neynar SIWN
+  // Farcaster context - wallet connects automatically via miniapp-wagmi-connector
   if (context === 'farcaster') {
     return (
       <div className={className}>
-        <NeynarAuthButton 
-          variant={SIWN_variant.FARCASTER}
-        />
+        <button 
+          className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-cyber-primary to-cyber-secondary text-black font-medium rounded-lg hover:opacity-90 transition-opacity"
+        >
+          <WalletIcon className="h-4 w-4 mr-2" />
+          Connecting...
+        </button>
       </div>
     );
   }
