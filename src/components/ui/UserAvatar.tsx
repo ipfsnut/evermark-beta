@@ -261,7 +261,7 @@ export function UserAvatarWithInfo({
   layout?: 'horizontal' | 'vertical';
 }) {
   const displayName = user?.displayName || user?.username;
-  const displayAddress = address?.slice(0, 6) + '...' + address?.slice(-4);
+  const displayAddress = `${address?.slice(0, 6)  }...${  address?.slice(-4)}`;
 
   return (
     <div 

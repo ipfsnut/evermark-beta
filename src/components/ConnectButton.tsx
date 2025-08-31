@@ -7,7 +7,6 @@ import { createWallet, inAppWallet } from 'thirdweb/wallets';
 import { client } from '@/lib/thirdweb';
 import { CHAIN } from '@/lib/contracts';
 import { useWallet } from '../providers/WalletProvider';
-import { useFarcasterDetection } from '../hooks/useFarcasterDetection';
 
 interface WalletConnectProps {
   className?: string;
@@ -29,7 +28,6 @@ const getPWAWallets = () => [
 
 export function WalletConnect({ className = '', variant = 'default' }: WalletConnectProps) {
   const { address, isConnected, context, disconnect } = useWallet();
-  const { isInFarcaster } = useFarcasterDetection();
   
   // Get display info based on context
   const getDisplayInfo = () => {

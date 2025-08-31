@@ -155,7 +155,7 @@ export function useStakingStats(): StakingStatsData {
       totalEmarkSupply: totalEmarkSupply.toString(),
       totalUnbonding: totalUnbondingAmount.toString(),
       activeStakers,
-      stakingRatio: stakingRatio.toFixed(2) + '%',
+      stakingRatio: `${stakingRatio.toFixed(2)  }%`,
       wEmarkSupply: totalWEmark.toString(),
       liquidEmark: liquidEmark.toString(),
       // New reward calculation data
@@ -164,7 +164,7 @@ export function useStakingStats(): StakingStatsData {
       currentEmarkPool: currentEmarkPool?.toString(),
       weeklyRewards: weeklyRewards.toString(),
       dailyRewards: dailyRewards.toString(),
-      realTimeAPR: realTimeAPR.toFixed(2) + '%',
+      realTimeAPR: `${realTimeAPR.toFixed(2)  }%`,
       isLoading
     });
     

@@ -36,10 +36,10 @@ const ProtocolStats: React.FC = () => {
   const safeEvermarks = Array.isArray(evermarks) ? evermarks : [];
   const stats = {
     totalEvermarks: totalCount || 0,
-    withImages: safeEvermarks.filter(e => e && e.image).length,
+    withImages: safeEvermarks.filter(e => e?.image).length,
     activeCreators: new Set(safeEvermarks.filter(e => e && e.author).map(e => e.author)).size,
     thisWeek: safeEvermarks.filter(e => {
-      if (!e || !e.createdAt) return false;
+      if (!e?.createdAt) return false;
       try {
         const weekAgo = new Date();
         weekAgo.setDate(weekAgo.getDate() - 7);

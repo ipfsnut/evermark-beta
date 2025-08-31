@@ -4,7 +4,8 @@ import { DelegateButton } from './components/DelegateButton';
 import { VotingPanel } from './components/VotingPanel';
 import { useVotingState } from './hooks/useVotingState';
 import { VotingService } from './services/VotingService';
-import { BatchVotingRequest, EvermarkRanking, VOTING_CONSTANTS, VotingAnalytics, VotingError, VotingErrorCode, VotingFeatureFlags, VotingNotification, VotingPerformanceMetrics, VotingPower, VotingTheme, VotingTransaction, VotingValidation, Vote } from './types';
+import type { BatchVotingRequest, EvermarkRanking, VotingAnalytics, VotingError, VotingErrorCode, VotingFeatureFlags, VotingNotification, VotingPerformanceMetrics, VotingPower, VotingTheme, VotingTransaction, VotingValidation, Vote } from './types';
+import { VOTING_CONSTANTS } from './types';
 
 // Types - Export all public interfaces
 export type {

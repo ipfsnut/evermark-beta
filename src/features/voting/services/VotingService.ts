@@ -292,7 +292,7 @@ export class VotingService {
   static async getTimeRemainingInSeason(): Promise<number> {
     try {
       const currentSeason = await this.getCurrentSeason();
-      if (!currentSeason || !currentSeason.isActive) {
+      if (!currentSeason?.isActive) {
         return 0;
       }
 

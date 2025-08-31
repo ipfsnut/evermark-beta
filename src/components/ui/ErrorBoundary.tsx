@@ -1,5 +1,6 @@
 // src/components/ui/ErrorBoundary.tsx - Error boundary for graceful error handling
-import { Component, ErrorInfo, ReactNode } from 'react';
+import type { ErrorInfo, ReactNode } from 'react';
+import { Component } from 'react';
 import { AlertTriangleIcon, RefreshCwIcon, HomeIcon } from 'lucide-react';
 import { themeClasses } from '../../utils/theme';
 

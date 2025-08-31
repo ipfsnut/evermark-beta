@@ -346,11 +346,11 @@ export class EvermarkBlockchainService {
       
       // Log all parameters before preparing transaction
       console.log('📝 Transaction parameters:', {
-        metadataURI: metadataURI,
+        metadataURI,
         metadataURIType: typeof metadataURI,
-        title: title,
+        title,
         titleType: typeof title,
-        creator: creator,
+        creator,
         creatorType: typeof creator,
         mintingFee: mintingFee.toString(),
         mintingFeeType: typeof mintingFee

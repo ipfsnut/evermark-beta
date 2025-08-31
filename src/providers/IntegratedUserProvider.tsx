@@ -164,7 +164,7 @@ function FarcasterIntegratedUserProvider({ children }: { children: React.ReactNo
   const getPrimaryIdentity = useCallback((): 'farcaster' | 'ens' | 'wallet' | null => {
     if (!user) return null;
     
-    if (user.farcaster && user.farcaster.isVerified) return 'farcaster';
+    if (user.farcaster?.isVerified) return 'farcaster';
     if (user.ens) return 'ens';
     if (user.farcaster) return 'farcaster';
     if (user.wallet) return 'wallet';
@@ -337,7 +337,7 @@ function BrowserIntegratedUserProvider({ children }: { children: React.ReactNode
   const getPrimaryIdentity = useCallback((): 'farcaster' | 'ens' | 'wallet' | null => {
     if (!user) return null;
     
-    if (user.farcaster && user.farcaster.isVerified) return 'farcaster';
+    if (user.farcaster?.isVerified) return 'farcaster';
     if (user.ens) return 'ens';
     if (user.farcaster) return 'farcaster';
     if (user.wallet) return 'wallet';

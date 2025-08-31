@@ -133,7 +133,7 @@ export class EvermarkValidator {
     }
 
     // URL validation
-    if (metadata.sourceUrl && metadata.sourceUrl.trim()) {
+    if (metadata.sourceUrl?.trim()) {
       if (!Validators.isValidUrl(metadata.sourceUrl)) {
         errors.push({ field: 'sourceUrl', message: 'Source URL must be a valid URL' });
       }

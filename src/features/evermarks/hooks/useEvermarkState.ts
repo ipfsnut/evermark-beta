@@ -70,7 +70,7 @@ const TempEvermarkService = {
           ...item,
           id: item.token_id,
           tokenId: item.token_id, // Add tokenId for components
-          tags: tags, // Ensure tags is always an array
+          tags, // Ensure tags is always an array
           ipfsHash: item.ipfs_image_hash, // Map IPFS hash
           image: item.supabase_image_url || (item.ipfs_image_hash ? `ipfs://${item.ipfs_image_hash}` : undefined), // Prioritize Supabase cached images
           createdAt: item.created_at || new Date().toISOString(),
@@ -258,7 +258,7 @@ const TempEvermarkService = {
       const creatorAddress = accountAddress; // Always use full wallet address for blockchain
       console.log('🔍 Creator address debugging:', {
         metadataAuthor: metadata.author,
-        accountAddress: accountAddress,
+        accountAddress,
         finalCreatorAddress: creatorAddress,
         finalCreatorType: typeof creatorAddress,
         finalCreatorLength: creatorAddress?.length,

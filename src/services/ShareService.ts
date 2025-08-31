@@ -201,7 +201,7 @@ export class ShareService {
       await navigator.share({
         title: `Evermark: ${evermark.title}`,
         text: `Check out this Evermark: "${evermark.title}"`,
-        url: url
+        url
       });
 
       // Record the share
@@ -290,7 +290,7 @@ export class ShareService {
       await navigator.share({
         title: `Evermark Docs: ${docTitle}`,
         text: `Check out this Evermark documentation: "${docTitle}"`,
-        url: url
+        url
       });
     } catch (error) {
       if ((error as Error).name !== 'AbortError') {

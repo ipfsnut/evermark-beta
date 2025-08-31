@@ -181,7 +181,7 @@ export const evermarksUtils = {
     
     // Check required fields
     for (const field of config.requiredFields) {
-      if (!data[field] || !data[field].toString().trim()) {
+      if (!data[field]?.toString().trim()) {
         errors.push(`${field} is required for ${config.name}`);
       }
     }
@@ -249,7 +249,7 @@ export const evermarksUtils = {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     if (bytes === 0) return '0 Bytes';
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+    return `${Math.round(bytes / Math.pow(1024, i) * 100) / 100  } ${  sizes[i]}`;
   },
   
   /**

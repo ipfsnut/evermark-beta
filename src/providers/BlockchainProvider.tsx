@@ -1,5 +1,6 @@
 // src/providers/BlockchainProvider.tsx - Simple blockchain state management
-import { createContext, useContext, ReactNode } from 'react';
+import type { ReactNode } from 'react';
+import { createContext, useContext } from 'react';
 import { useActiveAccount } from 'thirdweb/react';
 import { validateContractAddresses } from '../lib/contracts';
 

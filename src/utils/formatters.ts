@@ -49,7 +49,7 @@ export class Formatters {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     if (bytes === 0) return '0 Bytes';
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+    return `${Math.round(bytes / Math.pow(1024, i) * 100) / 100  } ${  sizes[i]}`;
   }
 
   /**
@@ -93,7 +93,7 @@ export class Formatters {
       
       return `${domain}${path.slice(0, maxLength - domain.length - 3)}...`;
     } catch {
-      return url.slice(0, maxLength - 3) + '...';
+      return `${url.slice(0, maxLength - 3)  }...`;
     }
   }
 

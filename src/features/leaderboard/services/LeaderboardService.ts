@@ -1,7 +1,7 @@
 // src/features/leaderboard/services/LeaderboardService.ts
 // Offchain leaderboard service - calculates rankings from evermark data
 
-import { 
+import type { 
   LeaderboardEntry, 
   LeaderboardFeedResult, 
   LeaderboardStats,

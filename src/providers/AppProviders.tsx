@@ -55,22 +55,24 @@ export function AppProviders({ children }: AppProvidersProps) {
 
   // Farcaster Mini App Provider Stack with Neynar authentication
   if (isInFarcaster) {
-    console.log('🎯 Loading Farcaster Mini App providers (Mini App Wagmi + Neynar)');
+    console.log('🎯 Loading Farcaster Mini App providers (Mini App Wagmi + Thirdweb + Neynar)');
 
     return (
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
-          <WagmiProvider config={miniAppWagmiConfig}>
-              <WalletProvider>
-                <BlockchainProvider>
-                  <IntegratedUserProvider>
-                    <AppContextProvider>
-                      {children}
-                    </AppContextProvider>
-                  </IntegratedUserProvider>
-                </BlockchainProvider>
-              </WalletProvider>
-            </WagmiProvider>
+          <ThirdwebProvider>
+            <WagmiProvider config={miniAppWagmiConfig}>
+                <WalletProvider>
+                  <BlockchainProvider>
+                    <IntegratedUserProvider>
+                      <AppContextProvider>
+                        {children}
+                      </AppContextProvider>
+                    </IntegratedUserProvider>
+                  </BlockchainProvider>
+                </WalletProvider>
+              </WagmiProvider>
+          </ThirdwebProvider>
         </ThemeProvider>
       </QueryClientProvider>
     );

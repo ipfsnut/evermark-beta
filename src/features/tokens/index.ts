@@ -5,7 +5,8 @@ import { RewardsClaiming } from './components/RewardsClaiming';
 import { useTokenState } from './hooks/useTokenState';
 import { TokenService } from './services/TokenService';
 import { RewardsService } from './services/RewardsService';
-import { TOKEN_CONSTANTS, TokenApprovalParams, TokenDisplayInfo } from './types';
+import type { TokenApprovalParams, TokenDisplayInfo } from './types';
+import { TOKEN_CONSTANTS } from './types';
 
 // Types - Export all public interfaces
 export type {

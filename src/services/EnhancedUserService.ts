@@ -299,7 +299,7 @@ export class EnhancedUserService {
       console.log('🔍 Attempting ENS resolution for:', address);
       
       const ensData = await ENSResolver.resolveAddress(address);
-      if (!ensData || !ensData.name) {
+      if (!ensData?.name) {
         console.log('No ENS name found for address');
         return null;
       }
