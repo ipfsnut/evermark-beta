@@ -68,10 +68,17 @@ export function AppProviders({ children }: AppProvidersProps) {
       );
     }
 
+    // Create settings object with only the required clientId
+    const neynarSettings = {
+      clientId: neynarClientId
+    };
+
+    console.log('🔧 Neynar settings:', neynarSettings);
+
     return (
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
-          <NeynarContextProvider>
+          <NeynarContextProvider settings={neynarSettings}>
             <WagmiProvider config={miniAppWagmiConfig}>
               <WalletProvider>
                 <BlockchainProvider>
