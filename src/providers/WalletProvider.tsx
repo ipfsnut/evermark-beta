@@ -37,6 +37,11 @@ export function WalletProvider({ children }: WalletProviderProps) {
     neynarAuth = null; // Not in Neynar context
   }
   
+  // Debug: Log what's actually available on Neynar user object
+  if (neynarAuth?.user) {
+    console.log('🔍 Neynar user object:', neynarAuth.user);
+  }
+  
   // Use Neynar address if available, fallback to Thirdweb account
   const walletAddress = neynarAuth?.user?.verified_addresses?.eth_addresses?.[0] ||
                        neynarAuth?.user?.custody_address ||
