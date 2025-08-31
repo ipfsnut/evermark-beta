@@ -1,6 +1,7 @@
 // src/providers/WalletProvider.tsx - Unified wallet state for all contexts
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
+import { useActiveAccount } from 'thirdweb/react';
 import { useFarcasterDetection } from '../hooks/useFarcasterDetection';
 
 interface WalletContextType {
@@ -86,8 +87,7 @@ function FarcasterWalletProvider({ children }: { children: React.ReactNode }) {
 
 // Browser/PWA-specific provider using thirdweb hooks
 function BrowserWalletProvider({ children, context }: { children: React.ReactNode; context: 'browser' | 'pwa' }) {
-  // Import thirdweb hook dynamically to avoid issues in Farcaster context
-  const { useActiveAccount } = require('thirdweb/react');
+  // Use thirdweb hook directly since this component only renders in Browser/PWA context
   const thirdwebAccount = useActiveAccount();
 
   const walletAddress = thirdwebAccount?.address || null;
