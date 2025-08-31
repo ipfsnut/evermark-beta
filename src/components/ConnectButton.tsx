@@ -1,12 +1,14 @@
-// src/components/ConnectButton.tsx - Fixed for Thirdweb v5
+// src/components/ConnectButton.tsx - Context-aware wallet connection
+import React from 'react';
 import { ConnectButton, useActiveAccount } from 'thirdweb/react';
-import { client } from '@/lib/thirdweb';
-import { CHAIN } from '@/lib/contracts';
+import { useConnect } from 'wagmi';
+import { NeynarAuthButton, SIWN_variant } from '@neynar/react';
 import { WalletIcon, UserIcon, LogOutIcon } from 'lucide-react';
 import { createWallet, inAppWallet } from 'thirdweb/wallets';
-import { useAppAuth } from '../providers/AppContext';
-import { useWalletConnection } from '../providers/WalletProvider';
-import { useNeynarContext, NeynarAuthButton, SIWN_variant } from '@neynar/react';
+
+import { client } from '@/lib/thirdweb';
+import { CHAIN } from '@/lib/contracts';
+import { useWallet } from '../providers/WalletProvider';
 import { useFarcasterDetection } from '../hooks/useFarcasterDetection';
 
 interface WalletConnectProps {
@@ -14,46 +16,43 @@ interface WalletConnectProps {
   variant?: 'default' | 'compact';
 }
 
-// Define supported wallets for v5 - Fixed wallet array typing
-const getWallets = () => [
-  inAppWallet(),
+// Wallet configurations by context
+const getBrowserWallets = () => [
   createWallet('io.metamask'),
   createWallet('com.coinbase.wallet'), 
   createWallet('me.rainbow'),
 ];
 
-export function WalletConnect({ className = '', variant = 'default' }: WalletConnectProps) {
-  const account = useActiveAccount();
-  const { disconnect } = useAppAuth();
-  const { isAutoConnecting, autoConnectFailed, isConnected, address } = useWalletConnection();
-  
-  // Try to use Neynar context (only available in Farcaster)
-  let neynarAuth;
-  try {
-    neynarAuth = useNeynarContext();
-  } catch {
-    neynarAuth = null; // Not in Farcaster context
-  }
-  
-  const isSIWNAuthenticated = !!neynarAuth?.user;
-  const siwnUser = neynarAuth?.user;
-  const { isInFarcaster } = useFarcasterDetection();
+const getPWAWallets = () => [
+  inAppWallet(), // Email/phone signup first for PWA
+  createWallet('io.metamask'),
+  createWallet('com.coinbase.wallet'),
+];
 
-  const handleLogout = async () => {
-    try {
-      await disconnect();
-    } catch (error) {
-      console.error('Failed to disconnect wallet:', error);
+export function WalletConnect({ className = '', variant = 'default' }: WalletConnectProps) {
+  const { address, isConnected, context, disconnect } = useWallet();
+  const { isInFarcaster } = useFarcasterDetection();
+  
+  // Get display info based on context
+  const getDisplayInfo = () => {
+    if (context === 'farcaster') {
+      // TODO: Get from Neynar user object when available
+      return {
+        displayName: null,
+        shortAddress: address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null
+      };
     }
+    
+    return {
+      displayName: null,
+      shortAddress: address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null
+    };
   };
 
-  // Use the unified wallet connection status from WalletProvider
-  const walletAddress = address; // WalletProvider handles SIWN vs Thirdweb priority
-  const displayName = siwnUser?.display_name || siwnUser?.username;
+  const { displayName, shortAddress } = getDisplayInfo();
 
-  if (isConnected && walletAddress) {
-    const shortAddress = `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`;
-
+  // Connected state - show user info
+  if (isConnected && address) {
     if (variant === 'compact') {
       return (
         <div className={`flex items-center space-x-2 px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg ${className}`}>
@@ -61,21 +60,17 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
             <UserIcon className="h-3 w-3 text-black" />
           </div>
           <button
-            onClick={handleLogout}
+            onClick={disconnect}
             className="text-sm font-medium text-white hover:text-cyber-primary transition-colors cursor-pointer"
             title="Click to logout"
           >
-            {displayName ? `@${siwnUser?.username}` : shortAddress}
+            {displayName || shortAddress}
           </button>
         </div>
       );
     }
-  }
 
-  // For the default variant when connected, show a custom wallet display with logout
-  if (isConnected && walletAddress && variant === 'default') {
-    const shortAddress = `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`;
-    
+    // Default variant
     return (
       <div className={`flex items-center space-x-2 px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg ${className}`}>
         <div className="w-8 h-8 bg-gradient-to-r from-cyber-primary to-cyber-secondary rounded-full flex items-center justify-center">
@@ -83,58 +78,25 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
         </div>
         <div className="flex flex-col">
           <button
-            onClick={handleLogout}
+            onClick={disconnect}
             className="text-sm font-medium text-white hover:text-cyber-primary transition-colors cursor-pointer text-left"
             title="Click to logout"
           >
-            {displayName ? `@${siwnUser?.username}` : shortAddress}
+            {displayName || shortAddress}
           </button>
           <span className="text-xs text-gray-400">
-            {isSIWNAuthenticated ? 'Farcaster' : 'Connected'}
+            {context === 'farcaster' ? 'Farcaster' : 'Connected'}
           </span>
         </div>
-        <LogOutIcon className="h-4 w-4 text-gray-400 hover:text-cyber-primary transition-colors cursor-pointer" onClick={handleLogout} />
+        <LogOutIcon className="h-4 w-4 text-gray-400 hover:text-cyber-primary transition-colors cursor-pointer" onClick={disconnect} />
       </div>
     );
   }
 
-  // If we're auto-connecting, show a loading state
-  if (isAutoConnecting) {
-    return (
-      <div className={`inline-flex items-center px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg ${className}`}>
-        <span className="flex items-center text-gray-400">
-          <WalletIcon className="h-4 w-4 mr-2 animate-pulse" />
-          Connecting...
-        </span>
-      </div>
-    );
-  }
+  // Not connected - show appropriate connection method
   
-  // If auto-connect failed, show a message with the connect button
-  if (autoConnectFailed && !account) {
-    return (
-      <div className="flex flex-col items-center gap-2">
-        <ConnectButton
-          client={client}
-          wallets={getWallets()}
-          chain={CHAIN}
-          connectButton={{
-            label: (
-              <span className="flex items-center">
-                <WalletIcon className="h-4 w-4 mr-2" />
-                Connect Wallet
-              </span>
-            ),
-            className: `inline-flex items-center px-4 py-2 bg-gradient-to-r from-cyber-primary to-cyber-secondary text-black font-medium rounded-lg hover:opacity-90 transition-opacity ${className}`
-          }}
-        />
-        <span className="text-xs text-gray-400">Auto-connect failed. Please connect manually.</span>
-      </div>
-    );
-  }
-
-  // Show Neynar auth button if in Farcaster context and not connected
-  if (isInFarcaster && !isConnected) {
+  // Farcaster context - use Neynar SIWN
+  if (context === 'farcaster') {
     return (
       <div className={className}>
         <NeynarAuthButton 
@@ -144,17 +106,20 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
     );
   }
 
+  // Browser/PWA context - use Thirdweb ConnectButton
+  const wallets = context === 'pwa' ? getPWAWallets() : getBrowserWallets();
+  
   return (
     <ConnectButton
       client={client}
-      wallets={getWallets()}
+      wallets={wallets}
       chain={CHAIN}
       connectModal={{ size: "wide" }}
       connectButton={{
         label: (
           <span className="flex items-center">
             <WalletIcon className="h-4 w-4 mr-2" />
-            Connect Wallet
+            {context === 'pwa' ? 'Sign In' : 'Connect Wallet'}
           </span>
         ),
         className: `inline-flex items-center px-4 py-2 bg-gradient-to-r from-cyber-primary to-cyber-secondary text-black font-medium rounded-lg hover:opacity-90 transition-opacity ${className}`
@@ -163,90 +128,29 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
   );
 }
 
-// Alternative simple connect button for basic usage
+// Simplified connect button for basic usage
 export function SimpleConnectButton({ className = '' }: { className?: string }) {
-  const account = useActiveAccount();
-  const { disconnect } = useAppAuth();
-  const { isAutoConnecting, autoConnectFailed } = useWalletConnection();
+  const { address, isConnected, context } = useWallet();
 
-  const handleLogout = async () => {
-    try {
-      await disconnect();
-    } catch (error) {
-      console.error('Failed to disconnect wallet:', error);
-    }
-  };
-
-  if (account) {
+  if (isConnected && address) {
+    const shortAddress = `${address.slice(0, 6)}...${address.slice(-4)}`;
+    
     return (
       <div className={`flex items-center space-x-2 px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg ${className}`}>
         <div className="w-8 h-8 bg-gradient-to-r from-cyber-primary to-cyber-secondary rounded-full flex items-center justify-center">
           <UserIcon className="h-4 w-4 text-black" />
         </div>
         <div className="flex flex-col">
-          <button
-            onClick={handleLogout}
-            className="text-sm font-medium text-white hover:text-cyber-primary transition-colors cursor-pointer text-left"
-            title="Click to logout"
-          >
-            {`${account.address.slice(0, 6)}...${account.address.slice(-4)}`}
-          </button>
-          <span className="text-xs text-gray-400">Connected</span>
+          <span className="text-sm font-medium text-white">
+            {shortAddress}
+          </span>
+          <span className="text-xs text-gray-400">
+            {context === 'farcaster' ? 'Farcaster' : 'Connected'}
+          </span>
         </div>
       </div>
     );
   }
 
-  // If we're auto-connecting, show a loading state
-  if (isAutoConnecting) {
-    return (
-      <div className={`inline-flex items-center px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg ${className}`}>
-        <span className="flex items-center text-gray-400">
-          <WalletIcon className="h-4 w-4 mr-2 animate-pulse" />
-          Connecting...
-        </span>
-      </div>
-    );
-  }
-  
-  // If auto-connect failed, show a message with the connect button
-  if (autoConnectFailed && !account) {
-    return (
-      <div className="flex flex-col items-center gap-2">
-        <ConnectButton
-          client={client}
-          wallets={getWallets()}
-          chain={CHAIN}
-          connectButton={{
-            label: (
-              <span className="flex items-center">
-                <WalletIcon className="h-4 w-4 mr-2" />
-                Connect Wallet
-              </span>
-            ),
-            className: `inline-flex items-center px-4 py-2 bg-gradient-to-r from-cyber-primary to-cyber-secondary text-black font-medium rounded-lg hover:opacity-90 transition-opacity ${className}`
-          }}
-        />
-        <span className="text-xs text-gray-400">Auto-connect failed. Please connect manually.</span>
-      </div>
-    );
-  }
-
-  return (
-    <ConnectButton
-      client={client}
-      wallets={getWallets()}
-      chain={CHAIN}
-      connectModal={{ size: "wide" }}
-      connectButton={{
-        label: (
-          <span className="flex items-center">
-            <WalletIcon className="h-4 w-4 mr-2" />
-            Connect Wallet
-          </span>
-        ),
-        className: `inline-flex items-center px-4 py-2 bg-gradient-to-r from-cyber-primary to-cyber-secondary text-black font-medium rounded-lg hover:opacity-90 transition-opacity ${className}`
-      }}
-    />
-  );
+  return <WalletConnect className={className} variant="default" />;
 }

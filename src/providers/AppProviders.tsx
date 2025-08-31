@@ -1,86 +1,103 @@
+// src/providers/AppProviders.tsx - Context-aware provider loading
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThirdwebProvider } from 'thirdweb/react';
-
 import { NeynarContextProvider } from '@neynar/react';
+import { WagmiProvider, createConfig } from 'wagmi';
+import { farcasterMiniApp } from '@farcaster/miniapp-wagmi-connector';
+import { http } from 'viem';
+import { base } from 'viem/chains';
+
+import { client } from '@/lib/thirdweb';
 import { WalletProvider } from './WalletProvider';
 import { BlockchainProvider } from './BlockchainProvider';
-import { IntegratedUserProvider } from './IntegratedUserProvider'; // NOW INCLUDED
+import { IntegratedUserProvider } from './IntegratedUserProvider';
 import { AppContextProvider } from './AppContext';
 import { ThemeProvider } from './ThemeProvider';
+import { useFarcasterDetection } from '../hooks/useFarcasterDetection';
+
+// React Query client with optimized settings
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30000, // 30 seconds
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
+// Mini App Wagmi config (for Farcaster context)
+const miniAppWagmiConfig = createConfig({
+  chains: [base],
+  connectors: [farcasterMiniApp()],
+  transports: {
+    [base.id]: http()
+  }
+});
 
 interface AppProvidersProps {
   children: React.ReactNode;
 }
 
-// Configure React Query with optimized settings for Web3 + Farcaster
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      // Blockchain data caching strategy
-      staleTime: 30 * 1000, // 30 seconds for financial data
-      gcTime: 5 * 60 * 1000, // 5 minutes garbage collection
-      retry: (failureCount, error) => {
-        // Don't retry on 4xx errors, retry on network issues
-        if (error instanceof Error && error.message.includes('4')) {
-          return false;
-        }
-        return failureCount < 3;
-      },
-      refetchOnWindowFocus: false, // Disable for better UX in mobile frames
-      refetchOnReconnect: true,
-    },
-    mutations: {
-      retry: false, // Never retry mutations (blockchain transactions)
-    },
-  },
-});
-
-/**
- * AppProviders - CLEAN DUAL AUTH ARCHITECTURE:
- * 1. React Query (data management)
- * 2. Theme Provider (dark/light mode)  
- * 3. Thirdweb Provider (blockchain SDK - always present)
- * 4. Conditional Neynar Provider (only in Farcaster context)
- * 5. Wallet Provider (handles both auth types)
- * 6. Blockchain Provider (contract interactions)
- * 7. IntegratedUserProvider (unified user management)
- * 8. App Context (app-level state)
- */
 export function AppProviders({ children }: AppProvidersProps) {
-  // Detect Farcaster context
-  const isInFarcaster = typeof window !== 'undefined' && 
-    (window.parent !== window || navigator.userAgent.toLowerCase().includes('farcaster'));
+  const { isInFarcaster, isLoading } = useFarcasterDetection();
+  
+  console.log('🔍 AppProviders context detection:', { isInFarcaster, isLoading });
 
-  const providers = (
-    <ThirdwebProvider>
-      <WalletProvider>
-        <BlockchainProvider>
-          <IntegratedUserProvider>
-            <AppContextProvider>
-              {children}
-            </AppContextProvider>
-          </IntegratedUserProvider>
-        </BlockchainProvider>
-      </WalletProvider>
-    </ThirdwebProvider>
-  );
+  // Wait for detection to complete
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
 
-  // Wrap with Neynar only in Farcaster context
-  const content = isInFarcaster ? (
-    <NeynarContextProvider settings={{ clientId: import.meta.env.VITE_NEYNAR_CLIENT_ID }}>
-      {providers}
-    </NeynarContextProvider>
-  ) : providers;
+  // Farcaster Mini App Provider Stack
+  if (isInFarcaster) {
+    console.log('🎯 Loading Farcaster Mini App providers (Neynar + Mini App Wagmi)');
+    
+    // Temporarily disable Neynar to isolate React error
+    return (
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <div className="text-center p-4 bg-yellow-100 text-yellow-800">
+            Farcaster context detected - Neynar provider temporarily disabled for debugging
+          </div>
+          <WagmiProvider config={miniAppWagmiConfig}>
+            <WalletProvider>
+              <BlockchainProvider>
+                <IntegratedUserProvider>
+                  <AppContextProvider>
+                    {children}
+                  </AppContextProvider>
+                </IntegratedUserProvider>
+              </BlockchainProvider>
+            </WalletProvider>
+          </WagmiProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    );
+  }
 
+  // Browser/PWA Provider Stack
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        {content}
+        <ThirdwebProvider>
+          <WalletProvider>
+            <BlockchainProvider>
+              <IntegratedUserProvider>
+                <AppContextProvider>
+                  {children}
+                </AppContextProvider>
+              </IntegratedUserProvider>
+            </BlockchainProvider>
+          </WalletProvider>
+        </ThirdwebProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );
 }
 
-// Export the configured query client for use in custom hooks
-export { queryClient };
+// queryClient is only used internally in this file

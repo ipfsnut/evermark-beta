@@ -1,0 +1,304 @@
+# WALLET ARCHITECTURE STRATEGY
+# Generated: 2025-08-31
+# Goal: Clean, simple wallet handling for all 3 contexts
+
+## CONTEXT DEFINITIONS
+===================
+
+1. **Farcaster Mobile (Mini App)**: User in Warpcast mobile app
+2. **Browser**: User in desktop/mobile browser (Chrome, Safari, etc.) 
+3. **PWA**: User using installed PWA version
+
+## WALLET STRATEGY BY CONTEXT
+===========================
+
+### 1. FARCASTER MOBILE (Mini App Context)
+**SDK**: `@farcaster/miniapp-sdk` + `@farcaster/miniapp--connector`
+**Auth**: Neynar SIWN for identity
+**Wallet**: Farcaster's built-in wallet via Mini App SDK
+
+```typescript
+// Detection
+const isInFarcaster = sdk.context.user // Mini App SDK provides context
+
+// Wallet Access  
+const provider = sdk.wallet.getEthereumProvider()
+// OR use Wagmi with miniapp-wagmi-connector (recommended)
+
+// Identity
+const { user } = useNeynarContext() // For Farcaster profile/identity
+// user.custody_address - the wallet address for transactions
+```
+
+**Key Points**:
+- User already has wallet connected through Farcaster
+- No wallet selection dialog needed
+- Use `custody_address` from Neynar user object for transactions
+- Wagmi miniapp connector handles connection automatically
+- Neynar provides rich Farcaster identity (username, pfp, etc.)
+
+### 2. BROWSER (Desktop/Mobile Web)
+**SDK**: Thirdweb v5
+**Auth**: None needed (just wallet connection)
+**Wallet**: MetaMask, Coinbase Wallet, WalletConnect, etc.
+
+```typescript
+// Detection
+const isInBrowser = !isInFarcaster && !isPWA
+
+// Wallet Access
+import { ConnectButton, useActiveAccount } from 'thirdweb/react'
+const account = useActiveAccount()
+// account.address - the wallet address for transactions
+
+// Connection
+<ConnectButton 
+  client={client}
+  wallets={[metamask(), coinbaseWallet(), walletConnect()]}
+  connectModal={{ size: "wide" }}
+/>
+```
+
+**Key Points**:
+- User chooses from available wallet options
+- Full wallet selection UI provided by Thirdweb
+- No Farcaster identity available
+- Use account.address for transactions
+
+### 3. PWA (Installed App)
+**SDK**: Thirdweb v5 with in-app wallet
+**Auth**: None needed (just wallet connection)  
+**Wallet**: Thirdweb in-app wallet (email/phone) + external wallets
+
+```typescript
+// Detection
+const isPWA = window.matchMedia('(display-mode: standalone)').matches
+
+// Wallet Access
+import { inAppWallet } from 'thirdweb/wallets'
+const wallets = [
+  inAppWallet(), // Email/phone signup
+  metamask(),
+  coinbaseWallet()
+]
+
+// Connection - same as browser but with in-app wallet first
+<ConnectButton 
+  client={client}
+  wallets={wallets}
+  connectModal={{ size: "wide" }}
+/>
+```
+
+**Key Points**:
+- In-app wallet for easy onboarding (email/phone)
+- Still supports external wallets
+- Same transaction flow as browser
+- Use account.address for transactions
+
+## UNIFIED WALLET PROVIDER ARCHITECTURE
+=====================================
+
+### Single Source of Truth Pattern
+```typescript
+// WalletProvider.tsx - Unified wallet state
+export function WalletProvider({ children }) {
+  // Context detection
+  const isInFarcaster = /* Mini App SDK context check */
+  const isPWA = window.matchMedia('(display-mode: standalone)').matches
+  const isBrowser = !isInFarcaster && !isPWA
+
+  // Farcaster: Neynar + Mini App wallet
+  const { user: neynarUser } = useNeynarContext() // Only load if in Farcaster
+  const farcasterAddress = neynarUser?.custody_address
+
+  // Browser/PWA: Thirdweb wallet
+  const thirdwebAccount = useActiveAccount()
+  const thirdwebAddress = thirdwebAccount?.address
+
+  // Unified wallet state
+  const walletAddress = isInFarcaster ? farcasterAddress : thirdwebAddress
+  const isConnected = !!walletAddress
+  
+  // Unified connect function
+  const connect = async () => {
+    if (isInFarcaster) {
+      // Neynar SIWN handles this automatically
+      return { success: true }
+    } else {
+      // Thirdweb handles this via ConnectButton
+      return { success: false, message: 'Use ConnectButton component' }
+    }
+  }
+
+  return (
+    <WalletContext.Provider value={{
+      address: walletAddress,
+      isConnected,
+      connect,
+      context: isInFarcaster ? 'farcaster' : isPWA ? 'pwa' : 'browser'
+    }}>
+      {children}
+    </WalletContext.Provider>
+  )
+}
+```
+
+### Component Strategy
+```typescript
+// ConnectButton.tsx - Context-aware connection
+export function ConnectButton() {
+  const { isConnected, context } = useWallet()
+  const { isInFarcaster } = useFarcasterDetection()
+
+  // Already connected - show user info
+  if (isConnected) {
+    return <UserProfile />
+  }
+
+  // Farcaster context - use Neynar auth
+  if (isInFarcaster) {
+    return <NeynarAuthButton variant={SIWN_variant.FARCASTER} />
+  }
+
+  // Browser/PWA context - use Thirdweb
+  return (
+    <ThirdwebConnectButton 
+      client={client}
+      wallets={context === 'pwa' ? pwaWallets : browserWallets}
+      connectModal={{ size: "wide" }}
+    />
+  )
+}
+```
+
+## DEPENDENCIES BY CONTEXT
+========================
+
+### Farcaster Mobile
+```json
+{
+  "@farcaster/miniapp-sdk": "^0.1.9",
+  "@farcaster/miniapp-wagmi-connector": "^0.0.42", 
+  "@neynar/react": "^1.1.0",
+  "wagmi": "^2.15.4",
+  "viem": "^2.21.54"
+}
+```
+
+### Browser + PWA  
+```json
+{
+  "thirdweb": "^5.101.1"
+}
+```
+
+## PROVIDER HIERARCHY (SIMPLIFIED)
+================================
+
+```typescript
+// AppProviders.tsx - Conditional provider loading
+export function AppProviders({ children }) {
+  const isInFarcaster = /* detect Farcaster context */
+
+  if (isInFarcaster) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <NeynarContextProvider settings={{ clientId: NEYNAR_CLIENT_ID }}>
+          <WagmiProvider config={miniappWagmiConfig}>
+            <WalletProvider>
+              {children}
+            </WalletProvider>
+          </WagmiProvider>
+        </NeynarContextProvider>
+      </QueryClientProvider>
+    )
+  }
+
+  // Browser/PWA
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThirdwebProvider>
+        <WalletProvider>
+          {children}
+        </WalletProvider>
+      </ThirdwebProvider>
+    </QueryClientProvider>
+  )
+}
+```
+
+## TRANSACTION PATTERNS
+=====================
+
+### Farcaster Transactions
+```typescript
+// Use Mini App wallet via Wagmi
+const { writeContract } = useWriteContract()
+const { address } = useAccount() // From miniapp-wagmi-connector
+
+await writeContract({
+  address: contractAddress,
+  abi: contractAbi,
+  functionName: 'mintEvermark',
+  args: [title, description],
+  value: parseEther('0.00007')
+})
+```
+
+### Browser/PWA Transactions  
+```typescript
+// Use Thirdweb
+import { prepareContractCall, sendTransaction } from 'thirdweb'
+const account = useActiveAccount()
+
+const transaction = prepareContractCall({
+  contract: evermarkContract,
+  method: 'mintEvermark',
+  params: [title, description],
+  value: toWei('0.00007')
+})
+
+await sendTransaction({ transaction, account })
+```
+
+## IMPLEMENTATION CHECKLIST
+=========================
+
+### Phase 1: Clean Up Current Implementation
+- [ ] Remove duplicate wallet address logic from WalletProvider
+- [ ] Simplify provider hierarchy in AppProviders.tsx
+- [ ] Use custody_address from Neynar (not verified_addresses)
+- [ ] Remove Thirdweb from Farcaster context entirely
+
+### Phase 2: Context-Specific Providers
+- [ ] Install @farcaster/miniapp-wagmi-connector
+- [ ] Create separate Wagmi config for Mini App context
+- [ ] Conditional provider loading based on context detection
+- [ ] Single WalletProvider that works across all contexts
+
+### Phase 3: Unified Connect Components
+- [ ] Update ConnectButton to be context-aware
+- [ ] Remove redundant connection logic
+- [ ] Test wallet connection in all 3 contexts
+- [ ] Verify transactions work in all contexts
+
+## BENEFITS OF THIS APPROACH
+===========================
+
+1. **No SDK Conflicts**: Each context uses its optimal SDK
+2. **Cleaner Code**: No try-catch blocks for missing providers
+3. **Better UX**: Native wallet experience in each context
+4. **Simpler Logic**: One wallet source per context
+5. **Future Proof**: Uses latest SDKs and best practices
+
+## CURRENT ISSUES TO FIX
+=======================
+
+1. **Wallet Address Confusion**: Currently trying to get address from Neynar when should use custody_address
+2. **Provider Conflicts**: Loading Neynar in non-Farcaster contexts
+3. **Double Authentication**: Neynar + Thirdweb in same context
+4. **Complex Auto-Connect**: Too many conditions and fallbacks
+
+---
+End of Strategy Document
