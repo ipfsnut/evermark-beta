@@ -16,9 +16,13 @@ import { devLog, prodLog } from './utils/debug';
     const { sdk } = await import('@farcaster/miniapp-sdk');
     console.log('🔄 Calling miniapp-sdk ready() from main.tsx...');
     await sdk.actions.ready();
-    console.log('✅ Miniapp SDK ready() called successfully');
+    console.log('✅ Miniapp SDK ready() called successfully from main.tsx');
+    
+    // Set a global flag to indicate SDK is ready
+    (window as any).__evermark_farcaster_sdk_ready = true;
   } catch (error) {
     console.log('🌐 Not in Farcaster context - browser/PWA mode');
+    (window as any).__evermark_farcaster_sdk_ready = false;
   }
 })();
 

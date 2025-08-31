@@ -60,8 +60,7 @@ export function AppProviders({ children }: AppProvidersProps) {
     return (
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
-          <NeynarContextProvider settings={{ clientId: import.meta.env.VITE_NEYNAR_CLIENT_ID }}>
-            <WagmiProvider config={miniAppWagmiConfig}>
+          <WagmiProvider config={miniAppWagmiConfig}>
               <WalletProvider>
                 <BlockchainProvider>
                   <IntegratedUserProvider>
@@ -72,7 +71,6 @@ export function AppProviders({ children }: AppProvidersProps) {
                 </BlockchainProvider>
               </WalletProvider>
             </WagmiProvider>
-          </NeynarContextProvider>
         </ThemeProvider>
       </QueryClientProvider>
     );

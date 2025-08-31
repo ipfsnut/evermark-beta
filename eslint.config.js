@@ -8,7 +8,7 @@ import react from 'eslint-plugin-react';
 
 export default [
   {
-    ignores: ['dist/**', 'build/**', '*.config.js', '*.config.ts', 'netlify/**']
+    ignores: ['dist/**', 'build/**', '*.config.js', '*.config.ts', 'netlify/**', '.netlify/**', 'wallet.txt', 'public/**']
   },
   {
     files: ['**/*.{js,jsx,ts,tsx}'],

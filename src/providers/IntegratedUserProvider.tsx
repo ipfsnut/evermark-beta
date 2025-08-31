@@ -64,20 +64,20 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
 function FarcasterIntegratedUserProvider({ children }: { children: React.ReactNode }) {
   const account = useWagmiAccount();
   
-  // Use Neynar context for Farcaster authentication
-  const neynarAuth = useNeynarContext();
+  // Neynar temporarily removed to isolate React Error #31
+  // const neynarAuth: { user?: { fid?: number } } | null = null;
   
   const [user, setUser] = useState<EnhancedUser | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load user profile when wallet or Neynar auth changes
+  // Load user profile when wallet changes
   useEffect(() => {
     loadUserProfile();
-  }, [account?.address, neynarAuth?.user?.fid]);
+  }, [account?.address]);
 
   const loadUserProfile = useCallback(async () => {
-    if (!account?.address && !neynarAuth?.user) {
+    if (!account?.address) {
       setUser(null);
       return;
     }
@@ -88,14 +88,8 @@ function FarcasterIntegratedUserProvider({ children }: { children: React.ReactNo
     try {
       let enhancedUser: EnhancedUser | null = null;
 
-      // Priority 1: Neynar user (best identity data)
-      if (neynarAuth?.user?.fid) {
-        console.log('🎯 Loading profile from Neynar FID:', neynarAuth.user.fid);
-        enhancedUser = await EnhancedUserService.getUserByFarcasterFID(neynarAuth.user.fid);
-      }
-      
-      // Priority 2: Wallet address (try to enhance with ENS)
-      else if (account?.address) {
+      // Priority 1: Wallet address (Neynar temporarily disabled)
+      if (account?.address) {
         console.log('🎯 Loading profile from wallet address:', account.address);
         enhancedUser = await EnhancedUserService.getUserByAddress(account.address);
       }
@@ -120,7 +114,7 @@ function FarcasterIntegratedUserProvider({ children }: { children: React.ReactNo
     } finally {
       setIsLoading(false);
     }
-  }, [account?.address, neynarAuth?.user]);
+  }, [account?.address]);
 
   const refreshUser = useCallback(async () => {
     EnhancedUserService.clearCache();
