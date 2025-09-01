@@ -1,4 +1,5 @@
 import React from 'react';
+import { useThemeClasses } from '@/providers/ThemeProvider';
 
 interface EvermarkSkeletonProps {
   variant?: 'hero' | 'standard' | 'compact' | 'list';
@@ -11,8 +12,9 @@ export const EvermarkSkeleton: React.FC<EvermarkSkeletonProps> = ({
   count = 1,
   className = ''
 }) => {
+  const themeClasses = useThemeClasses();
   const getSkeletonClasses = () => {
-    const baseClasses = 'animate-pulse bg-gray-800 border border-gray-700 rounded-xl overflow-hidden';
+    const baseClasses = `animate-pulse ${themeClasses.bg.card} border ${themeClasses.border.primary} rounded-xl overflow-hidden`;
     
     switch (variant) {
       case 'hero':
@@ -29,13 +31,13 @@ export const EvermarkSkeleton: React.FC<EvermarkSkeletonProps> = ({
   const getImageSkeletonClasses = () => {
     switch (variant) {
       case 'hero':
-        return 'h-48 bg-gray-700';
+        return `h-48 ${themeClasses.bg.tertiary}`;
       case 'compact':
-        return 'h-24 bg-gray-700';
+        return `h-24 ${themeClasses.bg.tertiary}`;
       case 'list':
-        return 'w-24 h-24 bg-gray-700 flex-shrink-0';
+        return `w-24 h-24 ${themeClasses.bg.tertiary} flex-shrink-0`;
       default:
-        return 'h-40 bg-gray-700';
+        return `h-40 ${themeClasses.bg.tertiary}`;
     }
   };
 
@@ -47,38 +49,38 @@ export const EvermarkSkeleton: React.FC<EvermarkSkeletonProps> = ({
       {/* Content skeleton */}
       <div className={`p-4 space-y-3 ${variant === 'list' ? 'flex-1' : ''}`}>
         {/* Title */}
-        <div className="h-4 bg-gray-700 rounded w-3/4" />
+        <div className={`h-4 ${themeClasses.bg.tertiary} rounded w-3/4`} />
         
         {/* Author and date */}
         <div className="flex justify-between">
-          <div className="h-3 bg-gray-700 rounded w-1/3" />
-          <div className="h-3 bg-gray-700 rounded w-1/4" />
+          <div className={`h-3 ${themeClasses.bg.tertiary} rounded w-1/3`} />
+          <div className={`h-3 ${themeClasses.bg.tertiary} rounded w-1/4`} />
         </div>
         
         {/* Description (not for compact) */}
         {variant !== 'compact' && variant !== 'list' && (
           <div className="space-y-2">
-            <div className="h-3 bg-gray-700 rounded w-full" />
-            <div className="h-3 bg-gray-700 rounded w-2/3" />
+            <div className={`h-3 ${themeClasses.bg.tertiary} rounded w-full`} />
+            <div className={`h-3 ${themeClasses.bg.tertiary} rounded w-2/3`} />
           </div>
         )}
         
         {/* Tags */}
         <div className="flex space-x-2">
-          <div className="h-6 bg-gray-700 rounded-full w-16" />
-          <div className="h-6 bg-gray-700 rounded-full w-20" />
+          <div className={`h-6 ${themeClasses.bg.tertiary} rounded-full w-16`} />
+          <div className={`h-6 ${themeClasses.bg.tertiary} rounded-full w-20`} />
           {variant !== 'compact' && (
-            <div className="h-6 bg-gray-700 rounded-full w-14" />
+            <div className={`h-6 ${themeClasses.bg.tertiary} rounded-full w-14`} />
           )}
         </div>
         
         {/* Stats */}
-        <div className="flex justify-between items-center pt-2 border-t border-gray-700">
+        <div className={`flex justify-between items-center pt-2 border-t ${themeClasses.border.primary}`}>
           <div className="flex space-x-3">
-            <div className="h-3 bg-gray-700 rounded w-12" />
-            <div className="h-3 bg-gray-700 rounded w-10" />
+            <div className={`h-3 ${themeClasses.bg.tertiary} rounded w-12`} />
+            <div className={`h-3 ${themeClasses.bg.tertiary} rounded w-10`} />
           </div>
-          <div className="h-3 bg-gray-700 rounded w-8" />
+          <div className={`h-3 ${themeClasses.bg.tertiary} rounded w-8`} />
         </div>
       </div>
     </div>

@@ -44,12 +44,26 @@ export function useStakingTransactions(): StakingTransactions {
       throw new Error('Wallet not connected');
     }
     
+    // Validation checks before attempting approval
+    if (amount <= BigInt(0)) {
+      throw new Error('Approval amount must be greater than zero');
+    }
+    
+    if (!wemark.address || wemark.address === '0x0000000000000000000000000000000000000000') {
+      throw new Error('Invalid WEMARK contract address');
+    }
+    
+    if (!account.address || account.address === '0x0000000000000000000000000000000000000000') {
+      throw new Error('Invalid user address');
+    }
+    
     setIsApproving(true);
     try {
       devLog("Approving EMARK spending:", {
         amount: amount.toString(),
         spender: wemark.address,
-        user: account.address
+        user: account.address,
+        emarkContract: emarkToken.address
       });
       
       const result = await sendTransaction({

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FilterIcon,  CalendarIcon, CheckIcon } from 'lucide-react';
+import { useThemeClasses } from '@/providers/ThemeProvider';
 import type { EvermarkFilters as EvermarkFiltersType } from '../types';
 
 interface EvermarkFiltersProps {
@@ -29,6 +30,7 @@ export function EvermarkFilters({
   className = ''
 }: EvermarkFiltersProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const themeClasses = useThemeClasses();
 
   const handleContentTypeToggle = (contentType: string) => {
     onFiltersChange({
@@ -62,12 +64,12 @@ export function EvermarkFilters({
   ].filter(Boolean).length;
 
   return (
-    <div className={`bg-gray-800/50 border border-gray-700 rounded-lg ${className}`}>
+    <div className={`${themeClasses.bg.card} border ${themeClasses.border.primary} rounded-lg ${className}`}>
       {/* Filter Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-700">
+      <div className={`flex items-center justify-between p-4 border-b ${themeClasses.border.primary}`}>
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-center gap-2 text-white hover:text-gray-300 transition-colors"
+          className={`flex items-center gap-2 ${themeClasses.text.primary} hover:${themeClasses.text.secondary} transition-colors`}
         >
           <FilterIcon className="h-5 w-5" />
           <span className="font-medium">Filters</span>
@@ -81,7 +83,7 @@ export function EvermarkFilters({
         {hasActiveFilters && (
           <button
             onClick={onClearFilters}
-            className="text-gray-400 hover:text-white text-sm transition-colors"
+            className={`${themeClasses.text.muted} hover:${themeClasses.text.primary} text-sm transition-colors`}
           >
             Clear all
           </button>
@@ -93,7 +95,7 @@ export function EvermarkFilters({
         <div className="p-4 space-y-6">
           {/* Content Types */}
           <div>
-            <h3 className="text-sm font-medium text-gray-300 mb-3">Content Type</h3>
+            <h3 className={`text-sm font-medium ${themeClasses.text.secondary} mb-3`}>Content Type</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
               {CONTENT_TYPES.map((type) => (
                 <button
@@ -102,7 +104,7 @@ export function EvermarkFilters({
                   className={`flex items-center gap-2 p-3 rounded-lg border transition-all text-sm ${
                     filters.contentType === type.value
                       ? 'border-cyan-400 bg-cyan-900/30 text-cyan-300'
-                      : 'border-gray-600 bg-gray-700/50 text-gray-300 hover:border-gray-500'
+                      : `${themeClasses.border.primary} ${themeClasses.bg.tertiary} ${themeClasses.text.secondary} ${themeClasses.border.hover}`
                   }`}
                 >
                   <span>{type.icon}</span>
@@ -117,7 +119,7 @@ export function EvermarkFilters({
 
           {/* Verification Status */}
           <div>
-            <h3 className="text-sm font-medium text-gray-300 mb-3">Verification Status</h3>
+            <h3 className={`text-sm font-medium ${themeClasses.text.secondary} mb-3`}>Verification Status</h3>
             <div className="flex gap-2">
               {[
                 { value: undefined, label: 'All' },
@@ -130,7 +132,7 @@ export function EvermarkFilters({
                   className={`px-4 py-2 rounded-lg border transition-all text-sm ${
                     filters.verified === option.value
                       ? 'border-green-400 bg-green-900/30 text-green-300'
-                      : 'border-gray-600 bg-gray-700/50 text-gray-300 hover:border-gray-500'
+                      : `${themeClasses.border.primary} ${themeClasses.bg.tertiary} ${themeClasses.text.secondary} ${themeClasses.border.hover}`
                   }`}
                 >
                   {option.label}
@@ -144,19 +146,19 @@ export function EvermarkFilters({
 
           {/* Author Filter */}
           <div>
-            <h3 className="text-sm font-medium text-gray-300 mb-3">Author</h3>
+            <h3 className={`text-sm font-medium ${themeClasses.text.secondary} mb-3`}>Author</h3>
             <input
               type="text"
               placeholder="Filter by author name..."
               value={filters.author || ''}
               onChange={(e) => onFiltersChange({ author: e.target.value })}
-              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-20"
+              className={`w-full px-4 py-3 ${themeClasses.bg.tertiary} border ${themeClasses.border.primary} rounded-lg ${themeClasses.text.primary} placeholder-gray-400 ${themeClasses.border.focus} focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-20`}
             />
           </div>
 
           {/* Popular Tags */}
           <div>
-            <h3 className="text-sm font-medium text-gray-300 mb-3">Popular Tags</h3>
+            <h3 className={`text-sm font-medium ${themeClasses.text.secondary} mb-3`}>Popular Tags</h3>
             <div className="flex flex-wrap gap-2">
               {POPULAR_TAGS.map((tag) => {
                 const isSelected = filters.tags?.includes(tag) || false;
@@ -167,7 +169,7 @@ export function EvermarkFilters({
                     className={`px-3 py-1 rounded-full border text-sm transition-all ${
                       isSelected
                         ? 'border-purple-400 bg-purple-900/30 text-purple-300'
-                        : 'border-gray-600 bg-gray-700/50 text-gray-300 hover:border-gray-500'
+                        : `${themeClasses.border.primary} ${themeClasses.bg.tertiary} ${themeClasses.text.secondary} ${themeClasses.border.hover}`
                     }`}
                   >
                     #{tag}
@@ -182,7 +184,7 @@ export function EvermarkFilters({
 
           {/* Custom Tags */}
           <div>
-            <h3 className="text-sm font-medium text-gray-300 mb-3">Custom Tags</h3>
+            <h3 className={`text-sm font-medium ${themeClasses.text.secondary} mb-3`}>Custom Tags</h3>
             <input
               type="text"
               placeholder="Add custom tags (comma-separated)..."
@@ -198,16 +200,16 @@ export function EvermarkFilters({
                 
                 onFiltersChange({ tags: allTags });
               }}
-              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-20"
+              className={`w-full px-4 py-3 ${themeClasses.bg.tertiary} border ${themeClasses.border.primary} rounded-lg ${themeClasses.text.primary} placeholder-gray-400 ${themeClasses.border.focus} focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-20`}
             />
           </div>
 
           {/* Date Range (placeholder for future implementation) */}
           <div>
-            <h3 className="text-sm font-medium text-gray-300 mb-3">Date Range</h3>
-            <div className="flex items-center gap-2 p-3 bg-gray-700/50 border border-gray-600 rounded-lg">
-              <CalendarIcon className="h-4 w-4 text-gray-400" />
-              <span className="text-gray-400 text-sm">Date range filtering coming soon...</span>
+            <h3 className={`text-sm font-medium ${themeClasses.text.secondary} mb-3`}>Date Range</h3>
+            <div className={`flex items-center gap-2 p-3 ${themeClasses.bg.tertiary} border ${themeClasses.border.primary} rounded-lg`}>
+              <CalendarIcon className={`h-4 w-4 ${themeClasses.text.muted}`} />
+              <span className={`${themeClasses.text.muted} text-sm`}>Date range filtering coming soon...</span>
             </div>
           </div>
         </div>

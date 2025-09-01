@@ -39,6 +39,7 @@ contract EvermarkRewards is
     uint256 public emarkDistributionRate;  
     uint256 public rebalancePeriod;
     
+    uint256 public currentPeriodNumber;
     uint256 public currentPeriodStart;
     uint256 public currentPeriodEnd;
     uint256 public ethRewardRate;
@@ -126,6 +127,7 @@ contract EvermarkRewards is
 
 
     function _initializePeriod() internal {
+        currentPeriodNumber = 1;
         currentPeriodStart = block.timestamp;
         currentPeriodEnd = block.timestamp + rebalancePeriod;
         ethLastUpdateTime = block.timestamp;

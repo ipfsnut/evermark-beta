@@ -171,10 +171,19 @@ export default function AdminPage(): React.ReactNode {
         if (rewardsPeriodStatus) {
           const [currentPeriod, periodEnd, wethRate, emarkRate] = rewardsPeriodStatus as [bigint, bigint, bigint, bigint];
           
-          console.log('Raw contract data:', {
-            currentPeriod: currentPeriod.toString(),
-            periodEnd: periodEnd.toString(),
-            periodEndAsDate: new Date(Number(periodEnd) * 1000).toISOString()
+          const periodEndNum = Number(periodEnd);
+          const currentTimestamp = Math.floor(Date.now() / 1000);
+          const isInFuture = periodEndNum > currentTimestamp;
+          const yearsFromNow = (periodEndNum - currentTimestamp) / (365 * 24 * 3600);
+          
+          console.log('🔍 Rewards Period Analysis:', {
+            rawPeriodEnd: periodEnd.toString(),
+            periodEndAsNumber: periodEndNum,
+            currentTimestamp,
+            periodEndDate: new Date(periodEndNum * 1000).toISOString(),
+            isInFuture,
+            yearsFromNow: yearsFromNow.toFixed(2),
+            isReasonable: isInFuture && yearsFromNow < 2
           });
           
           setRewardsPeriod({
@@ -514,8 +523,7 @@ export default function AdminPage(): React.ReactNode {
               </div>
             </div>
             <div className="mt-4">
-              <p className="text-gray-400 text-sm">Period End Time</p>
-              <p className="text-sm text-gray-300">{formatDate(rewardsPeriod.periodEnd)}</p>
+              <p className="text-gray-400 text-sm">Ends: {formatDate(rewardsPeriod.periodEnd)}</p>
             </div>
           </div>
         )}

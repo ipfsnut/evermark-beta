@@ -28,6 +28,7 @@ import { useEvermarksState, type Evermark } from '@/features/evermarks';
 import { VotingPanel } from '@/features/voting';
 import { useAppAuth } from '@/providers/AppContext';
 import { useFarcasterUser } from '@/hooks/useFarcasterDetection';
+import { useThemeClasses } from '@/providers/ThemeProvider';
 import { cn, useIsMobile } from '@/utils/responsive';
 
 // Share modal component
@@ -38,6 +39,7 @@ const ShareModal: React.FC<{
 }> = ({ isOpen, onClose, evermark }) => {
   const [copied, setCopied] = useState(false);
   const shareUrl = `${window.location.origin}/evermark/${evermark.id}`;
+  const themeClasses = useThemeClasses();
 
   const handleCopy = async () => {
     try {
@@ -54,28 +56,28 @@ const ShareModal: React.FC<{
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-gray-900 border border-gray-700 rounded-lg shadow-2xl max-w-md w-full">
-        <div className="flex items-center justify-between p-6 border-b border-gray-700">
-          <h3 className="text-xl font-bold text-white">Share Evermark</h3>
+      <div className={`relative ${themeClasses.bg.card} border ${themeClasses.border.primary} rounded-lg shadow-2xl max-w-md w-full`}>
+        <div className={`flex items-center justify-between p-6 border-b ${themeClasses.border.primary}`}>
+          <h3 className={`text-xl font-bold ${themeClasses.text.primary}`}>Share Evermark</h3>
           <button
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded transition-colors"
+            className={`p-2 ${themeClasses.text.muted} hover:${themeClasses.text.primary} ${themeClasses.bg.hover} rounded transition-colors`}
           >
             ✕
           </button>
         </div>
         
         <div className="p-6 space-y-4">
-          <div className="bg-gray-800 rounded-lg p-4">
+          <div className={`${themeClasses.bg.tertiary} rounded-lg p-4`}>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400 truncate mr-3">{shareUrl}</span>
+              <span className={`text-sm ${themeClasses.text.muted} truncate mr-3`}>{shareUrl}</span>
               <button
                 onClick={handleCopy}
                 className={cn(
                   "flex items-center gap-2 px-3 py-1 rounded text-sm font-medium transition-colors",
                   copied 
                     ? "bg-green-600 text-white" 
-                    : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                    : `${themeClasses.button.secondary}`
                 )}
               >
                 <CopyIcon className="h-3 w-3" />
@@ -148,6 +150,7 @@ export default function EvermarkDetailPage(): React.ReactNode {
   const { isAuthenticated } = useAppAuth();
   const { isInFarcaster } = useFarcasterUser();
   const isMobile = useIsMobile();
+  const themeClasses = useThemeClasses();
   
   const [evermark, setEvermark] = useState<Evermark | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -195,10 +198,10 @@ export default function EvermarkDetailPage(): React.ReactNode {
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+      <div className={`min-h-screen ${themeClasses.bg.primary} ${themeClasses.text.primary} flex items-center justify-center`}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mx-auto mb-4"></div>
-          <p className="text-gray-400">Loading Evermark...</p>
+          <p className={themeClasses.text.muted}>Loading Evermark...</p>
         </div>
       </div>
     );
@@ -207,15 +210,15 @@ export default function EvermarkDetailPage(): React.ReactNode {
   // Error state
   if (error || !evermark) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+      <div className={`min-h-screen ${themeClasses.bg.primary} ${themeClasses.text.primary} flex items-center justify-center`}>
         <div className="text-center max-w-md">
           <div className="text-6xl mb-4">❌</div>
           <h1 className="text-2xl font-bold text-red-400 mb-2">Evermark Not Found</h1>
-          <p className="text-gray-400 mb-6">{error || 'The evermark you\'re looking for doesn\'t exist.'}</p>
+          <p className={`${themeClasses.text.muted} mb-6`}>{error || 'The evermark you\'re looking for doesn\'t exist.'}</p>
           <div className="flex gap-3 justify-center">
             <button
               onClick={() => navigate(-1)}
-              className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+              className={`px-4 py-2 ${themeClasses.button.secondary} rounded-lg transition-colors`}
             >
               Go Back
             </button>
@@ -232,14 +235,14 @@ export default function EvermarkDetailPage(): React.ReactNode {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className={`min-h-screen ${themeClasses.bg.primary} ${themeClasses.text.primary}`}>
       {/* Header */}
-      <div className="bg-gray-900/50 border-b border-gray-700 sticky top-0 z-40 backdrop-blur-sm">
+      <div className={`${themeClasses.bg.secondary} border-b ${themeClasses.border.primary} sticky top-0 z-40 backdrop-blur-sm`}>
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <button
               onClick={() => navigate(-1)}
-              className="inline-flex items-center text-gray-400 hover:text-white transition-colors"
+              className={`inline-flex items-center ${themeClasses.text.muted} hover:${themeClasses.text.primary} transition-colors`}
             >
               <ArrowLeftIcon className="w-5 h-5 mr-2" />
               Back
@@ -248,7 +251,7 @@ export default function EvermarkDetailPage(): React.ReactNode {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setShowShareModal(true)}
-                className="flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-600 text-white rounded-lg transition-colors"
+                className={`flex items-center gap-2 px-3 py-2 ${themeClasses.button.secondary} rounded-lg transition-colors`}
               >
                 <ShareIcon className="h-4 w-4" />
                 {!isMobile && 'Share'}
@@ -261,7 +264,7 @@ export default function EvermarkDetailPage(): React.ReactNode {
                     "flex items-center gap-2 px-3 py-2 rounded-lg transition-colors font-medium",
                     showVoting
                       ? "bg-purple-600 hover:bg-purple-700 text-white"
-                      : "bg-gray-800 hover:bg-gray-700 border border-gray-600 text-white"
+                      : themeClasses.button.secondary
                   )}
                 >
                   <VoteIcon className="h-4 w-4" />
@@ -298,12 +301,12 @@ export default function EvermarkDetailPage(): React.ReactNode {
               </div>
 
               {/* Title */}
-              <h1 className="text-3xl md:text-4xl font-bold text-white leading-tight">
+              <h1 className={`text-3xl md:text-4xl font-bold ${themeClasses.text.primary} leading-tight`}>
                 {evermark.title}
               </h1>
 
               {/* Author and Date */}
-              <div className="flex flex-wrap items-center gap-4 text-gray-400">
+              <div className={`flex flex-wrap items-center gap-4 ${themeClasses.text.muted}`}>
                 <div className="flex items-center gap-2">
                   <UserIcon className="h-4 w-4" />
                   <span>by {evermark.author}</span>
@@ -327,7 +330,7 @@ export default function EvermarkDetailPage(): React.ReactNode {
                 <img
                   src={evermark.image}
                   alt={evermark.title}
-                  className="w-full h-64 md:h-96 object-cover rounded-lg border border-gray-700"
+                  className={`w-full h-64 md:h-96 object-cover rounded-lg border ${themeClasses.border.primary}`}
                 />
                 {evermark.imageStatus !== 'processed' && (
                   <div className="absolute bottom-4 left-4 bg-black/80 text-white px-3 py-1 rounded-full text-sm backdrop-blur-sm">
@@ -354,9 +357,9 @@ export default function EvermarkDetailPage(): React.ReactNode {
 
             {/* Description */}
             {evermark.description && (
-              <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6">
-                <h2 className="text-lg font-semibold text-white mb-3">Description</h2>
-                <p className="text-gray-300 leading-relaxed">{evermark.description}</p>
+              <div className={`${themeClasses.bg.card} border ${themeClasses.border.primary} rounded-lg p-6`}>
+                <h2 className={`text-lg font-semibold ${themeClasses.text.primary} mb-3`}>Description</h2>
+                <p className={`${themeClasses.text.secondary} leading-relaxed`}>{evermark.description}</p>
               </div>
             )}
 
@@ -379,7 +382,7 @@ export default function EvermarkDetailPage(): React.ReactNode {
             {/* Tags */}
             {evermark.tags.length > 0 && (
               <div className="space-y-3">
-                <h2 className="text-lg font-semibold text-white">Tags</h2>
+                <h2 className={`text-lg font-semibold ${themeClasses.text.primary}`}>Tags</h2>
                 <div className="flex flex-wrap gap-2">
                   {evermark.tags.map((tag, index) => (
                     <span
@@ -398,28 +401,28 @@ export default function EvermarkDetailPage(): React.ReactNode {
             {evermark.extendedMetadata && Object.keys(evermark.extendedMetadata).some(key => 
               evermark.extendedMetadata[key] && key !== 'tags' && key !== 'customFields'
             ) && (
-              <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6">
-                <h2 className="text-lg font-semibold text-white mb-4">Additional Information</h2>
+              <div className={`${themeClasses.bg.card} border ${themeClasses.border.primary} rounded-lg p-6`}>
+                <h2 className={`text-lg font-semibold ${themeClasses.text.primary} mb-4`}>Additional Information</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   {evermark.extendedMetadata.doi && (
                     <div>
-                      <span className="text-gray-400">DOI:</span>
-                      <span className="ml-2 text-white font-mono">{evermark.extendedMetadata.doi}</span>
+                      <span className={themeClasses.text.muted}>DOI:</span>
+                      <span className={`ml-2 ${themeClasses.text.primary} font-mono`}>{evermark.extendedMetadata.doi}</span>
                     </div>
                   )}
                   {evermark.extendedMetadata.isbn && (
                     <div>
-                      <span className="text-gray-400">ISBN:</span>
-                      <span className="ml-2 text-white font-mono">{evermark.extendedMetadata.isbn}</span>
+                      <span className={themeClasses.text.muted}>ISBN:</span>
+                      <span className={`ml-2 ${themeClasses.text.primary} font-mono`}>{evermark.extendedMetadata.isbn}</span>
                     </div>
                   )}
                   {evermark.extendedMetadata.castData && (
                     <div className="md:col-span-2">
-                      <span className="text-gray-400">Farcaster Cast:</span>
-                      <div className="mt-2 bg-gray-700/50 p-3 rounded border border-gray-600">
-                        <p className="text-gray-300">{evermark.extendedMetadata.castData.content}</p>
+                      <span className={themeClasses.text.muted}>Farcaster Cast:</span>
+                      <div className={`mt-2 ${themeClasses.bg.tertiary} p-3 rounded border ${themeClasses.border.primary}`}>
+                        <p className={themeClasses.text.secondary}>{evermark.extendedMetadata.castData.content}</p>
                         {evermark.extendedMetadata.castData.engagement && (
-                          <div className="flex gap-4 mt-2 text-xs text-gray-400">
+                          <div className={`flex gap-4 mt-2 text-xs ${themeClasses.text.muted}`}>
                             <span>❤️ {evermark.extendedMetadata.castData.engagement.likes}</span>
                             <span>🔄 {evermark.extendedMetadata.castData.engagement.recasts}</span>
                             <span>💬 {evermark.extendedMetadata.castData.engagement.replies}</span>
@@ -437,19 +440,19 @@ export default function EvermarkDetailPage(): React.ReactNode {
           <div className="space-y-6">
             {/* Voting Panel */}
             {showVoting && isAuthenticated ? (
-              <div className="bg-gray-800/50 border border-gray-700 rounded-lg">
-                <div className="p-4 border-b border-gray-700">
-                  <h3 className="font-semibold text-white">Vote on this Evermark</h3>
+              <div className={`${themeClasses.bg.card} border ${themeClasses.border.primary} rounded-lg`}>
+                <div className={`p-4 border-b ${themeClasses.border.primary}`}>
+                  <h3 className={`font-semibold ${themeClasses.text.primary}`}>Vote on this Evermark</h3>
                 </div>
                 <div className="p-4">
                   <VotingPanel evermarkId={evermark.id} />
                 </div>
               </div>
             ) : !isAuthenticated ? (
-              <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6 text-center">
-                <VoteIcon className="mx-auto h-12 w-12 text-gray-500 mb-4" />
-                <h3 className="text-lg font-medium text-white mb-2">Vote on Content</h3>
-                <p className="text-gray-400 mb-4">
+              <div className={`${themeClasses.bg.card} border ${themeClasses.border.primary} rounded-lg p-6 text-center`}>
+                <VoteIcon className={`mx-auto h-12 w-12 ${themeClasses.text.muted} mb-4`} />
+                <h3 className={`text-lg font-medium ${themeClasses.text.primary} mb-2`}>Vote on Content</h3>
+                <p className={`${themeClasses.text.muted} mb-4`}>
                   Connect your wallet to vote on this evermark and earn rewards
                 </p>
                 <div className="bg-gradient-to-r from-blue-900/50 to-purple-900/50 border border-blue-500/30 rounded-lg p-4">
@@ -462,10 +465,10 @@ export default function EvermarkDetailPage(): React.ReactNode {
                 </div>
               </div>
             ) : (
-              <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6 text-center">
-                <VoteIcon className="mx-auto h-12 w-12 text-gray-500 mb-4" />
-                <h3 className="text-lg font-medium text-white mb-2">Support This Content</h3>
-                <p className="text-gray-400 mb-4">
+              <div className={`${themeClasses.bg.card} border ${themeClasses.border.primary} rounded-lg p-6 text-center`}>
+                <VoteIcon className={`mx-auto h-12 w-12 ${themeClasses.text.muted} mb-4`} />
+                <h3 className={`text-lg font-medium ${themeClasses.text.primary} mb-2`}>Support This Content</h3>
+                <p className={`${themeClasses.text.muted} mb-4`}>
                   Click the Vote button above to delegate your voting power to this evermark
                 </p>
                 <button
@@ -479,45 +482,45 @@ export default function EvermarkDetailPage(): React.ReactNode {
             )}
 
             {/* Stats */}
-            <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6">
-              <h3 className="font-semibold text-white mb-4">Stats</h3>
+            <div className={`${themeClasses.bg.card} border ${themeClasses.border.primary} rounded-lg p-6`}>
+              <h3 className={`font-semibold ${themeClasses.text.primary} mb-4`}>Stats</h3>
               <div className="space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Created:</span>
-                  <span className="text-white">{new Date(evermark.createdAt).toLocaleDateString()}</span>
+                  <span className={themeClasses.text.muted}>Created:</span>
+                  <span className={themeClasses.text.primary}>{new Date(evermark.createdAt).toLocaleDateString()}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Token ID:</span>
-                  <span className="text-white font-mono">#{evermark.tokenId}</span>
+                  <span className={themeClasses.text.muted}>Token ID:</span>
+                  <span className={`${themeClasses.text.primary} font-mono`}>#{evermark.tokenId}</span>
                 </div>
                 {evermark.votes !== undefined && (
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Votes:</span>
+                    <span className={themeClasses.text.muted}>Votes:</span>
                     <span className="text-green-400 font-medium">{evermark.votes}</span>
                   </div>
                 )}
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Creator:</span>
-                  <span className="text-white truncate ml-2">{evermark.creator}</span>
+                  <span className={themeClasses.text.muted}>Creator:</span>
+                  <span className={`${themeClasses.text.primary} truncate ml-2`}>{evermark.creator}</span>
                 </div>
               </div>
             </div>
 
             {/* Technical Details */}
-            <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6">
-              <h3 className="font-semibold text-white mb-4">Technical Details</h3>
+            <div className={`${themeClasses.bg.card} border ${themeClasses.border.primary} rounded-lg p-6`}>
+              <h3 className={`font-semibold ${themeClasses.text.primary} mb-4`}>Technical Details</h3>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Network:</span>
+                  <span className={themeClasses.text.muted}>Network:</span>
                   <span className="text-green-400">Base Mainnet</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Storage:</span>
+                  <span className={themeClasses.text.muted}>Storage:</span>
                   <span className="text-cyan-400">IPFS + Blockchain</span>
                 </div>
                 {evermark.metadataURI && (
                   <div>
-                    <span className="text-gray-400 block mb-1">Metadata URI:</span>
+                    <span className={`${themeClasses.text.muted} block mb-1`}>Metadata URI:</span>
                     <a
                       href={evermark.metadataURI}
                       target="_blank"
@@ -532,23 +535,23 @@ export default function EvermarkDetailPage(): React.ReactNode {
             </div>
 
             {/* Quick Actions */}
-            <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6">
-              <h3 className="font-semibold text-white mb-4">Quick Actions</h3>
+            <div className={`${themeClasses.bg.card} border ${themeClasses.border.primary} rounded-lg p-6`}>
+              <h3 className={`font-semibold ${themeClasses.text.primary} mb-4`}>Quick Actions</h3>
               <div className="space-y-3">
                 <Link
                   to="/explore"
-                  className="w-full flex items-center justify-between p-3 bg-gray-700/50 hover:bg-gray-700 rounded-lg transition-colors group"
+                  className={`w-full flex items-center justify-between p-3 ${themeClasses.bg.tertiary} ${themeClasses.bg.hover} rounded-lg transition-colors group`}
                 >
-                  <span className="text-white">Explore More</span>
-                  <span className="text-gray-400 group-hover:text-white transition-colors">→</span>
+                  <span className={themeClasses.text.primary}>Explore More</span>
+                  <span className={`${themeClasses.text.muted} group-hover:${themeClasses.text.primary} transition-colors`}>→</span>
                 </Link>
                 
                 <Link
                   to="/leaderboard"
-                  className="w-full flex items-center justify-between p-3 bg-gray-700/50 hover:bg-gray-700 rounded-lg transition-colors group"
+                  className={`w-full flex items-center justify-between p-3 ${themeClasses.bg.tertiary} ${themeClasses.bg.hover} rounded-lg transition-colors group`}
                 >
-                  <span className="text-white">View Leaderboard</span>
-                  <span className="text-gray-400 group-hover:text-white transition-colors">→</span>
+                  <span className={themeClasses.text.primary}>View Leaderboard</span>
+                  <span className={`${themeClasses.text.muted} group-hover:${themeClasses.text.primary} transition-colors`}>→</span>
                 </Link>
                 
                 {isAuthenticated && (

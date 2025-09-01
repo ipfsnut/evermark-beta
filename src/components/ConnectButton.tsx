@@ -7,6 +7,7 @@ import { createWallet, inAppWallet } from 'thirdweb/wallets';
 import { client } from '@/lib/thirdweb';
 import { CHAIN } from '@/lib/contracts';
 import { useWallet } from '../providers/WalletProvider';
+import { useThemeClasses } from '@/providers/ThemeProvider';
 
 interface WalletConnectProps {
   className?: string;
@@ -28,6 +29,7 @@ const getPWAWallets = () => [
 
 export function WalletConnect({ className = '', variant = 'default' }: WalletConnectProps) {
   const { address, isConnected, context, disconnect } = useWallet();
+  const themeClasses = useThemeClasses();
   
   // Get display info based on context
   const getDisplayInfo = () => {
@@ -51,13 +53,13 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
   if (isConnected && address) {
     if (variant === 'compact') {
       return (
-        <div className={`flex items-center space-x-2 px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg ${className}`}>
+        <div className={`flex items-center space-x-2 px-3 py-2 ${themeClasses.bg.card} border ${themeClasses.border.primary} rounded-lg ${className}`}>
           <div className="w-6 h-6 bg-gradient-to-r from-cyber-primary to-cyber-secondary rounded-full flex items-center justify-center">
             <UserIcon className="h-3 w-3 text-black" />
           </div>
           <button
             onClick={disconnect}
-            className="text-sm font-medium text-white hover:text-cyber-primary transition-colors cursor-pointer"
+            className={`text-sm font-medium ${themeClasses.text.primary} hover:text-cyber-primary transition-colors cursor-pointer`}
             title="Click to logout"
           >
             {displayName ?? shortAddress}
@@ -68,23 +70,23 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
 
     // Default variant
     return (
-      <div className={`flex items-center space-x-2 px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg ${className}`}>
+      <div className={`flex items-center space-x-2 px-4 py-2 ${themeClasses.bg.card} border ${themeClasses.border.primary} rounded-lg ${className}`}>
         <div className="w-8 h-8 bg-gradient-to-r from-cyber-primary to-cyber-secondary rounded-full flex items-center justify-center">
           <UserIcon className="h-4 w-4 text-black" />
         </div>
         <div className="flex flex-col">
           <button
             onClick={disconnect}
-            className="text-sm font-medium text-white hover:text-cyber-primary transition-colors cursor-pointer text-left"
+            className={`text-sm font-medium ${themeClasses.text.primary} hover:text-cyber-primary transition-colors cursor-pointer text-left`}
             title="Click to logout"
           >
             {displayName ?? shortAddress}
           </button>
-          <span className="text-xs text-gray-400">
+          <span className={`text-xs ${themeClasses.text.muted}`}>
             {context === 'farcaster' ? 'Farcaster' : 'Connected'}
           </span>
         </div>
-        <LogOutIcon className="h-4 w-4 text-gray-400 hover:text-cyber-primary transition-colors cursor-pointer" onClick={disconnect} />
+        <LogOutIcon className={`h-4 w-4 ${themeClasses.text.muted} hover:text-cyber-primary transition-colors cursor-pointer`} onClick={disconnect} />
       </div>
     );
   }
@@ -130,20 +132,21 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
 // Simplified connect button for basic usage
 export function SimpleConnectButton({ className = '' }: { className?: string }) {
   const { address, isConnected, context } = useWallet();
+  const themeClasses = useThemeClasses();
 
   if (isConnected && address) {
     const shortAddress = `${address.slice(0, 6)}...${address.slice(-4)}`;
     
     return (
-      <div className={`flex items-center space-x-2 px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg ${className}`}>
+      <div className={`flex items-center space-x-2 px-4 py-2 ${themeClasses.bg.card} border ${themeClasses.border.primary} rounded-lg ${className}`}>
         <div className="w-8 h-8 bg-gradient-to-r from-cyber-primary to-cyber-secondary rounded-full flex items-center justify-center">
           <UserIcon className="h-4 w-4 text-black" />
         </div>
         <div className="flex flex-col">
-          <span className="text-sm font-medium text-white">
+          <span className={`text-sm font-medium ${themeClasses.text.primary}`}>
             {shortAddress}
           </span>
-          <span className="text-xs text-gray-400">
+          <span className={`text-xs ${themeClasses.text.muted}`}>
             {context === 'farcaster' ? 'Farcaster' : 'Connected'}
           </span>
         </div>
