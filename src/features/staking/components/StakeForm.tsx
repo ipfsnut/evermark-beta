@@ -33,7 +33,7 @@ export function StakeForm({ stakingState, onSuccess, className = '', disabled = 
   const [needsApproval, setNeedsApproval] = useState(false);
   const { isDark } = useTheme();
 
-  const { stakingInfo, isStaking, formatTokenAmount, currentAllowance, isApproving, approveStaking } = stakingState;
+  const { stakingInfo, isStaking, formatTokenAmount, currentAllowance, isApproving, approveStaking, refreshAllowance } = stakingState;
 
   // Validate amount whenever it changes
   useEffect(() => {
@@ -86,15 +86,20 @@ export function StakeForm({ stakingState, onSuccess, className = '', disabled = 
       const amountWei = toWei(amount);
       
       // Call the actual blockchain approval
-      await approveStaking(amountWei);
+      const txHash = await approveStaking(amountWei);
       
-      setLocalSuccess(`Successfully approved ${amount} EMARK for staking!`);
-      setNeedsApproval(false); // Reset approval state after successful approval
+      // Wait a moment for transaction to be mined, then refresh allowance
+      setTimeout(async () => {
+        await refreshAllowance();
+        setNeedsApproval(false);
+      }, 3000); // Wait 3 seconds for block confirmation
+      
+      setLocalSuccess(`Successfully approved ${amount} EMARK for staking! Transaction: ${txHash ? txHash.slice(0, 10) + '...' : 'confirmed'}`);
     } catch (error: unknown) {
       console.error('Approval failed:', error);
       setLocalError(error instanceof Error ? error.message : 'Approval failed. Please try again.');
     }
-  }, [validation.isValid, amount, isApproving, approveStaking]);
+  }, [validation.isValid, amount, isApproving, approveStaking, refreshAllowance]);
 
   // Handle staking (should only be called after approval)
   const handleStake = useCallback(async (e: React.FormEvent) => {

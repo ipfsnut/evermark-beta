@@ -222,7 +222,7 @@ export function useStakingState(userAddress?: string): UseStakingStateReturn {
   }, [transactions]);
 
   // ✅ Return complete staking state interface
-  return {
+  const result: UseStakingStateReturn = {
     // Data
     stakingInfo,
     stakingStats,
@@ -265,6 +265,11 @@ export function useStakingState(userAddress?: string): UseStakingStateReturn {
     
     // Approval info
     currentAllowance: stakingData.stakingAllowance,
-    isApproving: transactions.isApproving
+    isApproving: transactions.isApproving,
+    
+    // Data refresh utilities
+    refreshAllowance: stakingData.refetchAllowance
   };
+  
+  return result;
 }

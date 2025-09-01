@@ -168,8 +168,49 @@ export default function AdminPage(): React.ReactNode {
         // Set rewards period info
         if (rewardsPeriodStatus) {
           const [currentPeriod, periodEnd, wethRate, emarkRate] = rewardsPeriodStatus as [bigint, bigint, bigint, bigint];
-          const periodEndDate = new Date(Number(periodEnd) * 1000);
-          const timeRemaining = Math.max(0, Math.floor((periodEndDate.getTime() - Date.now()) / 1000));
+          
+          // Debug logging to understand the timestamp format
+          console.log('🔍 Rewards Period Debug:', {
+            currentPeriod: Number(currentPeriod),
+            periodEndRaw: periodEnd.toString(),
+            periodEndAsNumber: Number(periodEnd),
+            currentTimestamp: Math.floor(Date.now() / 1000),
+            currentDate: new Date().toISOString()
+          });
+          
+          // Check if periodEnd looks like a reasonable timestamp
+          const periodEndNum = Number(periodEnd);
+          const currentTimestamp = Math.floor(Date.now() / 1000);
+          
+          let periodEndDate: Date;
+          let timeRemaining: number;
+          
+          // If the period end is 0, way too far in the future (more than 2 years), or in the past by more than 1 year, treat as invalid
+          const oneYearFromNow = currentTimestamp + (365 * 24 * 3600);
+          const twoYearsFromNow = currentTimestamp + (2 * 365 * 24 * 3600);
+          const oneYearAgo = currentTimestamp - (365 * 24 * 3600);
+          
+          if (periodEndNum === 0 || periodEndNum > twoYearsFromNow || periodEndNum < oneYearAgo) {
+            console.warn('⚠️ Invalid or suspicious periodEnd timestamp:', {
+              periodEndNum,
+              currentTimestamp,
+              periodEndDate: new Date(periodEndNum * 1000).toISOString(),
+              reason: periodEndNum === 0 ? 'zero' : 
+                     periodEndNum > twoYearsFromNow ? 'too far future' : 
+                     'too far past'
+            });
+            periodEndDate = new Date(currentTimestamp * 1000); // Current time
+            timeRemaining = 0; // Expired
+          } else {
+            periodEndDate = new Date(periodEndNum * 1000);
+            timeRemaining = Math.max(0, Math.floor((periodEndDate.getTime() - Date.now()) / 1000));
+          }
+          
+          console.log('🔍 Calculated values:', {
+            periodEndDate: periodEndDate.toISOString(),
+            timeRemaining,
+            isExpired: timeRemaining === 0
+          });
           
           setRewardsPeriod({
             currentPeriod: Number(currentPeriod),
@@ -582,6 +623,18 @@ export default function AdminPage(): React.ReactNode {
               }`}>
                 {rewardsPeriod.timeRemaining > 0 ? 'Active' : 'Expired'}
               </div>
+              
+              {/* Show debug info if period end looks suspicious */}
+              {(() => {
+                const periodEndTimestamp = Number(rewardsPeriod.periodEnd.getTime() / 1000);
+                const currentTimestamp = Math.floor(Date.now() / 1000);
+                const twoYearsFromNow = currentTimestamp + (2 * 365 * 24 * 3600);
+                return periodEndTimestamp > twoYearsFromNow;
+              })() && (
+                <div className="mt-2 px-2 py-1 bg-yellow-900/20 border border-yellow-500/30 rounded text-xs text-yellow-300">
+                  ⚠️ Invalid period end date detected - contract needs reset
+                </div>
+              )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
@@ -744,7 +797,12 @@ export default function AdminPage(): React.ReactNode {
                   className="w-full flex items-center justify-center px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg text-sm transition-colors"
                 >
                   <Play className="w-4 h-4 mr-2" />
-                  Start New Period
+                  {rewardsPeriod && (() => {
+                    const periodEndTimestamp = Number(rewardsPeriod.periodEnd.getTime() / 1000);
+                    const currentTimestamp = Math.floor(Date.now() / 1000);
+                    const twoYearsFromNow = currentTimestamp + (2 * 365 * 24 * 3600);
+                    return periodEndTimestamp > twoYearsFromNow;
+                  })() ? 'Fix Invalid Period' : 'Start New Period'}
                 </button>
                 
                 <button

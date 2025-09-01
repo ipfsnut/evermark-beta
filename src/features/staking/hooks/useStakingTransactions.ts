@@ -20,7 +20,7 @@ export interface StakingTransactions {
   requestUnstake: (amount: bigint) => Promise<void>;
   completeUnstake: () => Promise<void>;
   cancelUnbonding: () => Promise<void>;
-  approveStaking: (amount: bigint) => Promise<void>;
+  approveStaking: (amount: bigint) => Promise<string>;
   
   // Utility
   refetch: () => Promise<void>;
@@ -59,6 +59,9 @@ export function useStakingTransactions(): StakingTransactions {
       });
       
       prodLog("EMARK approval successful:", result.transactionHash);
+      
+      // Return transaction hash for confirmation tracking
+      return result.transactionHash;
     } finally {
       setIsApproving(false);
     }

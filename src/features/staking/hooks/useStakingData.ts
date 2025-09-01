@@ -24,6 +24,9 @@ export interface StakingData {
   // Loading states
   isLoading: boolean;
   hasError: boolean;
+  
+  // Utility functions
+  refetchAllowance: () => void;
 }
 
 export function useStakingData(userAddress?: string): StakingData {
@@ -45,7 +48,7 @@ export function useStakingData(userAddress?: string): StakingData {
   });
   
   // EMARK allowance for staking contract
-  const { data: stakingAllowance, isLoading: allowanceLoading } = useReadContract({
+  const { data: stakingAllowance, isLoading: allowanceLoading, refetch: refetchAllowance } = useReadContract({
     contract: emarkToken,
     method: "function allowance(address,address) view returns (uint256)",
     params: [effectiveAddress, wemark.address],
@@ -131,7 +134,10 @@ export function useStakingData(userAddress?: string): StakingData {
       
       // Loading states
       isLoading,
-      hasError
+      hasError,
+      
+      // Utility functions
+      refetchAllowance
     };
   }, [
     emarkBalance,
@@ -149,7 +155,8 @@ export function useStakingData(userAddress?: string): StakingData {
     unbondingLoading,
     summaryLoading,
     unbondingError,
-    effectiveAddress
+    effectiveAddress,
+    refetchAllowance
   ]);
   
   return stakingData;
