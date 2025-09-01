@@ -11,6 +11,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useWalletAccount, useThirdwebAccount } from '@/hooks/core/useWalletAccount';
 import { useTheme } from '@/providers/ThemeProvider';
+import { useNotifications } from '@/hooks/useNotifications';
 import { cn } from '@/utils/responsive';
 import { RewardsService } from '../services/RewardsService';
 
@@ -24,6 +25,7 @@ export function RewardsClaiming({ className = '', userStakedAmount = BigInt(0) }
   const account = useWalletAccount();
   const thirdwebAccount = useThirdwebAccount();
   const queryClient = useQueryClient();
+  const { success, error: showError, info } = useNotifications();
   
   const [claimError, setClaimError] = useState<string | null>(null);
   const [claimSuccess, setClaimSuccess] = useState<string | null>(null);
@@ -69,12 +71,29 @@ export function RewardsClaiming({ className = '', userStakedAmount = BigInt(0) }
       queryClient.invalidateQueries({ queryKey: ['user-rewards', account?.address] });
       queryClient.invalidateQueries({ queryKey: ['reward-rates'] });
       setClaimError(null);
-      setClaimSuccess(`Rewards claimed successfully! TX: ${result.txHash?.slice(0, 10)}...`);
-      setTimeout(() => setClaimSuccess(null), 5000);
+      
+      // Show success notification
+      success(
+        'Rewards Claimed!',
+        'Your ETH and EMARK rewards have been successfully claimed.',
+        {
+          duration: 6000,
+          actions: result.txHash ? [{
+            label: 'View Transaction',
+            onClick: () => window.open(`https://basescan.org/tx/${result.txHash}`, '_blank')
+          }] : undefined
+        }
+      );
     },
     onError: (error: Error) => {
       setClaimError(error.message);
-      setTimeout(() => setClaimError(null), 5000);
+      
+      // Show error notification
+      showError(
+        'Claim Failed',
+        error.message,
+        { duration: 8000 }
+      );
     },
   });
 

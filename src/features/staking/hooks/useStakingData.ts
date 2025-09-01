@@ -1,8 +1,9 @@
 // src/features/staking/hooks/useStakingData.ts
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useReadContract } from "thirdweb/react";
 import { useContracts } from '@/hooks/core/useContracts';
 import { devLog } from '@/utils/debug';
+import { VotingPowerService } from '../services/VotingPowerService';
 
 export interface StakingData {
   // Token balances
@@ -14,6 +15,7 @@ export interface StakingData {
   // Voting power
   availableVotingPower: bigint;
   delegatedPower: bigint;
+  reservedPower: bigint;
   
   // Unbonding state
   unbondingAmount: bigint;
@@ -32,6 +34,17 @@ export interface StakingData {
 export function useStakingData(userAddress?: string): StakingData {
   const { wemark, emarkToken } = useContracts();
   const effectiveAddress = userAddress || '0x0000000000000000000000000000000000000000';
+  
+  // State for voting power breakdown
+  const [votingPowerBreakdown, setVotingPowerBreakdown] = useState<{
+    available: bigint;
+    reserved: bigint;
+    delegated: bigint;
+  }>({
+    available: BigInt(0),
+    reserved: BigInt(0),
+    delegated: BigInt(0)
+  });
   
   // EMARK token balance
   const { data: emarkBalance, isLoading: emarkLoading } = useReadContract({
@@ -82,6 +95,46 @@ export function useStakingData(userAddress?: string): StakingData {
     params: [effectiveAddress],
   });
   
+  // Effect to calculate voting power breakdown when wEMARK balance changes
+  useEffect(() => {
+    if (!userAddress || userAddress === '0x0000000000000000000000000000000000000000') return;
+    if (!wEmarkBalance || wEmarkBalance === BigInt(0)) return;
+
+    let mounted = true;
+
+    const calculateVotingPower = async () => {
+      try {
+        const breakdown = await VotingPowerService.getVotingPowerBreakdown(
+          userAddress,
+          wEmarkBalance as bigint
+        );
+        
+        if (mounted) {
+          setVotingPowerBreakdown({
+            available: breakdown.available,
+            reserved: breakdown.reserved,
+            delegated: breakdown.delegated
+          });
+        }
+      } catch (error) {
+        console.warn('Failed to calculate voting power breakdown:', error);
+        if (mounted) {
+          setVotingPowerBreakdown({
+            available: wEmarkBalance as bigint,
+            reserved: BigInt(0),
+            delegated: BigInt(0)
+          });
+        }
+      }
+    };
+
+    calculateVotingPower();
+
+    return () => {
+      mounted = false;
+    };
+  }, [userAddress, wEmarkBalance]);
+  
   const stakingData = useMemo(() => {
     // Parse user info from WEMARK: (stakedBalance, unbonding, withdrawTime, canWithdrawNow)
     const stakedBalance = userInfo?.[0] || BigInt(0);
@@ -89,9 +142,10 @@ export function useStakingData(userAddress?: string): StakingData {
     const unbondingReleaseTime = userInfo?.[2] || BigInt(0);
     const canClaimUnbonding = userInfo?.[3] || canWithdraw || false;
     
-    // Voting power is the wEMARK balance
-    const availableVoting = availableVotingPower || BigInt(0);
-    const delegated = BigInt(0); // WEMARK is non-transferable, no delegation
+    // Use calculated voting power breakdown
+    const availableVoting = votingPowerBreakdown.available;
+    const reservedVoting = votingPowerBreakdown.reserved;
+    const delegated = votingPowerBreakdown.delegated;
     
     const isLoading = emarkLoading || wEmarkLoading || allowanceLoading || votingLoading || 
                      delegatedLoading || unbondingLoading || summaryLoading;
@@ -125,6 +179,7 @@ export function useStakingData(userAddress?: string): StakingData {
       // Voting power
       availableVotingPower: availableVoting,
       delegatedPower: delegated,
+      reservedPower: reservedVoting,
       
       // Unbonding state
       unbondingAmount,
@@ -156,7 +211,8 @@ export function useStakingData(userAddress?: string): StakingData {
     summaryLoading,
     unbondingError,
     effectiveAddress,
-    refetchAllowance
+    refetchAllowance,
+    votingPowerBreakdown
   ]);
   
   return stakingData;

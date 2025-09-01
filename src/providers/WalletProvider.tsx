@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAccount } from 'wagmi';
 import { useActiveAccount } from 'thirdweb/react';
 import { useFarcasterDetection } from '../hooks/useFarcasterDetection';
+import { authLogger } from '../utils/logger';
 
 interface WalletContextType {
   // Unified wallet state
@@ -65,16 +66,16 @@ function FarcasterWalletProvider({ children }: { children: React.ReactNode }): R
             const accounts = await ethProvider.request({ method: 'eth_accounts' });
             if (accounts && accounts.length > 0) {
               setManualAddress(accounts[0]);
-              console.log('✅ Got wallet address from Farcaster SDK:', accounts[0]);
+              authLogger.info('Got wallet address from Farcaster SDK', { address: accounts[0] });
             } else {
-              console.log('🔍 Farcaster SDK provider available but no accounts connected');
+              authLogger.debug('Farcaster SDK provider available but no accounts connected');
             }
           } catch (accountError) {
-            console.log('Failed to get accounts from Farcaster provider:', accountError);
+            authLogger.warn('Failed to get accounts from Farcaster provider', { error: accountError });
           }
         }
       } catch (error) {
-        console.log('Failed to get wallet provider from Farcaster SDK:', error);
+        authLogger.warn('Failed to get wallet provider from Farcaster SDK', { error });
       }
     };
 
@@ -93,17 +94,17 @@ function FarcasterWalletProvider({ children }: { children: React.ReactNode }): R
                           manualAddress ? 'farcaster-sdk' : null;
 
   const connect = async (): Promise<{ success: boolean; error?: string }> => {
-    console.log('🎯 Farcaster context - connection handled by Mini App');
+    authLogger.info('Farcaster context - connection handled by Mini App');
     return { success: true };
   };
 
   const disconnect = async (): Promise<void> => {
-    console.log('Disconnect not supported in Farcaster context');
+    authLogger.info('Disconnect not supported in Farcaster context');
   };
 
   // Debug logging
   useEffect(() => {
-    console.log('💼 Farcaster Wallet Provider State:', {
+    authLogger.debug('Farcaster Wallet Provider State', {
       context: 'farcaster',
       address: walletAddress,
       isConnected,
@@ -140,17 +141,17 @@ function BrowserWalletProvider({ children, context }: { children: React.ReactNod
   const connectionSource = walletAddress ? 'thirdweb' : null;
 
   const connect = async (): Promise<{ success: boolean; error?: string }> => {
-    console.log('🌐 Browser/PWA context - use ConnectButton component');
+    authLogger.info('Browser/PWA context - use ConnectButton component');
     return { success: false, error: 'Use ConnectButton component for manual connection' };
   };
 
   const disconnect = async (): Promise<void> => {
-    console.log('Disconnect requested - handled by ConnectButton component');
+    authLogger.info('Disconnect requested - handled by ConnectButton component');
   };
 
   // Debug logging
   useEffect(() => {
-    console.log('💼 Browser/PWA Wallet Provider State:', {
+    authLogger.debug('Browser/PWA Wallet Provider State', {
       context,
       address: walletAddress,
       isConnected,

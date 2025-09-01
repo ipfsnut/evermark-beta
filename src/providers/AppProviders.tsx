@@ -12,6 +12,7 @@ import { BlockchainProvider } from './BlockchainProvider';
 import { IntegratedUserProvider } from './IntegratedUserProvider';
 import { AppContextProvider } from './AppContext';
 import { ThemeProvider } from './ThemeProvider';
+import { NotificationProvider } from '../components/notifications/NotificationSystem';
 import { useFarcasterDetection } from '../hooks/useFarcasterDetection';
 
 // React Query client with optimized settings
@@ -58,19 +59,21 @@ export function AppProviders({ children }: AppProvidersProps) {
     return (
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
-          <ThirdwebProvider>
-            <WagmiProvider config={miniAppWagmiConfig}>
-                <WalletProvider>
-                  <BlockchainProvider>
-                    <IntegratedUserProvider>
-                      <AppContextProvider>
-                        {children}
-                      </AppContextProvider>
-                    </IntegratedUserProvider>
-                  </BlockchainProvider>
-                </WalletProvider>
-              </WagmiProvider>
-          </ThirdwebProvider>
+          <NotificationProvider>
+            <ThirdwebProvider>
+              <WagmiProvider config={miniAppWagmiConfig}>
+                  <WalletProvider>
+                    <BlockchainProvider>
+                      <IntegratedUserProvider>
+                        <AppContextProvider>
+                          {children}
+                        </AppContextProvider>
+                      </IntegratedUserProvider>
+                    </BlockchainProvider>
+                  </WalletProvider>
+                </WagmiProvider>
+            </ThirdwebProvider>
+          </NotificationProvider>
         </ThemeProvider>
       </QueryClientProvider>
     );
@@ -80,17 +83,19 @@ export function AppProviders({ children }: AppProvidersProps) {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <ThirdwebProvider>
-          <WalletProvider>
-            <BlockchainProvider>
-              <IntegratedUserProvider>
-                <AppContextProvider>
-                  {children}
-                </AppContextProvider>
-              </IntegratedUserProvider>
-            </BlockchainProvider>
-          </WalletProvider>
-        </ThirdwebProvider>
+        <NotificationProvider>
+          <ThirdwebProvider>
+            <WalletProvider>
+              <BlockchainProvider>
+                <IntegratedUserProvider>
+                  <AppContextProvider>
+                    {children}
+                  </AppContextProvider>
+                </IntegratedUserProvider>
+              </BlockchainProvider>
+            </WalletProvider>
+          </ThirdwebProvider>
+        </NotificationProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

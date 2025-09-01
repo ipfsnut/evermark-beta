@@ -39,7 +39,6 @@ contract EvermarkRewards is
     uint256 public emarkDistributionRate;  
     uint256 public rebalancePeriod;
     
-    uint256 public currentPeriodNumber;
     uint256 public currentPeriodStart;
     uint256 public currentPeriodEnd;
     uint256 public ethRewardRate;
@@ -61,9 +60,13 @@ contract EvermarkRewards is
     uint256 public lastEmarkPoolSnapshot;
 
     uint256 public emergencyPauseUntil;
+    
+    // V2 Storage (added for upgrade)
+    uint256 public currentPeriodNumber;
 
 
     event PeriodRebalanced(
+        uint256 indexed periodNumber,
         uint256 indexed periodStart,
         uint256 indexed periodEnd,
         uint256 ethPoolSnapshot,
@@ -153,8 +156,10 @@ contract EvermarkRewards is
         
         currentPeriodStart = block.timestamp;
         currentPeriodEnd = block.timestamp + rebalancePeriod;
+        currentPeriodNumber += 1;
         
         emit PeriodRebalanced(
+            currentPeriodNumber,
             currentPeriodStart,
             currentPeriodEnd,
             lastEthPoolSnapshot,
@@ -246,9 +251,25 @@ contract EvermarkRewards is
     }
 
     /**
-     * @notice Get current period and pool status
+     * @notice Get current period status for frontend display
      */
     function getPeriodStatus() external view returns (
+        uint256 currentPeriod,
+        uint256 periodEnd,
+        uint256 wethRate,
+        uint256 emarkRate
+    ) {
+        currentPeriod = currentPeriodNumber;
+        periodEnd = currentPeriodEnd;
+        wethRate = ethRewardRate;
+        emarkRate = emarkRewardRate;
+    }
+
+    /**
+     * @notice Get detailed period information for admin use
+     */
+    function getDetailedPeriodStatus() external view returns (
+        uint256 periodNumber,
         uint256 periodStart,
         uint256 periodEnd,
         uint256 timeUntilRebalance,
@@ -259,6 +280,7 @@ contract EvermarkRewards is
         uint256 nextEthRate,
         uint256 nextEmarkRate
     ) {
+        periodNumber = currentPeriodNumber;
         periodStart = currentPeriodStart;
         periodEnd = currentPeriodEnd;
         timeUntilRebalance = block.timestamp >= currentPeriodEnd ? 0 : currentPeriodEnd - block.timestamp;
@@ -376,5 +398,14 @@ contract EvermarkRewards is
 
     function supportsInterface(bytes4 interfaceId) public view override returns (bool) {
         return super.supportsInterface(interfaceId);
+    }
+    
+    /**
+     * @notice Initialize V2 upgrade - sets period number if not already set
+     */
+    function initializeV2() external onlyRole(ADMIN_ROLE) {
+        if (currentPeriodNumber == 0) {
+            currentPeriodNumber = 1;
+        }
     }
 }

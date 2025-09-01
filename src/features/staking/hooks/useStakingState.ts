@@ -41,7 +41,7 @@ export function useStakingState(userAddress?: string): UseStakingStateReturn {
       // Voting power
       availableVotingPower: stakingData.availableVotingPower,
       delegatedPower: stakingData.delegatedPower,
-      reservedPower: BigInt(0), // Would be calculated from delegated power
+      reservedPower: stakingData.reservedPower,
       
       // Unbonding state
       unbondingAmount: stakingData.unbondingAmount,

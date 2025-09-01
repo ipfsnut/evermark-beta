@@ -17,8 +17,10 @@ export type {
 // Services - Export business logic layer
 // EvermarkService not exported due to SDK dependencies
 
-// Hooks - Export main state management hook
+// Hooks - Export state management hooks
 export { useEvermarksState } from './hooks/useEvermarkState';
+export { useEvermarkQueries } from './hooks/useEvermarkQueries';
+export { useEvermarkCreation } from './hooks/useEvermarkCreation';
 
 // Components - Export all UI components
 export { EvermarkFeed } from './components/EvermarkFeed';
