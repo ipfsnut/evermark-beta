@@ -1,6 +1,7 @@
 // src/hooks/core/useWalletAccount.ts - Unified wallet account hook for all contexts
 
 import { useWallet } from '@/providers/WalletProvider';
+import { useActiveAccount } from 'thirdweb/react';
 
 /**
  * Unified wallet account hook that works in both Farcaster and Browser contexts.
@@ -36,4 +37,17 @@ export function useIsWalletConnected(): boolean {
 export function useWalletAddress(): string | null {
   const { address } = useWallet();
   return address;
+}
+
+/**
+ * Hook that returns the thirdweb Account object when available (browser context)
+ * or null in Farcaster context. Use this for thirdweb SDK operations that need
+ * the full Account interface (sendTransaction, signMessage, etc.)
+ */
+export function useThirdwebAccount() {
+  const { context } = useWallet();
+  const thirdwebAccount = useActiveAccount();
+  
+  // Only return thirdweb account in browser/PWA context
+  return context === 'browser' || context === 'pwa' ? thirdwebAccount : null;
 }

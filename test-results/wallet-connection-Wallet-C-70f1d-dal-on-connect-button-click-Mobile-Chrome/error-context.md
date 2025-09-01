@@ -1,0 +1,383 @@
+# Page snapshot
+
+```yaml
+- generic:
+  - generic:
+    - generic:
+      - banner:
+        - generic:
+          - generic:
+            - generic:
+              - button:
+                - img
+              - link:
+                - /url: /
+                - generic:
+                  - generic: E
+            - generic:
+              - link:
+                - /url: /explore
+                - img
+              - button:
+                - generic:
+                  - img
+              - generic:
+                - button:
+                  - img
+                  - generic: "1"
+              - button:
+                - generic:
+                  - img
+                  - text: Connect Wallet
+      - generic:
+        - main:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - img
+                      - generic:
+                        - heading [level=1]:
+                          - text: EVERMARK PROTOCOL
+                          - generic: "[BETA]"
+                        - paragraph:
+                          - text: Discover amazing content online and earn rewards by sharing Evermarks through
+                          - generic: community curation
+                        - generic:
+                          - generic: 🔗 Permanent Links
+                          - generic: 💰 $WEMARK Rewards
+                          - generic: 🗳️ Community Voting
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - img
+                      - generic:
+                        - generic: "7"
+                        - generic: Total Evermarks
+                    - generic:
+                      - generic:
+                        - generic:
+                          - img
+                      - generic:
+                        - generic: "2"
+                        - generic: With Media
+                    - generic:
+                      - generic:
+                        - generic:
+                          - img
+                      - generic:
+                        - generic: "5"
+                        - generic: Active Creators
+                    - generic:
+                      - generic:
+                        - generic:
+                          - img
+                      - generic:
+                        - generic: "0"
+                        - generic: This Week
+                - generic:
+                  - generic:
+                    - heading [level=2]: Get Started
+                    - paragraph: Choose your path in the Evermark ecosystem
+                  - generic:
+                    - link:
+                      - /url: /explore
+                      - generic:
+                        - img
+                      - heading [level=3]: Explore All
+                      - paragraph: Browse the collection
+                    - link:
+                      - /url: /leaderboard
+                      - generic:
+                        - img
+                      - heading [level=3]: View Rankings
+                      - paragraph: See community favorites
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - heading [level=2]: Community Feed
+                        - link:
+                          - /url: /explore
+                          - generic: View All
+                          - img
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - heading [level=2]:
+                                - text: Evermarks
+                                - generic: (7)
+                              - button:
+                                - img
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - img
+                              - generic:
+                                - heading [level=3]: Popfi
+                                - generic:
+                                  - generic:
+                                    - img
+                                    - generic: 0x58e5...5AfA
+                                  - generic:
+                                    - img
+                                    - generic: 10 days ago
+                                - paragraph: Habibi popping party 🎈
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - img
+                                    - img
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - img
+                              - generic:
+                                - heading [level=3]: Policy abstraction as a predictor of cognitive effort avoidance.
+                                - generic:
+                                  - generic:
+                                    - img
+                                    - generic: 0x18A8...2A3c
+                                  - generic:
+                                    - img
+                                    - generic: 10 days ago
+                                - paragraph: Policy abstraction as a predictor of cognitive effort avoidance. by Ceyda Sayalı, Jordan Rubin-McGregor, David Badre
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - img
+                                    - img
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - img
+                                  - generic:
+                                    - generic: 💾 Cached
+                                    - generic: 🖼️ Wide
+                                    - generic: "AR: 2.00"
+                              - generic:
+                                - heading [level=3]: Cast from farcaster.xyz
+                                - generic:
+                                  - generic:
+                                    - img
+                                    - generic: 0x2B27...3fe3
+                                  - generic:
+                                    - img
+                                    - generic: 10 days ago
+                                - paragraph: Farcaster cast preserved from https://farcaster.xyz/kompreni/0xa9f15161
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - img
+                                    - img
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - img
+                                  - generic:
+                                    - generic: 💾 Cached
+                                    - generic: 🖼️ Wide
+                                    - generic: "AR: 2.00"
+                              - generic:
+                                - heading [level=3]: Cast from farcaster.xyz
+                                - generic:
+                                  - generic:
+                                    - img
+                                    - generic: 0x2B27...3fe3
+                                  - generic:
+                                    - img
+                                    - generic: 10 days ago
+                                - paragraph: Farcaster cast preserved from https://farcaster.xyz/horsefacts.eth/0x941d16c5
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - img
+                                    - img
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - img
+                                  - generic:
+                                    - generic: 💾 Cached
+                                    - generic: 🖼️ Wide
+                                    - generic: "AR: 2.00"
+                              - generic:
+                                - heading [level=3]: MOO MOO HA MOO HA HA MOO HA HA SAID MOO HA HA SAID THE MOO HA HA SAID THE LAUGHING MOO HA HA SAID TH
+                                - generic:
+                                  - generic:
+                                    - img
+                                    - generic: Vitalik Buterin
+                                  - generic:
+                                    - img
+                                    - generic: 10 days ago
+                                - paragraph: MOO MOO HA MOO HA HA MOO HA HA SAID MOO HA HA SAID THE MOO HA HA SAID THE LAUGHING MOO HA HA SAID THE LAUGHING COW
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - img
+                                    - img
+                            - generic:
+                              - generic:
+                                - heading [level=3]: "Evermark #1"
+                                - generic:
+                                  - generic:
+                                    - img
+                                    - generic: Unknown
+                                  - generic:
+                                    - img
+                                    - generic: 10 days ago
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - img
+                            - generic:
+                              - generic:
+                                - heading [level=3]: Alpha Retirement
+                                - generic:
+                                  - generic:
+                                    - img
+                                    - generic: Unknown
+                                  - generic:
+                                    - img
+                                    - generic: 10 days ago
+                                - paragraph: Evermark is changing. We have upgraded from the Alpha contracts & application structure to Beta contracts, and are now beginning the Beta Testing Phase of Evermark Development!
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - img
+                                    - img
+                    - generic:
+                      - generic:
+                        - img
+                        - heading [level=3]: Join the Community
+                        - paragraph: Connect your wallet to vote on content and earn rewards
+                        - generic:
+                          - paragraph: 🖥️ Desktop wallet connection available
+                      - generic:
+                        - heading [level=3]: Protocol Insights
+                        - generic:
+                          - generic:
+                            - generic: "Network:"
+                            - generic: Base Mainnet
+                          - generic:
+                            - generic: "Storage:"
+                            - generic: IPFS + Blockchain
+                          - generic:
+                            - generic: "Status:"
+                            - generic: Live
+                          - generic:
+                            - generic: "Version:"
+                            - generic: Beta v0.0.1
+                - generic:
+                  - generic:
+                    - generic:
+                      - heading [level=2]: Ready to Preserve Something Amazing?
+                      - paragraph:
+                        - text: Transform any online content into a permanent, shareable Evermark. Join our community of curators and earn
+                        - generic: $WEMARK
+                        - text: rewards.
+                      - generic:
+                        - link:
+                          - /url: /create
+                          - img
+                          - generic: Create Your First Evermark
+                        - link:
+                          - /url: /explore
+                          - img
+                          - generic: Explore All Evermarks
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - generic: E
+            - generic: Evermark Beta
+          - button:
+            - img
+        - generic:
+          - generic:
+            - heading [level=3]: Navigation
+            - link:
+              - /url: /
+              - img
+              - generic: Home
+            - link:
+              - /url: /explore
+              - img
+              - generic: Explore
+            - generic:
+              - img
+              - generic: Create
+              - generic: Sign in required
+            - link:
+              - /url: /swap
+              - img
+              - generic: Swap
+            - generic:
+              - img
+              - generic: Staking
+              - generic: Sign in required
+            - link:
+              - /url: /leaderboard
+              - img
+              - generic: Leaderboard
+          - generic:
+            - heading [level=3]: Information
+            - link:
+              - /url: /docs
+              - img
+              - generic: Documentation
+            - link:
+              - /url: /about
+              - img
+              - generic: About
+          - generic:
+            - heading [level=3]: External
+            - link:
+              - /url: https://github.com/ipfsnut/evermark-beta
+              - img
+              - generic: GitHub
+        - generic:
+          - generic:
+            - generic: Evermark Beta v0.1
+            - generic:
+              - generic: Built on
+              - generic: Base
+              - generic: •
+              - generic: Powered by
+              - generic: EMARK
+  - dialog "Connect Modal" [ref=e2]:
+    - heading "Connect Modal" [level=2] [ref=e3]
+    - generic [ref=e7]:
+      - heading "Sign in" [level=2] [ref=e10]
+      - list [ref=e12]:
+        - listitem [ref=e13]:
+          - button "MetaMask" [ref=e14] [cursor=pointer]:
+            - generic [ref=e17] [cursor=pointer]: MetaMask
+        - listitem [ref=e18]:
+          - button "Coinbase Wallet" [ref=e19] [cursor=pointer]:
+            - generic [ref=e22] [cursor=pointer]: Coinbase Wallet
+        - listitem [ref=e23]:
+          - button "Rainbow" [ref=e24] [cursor=pointer]:
+            - generic [ref=e27] [cursor=pointer]: Rainbow
+        - button "All Wallets 500+" [ref=e29] [cursor=pointer]:
+          - generic [ref=e35] [cursor=pointer]:
+            - generic [ref=e36] [cursor=pointer]: All Wallets
+            - generic [ref=e37] [cursor=pointer]: 500+
+      - generic [ref=e40]:
+        - generic [ref=e41]: New to wallets?
+        - link "Get started" [ref=e42] [cursor=pointer]:
+          - /url: https://blog.thirdweb.com/web3-wallet/
+      - link "Powered by" [ref=e45] [cursor=pointer]:
+        - /url: https://playground.thirdweb.com/connect/sign-in/button?utm_source=cw_text
+        - generic [ref=e47] [cursor=pointer]: Powered by
+    - button "Close" [active] [ref=e52] [cursor=pointer]:
+      - img [ref=e53] [cursor=pointer]
+```

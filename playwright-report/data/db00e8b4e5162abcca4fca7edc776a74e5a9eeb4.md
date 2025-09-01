@@ -1,0 +1,85 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - button "Toggle menu" [ref=e8] [cursor=pointer]:
+          - img [ref=e9] [cursor=pointer]
+        - link "E" [ref=e10] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e12] [cursor=pointer]: E
+      - generic [ref=e13]:
+        - link [ref=e14] [cursor=pointer]:
+          - /url: /explore
+          - img [ref=e15] [cursor=pointer]
+        - button "Switch to light mode" [ref=e18] [cursor=pointer]:
+          - img [ref=e20] [cursor=pointer]
+        - button [ref=e27] [cursor=pointer]:
+          - img [ref=e28] [cursor=pointer]
+        - button "Connect" [ref=e31] [cursor=pointer]:
+          - generic [ref=e32] [cursor=pointer]:
+            - img [ref=e33] [cursor=pointer]
+            - text: Connect Wallet
+  - main [ref=e37]:
+    - paragraph [ref=e43]: Loading Evermark...
+  - generic [ref=e44]:
+    - generic [ref=e45]:
+      - generic [ref=e46]:
+        - generic [ref=e48]: E
+        - generic [ref=e49]: Evermark Beta
+      - button "Close menu" [ref=e50] [cursor=pointer]:
+        - img [ref=e51] [cursor=pointer]
+    - generic [ref=e54]:
+      - generic [ref=e55]:
+        - heading "Navigation" [level=3] [ref=e56]
+        - link "Home" [ref=e57] [cursor=pointer]:
+          - /url: /
+          - img [ref=e58] [cursor=pointer]
+          - generic [ref=e61] [cursor=pointer]: Home
+        - link "Explore" [ref=e62] [cursor=pointer]:
+          - /url: /explore
+          - img [ref=e63] [cursor=pointer]
+          - generic [ref=e66] [cursor=pointer]: Explore
+        - generic [ref=e67]:
+          - img [ref=e68]
+          - generic [ref=e69]: Create
+          - generic [ref=e70]: Sign in required
+        - link "Swap" [ref=e71] [cursor=pointer]:
+          - /url: /swap
+          - img [ref=e72] [cursor=pointer]
+          - generic [ref=e75] [cursor=pointer]: Swap
+        - generic [ref=e76]:
+          - img [ref=e77]
+          - generic [ref=e81]: Staking
+          - generic [ref=e82]: Sign in required
+        - link "Leaderboard" [ref=e83] [cursor=pointer]:
+          - /url: /leaderboard
+          - img [ref=e84] [cursor=pointer]
+          - generic [ref=e87] [cursor=pointer]: Leaderboard
+      - generic [ref=e88]:
+        - heading "Information" [level=3] [ref=e89]
+        - link "Documentation" [ref=e90] [cursor=pointer]:
+          - /url: /docs
+          - img [ref=e91] [cursor=pointer]
+          - generic [ref=e93] [cursor=pointer]: Documentation
+        - link "About" [ref=e94] [cursor=pointer]:
+          - /url: /about
+          - img [ref=e95] [cursor=pointer]
+          - generic [ref=e97] [cursor=pointer]: About
+      - generic [ref=e98]:
+        - heading "External" [level=3] [ref=e99]
+        - link "GitHub" [ref=e100] [cursor=pointer]:
+          - /url: https://github.com/ipfsnut/evermark-beta
+          - img [ref=e101] [cursor=pointer]
+          - generic [ref=e105] [cursor=pointer]: GitHub
+    - generic [ref=e107]:
+      - generic [ref=e108]: Evermark Beta v0.1
+      - generic [ref=e109]:
+        - generic [ref=e110]: Built on
+        - generic [ref=e111]: Base
+        - generic [ref=e112]: •
+        - generic [ref=e113]: Powered by
+        - generic [ref=e114]: EMARK
+```

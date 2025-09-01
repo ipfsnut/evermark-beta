@@ -9,7 +9,7 @@ import {
   DollarSignIcon
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useActiveAccount } from 'thirdweb/react';
+import { useWalletAccount, useThirdwebAccount } from '@/hooks/core/useWalletAccount';
 import { useTheme } from '@/providers/ThemeProvider';
 import { cn } from '@/utils/responsive';
 import { RewardsService } from '../services/RewardsService';
@@ -21,7 +21,8 @@ interface RewardsClaimingProps {
 
 export function RewardsClaiming({ className = '', userStakedAmount = BigInt(0) }: RewardsClaimingProps) {
   const { isDark } = useTheme();
-  const account = useActiveAccount();
+  const account = useWalletAccount();
+  const thirdwebAccount = useThirdwebAccount();
   const queryClient = useQueryClient();
   
   const [claimError, setClaimError] = useState<string | null>(null);
@@ -56,8 +57,8 @@ export function RewardsClaiming({ className = '', userStakedAmount = BigInt(0) }
   // Claim rewards mutation
   const claimMutation = useMutation({
     mutationFn: async () => {
-      if (!account) throw new Error('Wallet not connected');
-      const result = await RewardsService.claimRewards(account);
+      if (!account || !thirdwebAccount) throw new Error('Wallet not connected');
+      const result = await RewardsService.claimRewards(thirdwebAccount);
       if (!result.success) {
         throw new Error(result.error || 'Claim failed');
       }

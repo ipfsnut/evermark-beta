@@ -1,0 +1,86 @@
+name: Deploy to Netlify
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  test:
+    name: Test Before Deploy
+    uses: ./.github/workflows/test.yml
+    secrets: inherit
+
+  deploy:
+    name: Deploy to Production
+    needs: test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_THIRDWEB_CLIENT_ID: ${{ secrets.VITE_THIRDWEB_CLIENT_ID }}
+          VITE_THIRDWEB_SECRET_KEY: ${{ secrets.VITE_THIRDWEB_SECRET_KEY }}
+          VITE_NEYNAR_API_KEY: ${{ secrets.VITE_NEYNAR_API_KEY }}
+          VITE_CHAIN_ID: 8453
+          VITE_EMARK_TOKEN_ADDRESS: ${{ secrets.VITE_EMARK_TOKEN_ADDRESS }}
+          VITE_CARD_CATALOG_ADDRESS: ${{ secrets.VITE_CARD_CATALOG_ADDRESS }}
+          VITE_EVERMARK_NFT_ADDRESS: ${{ secrets.VITE_EVERMARK_NFT_ADDRESS }}
+          VITE_EVERMARK_VOTING_ADDRESS: ${{ secrets.VITE_EVERMARK_VOTING_ADDRESS }}
+          VITE_EVERMARK_LEADERBOARD_ADDRESS: ${{ secrets.VITE_EVERMARK_LEADERBOARD_ADDRESS }}
+          VITE_EVERMARK_REWARDS_ADDRESS: ${{ secrets.VITE_EVERMARK_REWARDS_ADDRESS }}
+          VITE_FEE_COLLECTOR_ADDRESS: ${{ secrets.VITE_FEE_COLLECTOR_ADDRESS }}
+          VITE_FARCASTER_DEVELOPER_FID: ${{ secrets.VITE_FARCASTER_DEVELOPER_FID }}
+
+      - name: Deploy to Netlify
+        uses: nwtgck/actions-netlify@v2.0
+        with:
+          publish-dir: './dist'
+          production-branch: main
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          deploy-message: "Deploy from GitHub Actions"
+          enable-pull-request-comment: true
+          enable-commit-comment: true
+          overwrites-pull-request-comment: true
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        timeout-minutes: 10
+
+      - name: Post deployment checks
+        run: |
+          echo "Deployment completed"
+          echo "Site URL: https://${{ secrets.NETLIFY_SITE_NAME }}.netlify.app"
+
+  notify:
+    name: Notify Deployment
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Send notification
+        run: |
+          if [ "${{ needs.deploy.result }}" == "success" ]; then
+            echo "✅ Deployment successful"
+          else
+            echo "❌ Deployment failed"
+          fi

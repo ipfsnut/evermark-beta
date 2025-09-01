@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useActiveAccount } from 'thirdweb/react';
+import { useWalletAccount, useThirdwebAccount } from '@/hooks/core/useWalletAccount';
 import type { Account } from 'thirdweb/wallets';
 
 import {
@@ -400,7 +400,8 @@ const QUERY_KEYS = {
 export function useEvermarksState(): UseEvermarksResult {
   
   // Get the active account for blockchain operations
-  const thirdwebAccount = useActiveAccount();
+  const account = useWalletAccount();
+  const thirdwebAccount = useThirdwebAccount();
   
   // Local state for pagination and filtering
   const [pagination, setPaginationState] = useState<EvermarkPagination>(
@@ -445,7 +446,7 @@ export function useEvermarksState(): UseEvermarksResult {
   const createMutation = useMutation({
     mutationFn: async (input: CreateEvermarkInput) => {
       // Check if we have an account before starting creation
-      if (!thirdwebAccount) {
+      if (!account || !thirdwebAccount) {
         throw new Error('No wallet connected. Please connect your wallet to create an Evermark.');
       }
 
@@ -453,7 +454,7 @@ export function useEvermarksState(): UseEvermarksResult {
       setCreateStep('Validating inputs...');
       
       // Call the blockchain-first creation service
-      const result = await TempEvermarkService.createEvermark(input, thirdwebAccount!);
+      const result = await TempEvermarkService.createEvermark(input, thirdwebAccount);
       
       if (result.success) {
         setCreateProgress(100);

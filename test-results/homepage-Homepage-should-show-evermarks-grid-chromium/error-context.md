@@ -1,0 +1,316 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e6]:
+      - link "E Evermark" [ref=e8] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e10] [cursor=pointer]: E
+        - generic [ref=e11] [cursor=pointer]: Evermark
+      - generic [ref=e13]:
+        - img [ref=e14]
+        - textbox "Search Evermarks..." [ref=e17]
+      - generic [ref=e18]:
+        - button "Switch to light mode" [ref=e19] [cursor=pointer]:
+          - img [ref=e21] [cursor=pointer]
+        - button "2" [ref=e28] [cursor=pointer]:
+          - img [ref=e29] [cursor=pointer]
+          - generic [ref=e32] [cursor=pointer]: "2"
+        - button "Connect" [ref=e33] [cursor=pointer]:
+          - generic [ref=e34] [cursor=pointer]:
+            - img [ref=e35] [cursor=pointer]
+            - text: Connect Wallet
+  - generic [ref=e38]:
+    - complementary [ref=e39]:
+      - generic [ref=e40]:
+        - generic [ref=e41]:
+          - heading "Main" [level=3] [ref=e42]
+          - link "Home" [ref=e43] [cursor=pointer]:
+            - /url: /
+            - img [ref=e44] [cursor=pointer]
+            - generic [ref=e47] [cursor=pointer]: Home
+          - link "Explore" [ref=e48] [cursor=pointer]:
+            - /url: /explore
+            - img [ref=e49] [cursor=pointer]
+            - generic [ref=e52] [cursor=pointer]: Explore
+          - link "Leaderboard" [ref=e53] [cursor=pointer]:
+            - /url: /leaderboard
+            - img [ref=e54] [cursor=pointer]
+            - generic [ref=e57] [cursor=pointer]: Leaderboard
+          - link "Staking" [ref=e58] [cursor=pointer]:
+            - /url: /staking
+            - img [ref=e59] [cursor=pointer]
+            - generic [ref=e64] [cursor=pointer]: Staking
+          - link "Referrals" [ref=e65] [cursor=pointer]:
+            - /url: /referrals
+            - img [ref=e66] [cursor=pointer]
+            - generic [ref=e69] [cursor=pointer]: Referrals
+        - generic [ref=e71]:
+          - heading "Actions" [level=3] [ref=e72]
+          - link "Create Evermark" [ref=e73] [cursor=pointer]:
+            - /url: /create
+            - img [ref=e74] [cursor=pointer]
+            - generic [ref=e75] [cursor=pointer]: Create Evermark
+        - generic [ref=e77]:
+          - heading "Info" [level=3] [ref=e78]
+          - link "About" [ref=e79] [cursor=pointer]:
+            - /url: /about
+            - img [ref=e80] [cursor=pointer]
+            - generic [ref=e82] [cursor=pointer]: About
+          - link "Docs" [ref=e83] [cursor=pointer]:
+            - /url: /docs
+            - img [ref=e84] [cursor=pointer]
+            - generic [ref=e86] [cursor=pointer]: Docs
+        - generic [ref=e88]:
+          - img [ref=e89]
+          - heading "Create & Collect" [level=4] [ref=e91]
+          - paragraph [ref=e92]: Connect to start creating Evermarks and building your collection.
+          - link "Get Started" [ref=e93] [cursor=pointer]:
+            - /url: /
+        - generic [ref=e96]: Base Network
+    - main [ref=e97]:
+      - generic [ref=e100]:
+        - generic [ref=e105]:
+          - img "Evermark Protocol" [ref=e109]
+          - generic [ref=e110]:
+            - heading "EVERMARK PROTOCOL [BETA]" [level=1] [ref=e111]:
+              - text: EVERMARK PROTOCOL
+              - generic [ref=e112]: "[BETA]"
+            - paragraph [ref=e113]:
+              - text: Discover amazing content online and earn rewards by sharing Evermarks through
+              - generic [ref=e114]: community curation
+            - generic [ref=e115]:
+              - generic [ref=e116]: 🔗 Permanent Links
+              - generic [ref=e117]: 💰 $WEMARK Rewards
+              - generic [ref=e118]: 🗳️ Community Voting
+        - generic [ref=e120]:
+          - generic [ref=e121]:
+            - img [ref=e124]
+            - generic [ref=e126]:
+              - generic [ref=e127]: "7"
+              - generic [ref=e128]: Total Evermarks
+          - generic [ref=e129]:
+            - img [ref=e132]
+            - generic [ref=e134]:
+              - generic [ref=e135]: "2"
+              - generic [ref=e136]: With Media
+          - generic [ref=e137]:
+            - img [ref=e140]
+            - generic [ref=e143]:
+              - generic [ref=e144]: "5"
+              - generic [ref=e145]: Active Creators
+          - generic [ref=e146]:
+            - img [ref=e149]
+            - generic [ref=e152]:
+              - generic [ref=e153]: "0"
+              - generic [ref=e154]: This Week
+        - generic [ref=e155]:
+          - generic [ref=e156]:
+            - heading "Get Started" [level=2] [ref=e157]
+            - paragraph [ref=e158]: Choose your path in the Evermark ecosystem
+          - generic [ref=e159]:
+            - link "Explore All Browse the collection" [ref=e160] [cursor=pointer]:
+              - /url: /explore
+              - img [ref=e162] [cursor=pointer]
+              - heading "Explore All" [level=3] [ref=e164] [cursor=pointer]
+              - paragraph [ref=e165] [cursor=pointer]: Browse the collection
+            - link "View Rankings See community favorites" [ref=e166] [cursor=pointer]:
+              - /url: /leaderboard
+              - img [ref=e168] [cursor=pointer]
+              - heading "View Rankings" [level=3] [ref=e171] [cursor=pointer]
+              - paragraph [ref=e172] [cursor=pointer]: See community favorites
+        - generic [ref=e174]:
+          - generic [ref=e175]:
+            - generic [ref=e176]:
+              - heading "Community Feed" [level=2] [ref=e177]
+              - link "View All" [ref=e178] [cursor=pointer]:
+                - /url: /explore
+                - generic [ref=e179] [cursor=pointer]: View All
+                - img [ref=e180] [cursor=pointer]
+            - generic [ref=e183]:
+              - generic [ref=e185]:
+                - heading "Evermarks(7)" [level=2] [ref=e186]:
+                  - text: Evermarks
+                  - generic [ref=e187]: (7)
+                - button "Refresh" [ref=e188] [cursor=pointer]:
+                  - img [ref=e189] [cursor=pointer]
+              - generic [ref=e194]:
+                - generic [ref=e195] [cursor=pointer]:
+                  - 'img "Evermark #7" [ref=e198] [cursor=pointer]'
+                  - generic [ref=e201] [cursor=pointer]:
+                    - heading "Popfi" [level=3] [ref=e202] [cursor=pointer]
+                    - generic [ref=e203] [cursor=pointer]:
+                      - generic:
+                        - img [ref=e204] [cursor=pointer]
+                        - generic: 0x58e5...5AfA
+                      - generic [ref=e207] [cursor=pointer]:
+                        - img [ref=e208] [cursor=pointer]
+                        - generic [ref=e210] [cursor=pointer]: 10 days ago
+                    - paragraph [ref=e211] [cursor=pointer]: Habibi popping party 🎈
+                    - generic [ref=e213] [cursor=pointer]:
+                      - generic [ref=e214] [cursor=pointer]:
+                        - img [ref=e215] [cursor=pointer]
+                        - generic [ref=e219] [cursor=pointer]: URL
+                      - img [ref=e220] [cursor=pointer]
+                - generic [ref=e224] [cursor=pointer]:
+                  - 'img "Evermark #6" [ref=e227] [cursor=pointer]'
+                  - generic [ref=e230] [cursor=pointer]:
+                    - heading "Policy abstraction as a predictor of cognitive effort avoidance." [level=3] [ref=e231] [cursor=pointer]
+                    - generic [ref=e232] [cursor=pointer]:
+                      - generic:
+                        - img [ref=e233] [cursor=pointer]
+                        - generic: 0x18A8...2A3c
+                      - generic [ref=e236] [cursor=pointer]:
+                        - img [ref=e237] [cursor=pointer]
+                        - generic [ref=e239] [cursor=pointer]: 10 days ago
+                    - paragraph [ref=e240] [cursor=pointer]: Policy abstraction as a predictor of cognitive effort avoidance. by Ceyda Sayalı, Jordan Rubin-McGregor, David Badre
+                    - generic [ref=e242] [cursor=pointer]:
+                      - generic [ref=e243] [cursor=pointer]:
+                        - img [ref=e244] [cursor=pointer]
+                        - generic [ref=e247] [cursor=pointer]: DOI
+                      - img [ref=e248] [cursor=pointer]
+                - generic [ref=e252] [cursor=pointer]:
+                  - generic [ref=e254] [cursor=pointer]:
+                    - 'img "Evermark #5" [ref=e255] [cursor=pointer]'
+                    - generic [ref=e256] [cursor=pointer]:
+                      - generic [ref=e257] [cursor=pointer]: 💾 Cached
+                      - generic [ref=e258] [cursor=pointer]: 🖼️ Wide
+                      - generic [ref=e259] [cursor=pointer]: "AR: 2.00"
+                  - generic [ref=e260] [cursor=pointer]:
+                    - heading "Cast from farcaster.xyz" [level=3] [ref=e261] [cursor=pointer]
+                    - generic [ref=e262] [cursor=pointer]:
+                      - generic:
+                        - img [ref=e263] [cursor=pointer]
+                        - generic: 0x2B27...3fe3
+                      - generic [ref=e266] [cursor=pointer]:
+                        - img [ref=e267] [cursor=pointer]
+                        - generic [ref=e269] [cursor=pointer]: 10 days ago
+                    - paragraph [ref=e270] [cursor=pointer]: Farcaster cast preserved from https://farcaster.xyz/kompreni/0xa9f15161
+                    - generic [ref=e272] [cursor=pointer]:
+                      - generic [ref=e273] [cursor=pointer]:
+                        - img [ref=e274] [cursor=pointer]
+                        - generic [ref=e276] [cursor=pointer]: Cast
+                      - img [ref=e277] [cursor=pointer]
+                - generic [ref=e281] [cursor=pointer]:
+                  - generic [ref=e283] [cursor=pointer]:
+                    - 'img "Evermark #4" [ref=e284] [cursor=pointer]'
+                    - generic [ref=e285] [cursor=pointer]:
+                      - generic [ref=e286] [cursor=pointer]: 💾 Cached
+                      - generic [ref=e287] [cursor=pointer]: 🖼️ Wide
+                      - generic [ref=e288] [cursor=pointer]: "AR: 2.00"
+                  - generic [ref=e289] [cursor=pointer]:
+                    - heading "Cast from farcaster.xyz" [level=3] [ref=e290] [cursor=pointer]
+                    - generic [ref=e291] [cursor=pointer]:
+                      - generic:
+                        - img [ref=e292] [cursor=pointer]
+                        - generic: 0x2B27...3fe3
+                      - generic [ref=e295] [cursor=pointer]:
+                        - img [ref=e296] [cursor=pointer]
+                        - generic [ref=e298] [cursor=pointer]: 10 days ago
+                    - paragraph [ref=e299] [cursor=pointer]: Farcaster cast preserved from https://farcaster.xyz/horsefacts.eth/0x941d16c5
+                    - generic [ref=e301] [cursor=pointer]:
+                      - generic [ref=e302] [cursor=pointer]:
+                        - img [ref=e303] [cursor=pointer]
+                        - generic [ref=e305] [cursor=pointer]: Cast
+                      - img [ref=e306] [cursor=pointer]
+                - generic [ref=e310] [cursor=pointer]:
+                  - generic [ref=e312] [cursor=pointer]:
+                    - 'img "Evermark #3" [ref=e313] [cursor=pointer]'
+                    - generic [ref=e314] [cursor=pointer]:
+                      - generic [ref=e315] [cursor=pointer]: 💾 Cached
+                      - generic [ref=e316] [cursor=pointer]: 🖼️ Wide
+                      - generic [ref=e317] [cursor=pointer]: "AR: 2.00"
+                  - generic [ref=e318] [cursor=pointer]:
+                    - heading "MOO MOO HA MOO HA HA MOO HA HA SAID MOO HA HA SAID THE MOO HA HA SAID THE LAUGHING MOO HA HA SAID TH" [level=3] [ref=e319] [cursor=pointer]
+                    - generic [ref=e320] [cursor=pointer]:
+                      - generic:
+                        - img [ref=e321] [cursor=pointer]
+                        - generic: Vitalik Buterin
+                      - generic [ref=e324] [cursor=pointer]:
+                        - img [ref=e325] [cursor=pointer]
+                        - generic [ref=e327] [cursor=pointer]: 10 days ago
+                    - paragraph [ref=e328] [cursor=pointer]: MOO MOO HA MOO HA HA MOO HA HA SAID MOO HA HA SAID THE MOO HA HA SAID THE LAUGHING MOO HA HA SAID THE LAUGHING COW
+                    - generic [ref=e330] [cursor=pointer]:
+                      - generic [ref=e331] [cursor=pointer]:
+                        - img [ref=e332] [cursor=pointer]
+                        - generic [ref=e334] [cursor=pointer]: Cast
+                      - img [ref=e335] [cursor=pointer]
+                - generic [ref=e339] [cursor=pointer]:
+                  - generic [ref=e341] [cursor=pointer]:
+                    - 'img "Evermark #1" [ref=e342] [cursor=pointer]'
+                    - generic [ref=e343] [cursor=pointer]:
+                      - generic [ref=e344] [cursor=pointer]: 💾 Cached
+                      - generic [ref=e345] [cursor=pointer]: 🖼️ Wide
+                      - generic [ref=e346] [cursor=pointer]: "AR: 2.00"
+                  - generic [ref=e347] [cursor=pointer]:
+                    - 'heading "Evermark #1" [level=3] [ref=e348] [cursor=pointer]'
+                    - generic [ref=e349] [cursor=pointer]:
+                      - generic:
+                        - img [ref=e350] [cursor=pointer]
+                        - generic: Unknown
+                      - generic [ref=e353] [cursor=pointer]:
+                        - img [ref=e354] [cursor=pointer]
+                        - generic [ref=e356] [cursor=pointer]: 10 days ago
+                    - generic [ref=e359] [cursor=pointer]:
+                      - img [ref=e360] [cursor=pointer]
+                      - generic [ref=e363] [cursor=pointer]: Custom
+                - generic [ref=e364] [cursor=pointer]:
+                  - generic [ref=e366] [cursor=pointer]:
+                    - 'img "Evermark #2" [ref=e367] [cursor=pointer]'
+                    - generic [ref=e368] [cursor=pointer]:
+                      - generic [ref=e369] [cursor=pointer]: 💾 Cached
+                      - generic [ref=e370] [cursor=pointer]: 🖼️ Wide
+                      - generic [ref=e371] [cursor=pointer]: "AR: 1.52"
+                  - generic [ref=e372] [cursor=pointer]:
+                    - heading "Alpha Retirement" [level=3] [ref=e373] [cursor=pointer]
+                    - generic [ref=e374] [cursor=pointer]:
+                      - generic:
+                        - img [ref=e375] [cursor=pointer]
+                        - generic: Unknown
+                      - generic [ref=e378] [cursor=pointer]:
+                        - img [ref=e379] [cursor=pointer]
+                        - generic [ref=e381] [cursor=pointer]: 10 days ago
+                    - paragraph [ref=e382] [cursor=pointer]: Evermark is changing. We have upgraded from the Alpha contracts & application structure to Beta contracts, and are now beginning the Beta Testing Phase of Evermark Development!
+                    - generic [ref=e384] [cursor=pointer]:
+                      - generic [ref=e385] [cursor=pointer]:
+                        - img [ref=e386] [cursor=pointer]
+                        - generic [ref=e390] [cursor=pointer]: URL
+                      - img [ref=e391] [cursor=pointer]
+          - generic [ref=e395]:
+            - generic [ref=e396]:
+              - img [ref=e397]
+              - heading "Join the Community" [level=3] [ref=e400]
+              - paragraph [ref=e401]: Connect your wallet to vote on content and earn rewards
+              - paragraph [ref=e403]: 🖥️ Desktop wallet connection available
+            - generic [ref=e404]:
+              - heading "Protocol Insights" [level=3] [ref=e405]
+              - generic [ref=e406]:
+                - generic [ref=e407]:
+                  - generic [ref=e408]: "Network:"
+                  - generic [ref=e409]: Base Mainnet
+                - generic [ref=e410]:
+                  - generic [ref=e411]: "Storage:"
+                  - generic [ref=e412]: IPFS + Blockchain
+                - generic [ref=e413]:
+                  - generic [ref=e414]: "Status:"
+                  - generic [ref=e415]: Live
+                - generic [ref=e417]:
+                  - generic [ref=e418]: "Version:"
+                  - generic [ref=e419]: Beta v0.0.1
+        - generic [ref=e422]:
+          - heading "Ready to Preserve Something Amazing?" [level=2] [ref=e423]
+          - paragraph [ref=e424]:
+            - text: Transform any online content into a permanent, shareable Evermark. Join our community of curators and earn
+            - generic [ref=e425]: $WEMARK
+            - text: rewards.
+          - generic [ref=e426]:
+            - link "Create Your First Evermark" [ref=e427] [cursor=pointer]:
+              - /url: /create
+              - img [ref=e428] [cursor=pointer]
+              - generic [ref=e430] [cursor=pointer]: Create Your First Evermark
+            - link "Explore All Evermarks" [ref=e431] [cursor=pointer]:
+              - /url: /explore
+              - img [ref=e432] [cursor=pointer]
+              - generic [ref=e434] [cursor=pointer]: Explore All Evermarks
+```

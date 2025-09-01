@@ -1,6 +1,6 @@
 // src/features/voting/hooks/useVotingState.ts - Simplified for season-based voting
 import { useState, useCallback } from 'react';
-import { useActiveAccount } from 'thirdweb/react';
+import { useWalletAccount } from '@/hooks/core/useWalletAccount';
 import { VotingService } from '../services/VotingService';
 import type { 
   VotingPower, 
@@ -18,7 +18,7 @@ export function useVotingState(): UseVotingStateReturn {
   const [error, setError] = useState<VotingError | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   
-  const account = useActiveAccount();
+  const account = useWalletAccount();
   const userAddress = account?.address;
   const isConnected = !!account && !!userAddress;
 

@@ -2,7 +2,8 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useSendTransaction, useActiveAccount } from 'thirdweb/react';
+import { useSendTransaction } from 'thirdweb/react';
+import { useWalletAccount } from '@/hooks/core/useWalletAccount';
 import { prepareContractCall, getContract, readContract } from 'thirdweb';
 import type { Abi } from 'abitype';
 import { client } from '@/lib/thirdweb';
@@ -47,7 +48,7 @@ export function useTokenState(): UseTokenStateReturn {
   const [isApproving, setIsApproving] = useState(false);
   
   // Wallet and contracts
-  const account = useActiveAccount();
+  const account = useWalletAccount();
   const queryClient = useQueryClient();
   const { mutateAsync: sendTransaction } = useSendTransaction();
   
