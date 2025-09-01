@@ -13,14 +13,40 @@ export default function MyEvermarksPage() {
   const { isAuthenticated, user } = useAppAuth();
   const themeClasses = useThemeClasses();
   const { evermarks, isLoading, error, loadEvermarks } = useEvermarksState();
-  const { votingHistory } = useVotingState();
+  const { votingHistory, getUserVotesForEvermark } = useVotingState();
   const [activeTab, setActiveTab] = useState<'created' | 'supported'>('created');
+  const [userVotes, setUserVotes] = useState<Record<string, bigint>>({});
 
   // Filter evermarks by current wallet
   const myCreatedEvermarks = evermarks.filter(evermark => 
     user?.address && evermark.creator.toLowerCase() === user.address.toLowerCase()
   );
   
+  // Load user votes for each evermark to determine supported ones
+  useEffect(() => {
+    async function loadUserVotesForEvermarks() {
+      if (!user?.address || !evermarks.length) return;
+      
+      const votes: Record<string, bigint> = {};
+      
+      // Check votes for each evermark
+      await Promise.all(evermarks.map(async (evermark) => {
+        try {
+          const userVotesForEvermark = await getUserVotesForEvermark(evermark.id);
+          if (userVotesForEvermark > BigInt(0)) {
+            votes[evermark.id] = userVotesForEvermark;
+          }
+        } catch (error) {
+          console.error(`Failed to get votes for evermark ${evermark.id}:`, error);
+        }
+      }));
+      
+      setUserVotes(votes);
+    }
+    
+    loadUserVotesForEvermarks();
+  }, [user?.address, evermarks, getUserVotesForEvermark]);
+
   // Supported evermarks: ones where user has delegated votes
   const mySupportedEvermarks = evermarks.filter(evermark => {
     // User is not the creator
@@ -28,12 +54,15 @@ export default function MyEvermarksPage() {
       return false;
     }
     
-    // Check if user has voted on this evermark
-    const hasVoted = votingHistory?.some(vote => 
+    // Check if user has voted on this evermark (from blockchain data)
+    const hasVotedFromContract = userVotes[evermark.id] && userVotes[evermark.id] > BigInt(0);
+    
+    // Also check voting history as backup
+    const hasVotedFromHistory = votingHistory?.some(vote => 
       vote.evermarkId === evermark.id && vote.amount > 0
     );
     
-    return hasVoted || false;
+    return hasVotedFromContract || hasVotedFromHistory || false;
   });
 
   useEffect(() => {

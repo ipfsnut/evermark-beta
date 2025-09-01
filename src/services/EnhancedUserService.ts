@@ -206,7 +206,9 @@ export class EnhancedUserService {
         enhancedUser = ensEnhanced;
       }
 
-      // Farcaster profile lookup by address not yet implemented
+      // Try to enhance with Farcaster profile by looking up verifications
+      // Note: This requires the Neynar API to find FID by verified address
+      // For now, this remains unimplemented due to API limitations
 
 
       this.setCache(cacheKey, enhancedUser);

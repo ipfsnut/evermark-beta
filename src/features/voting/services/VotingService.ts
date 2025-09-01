@@ -270,26 +270,26 @@ export class VotingService {
     try {
       const votingContract = getEvermarkVotingContract();
       
-      // Prepare event definition for VoteDelegated
-      const voteDelegatedEvent = prepareEvent({
-        signature: "event VoteDelegated(address indexed user, uint256 indexed evermarkId, uint256 amount, uint256 indexed cycle)"
+      // Prepare event definition for VoteCast (the actual event from voteForEvermark)
+      const voteCastEvent = prepareEvent({
+        signature: "event VoteCast(address indexed voter, uint256 indexed season, uint256 indexed evermarkId, uint256 votes)"
       });
 
       const events = await getContractEvents({
         contract: votingContract,
-        events: [voteDelegatedEvent],
+        events: [voteCastEvent],
         fromBlock: fromBlock ?? 0n,
         toBlock: toBlock ?? 'latest'
       });
 
       return events
-        .filter(event => event.args.user === userAddress)
+        .filter(event => event.args.voter === userAddress)
         .map((event, index) => ({
           id: `${event.transactionHash}-${index}`,
           userAddress,
           evermarkId: event.args.evermarkId?.toString() ?? '',
-          amount: event.args.amount ?? BigInt(0),
-          season: Number(event.args.cycle) || 0, // Keep season field for compatibility but use cycle data
+          amount: event.args.votes ?? BigInt(0),
+          season: Number(event.args.season) || 0,
           timestamp: new Date(), // Use current time for now
           transactionHash: event.transactionHash,
           status: 'confirmed' as const,

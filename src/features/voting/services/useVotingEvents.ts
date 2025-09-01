@@ -26,12 +26,12 @@ export function useVotingEvents({ votingContract, enabled = true }: VotingEvents
     const setupEventListening = async () => {
       try {
         // Prepare event definitions for Thirdweb v5
-        const voteDelegatedEvent = prepareEvent({
-          signature: "event VoteDelegated(address indexed user, uint256 indexed evermarkId, uint256 amount, uint256 indexed cycle)"
+        const voteCastEvent = prepareEvent({
+          signature: "event VoteCast(address indexed voter, uint256 indexed season, uint256 indexed evermarkId, uint256 votes)"
         });
 
-        const voteUndelegatedEvent = prepareEvent({
-          signature: "event VoteUndelegated(address indexed user, uint256 indexed evermarkId, uint256 amount, uint256 indexed cycle)"
+        const voteWithdrawnEvent = prepareEvent({
+          signature: "event VoteWithdrawn(address indexed voter, uint256 indexed season, uint256 indexed evermarkId, uint256 votes)"
         });
 
         const cycleStartedEvent = prepareEvent({
@@ -65,17 +65,17 @@ export function useVotingEvents({ votingContract, enabled = true }: VotingEvents
               const toBlock = currentBlock;
 
               // Check for voting events
-              const [delegateEvents, undelegateEvents, cycleEvents, finalizeEvents] = await Promise.all([
+              const [voteEvents, withdrawEvents, cycleEvents, finalizeEvents] = await Promise.all([
                 getContractEvents({
                   contract: votingContract,
-                  events: [voteDelegatedEvent],
+                  events: [voteCastEvent],
                   fromBlock,
                   toBlock,
                 }).catch(() => []),
                 
                 getContractEvents({
                   contract: votingContract,
-                  events: [voteUndelegatedEvent],
+                  events: [voteWithdrawnEvent],
                   fromBlock,
                   toBlock,
                 }).catch(() => []),
@@ -95,7 +95,7 @@ export function useVotingEvents({ votingContract, enabled = true }: VotingEvents
                 }).catch(() => [])
               ]);
 
-              const totalEvents = delegateEvents.length + undelegateEvents.length + cycleEvents.length + finalizeEvents.length;
+              const totalEvents = voteEvents.length + withdrawEvents.length + cycleEvents.length + finalizeEvents.length;
 
               if (totalEvents > 0) {
                 console.log(`Detected ${totalEvents} voting events, invalidating queries`);
