@@ -25,9 +25,8 @@ function FarcasterSwapInterface() {
       const emarkAddress = CONTRACTS.EMARK_TOKEN;
       
       await sdk.actions.swapToken({
-        tokenIn: "ETH",
-        tokenOut: emarkAddress,
-        chain: "base"
+        sellToken: "eip155:8453/native", // Base ETH
+        buyToken: `eip155:8453/erc20:${emarkAddress}` // EMARK token on Base
       });
       
     } catch (error) {
