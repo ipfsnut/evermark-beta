@@ -9,11 +9,13 @@ import type { EvermarkFilters } from '@/features/evermarks/types';
 import { useVotingState } from '@/features/voting';
 import { useAppAuth } from '@/providers/AppContext';
 import { useThemeClasses } from '@/providers/ThemeProvider';
+import { useFarcasterDetection } from '@/hooks/useFarcasterDetection';
 import { cn } from '@/utils/responsive';
 
 export default function MyEvermarksPage() {
   const { isAuthenticated, user } = useAppAuth();
   const themeClasses = useThemeClasses();
+  const { isInFarcaster } = useFarcasterDetection();
   const { evermarks, isLoading, error, loadEvermarks } = useEvermarksState();
   const { votingHistory, getUserVotesForEvermark } = useVotingState();
   const [activeTab, setActiveTab] = useState<'created' | 'supported'>('created');
@@ -139,20 +141,34 @@ export default function MyEvermarksPage() {
   // Share collection functionality
   const handleShareCollection = async () => {
     const currentList = activeTab === 'created' ? myCreatedEvermarks : mySupportedEvermarks;
-    const collectionType = activeTab === 'created' ? 'Created Evermarks' : 'Reading List';
+    const collectionType = activeTab === 'created' ? 'Portfolio' : 'Reading List';
+    const userName = user?.displayName || user?.username || 'Anonymous';
     
-    // Create a shareable URL with collection info
-    const collectionData = {
-      type: collectionType,
-      user: user?.displayName || user?.username || 'Anonymous',
-      count: currentList.length,
-      items: currentList.slice(0, 5).map(e => ({ id: e.id, title: e.title, author: e.author }))
+    // Use proper URL format based on context
+    const getEvermarkUrl = (id: string) => {
+      if (isInFarcaster) {
+        // For Farcaster, use the Frame URL that opens within the app
+        return `https://evermark.xyz/frame/evermark/${id}`;
+      } else {
+        // For web/PWA, use regular URL
+        return `${window.location.origin}/evermark/${id}`;
+      }
     };
     
-    const shareText = `${collectionData.user}'s ${collectionType} (${collectionData.count} articles)\n\n` +
-      collectionData.items.map(item => `• ${item.title} by ${item.author}\n  ${window.location.origin}/evermark/${item.id}`).join('\n\n') +
-      (currentList.length > 5 ? `\n\n...and ${currentList.length - 5} more` : '') +
-      `\n\nDiscover more at ${window.location.origin}/my-evermarks`;
+    const getMainUrl = () => {
+      if (isInFarcaster) {
+        return 'https://evermark.xyz/frame';
+      } else {
+        return window.location.origin;
+      }
+    };
+    
+    const shareText = `📚 ${userName}'s ${collectionType} (${currentList.length} articles)\n\n` +
+      currentList.slice(0, 8).map(item => 
+        `• ${item.title} by ${item.author}\n  ${getEvermarkUrl(item.id)}`
+      ).join('\n\n') +
+      (currentList.length > 8 ? `\n\n...and ${currentList.length - 8} more evermarks` : '') +
+      `\n\n🔗 Preserve your own articles at ${getMainUrl()}`;
 
     try {
       await navigator.clipboard.writeText(shareText);

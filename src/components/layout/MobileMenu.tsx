@@ -170,7 +170,7 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
       
       {/* Mobile Menu */}
       <div className={cn(
-        "fixed top-0 left-0 bottom-0 z-50 w-80 max-w-[85vw] transform transition-transform duration-300 ease-in-out",
+        "fixed top-0 left-0 bottom-0 z-50 w-80 max-w-[85vw] transform transition-transform duration-300 ease-in-out flex flex-col h-screen",
         isOpen ? "translate-x-0" : "-translate-x-full",
         isDark 
           ? "bg-gray-900 border-r border-gray-800" 
@@ -251,7 +251,7 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
         )}
 
         {/* Navigation Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-6 min-h-0">
           {/* Main Navigation */}
           <div className="space-y-1 mb-8">
             <h3 className={cn(
@@ -288,7 +288,7 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
 
         {/* Footer */}
         <div className={cn(
-          "p-6 border-t",
+          "p-6 border-t flex-shrink-0",
           isDark ? "border-gray-800" : "border-gray-200"
         )}>
           <div className={cn(
