@@ -1,5 +1,5 @@
 // src/providers/WalletProvider.tsx - Unified wallet state for all contexts
-import React, { createContext, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAccount } from 'wagmi';
 import { useActiveAccount } from 'thirdweb/react';
 import { useFarcasterDetection } from '../hooks/useFarcasterDetection';
@@ -15,7 +15,7 @@ interface WalletContextType {
   disconnect: () => Promise<void>;
   
   // Debug info
-  connectionSource: 'neynar' | 'thirdweb' | 'miniapp-wagmi' | null;
+  connectionSource: 'neynar' | 'thirdweb' | 'miniapp-wagmi' | 'farcaster-sdk' | null;
 }
 
 const WalletContext = createContext<WalletContextType | null>(null);
@@ -41,13 +41,56 @@ export function WalletProvider({ children }: WalletProviderProps): React.ReactNo
   return <BrowserWalletProvider context={context as 'browser' | 'pwa'}>{children}</BrowserWalletProvider>;
 }
 
-// Farcaster-specific provider using wagmi hooks
+// Farcaster-specific provider with wallet connection actions
 function FarcasterWalletProvider({ children }: { children: React.ReactNode }): React.ReactNode {
   const miniAppAccount = useAccount(); // From miniapp-wagmi-connector
+  const [manualAddress, setManualAddress] = useState<string | null>(null);
 
-  const walletAddress = miniAppAccount?.address ?? null;
+  // Try to get wallet from Farcaster SDK if wagmi fails
+  useEffect(() => {
+    let mounted = true;
+    
+    const getWalletFromSDK = async () => {
+      if (miniAppAccount?.address || manualAddress) return; // Already connected
+      
+      try {
+        const { sdk } = await import('@farcaster/miniapp-sdk');
+        
+        // Try to get Ethereum provider from SDK
+        const ethProvider = await sdk.wallet.getEthereumProvider();
+        
+        if (ethProvider && mounted) {
+          // Try to get accounts from the provider
+          try {
+            const accounts = await ethProvider.request({ method: 'eth_accounts' });
+            if (accounts && accounts.length > 0) {
+              setManualAddress(accounts[0]);
+              console.log('✅ Got wallet address from Farcaster SDK:', accounts[0]);
+            } else {
+              console.log('🔍 Farcaster SDK provider available but no accounts connected');
+            }
+          } catch (accountError) {
+            console.log('Failed to get accounts from Farcaster provider:', accountError);
+          }
+        }
+      } catch (error) {
+        console.log('Failed to get wallet provider from Farcaster SDK:', error);
+      }
+    };
+
+    // Attempt to get wallet after a delay to let miniapp initialize
+    const timeout = setTimeout(getWalletFromSDK, 2000);
+    return () => { 
+      clearTimeout(timeout);
+      mounted = false; 
+    };
+  }, [miniAppAccount?.address, manualAddress]);
+
+  // Use wagmi address first, fallback to manual address
+  const walletAddress = miniAppAccount?.address ?? manualAddress ?? null;
   const isConnected = !!walletAddress;
-  const connectionSource = walletAddress ? 'miniapp-wagmi' : null;
+  const connectionSource = miniAppAccount?.address ? 'miniapp-wagmi' : 
+                          manualAddress ? 'farcaster-sdk' : null;
 
   const connect = async (): Promise<{ success: boolean; error?: string }> => {
     console.log('🎯 Farcaster context - connection handled by Mini App');
@@ -65,9 +108,11 @@ function FarcasterWalletProvider({ children }: { children: React.ReactNode }): R
       address: walletAddress,
       isConnected,
       connectionSource,
-      miniAppAccount: miniAppAccount ? 'present' : 'none'
+      miniAppAccount: miniAppAccount ? 'present' : 'none',
+      wagmiAddress: miniAppAccount?.address || 'none',
+      manualAddress: manualAddress || 'none'
     });
-  }, [walletAddress, isConnected, connectionSource]);
+  }, [walletAddress, isConnected, connectionSource, miniAppAccount, manualAddress]);
 
   const value: WalletContextType = {
     address: walletAddress,
