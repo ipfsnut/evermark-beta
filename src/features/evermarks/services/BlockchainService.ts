@@ -194,10 +194,7 @@ export class EvermarkBlockchainService {
 
     try {
       const result = await readContract({
-        contract: {
-          address: CONTRACTS.EVERMARK_NFT,
-          chain: getEvermarkNFTContract().chain,
-        },
+        contract: getEvermarkNFTContract(),
         method: "function REFERRAL_PERCENTAGE() view returns (uint256)",
         params: []
       });
@@ -224,10 +221,7 @@ export class EvermarkBlockchainService {
 
     try {
       const result = await readContract({
-        contract: {
-          address: CONTRACTS.EVERMARK_NFT,
-          chain: getEvermarkNFTContract().chain,
-        },
+        contract: getEvermarkNFTContract(),
         method: "function paused() view returns (bool)",
         params: []
       });
@@ -544,10 +538,7 @@ export class EvermarkBlockchainService {
 
     try {
       const result = await readContract({
-        contract: {
-          address: CONTRACTS.EVERMARK_NFT,
-          chain: getEvermarkNFTContract().chain,
-        },
+        contract: getEvermarkNFTContract(),
         method: "function totalSupply() view returns (uint256)",
         params: []
       });
