@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSendTransaction, useActiveAccount } from 'thirdweb/react';
 import { prepareContractCall, getContract, readContract } from 'thirdweb';
+import type { Abi } from 'abitype';
 import { client } from '@/lib/thirdweb';
 import { base } from 'thirdweb/chains';
 
@@ -57,7 +58,7 @@ export function useTokenState(): UseTokenStateReturn {
         client,
         chain: CHAIN,
         address: LOCAL_CONTRACTS.EMARK_TOKEN,
-        abi: EMARK_ABI as readonly unknown[]
+        abi: EMARK_ABI as Abi
       });
     } catch (error) {
       if (!LOCAL_CONTRACTS.EMARK_TOKEN) {

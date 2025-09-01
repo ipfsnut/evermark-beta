@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useActiveAccount } from 'thirdweb/react';
 import { useWalletAccount } from '@/hooks/core/useWalletAccount';
 import { NFTStakingService, type NFTStakeInfo, type NFTStakingStats } from '../services/NFTStakingService';
 
@@ -36,6 +37,7 @@ const QUERY_KEYS = {
 
 export function useNFTStaking(): UseNFTStakingReturn {
   const account = useWalletAccount();
+  const thirdwebAccount = useActiveAccount();
   const queryClient = useQueryClient();
   
   // Local state
@@ -69,8 +71,8 @@ export function useNFTStaking(): UseNFTStakingReturn {
   // Stake NFT mutation
   const stakeMutation = useMutation({
     mutationFn: async (tokenId: number) => {
-      if (!account) throw new Error('Wallet not connected');
-      const result = await NFTStakingService.stakeNFT(account, tokenId);
+      if (!thirdwebAccount) throw new Error('Wallet not connected');
+      const result = await NFTStakingService.stakeNFT(thirdwebAccount, tokenId);
       if (!result.success) {
         throw new Error(result.error || 'Staking failed');
       }
@@ -91,8 +93,8 @@ export function useNFTStaking(): UseNFTStakingReturn {
   // Unstake NFT mutation
   const unstakeMutation = useMutation({
     mutationFn: async (tokenId: number) => {
-      if (!account) throw new Error('Wallet not connected');
-      const result = await NFTStakingService.unstakeNFT(account, tokenId);
+      if (!thirdwebAccount) throw new Error('Wallet not connected');
+      const result = await NFTStakingService.unstakeNFT(thirdwebAccount, tokenId);
       if (!result.success) {
         throw new Error(result.error || 'Unstaking failed');
       }
@@ -113,8 +115,8 @@ export function useNFTStaking(): UseNFTStakingReturn {
   // Emergency unstake mutation
   const emergencyUnstakeMutation = useMutation({
     mutationFn: async (tokenId: number) => {
-      if (!account) throw new Error('Wallet not connected');
-      const result = await NFTStakingService.emergencyUnstake(account, tokenId);
+      if (!thirdwebAccount) throw new Error('Wallet not connected');
+      const result = await NFTStakingService.emergencyUnstake(thirdwebAccount, tokenId);
       if (!result.success) {
         throw new Error(result.error || 'Emergency unstake failed');
       }

@@ -476,7 +476,7 @@ export class VotingService {
       return error;
     }
     
-    if (error?.message) {
+    if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
       const message = error.message.toLowerCase();
       
       if (message.includes('insufficient')) {

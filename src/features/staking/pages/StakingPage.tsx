@@ -1,7 +1,8 @@
 // src/pages/StakePage.tsx - Staking management page
 import React from 'react';
 import { StakingWidget, NFTStakingPanel, useStakingState } from '@/features/staking';
-import { TokenBalance, RewardsClaiming } from '@/features/tokens';
+import { TokenBalance } from '@/features/tokens';
+import { RewardsClaiming } from '@/features/tokens/components/RewardsClaiming';
 import { useContractsStatus } from '@/hooks/core/useContracts';
 import { TrendingUpIcon, CoinsIcon, AlertCircleIcon, CheckCircleIcon } from 'lucide-react';
 import { cn, useIsMobile } from '@/utils/responsive';

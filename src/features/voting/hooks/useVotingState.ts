@@ -5,6 +5,7 @@ import { VotingService } from '../services/VotingService';
 import type { 
   VotingPower, 
   VotingSeason, 
+  VotingCycle,
   VotingStats, 
   VotingValidation, 
   VotingError, 
@@ -30,7 +31,7 @@ export function useVotingState(): UseVotingStateReturn {
   };
 
   const currentSeason: VotingSeason | null = null;
-  const currentCycle: unknown = null;
+  const currentCycle: VotingCycle | null = null;
   const votingStats: VotingStats | null = null;
   const userVotes: Vote[] = [];
   const votingHistory: Vote[] = [];

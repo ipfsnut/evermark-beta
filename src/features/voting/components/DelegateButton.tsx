@@ -92,7 +92,7 @@ export function DelegateButton({
       
     } catch (error: unknown) {
       console.error('Delegation failed:', error);
-      setLocalError(error.message || 'Failed to delegate votes');
+      setLocalError(error instanceof Error ? error.message : 'Failed to delegate votes');
     } finally {
       setLocalLoading(false);
     }
@@ -128,7 +128,7 @@ export function DelegateButton({
       
     } catch (error: unknown) {
       console.error('Undelegation failed:', error);
-      setLocalError(error.message || 'Failed to undelegate votes');
+      setLocalError(error instanceof Error ? error.message : 'Failed to undelegate votes');
     } finally {
       setLocalLoading(false);
     }
@@ -161,7 +161,7 @@ export function DelegateButton({
       
     } catch (error: unknown) {
       console.error('Quick delegation failed:', error);
-      setLocalError(error.message || 'Quick delegation failed');
+      setLocalError(error instanceof Error ? error.message : 'Quick delegation failed');
     } finally {
       setLocalLoading(false);
     }

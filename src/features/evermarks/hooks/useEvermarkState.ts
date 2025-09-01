@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useActiveAccount } from 'thirdweb/react';
+import type { Account } from 'thirdweb/wallets';
 
 import {
   type Evermark,
@@ -56,32 +57,47 @@ const TempEvermarkService = {
       // Transform database fields to frontend format
       const transformedEvermarks = (data.evermarks ?? []).map((item: unknown) => {
         const evermarkItem = item as Record<string, unknown>;
-        // Parse tags from metadata if available
+        // Parse metadata and extract required fields
         let tags: string[] = [];
+        let title = '';
+        let author = '';
+        let description = '';
+        
         try {
           if (evermarkItem.metadata) {
             const metadata = typeof evermarkItem.metadata === 'string' ? JSON.parse(evermarkItem.metadata as string) : evermarkItem.metadata as Record<string, unknown>;
             tags = (metadata.tags as string[]) ?? [];
+            title = (metadata.title as string) ?? '';
+            author = (metadata.author as string) ?? '';
+            description = (metadata.description as string) ?? '';
           }
         } catch {
-          // Failed to parse metadata, use empty tags
+          // Failed to parse metadata, use defaults
         }
         
         return {
           ...evermarkItem,
           id: evermarkItem.token_id as string,
-          tokenId: evermarkItem.token_id as string, // Add tokenId for components
-          tags, // Ensure tags is always an array
-          ipfsHash: evermarkItem.ipfs_image_hash as string, // Map IPFS hash
-          image: (evermarkItem.supabase_image_url as string) ?? (evermarkItem.ipfs_image_hash ? `ipfs://${evermarkItem.ipfs_image_hash}` : undefined), // Prioritize Supabase cached images
+          tokenId: Number(evermarkItem.token_id as string),
+          title: title || (evermarkItem.title as string) || 'Untitled',
+          author: author || (evermarkItem.author as string) || 'Unknown',
+          creator: (evermarkItem.owner as string) ?? (evermarkItem.author as string) ?? 'Unknown',
+          description: description || (evermarkItem.description as string) || '',
+          metadataURI: (evermarkItem.token_uri as string) || '',
+          tags,
+          verified: Boolean(evermarkItem.verified),
+          creationTime: Date.parse((evermarkItem.created_at as string) ?? new Date().toISOString()),
+          ipfsHash: evermarkItem.ipfs_image_hash as string,
+          image: (evermarkItem.supabase_image_url as string) ?? (evermarkItem.ipfs_image_hash ? `ipfs://${evermarkItem.ipfs_image_hash}` : undefined),
           createdAt: (evermarkItem.created_at as string) ?? new Date().toISOString(),
           updatedAt: (evermarkItem.updated_at as string) ?? (evermarkItem.created_at as string) ?? new Date().toISOString(),
-          contentType: evermarkItem.content_type as string,
+          contentType: (evermarkItem.content_type as Evermark['contentType']) || 'Custom',
           sourceUrl: evermarkItem.source_url as string,
-          tokenUri: evermarkItem.token_uri as string,
-          verificationStatus: evermarkItem.verified ? 'verified' as const : 'unverified' as const,
-          creator: (evermarkItem.owner as string) ?? (evermarkItem.author as string), // Add creator field
-          extendedMetadata: { tags } // Add extendedMetadata for compatibility
+          imageStatus: 'processed' as const,
+          extendedMetadata: { 
+            tags,
+            castData: evermarkItem.cast_data as any
+          }
         } as Evermark;
       });
       
@@ -125,7 +141,7 @@ const TempEvermarkService = {
       return null;
     }
   },
-  createEvermark: async (input: CreateEvermarkInput, account: { address: string | { toString(): string } }): Promise<CreateEvermarkResult> => {
+  createEvermark: async (input: CreateEvermarkInput, account: Account): Promise<CreateEvermarkResult> => {
     try {
       console.log('🚀 Starting blockchain-first evermark creation...');
       
@@ -135,9 +151,7 @@ const TempEvermarkService = {
       }
 
       // Ensure we have a proper address string
-      const accountAddress = typeof account.address === 'string' 
-        ? account.address 
-        : String(account.address);
+      const accountAddress = account.address;
 
       if (!input.metadata?.title) {
         throw new Error('Title is required');
@@ -386,7 +400,7 @@ const QUERY_KEYS = {
 export function useEvermarksState(): UseEvermarksResult {
   
   // Get the active account for blockchain operations
-  const account = useActiveAccount();
+  const thirdwebAccount = useActiveAccount();
   
   // Local state for pagination and filtering
   const [pagination, setPaginationState] = useState<EvermarkPagination>(
@@ -431,7 +445,7 @@ export function useEvermarksState(): UseEvermarksResult {
   const createMutation = useMutation({
     mutationFn: async (input: CreateEvermarkInput) => {
       // Check if we have an account before starting creation
-      if (!account) {
+      if (!thirdwebAccount) {
         throw new Error('No wallet connected. Please connect your wallet to create an Evermark.');
       }
 
@@ -439,7 +453,7 @@ export function useEvermarksState(): UseEvermarksResult {
       setCreateStep('Validating inputs...');
       
       // Call the blockchain-first creation service
-      const result = await TempEvermarkService.createEvermark(input, account);
+      const result = await TempEvermarkService.createEvermark(input, thirdwebAccount!);
       
       if (result.success) {
         setCreateProgress(100);

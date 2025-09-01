@@ -82,7 +82,7 @@ export function TokenTransfer({ tokenState, className = '' }: TokenTransferProps
       const maxAmount = tokenBalance.emarkBalance > gasReserve 
         ? tokenBalance.emarkBalance - gasReserve 
         : BigInt(0);
-      setAmount(formatTokenAmount(maxAmount, false));
+      setAmount(formatTokenAmount(maxAmount, 2));
     }
   }, [tokenBalance, formatTokenAmount]);
 
@@ -235,7 +235,7 @@ export function TokenTransfer({ tokenState, className = '' }: TokenTransferProps
               </div>
             </div>
             <div className="mt-2 text-xs text-gray-400">
-              Available: {tokenBalance ? formatTokenAmount(tokenBalance.emarkBalance, true) : '0'} EMARK
+              Available: {tokenBalance ? formatTokenAmount(tokenBalance.emarkBalance, 2) : '0'} EMARK
             </div>
           </div>
 

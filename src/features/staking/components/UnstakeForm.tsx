@@ -81,7 +81,7 @@ export function UnstakeForm({ stakingState, onSuccess, className = '' }: Unstake
       onSuccess?.();
     } catch (error: unknown) {
       console.error('Unstake submission failed:', error);
-      setLocalError(error.message || 'Unstaking request failed. Please try again.');
+      setLocalError(error instanceof Error ? error.message : 'Unstaking request failed. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

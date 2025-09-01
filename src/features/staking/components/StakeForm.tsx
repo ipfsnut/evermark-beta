@@ -92,7 +92,7 @@ export function StakeForm({ stakingState, onSuccess, className = '', disabled = 
       setNeedsApproval(false); // Reset approval state after successful approval
     } catch (error: unknown) {
       console.error('Approval failed:', error);
-      setLocalError(error.message || 'Approval failed. Please try again.');
+      setLocalError(error instanceof Error ? error.message : 'Approval failed. Please try again.');
     }
   }, [validation.isValid, amount, isApproving, approveStaking]);
 
@@ -117,7 +117,7 @@ export function StakeForm({ stakingState, onSuccess, className = '', disabled = 
       onSuccess?.();
     } catch (error: unknown) {
       console.error('Stake submission failed:', error);
-      setLocalError(error.message || 'Staking failed. Please try again.');
+      setLocalError(error instanceof Error ? error.message : 'Staking failed. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

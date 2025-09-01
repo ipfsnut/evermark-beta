@@ -256,7 +256,7 @@ export class StakingService {
     let message = 'Transaction failed';
     let recoverable = true;
 
-    if (error?.message) {
+    if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
       const errorMessage = error.message.toLowerCase();
       
       if (errorMessage.includes('insufficient balance')) {
@@ -287,10 +287,10 @@ export class StakingService {
     };
 
     // Only add details if there's meaningful error info
-    if (error?.message || error?.stack) {
+    if (error && typeof error === 'object' && ('message' in error || 'stack' in error)) {
       result.details = {
-        originalError: error.message ?? 'Unknown error',
-        ...(error.stack && { stack: error.stack })
+        originalError: ('message' in error && typeof error.message === 'string') ? error.message : 'Unknown error',
+        ...('stack' in error && typeof error.stack === 'string' && { stack: error.stack })
       };
     }
 

@@ -16,7 +16,7 @@ import {
 // Removed ImageUpload component - using simple file input with IPFS-first approach in EvermarkService
 
 import { useEvermarksState } from '../hooks/useEvermarkState';
-import { type CreateEvermarkInput, type EvermarkMetadata, type Evermark } from '../types';
+import { type CreateEvermarkInput, type EvermarkMetadata, type Evermark, type CreateEvermarkResult } from '../types';
 import { useAppAuth } from '@/providers/AppContext';
 import { useUserForEvermarks } from '@/providers/IntegratedUserProvider';
 import { useTheme } from '@/providers/ThemeProvider';
@@ -222,7 +222,7 @@ const HelpModal: React.FC<{
 
 // Main CreateEvermarkForm Component
 interface CreateEvermarkFormProps {
-  onSuccess?: (evermark: Evermark) => void;
+  onSuccess?: (result: CreateEvermarkResult) => void;
   onCancel?: () => void;
   className?: string;
 }

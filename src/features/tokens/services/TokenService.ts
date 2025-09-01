@@ -218,7 +218,9 @@ export class TokenService {
    * Parse contract error into user-friendly message
    */
   static parseContractError(error: unknown): TokenError {
-    const errorMessage = error?.message ?? error?.toString() ?? 'Unknown error';
+    const errorMessage = (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') 
+      ? error.message 
+      : (typeof error === 'string' ? error : String(error));
     
     // Common error patterns
     if (errorMessage.includes('insufficient allowance')) {
@@ -447,8 +449,8 @@ spender: string, amount: bigint, isUnlimited = false  ): {
   } {
     return {
       status: receipt.status === 1 ? 'success' : 'failed',
-      hash: receipt.transactionHash,
-      gasUsed: receipt.gasUsed ? this.formatTokenAmount(BigInt(receipt.gasUsed), 18) : 'Unknown',
+      hash: receipt.transactionHash || '',
+      gasUsed: receipt.gasUsed ? this.formatTokenAmount(BigInt(Number(receipt.gasUsed)), 18) : 'Unknown',
       blockNumber: receipt.blockNumber ?? 0,
       confirmations: receipt.confirmations ?? 0
     };
