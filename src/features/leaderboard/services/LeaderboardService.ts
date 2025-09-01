@@ -287,16 +287,68 @@ export class LeaderboardService {
   /**
    * Get leaderboard stats for current cycle
    */
-  static async fetchLeaderboardStats(period: string = 'current'): Promise<LeaderboardStats> {
-    return {
-      totalEvermarks: 0,
-      totalVotes: BigInt(0),
-      activeVoters: 0,
-      averageVotesPerEvermark: BigInt(0),
-      topEvermarkVotes: BigInt(0),
-      participationRate: 0,
-      period
-    };
+  static async fetchLeaderboardStats(period: string = 'current', evermarks?: Evermark[]): Promise<LeaderboardStats> {
+    try {
+      // If no evermarks provided, return empty stats
+      if (!evermarks || evermarks.length === 0) {
+        return {
+          totalEvermarks: 0,
+          totalVotes: BigInt(0),
+          activeVoters: 0,
+          averageVotesPerEvermark: BigInt(0),
+          topEvermarkVotes: BigInt(0),
+          participationRate: 0,
+          period
+        };
+      }
+
+      // Calculate leaderboard to get real voting data
+      const leaderboardEntries = await this.calculateLeaderboard(evermarks, period);
+      
+      if (leaderboardEntries.length === 0) {
+        return {
+          totalEvermarks: evermarks.length,
+          totalVotes: BigInt(0),
+          activeVoters: 0,
+          averageVotesPerEvermark: BigInt(0),
+          topEvermarkVotes: BigInt(0),
+          participationRate: 0,
+          period
+        };
+      }
+
+      // Calculate total votes from all entries
+      const totalVotes = leaderboardEntries.reduce((sum, entry) => sum + entry.totalVotes, BigInt(0));
+      
+      // Get top evermark votes (highest single evermark)
+      const topEvermarkVotes = leaderboardEntries[0]?.totalVotes || BigInt(0);
+      
+      // Calculate average votes per evermark
+      const averageVotes = leaderboardEntries.length > 0 
+        ? totalVotes / BigInt(leaderboardEntries.length)
+        : BigInt(0);
+
+      return {
+        totalEvermarks: evermarks.length,
+        totalVotes,
+        activeVoters: 0, // We don't track individual voters efficiently
+        averageVotesPerEvermark: averageVotes,
+        topEvermarkVotes,
+        participationRate: 0, // Participation rate removed as discussed
+        period
+      };
+    } catch (error) {
+      console.error('Failed to calculate leaderboard stats:', error);
+      return {
+        totalEvermarks: evermarks?.length || 0,
+        totalVotes: BigInt(0),
+        activeVoters: 0,
+        averageVotesPerEvermark: BigInt(0),
+        topEvermarkVotes: BigInt(0),
+        participationRate: 0,
+        period
+      };
+    }
   }
   
   /**

@@ -18,8 +18,8 @@ import { useEvermarksState } from '../../evermarks';
 const QUERY_KEYS = {
   leaderboard: (options: LeaderboardFeedOptions) => 
     ['leaderboard', 'entries', options],
-  stats: (period?: string) => 
-    ['leaderboard', 'stats', period ?? LEADERBOARD_CONSTANTS.DEFAULT_PERIOD],
+  stats: (period?: string, evermarksHash?: string) => 
+    ['leaderboard', 'stats', period ?? LEADERBOARD_CONSTANTS.DEFAULT_PERIOD, evermarksHash],
 } as const;
 
 /**
@@ -30,6 +30,11 @@ export function useLeaderboardState(): UseLeaderboardStateReturn {
 
   // Get real evermarks data to calculate leaderboard from
   const { evermarks, isLoading: isLoadingEvermarks } = useEvermarksState();
+  
+  // Create a simple hash of evermarks for cache invalidation
+  const evermarksHash = useMemo(() => {
+    return evermarks?.length ? `${evermarks.length}-${evermarks[0]?.id}` : '0';
+  }, [evermarks]);
 
   // Local state for filters and pagination
   const [filters, setFiltersState] = useState<LeaderboardFilters>(() => 
@@ -73,13 +78,15 @@ export function useLeaderboardState(): UseLeaderboardStateReturn {
     error: statsError,
     refetch: refetchStats
   } = useQuery({
-    queryKey: QUERY_KEYS.stats(filters.period),
+    queryKey: QUERY_KEYS.stats(filters.period, evermarksHash),
     queryFn: () => LeaderboardService.fetchLeaderboardStats(
-      filters.period ?? LEADERBOARD_CONSTANTS.DEFAULT_PERIOD
+      filters.period ?? LEADERBOARD_CONSTANTS.DEFAULT_PERIOD,
+      evermarks // Pass evermarks data for stats calculation
     ),
     staleTime: 30 * 1000, // 30 seconds
     retry: 2,
     retryDelay: 1000,
+    enabled: !isLoadingEvermarks // Only run when evermarks data is available
   });
 
   // Extract data from queries
