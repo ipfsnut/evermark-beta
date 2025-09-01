@@ -8,7 +8,8 @@ import {
   PlusIcon,
   BookOpenIcon,
   InfoIcon,
-  ShareIcon
+  ShareIcon,
+  ArrowUpDownIcon
 } from 'lucide-react';
 import { useAppAuth } from '../../providers/AppContext';
 import { useTheme } from '../../providers/ThemeProvider';
@@ -39,6 +40,11 @@ const navigationItems: NavItem[] = [
     to: '/leaderboard',
     label: 'Leaderboard',
     icon: TrendingUpIcon,
+  },
+  {
+    to: '/swap',
+    label: 'Swap',
+    icon: ArrowUpDownIcon,
   },
   {
     to: '/staking',

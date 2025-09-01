@@ -353,7 +353,7 @@ async function createEvermarkWithBlockchain(
     // Sync to database
     if (mintResult.tokenId && mintResult.txHash) {
       try {
-        const dbSyncResponse = await fetch('/api/evermarks', {
+        const dbSyncResponse = await fetch('/.netlify/functions/evermarks', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -433,7 +433,7 @@ async function createEvermarkWithBlockchain(
           
           // Trigger general image caching
           try {
-            await fetch('/.netlify/functions/cache-images', {
+            const cachingResponse = await fetch('/.netlify/functions/cache-images', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ 
@@ -441,7 +441,15 @@ async function createEvermarkWithBlockchain(
                 tokenIds: [parseInt(mintResult.tokenId)]
               })
             });
-          } catch {
+            
+            if (cachingResponse.ok) {
+              const cachingResult = await cachingResponse.json();
+              console.log('✅ Image caching completed:', cachingResult);
+            } else {
+              console.warn('⚠️ Image caching failed:', await cachingResponse.text());
+            }
+          } catch (error) {
+            console.warn('⚠️ Image caching failed:', error);
             // Don't fail if caching fails
           }
         }

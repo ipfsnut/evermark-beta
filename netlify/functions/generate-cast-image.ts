@@ -380,7 +380,7 @@ export const handler: Handler = async (event, context) => {
 
     // Update the evermark with the new image URL
     const { error: updateError } = await supabase
-      .from('evermarks')
+      .from('beta_evermarks')
       .update({
         supabase_image_url: urlData.publicUrl,
         ipfs_image_hash: null, // Clear old IPFS hash
