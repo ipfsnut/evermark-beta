@@ -132,7 +132,7 @@ export function StakeForm({ stakingState, onSuccess, className = '', disabled = 
   const handleAmountChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     
-    // Only allow valid number inputs
+    // Allow decimal inputs for proper token amounts
     if (value === '' || /^\d*\.?\d*$/.test(value)) {
       setAmount(value);
       setLocalError(null);
@@ -210,7 +210,7 @@ export function StakeForm({ stakingState, onSuccess, className = '', disabled = 
                   ? "bg-gray-900 border border-gray-600 text-white placeholder-gray-400 focus:border-purple-500"
                   : "bg-white/90 border border-yellow-300 text-gray-900 placeholder-gray-500 focus:border-purple-400"
               )}
-              placeholder="0.0"
+              placeholder="0"
               disabled={disabled || isSubmitting || isStaking}
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center space-x-2">

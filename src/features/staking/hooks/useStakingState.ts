@@ -128,22 +128,37 @@ export function useStakingState(userAddress?: string): UseStakingStateReturn {
       );
     }
 
+    // Check if user has sufficient EMARK balance
+    if (stakingInfo.emarkBalance < amount) {
+      throw StakingService.createError(
+        STAKING_ERRORS.INSUFFICIENT_BALANCE,
+        `Insufficient EMARK balance. You have ${StakingService.formatTokenAmount(stakingInfo.emarkBalance)} but need ${StakingService.formatTokenAmount(amount)}`
+      );
+    }
+
     // Check if approval is sufficient
     if (stakingData.stakingAllowance < amount) {
       throw StakingService.createError(
         STAKING_ERRORS.INSUFFICIENT_ALLOWANCE,
-        'Please approve EMARK spending first'
+        `Please approve EMARK spending first. Current allowance: ${StakingService.formatTokenAmount(stakingData.stakingAllowance)}, needed: ${StakingService.formatTokenAmount(amount)}`
       );
     }
 
     try {
+      console.log("Pre-stake validation passed:", {
+        emarkBalance: stakingInfo.emarkBalance.toString(),
+        requestedAmount: amount.toString(),
+        currentAllowance: stakingData.stakingAllowance.toString(),
+        userAddress: effectiveAddress
+      });
+      
       // Stake the tokens
       await transactions.stake(amount);
     } catch (error: unknown) {
       console.error('Stake failed:', error);
       throw StakingService.parseContractError(error);
     }
-  }, [stakingInfo, stakingData.stakingAllowance, transactions]);
+  }, [stakingInfo, stakingData.stakingAllowance, transactions, effectiveAddress]);
 
   // ✅ Pass through transaction actions with error handling
   const requestUnstake = useCallback(async (amount: bigint): Promise<void> => {

@@ -77,8 +77,13 @@ export function useStakingTransactions(): StakingTransactions {
     try {
       devLog("Staking EMARK tokens:", {
         amount: amount.toString(),
-        user: account.address
+        user: account.address,
+        wemark: wemark.address,
+        emarkToken: emarkToken.address
       });
+      
+      // Debug: Check current allowance before staking
+      devLog("Checking allowance before stake...");
       
       const result = await sendTransaction({
         contract: wemark,
@@ -87,10 +92,21 @@ export function useStakingTransactions(): StakingTransactions {
       });
       
       prodLog("Staking successful:", result.transactionHash);
+    } catch (error: unknown) {
+      console.error("Staking transaction failed:", error);
+      console.error("Contract addresses:", {
+        wemark: wemark.address,
+        emarkToken: emarkToken.address
+      });
+      console.error("Transaction details:", {
+        amount: amount.toString(),
+        user: account.address
+      });
+      throw error;
     } finally {
       setIsStaking(false);
     }
-  }, [account, wemark, sendTransaction]);
+  }, [account, wemark, emarkToken, sendTransaction]);
   
   // Request unstake (start unbonding period)
   const requestUnstake = useCallback(async (amount: bigint) => {
