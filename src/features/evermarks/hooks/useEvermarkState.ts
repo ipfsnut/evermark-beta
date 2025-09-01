@@ -64,12 +64,12 @@ const TempEvermarkService = {
         let description = '';
         
         try {
-          if (evermarkItem.metadata) {
-            const metadata = typeof evermarkItem.metadata === 'string' ? JSON.parse(evermarkItem.metadata as string) : evermarkItem.metadata as Record<string, unknown>;
-            tags = (metadata.tags as string[]) ?? [];
-            title = (metadata.title as string) ?? '';
-            author = (metadata.author as string) ?? '';
-            description = (metadata.description as string) ?? '';
+          if (evermarkItem.metadata_json) {
+            const metadata = JSON.parse(evermarkItem.metadata_json as string);
+            tags = metadata.tags ?? [];
+            title = metadata.title ?? '';
+            author = metadata.author ?? '';
+            description = metadata.description ?? '';
           }
         } catch {
           // Failed to parse metadata, use defaults
@@ -77,22 +77,23 @@ const TempEvermarkService = {
         
         return {
           ...evermarkItem,
-          id: evermarkItem.token_id as string,
-          tokenId: Number(evermarkItem.token_id as string),
-          title: title || (evermarkItem.title as string) || 'Untitled',
-          author: author || (evermarkItem.author as string) || 'Unknown',
-          creator: (evermarkItem.owner as string) ?? (evermarkItem.author as string) ?? 'Unknown',
-          description: description || (evermarkItem.description as string) || '',
-          metadataURI: (evermarkItem.token_uri as string) || '',
+          id: evermarkItem.token_id.toString(),
+          tokenId: Number(evermarkItem.token_id),
+          title: title || evermarkItem.title || 'Untitled',
+          author: author || evermarkItem.author || 'Unknown',
+          creator: evermarkItem.owner ?? evermarkItem.author ?? 'Unknown',
+          description: description || evermarkItem.description || '',
+          metadataURI: evermarkItem.token_uri || '',
           tags,
           verified: Boolean(evermarkItem.verified),
-          creationTime: Date.parse((evermarkItem.created_at as string) ?? new Date().toISOString()),
-          ipfsHash: evermarkItem.ipfs_image_hash as string,
-          image: (evermarkItem.supabase_image_url as string) ?? (evermarkItem.ipfs_image_hash ? `ipfs://${evermarkItem.ipfs_image_hash}` : undefined),
-          createdAt: (evermarkItem.created_at as string) ?? new Date().toISOString(),
-          updatedAt: (evermarkItem.updated_at as string) ?? (evermarkItem.created_at as string) ?? new Date().toISOString(),
-          contentType: (evermarkItem.content_type as Evermark['contentType']) || 'Custom',
-          sourceUrl: evermarkItem.source_url as string,
+          creationTime: Date.parse(evermarkItem.created_at ?? new Date().toISOString()),
+          ipfsHash: evermarkItem.ipfs_metadata_hash as string,
+          supabaseImageUrl: evermarkItem.processed_image_url as string,
+          image: evermarkItem.processed_image_url ?? (evermarkItem.ipfs_metadata_hash ? `ipfs://${evermarkItem.ipfs_metadata_hash}` : undefined),
+          createdAt: evermarkItem.created_at ?? new Date().toISOString(),
+          updatedAt: evermarkItem.updated_at ?? evermarkItem.created_at ?? new Date().toISOString(),
+          contentType: evermarkItem.content_type as Evermark['contentType'] || 'Custom',
+          sourceUrl: evermarkItem.source_url,
           imageStatus: 'processed' as const,
           extendedMetadata: { 
             tags,
@@ -135,7 +136,55 @@ const TempEvermarkService = {
       }
       
       const data = await response.json();
-      return data.evermark ?? null;
+      const evermarkItem = data.evermark;
+      
+      if (!evermarkItem) {
+        return null;
+      }
+      
+      // Transform single evermark using same logic as feed
+      let tags: string[] = [];
+      let title = '';
+      let author = '';
+      let description = '';
+      
+      try {
+        if (evermarkItem.metadata_json) {
+          const metadata = JSON.parse(evermarkItem.metadata_json as string);
+          tags = metadata.tags ?? [];
+          title = metadata.title ?? '';
+          author = metadata.author ?? '';
+          description = metadata.description ?? '';
+        }
+      } catch {
+        // Failed to parse metadata, use defaults
+      }
+      
+      return {
+        ...evermarkItem,
+        id: evermarkItem.token_id.toString(),
+        tokenId: Number(evermarkItem.token_id),
+        title: title || evermarkItem.title || 'Untitled',
+        author: author || evermarkItem.author || 'Unknown',
+        creator: evermarkItem.owner ?? evermarkItem.author ?? 'Unknown',
+        description: description || evermarkItem.description || '',
+        metadataURI: evermarkItem.token_uri || '',
+        tags,
+        verified: Boolean(evermarkItem.verified),
+        creationTime: Date.parse(evermarkItem.created_at ?? new Date().toISOString()),
+        ipfsHash: evermarkItem.ipfs_metadata_hash as string,
+        supabaseImageUrl: evermarkItem.processed_image_url as string,
+        image: evermarkItem.processed_image_url ?? (evermarkItem.ipfs_metadata_hash ? `ipfs://${evermarkItem.ipfs_metadata_hash}` : undefined),
+        createdAt: evermarkItem.created_at ?? new Date().toISOString(),
+        updatedAt: evermarkItem.updated_at ?? evermarkItem.created_at ?? new Date().toISOString(),
+        contentType: evermarkItem.content_type as Evermark['contentType'] || 'Custom',
+        sourceUrl: evermarkItem.source_url,
+        imageStatus: 'processed' as const,
+        extendedMetadata: { 
+          tags,
+          castData: evermarkItem.cast_data as any
+        }
+      } as Evermark;
     } catch (error) {
       console.error('Failed to fetch evermark:', error);
       return null;
