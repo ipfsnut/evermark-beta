@@ -382,6 +382,18 @@ async function createEvermarkWithBlockchain(
     
     onProgress(85, 'Syncing to database...');
     
+    // Check for automatic verification (cast authors creating their own evermarks)
+    let isAutoVerified = false;
+    if (castData && metadata.contentType === 'Cast') {
+      const { FarcasterService } = await import('../services/FarcasterService');
+      isAutoVerified = FarcasterService.canAutoVerify(castData, accountAddress);
+      
+      if (isAutoVerified) {
+        console.log('🔐 Auto-verifying cast - author creates own evermark');
+        onProgress(87, 'Auto-verifying cast ownership...');
+      }
+    }
+
     // Sync to database
     if (mintResult.tokenId && mintResult.txHash) {
       try {
@@ -400,6 +412,7 @@ async function createEvermarkWithBlockchain(
             source_url: metadata.sourceUrl || metadata.url || metadata.castUrl,
             token_uri: metadataUploadResult.url,
             author: castData?.author || castData?.username || tweetData?.author || academicMetadata?.primaryAuthor || webMetadata?.author || metadata.author || accountAddress,
+            verified: isAutoVerified,
             metadata: JSON.stringify({
               // Include cast data in the format expected by generate-cast-image.ts
               ...(castData && {

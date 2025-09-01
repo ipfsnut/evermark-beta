@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   User, 
   Calendar, 
@@ -9,7 +9,8 @@ import {
   FileText,
   MessageCircle,
   Clock,
-  Zap
+  Zap,
+  CheckCircle
 } from 'lucide-react';
 import { Formatters } from '../../../utils/formatters';
 import { useTheme } from '../../../providers/ThemeProvider';
@@ -17,6 +18,7 @@ import { cn } from '../../../utils/responsive';
 
 // Use ResponsiveEvermarkImage for better aspect ratio handling (especially for book covers)
 import { ResponsiveEvermarkImage } from '../../../components/images/ResponsiveEvermarkImage';
+import { AttestationPopup } from './AttestationPopup';
 import { type Evermark } from '../types';
 
 // TODO: Replace SDK-based performance monitoring with simple alternatives
@@ -53,9 +55,15 @@ export function EvermarkCard({
   className = ''
 }: EvermarkCardProps) {
   const { isDark } = useTheme();
+  const [showAttestationPopup, setShowAttestationPopup] = useState(false);
   
   const handleClick = () => {
     onClick?.(evermark);
+  };
+
+  const handleVerificationClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
+    setShowAttestationPopup(true);
   };
 
   const formatCount = (count: number): string => {
@@ -235,6 +243,14 @@ export function EvermarkCard({
               <div className="flex items-center min-w-0 flex-1">
                 <User className="h-3 w-3 mr-1 flex-shrink-0" />
                 <span className="truncate">{evermark.author}</span>
+                {evermark.verified && (
+                  <button
+                    onClick={handleVerificationClick}
+                    className="ml-1 flex-shrink-0 hover:scale-110 transition-transform"
+                  >
+                    <CheckCircle className="h-3 w-3 text-green-400" title="Verified - Click to view attestation" />
+                  </button>
+                )}
               </div>
               <div className="flex items-center flex-shrink-0">
                 {getContentTypeIcon(evermark.contentType)}
@@ -290,6 +306,13 @@ export function EvermarkCard({
             </div>
           </div>
         </div>
+        
+        {/* Attestation Popup */}
+        <AttestationPopup 
+          evermark={evermark}
+          isOpen={showAttestationPopup}
+          onClose={() => setShowAttestationPopup(false)}
+        />
       </div>
     );
   }
@@ -333,6 +356,14 @@ export function EvermarkCard({
           <div className="flex items-center min-w-0 flex-1">
             <User className="h-4 w-4 mr-1 flex-shrink-0" />
             <span className="truncate">{evermark.author}</span>
+            {evermark.verified && (
+              <button
+                onClick={handleVerificationClick}
+                className="ml-1 flex-shrink-0 hover:scale-110 transition-transform"
+              >
+                <CheckCircle className="h-4 w-4 text-green-400" title="Verified - Click to view attestation" />
+              </button>
+            )}
           </div>
           <div className="flex items-center flex-shrink-0 ml-2">
             <Calendar className="h-4 w-4 mr-1" />
@@ -402,6 +433,13 @@ export function EvermarkCard({
           </div>
         </div>
       </div>
+      
+      {/* Attestation Popup */}
+      <AttestationPopup 
+        evermark={evermark}
+        isOpen={showAttestationPopup}
+        onClose={() => setShowAttestationPopup(false)}
+      />
     </div>
   );
 }

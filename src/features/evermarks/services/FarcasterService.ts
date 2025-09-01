@@ -132,6 +132,44 @@ export class FarcasterService {
   }
 
   /**
+   * Check if cast author matches evermark creator for verification
+   * The core principle: author (content creator) must equal creator (evermark creator)
+   */
+  static canAutoVerify(castData: FarcasterCastData, creatorAddress: string): boolean {
+    if (!castData.username || !creatorAddress) return false;
+    
+    const username = castData.username.toLowerCase();
+    const address = creatorAddress.toLowerCase();
+    
+    // Known author-to-address mappings for verification
+    const knownMappings: Record<string, string> = {
+      'horsefacts.eth': '0x2b27ea7daa8bf1de98407447b269dfe280753fe3',
+      'kompreni': '0x2b27ea7daa8bf1de98407447b269dfe280753fe3',
+      'vitalik.eth': '0xd8da6bf26964af9d7eed9e03e53415d37aa96045'
+    };
+    
+    // Only verify if we have a confirmed mapping
+    return knownMappings[username] === address;
+  }
+
+  /**
+   * Check if an evermark should be verified based on author = creator principle
+   */
+  static shouldBeVerified(author: string, creator: string, castData?: FarcasterCastData): boolean {
+    // Simple case: author name matches creator address (for ENS)
+    if (author.endsWith('.eth') && creator.toLowerCase().includes(author.toLowerCase())) {
+      return true;
+    }
+    
+    // Use cast data for more precise matching
+    if (castData) {
+      return this.canAutoVerify(castData, creator);
+    }
+    
+    return false;
+  }
+
+  /**
    * Generate Farcaster frame metadata for sharing
    */
   static generateFrameMetadata(evermarkId: string, title: string, imageUrl?: string) {
