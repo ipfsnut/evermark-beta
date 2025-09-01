@@ -21,11 +21,11 @@ function FarcasterSwapInterface() {
       // Use the Farcaster Mini App SDK for native in-app swaps
       const { sdk } = await import('@farcaster/miniapp-sdk');
       
-      // Use native Farcaster swap instead of redirecting to Uniswap
+      // Use native Farcaster swap functionality
       const emarkAddress = CONTRACTS.EMARK_TOKEN;
       
-      await sdk.actions.openSwap({
-        tokenIn: "ETH", // or native token address
+      await sdk.actions.swapToken({
+        tokenIn: "ETH",
         tokenOut: emarkAddress,
         chain: "base"
       });
