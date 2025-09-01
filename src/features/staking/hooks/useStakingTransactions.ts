@@ -4,6 +4,7 @@ import { useWalletAccount } from '@/hooks/core/useWalletAccount';
 import { useContextualTransactions } from '@/hooks/core/useContextualTransactions';
 import { useContracts } from '@/hooks/core/useContracts';
 import { devLog, prodLog } from '@/utils/debug';
+import { PointsService } from '@/features/points/services/PointsService';
 
 // Remove unused imports
 
@@ -106,6 +107,22 @@ export function useStakingTransactions(): StakingTransactions {
       });
       
       prodLog("Staking successful:", result.transactionHash);
+      
+      // Award points for staking
+      try {
+        const stakeAmountFormatted = (Number(amount) / (10 ** 18)).toString();
+        await PointsService.awardPoints(
+          account.address,
+          'stake',
+          undefined,
+          result.transactionHash,
+          stakeAmountFormatted
+        );
+        const pointsEarned = PointsService.calculateStakePoints(amount);
+        console.log(`✅ Awarded ${pointsEarned} points for staking ${stakeAmountFormatted} EMARK`);
+      } catch (pointsError) {
+        console.warn('⚠️ Failed to award points for staking:', pointsError);
+      }
     } catch (error: unknown) {
       console.error("Staking transaction failed:", error);
       console.error("Contract addresses:", {

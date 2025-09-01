@@ -62,22 +62,24 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
     if (variant === 'compact') {
       return (
         <div className={`flex items-center space-x-2 px-3 py-2 ${themeClasses.bg.card} border ${themeClasses.border.primary} rounded-lg ${className}`}>
-          {avatar ? (
-            <img 
-              src={avatar} 
-              alt={displayName || shortAddress || 'User'} 
-              className="w-6 h-6 rounded-full"
-              onError={(e) => {
-                console.warn('Failed to load avatar:', avatar);
-                e.currentTarget.style.display = 'none';
-                const fallback = e.currentTarget.nextElementSibling;
-                if (fallback) fallback.style.display = 'flex';
-              }}
-            />
-          ) : null}
-          <div className="w-6 h-6 bg-gradient-to-r from-cyber-primary to-cyber-secondary rounded-full flex items-center justify-center" style={{ display: avatar ? 'none' : 'flex' }}>
-            <UserIcon className="h-3 w-3 text-black" />
-          </div>
+          <UserAvatar 
+            user={user ? {
+              fid: user.farcasterFid || 0,
+              username: user.username || user.farcasterUsername || '',
+              displayName: displayName || user.displayName || '',
+              pfpUrl: avatar || '',
+              bio: '',
+              followerCount: 0,
+              followingCount: 0,
+              verifiedAddresses: address ? [address] : [],
+              isVerified: false,
+              hasPowerBadge: false,
+              isActive: true
+            } : null}
+            address={address}
+            size="xs"
+            fallbackType="blockies"
+          />
           <button
             onClick={disconnect}
             className={`text-sm font-medium ${themeClasses.text.primary} hover:text-cyber-primary transition-colors cursor-pointer`}
@@ -92,22 +94,24 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
     // Default variant
     return (
       <div className={`flex items-center space-x-2 px-4 py-2 ${themeClasses.bg.card} border ${themeClasses.border.primary} rounded-lg ${className}`}>
-        {avatar ? (
-          <img 
-            src={avatar} 
-            alt={displayName || shortAddress || 'User'} 
-            className="w-8 h-8 rounded-full"
-            onError={(e) => {
-              console.warn('Failed to load avatar:', avatar);
-              e.currentTarget.style.display = 'none';
-              const fallback = e.currentTarget.nextElementSibling;
-              if (fallback) fallback.style.display = 'flex';
-            }}
-          />
-        ) : null}
-        <div className="w-8 h-8 bg-gradient-to-r from-cyber-primary to-cyber-secondary rounded-full flex items-center justify-center" style={{ display: avatar ? 'none' : 'flex' }}>
-          <UserIcon className="h-4 w-4 text-black" />
-        </div>
+        <UserAvatar 
+          user={user ? {
+            fid: user.farcasterFid || 0,
+            username: user.username || user.farcasterUsername || '',
+            displayName: displayName || user.displayName || '',
+            pfpUrl: avatar || '',
+            bio: '',
+            followerCount: 0,
+            followingCount: 0,
+            verifiedAddresses: address ? [address] : [],
+            isVerified: false,
+            hasPowerBadge: false,
+            isActive: true
+          } : null}
+          address={address}
+          size="sm"
+          fallbackType="blockies"
+        />
         <div className="flex flex-col">
           <button
             onClick={disconnect}
@@ -178,22 +182,24 @@ export function SimpleConnectButton({ className = '' }: { className?: string }) 
     
     return (
       <div className={`flex items-center space-x-2 px-4 py-2 ${themeClasses.bg.card} border ${themeClasses.border.primary} rounded-lg ${className}`}>
-        {avatar ? (
-          <img 
-            src={avatar} 
-            alt={displayName || shortAddress} 
-            className="w-8 h-8 rounded-full"
-            onError={(e) => {
-              console.warn('Failed to load avatar:', avatar);
-              e.currentTarget.style.display = 'none';
-              const fallback = e.currentTarget.nextElementSibling;
-              if (fallback) fallback.style.display = 'flex';
-            }}
-          />
-        ) : null}
-        <div className="w-8 h-8 bg-gradient-to-r from-cyber-primary to-cyber-secondary rounded-full flex items-center justify-center" style={{ display: avatar ? 'none' : 'flex' }}>
-          <UserIcon className="h-4 w-4 text-black" />
-        </div>
+        <UserAvatar 
+          user={user ? {
+            fid: user.farcasterFid || 0,
+            username: user.username || user.farcasterUsername || '',
+            displayName: displayName || user.displayName || '',
+            pfpUrl: avatar || '',
+            bio: '',
+            followerCount: 0,
+            followingCount: 0,
+            verifiedAddresses: address ? [address] : [],
+            isVerified: false,
+            hasPowerBadge: false,
+            isActive: true
+          } : null}
+          address={address}
+          size="sm"
+          fallbackType="blockies"
+        />
         <div className="flex flex-col">
           <span className={`text-sm font-medium ${themeClasses.text.primary}`}>
             {displayName ?? shortAddress}

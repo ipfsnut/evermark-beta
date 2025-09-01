@@ -11,6 +11,7 @@ import { base } from 'thirdweb/chains';
 import { VotingService } from '../services/VotingService';
 import { VotingCacheService } from '../services/VotingCacheService';
 import { LeaderboardService } from '../../leaderboard/services/LeaderboardService';
+import { PointsService } from '@/features/points/services/PointsService';
 import type { 
   VotingPower, 
   VotingSeason, 
@@ -223,6 +224,19 @@ export function useVotingState(): UseVotingStateReturn {
         console.log(`🔄 Updated vote cache for evermark ${evermarkId}: ${VotingService.formatVoteAmount(currentTotalVotes)} total votes`);
       }
 
+      // Award points for voting
+      try {
+        await PointsService.awardPoints(
+          userAddress,
+          'vote',
+          evermarkId,
+          result.transactionHash
+        );
+        console.log('✅ Awarded 1 point for voting');
+      } catch (pointsError) {
+        console.warn('⚠️ Failed to award points for voting:', pointsError);
+      }
+
       return {
         hash: result.transactionHash,
         type: 'vote',
@@ -303,6 +317,19 @@ export function useVotingState(): UseVotingStateReturn {
         );
         
         console.log(`🔄 Updated vote cache for evermark ${evermarkId} after withdrawal: ${VotingService.formatVoteAmount(currentTotalVotes)} total votes`);
+      }
+
+      // Award points for voting (undelegating is still a voting action)
+      try {
+        await PointsService.awardPoints(
+          userAddress,
+          'vote',
+          evermarkId,
+          result.transactionHash
+        );
+        console.log('✅ Awarded 1 point for vote undelegation');
+      } catch (pointsError) {
+        console.warn('⚠️ Failed to award points for vote undelegation:', pointsError);
       }
 
       return {

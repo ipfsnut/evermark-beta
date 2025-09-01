@@ -4,6 +4,7 @@ import { useWalletAccount, useThirdwebAccount } from '@/hooks/core/useWalletAcco
 import { useWallet } from '@/providers/WalletProvider';
 import { useContextualTransactions } from '@/hooks/core/useContextualTransactions';
 import { useNotifications } from '@/hooks/useNotifications';
+import { PointsService } from '@/features/points/services/PointsService';
 import type { Account } from 'thirdweb/wallets';
 
 import {
@@ -80,6 +81,19 @@ export function useEvermarkCreation() {
         
         // Invalidate queries to refetch data
         await queryClient.invalidateQueries({ queryKey: ['evermarks'] });
+        
+        // Award points for creating evermark
+        try {
+          await PointsService.awardPoints(
+            account.address, 
+            'create_evermark', 
+            result.tokenId, 
+            result.txHash
+          );
+          console.log('✅ Awarded 10 points for evermark creation');
+        } catch (pointsError) {
+          console.warn('⚠️ Failed to award points for evermark creation:', pointsError);
+        }
       } else {
         throw new Error(result.message || 'Evermark creation failed');
       }
