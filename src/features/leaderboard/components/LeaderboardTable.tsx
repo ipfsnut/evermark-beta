@@ -187,89 +187,85 @@ export function LeaderboardTable({
   }
 
   return (
-    <div className={cn("space-y-6", className)}>
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h2 className={`${themeClasses.headingMedium} mb-2`}>
+    <div className={cn("space-y-4 md:space-y-6", className)}>
+      {/* Header - Mobile First */}
+      <div className="space-y-4">
+        <div className="flex flex-col space-y-2">
+          <h2 className={`${themeClasses.headingMedium}`}>
             Leaderboard
             {totalCount > 0 && (
-              <span className="ml-2 text-base font-normal text-app-text-muted">
+              <span className="ml-2 text-sm md:text-base font-normal text-app-text-muted">
                 ({totalCount.toLocaleString()})
               </span>
             )}
           </h2>
-          <div className="flex items-center space-x-4 text-sm text-app-text-secondary">
-            <span>Period: {currentPeriod.label}</span>
-            {lastUpdated && (
-              <span>Updated {Formatters.formatRelativeTime(lastUpdated)}</span>
-            )}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 text-xs sm:text-sm text-app-text-secondary">
+            <div className="flex items-center space-x-3">
+              <span>Period: {currentPeriod.label}</span>
+              {lastUpdated && (
+                <span className="hidden sm:inline">Updated {Formatters.formatRelativeTime(lastUpdated)}</span>
+              )}
+            </div>
+            <button
+              onClick={refresh}
+              disabled={isRefreshing}
+              className={`${themeClasses.btnSecondary} disabled:opacity-50 self-start sm:self-auto`}
+              title="Refresh leaderboard"
+            >
+              <RefreshCw className={cn(
+                "h-4 w-4 text-app-text-primary",
+                isRefreshing && "animate-spin"
+              )} />
+            </button>
           </div>
-        </div>
-
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={refresh}
-            disabled={isRefreshing}
-            className={`${themeClasses.btnSecondary} disabled:opacity-50`}
-            title="Refresh leaderboard"
-          >
-            <RefreshCw className={cn(
-              "h-4 w-4 text-app-text-primary",
-              isRefreshing && "animate-spin"
-            )} />
-          </button>
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Filters - Mobile First */}
       {showFilters && (
-        <div className="space-y-4">
-          {/* Search and period selection */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            {/* Search */}
-            <form onSubmit={handleSearch} className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-app-text-muted" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search evermarks..."
-                  className={themeClasses.input}
-                />
-              </div>
-            </form>
-
-            {/* Period selector */}
-            <div className="flex space-x-2">
-              {availablePeriods.map(period => (
-                <button
-                  key={period.id}
-                  onClick={() => handlePeriodChange(period.id)}
-                  className={cn(
-                    "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
-                    period.id === currentPeriod.id
-                      ? themeClasses.btnPrimary
-                      : themeClasses.btnSecondary
-                  )}
-                >
-                  {period.label}
-                </button>
-              ))}
+        <div className="space-y-3">
+          {/* Search */}
+          <form onSubmit={handleSearch} className="w-full">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-app-text-muted" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search evermarks..."
+                className={cn(themeClasses.input, "pl-10")}
+              />
             </div>
+          </form>
+
+          {/* Period selector - Horizontal scroll on mobile */}
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {availablePeriods?.map(period => (
+              <button
+                key={period.id}
+                onClick={() => handlePeriodChange(period.id)}
+                className={cn(
+                  "px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0",
+                  period.id === currentPeriod.id
+                    ? themeClasses.btnPrimary
+                    : themeClasses.btnSecondary
+                )}
+              >
+                {period.label}
+              </button>
+            ))}
           </div>
 
           {/* Active filters */}
           {isFiltered && (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2 text-sm text-app-text-secondary">
-                <Filter className="h-4 w-4" />
+            <div className="flex items-center justify-between py-2">
+              <div className="flex items-center space-x-2 text-xs sm:text-sm text-app-text-secondary">
+                <Filter className="h-3 w-3 sm:h-4 sm:w-4" />
                 <span>Filters active</span>
               </div>
               <button
                 onClick={clearFilters}
-                className="text-sm transition-colors text-app-text-accent hover:text-app-brand-primary"
+                className="text-xs sm:text-sm transition-colors text-app-text-accent hover:text-app-brand-primary"
               >
                 Clear all
               </button>
@@ -278,46 +274,54 @@ export function LeaderboardTable({
         </div>
       )}
 
-      {/* Stats Summary */}
+      {/* Stats Summary - Mobile-first responsive grid */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className={themeClasses.card}>
-            <div className="text-sm text-app-text-secondary mb-1">Total Evermarks</div>
-            <div className="text-xl font-bold text-app-text-primary">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+          <div className={cn(themeClasses.card, "p-3 sm:p-4")}>
+            <div className="text-xs sm:text-sm text-app-text-secondary mb-1">Total Evermarks</div>
+            <div className="text-lg sm:text-xl font-bold text-app-text-primary">
               {stats.totalEvermarks.toLocaleString()}
             </div>
           </div>
-          <div className={themeClasses.card}>
-            <div className="text-sm text-app-text-secondary mb-1">Total Votes</div>
-            <div className="text-xl font-bold text-app-text-accent">
+          <div className={cn(themeClasses.card, "p-3 sm:p-4")}>
+            <div className="text-xs sm:text-sm text-app-text-secondary mb-1">Total Votes</div>
+            <div className="text-lg sm:text-xl font-bold text-app-text-accent">
               {LeaderboardService.formatVoteAmount(stats.totalVotes)}
             </div>
           </div>
-          <div className={themeClasses.card}>
-            <div className="text-sm text-app-text-secondary mb-1">Active Voters</div>
-            <div className="text-xl font-bold text-app-brand-success">
+          <div className={cn(themeClasses.card, "p-3 sm:p-4")}>
+            <div className="text-xs sm:text-sm text-app-text-secondary mb-1">Active Voters</div>
+            <div className="text-lg sm:text-xl font-bold text-app-brand-success">
               {stats.activeVoters.toLocaleString()}
             </div>
           </div>
-          <div className={themeClasses.card}>
-            <div className="text-sm text-app-text-secondary mb-1">Participation</div>
-            <div className="text-xl font-bold text-app-brand-secondary">
+          <div className={cn(themeClasses.card, "p-3 sm:p-4")}>
+            <div className="text-xs sm:text-sm text-app-text-secondary mb-1">Participation</div>
+            <div className="text-lg sm:text-xl font-bold text-app-brand-secondary">
               {(stats.participationRate * 100).toFixed(1)}%
             </div>
           </div>
         </div>
       )}
 
-      {/* Loading state */}
+      {/* Loading state - Mobile-first responsive */}
       {isLoading && (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="bg-app-bg-card border border-app-border rounded-lg p-4 animate-pulse">
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-app-bg-secondary rounded-lg"></div>
-                <div className="flex-1 space-y-2">
+            <div key={i} className="bg-app-bg-card border border-app-border rounded-lg p-3 sm:p-4 animate-pulse">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                <div className="flex items-center justify-between sm:contents">
+                  <div className="w-8 h-8 bg-app-bg-secondary rounded-lg"></div>
+                  <div className="w-6 h-6 bg-app-bg-secondary rounded-lg sm:order-2"></div>
+                </div>
+                <div className="flex-1 space-y-2 sm:order-1">
                   <div className="h-4 bg-app-bg-secondary rounded w-3/4"></div>
                   <div className="h-3 bg-app-bg-secondary rounded w-1/2"></div>
+                  <div className="h-3 bg-app-bg-secondary rounded w-2/3 sm:hidden"></div>
+                </div>
+                <div className="flex justify-between sm:block sm:text-right">
+                  <div className="h-6 bg-app-bg-secondary rounded w-16"></div>
+                  <div className="h-3 bg-app-bg-secondary rounded w-12 mt-1"></div>
                 </div>
               </div>
             </div>
@@ -349,9 +353,9 @@ export function LeaderboardTable({
         </div>
       )}
 
-      {/* Leaderboard table */}
+      {/* Leaderboard table - Mobile-first responsive */}
       {!isEmpty && !isLoading && (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {displayEntries.map((entry) => (
             <div
               key={entry.id}
@@ -359,71 +363,77 @@ export function LeaderboardTable({
               className={cn(
                 themeClasses.cardInteractive,
                 "cursor-pointer group backdrop-blur-sm",
-                compactMode ? "p-3" : "p-4"
+                compactMode ? "p-3" : "p-3 sm:p-4"
               )}
             >
-              <div className="flex items-center space-x-4">
-                {/* Rank */}
-                <div className="flex-shrink-0 w-16 text-center">
-                  {formatRankWithChange(entry)}
-                </div>
+              {/* Mobile-first responsive layout */}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                {/* Mobile: Rank and content type in header row */}
+                <div className="flex items-center justify-between sm:contents">
+                  {/* Rank */}
+                  <div className="flex-shrink-0">
+                    {formatRankWithChange(entry)}
+                  </div>
 
-                {/* Content type icon */}
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-app-bg-secondary rounded-lg flex items-center justify-center text-app-text-secondary">
-                    {getContentTypeIcon(entry.contentType)}
+                  {/* Content type icon - visible on mobile */}
+                  <div className="flex-shrink-0 sm:order-2">
+                    <div className="w-6 h-6 sm:w-8 sm:h-8 bg-app-bg-secondary rounded-lg flex items-center justify-center text-app-text-secondary">
+                      {getContentTypeIcon(entry.contentType)}
+                    </div>
                   </div>
                 </div>
 
-                {/* Main content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between">
+                {/* Main content - full width on mobile */}
+                <div className="flex-1 min-w-0 sm:order-1">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-lg font-semibold text-app-text-on-card group-hover:text-app-text-accent transition-colors truncate">
+                      <h3 className="text-base sm:text-lg font-semibold text-app-text-on-card group-hover:text-app-text-accent transition-colors line-clamp-2 sm:truncate">
                         {entry.title}
                       </h3>
                       
-                      <div className="flex items-center space-x-3 text-sm text-app-text-secondary mt-1">
-                        <div className="flex items-center">
-                          <User className="h-3 w-3 mr-1" />
+                      {/* Mobile: Stack metadata vertically, Desktop: horizontal */}
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs sm:text-sm text-app-text-secondary mt-1">
+                        <div className="flex items-center min-w-0">
+                          <User className="h-3 w-3 mr-1 flex-shrink-0" />
                           <span className="truncate">{entry.creator}</span>
                         </div>
                         
                         <div className="flex items-center">
-                          <Calendar className="h-3 w-3 mr-1" />
+                          <Calendar className="h-3 w-3 mr-1 flex-shrink-0" />
                           <span>{Formatters.formatRelativeTime(entry.createdAt)}</span>
                         </div>
                         
                         {entry.verified && (
                           <div className="flex items-center text-app-brand-success">
                             <Star className="h-3 w-3" />
+                            <span className="ml-1 text-xs sm:hidden">Verified</span>
                           </div>
                         )}
                       </div>
 
-                      {/* Description (if not compact) */}
+                      {/* Description (if not compact) - hidden on mobile for space */}
                       {!compactMode && entry.description && (
-                        <p className="text-sm text-app-text-on-card mt-2 line-clamp-2">
+                        <p className="hidden sm:block text-sm text-app-text-on-card mt-2 line-clamp-2">
                           {entry.description}
                         </p>
                       )}
 
-                      {/* Tags */}
+                      {/* Tags - responsive display */}
                       {entry.tags.length > 0 && (
                         <div className="flex items-center space-x-2 mt-2">
-                          <Tag className="h-3 w-3 text-app-text-muted" />
-                          <div className="flex flex-wrap gap-1">
-                            {entry.tags.slice(0, 3).map((tag, index) => (
+                          <Tag className="h-3 w-3 text-app-text-muted flex-shrink-0" />
+                          <div className="flex flex-wrap gap-1 min-w-0">
+                            {entry.tags.slice(0, 2).map((tag, index) => (
                               <span
                                 key={index}
-                                className="text-xs bg-app-bg-secondary text-app-text-secondary px-2 py-1 rounded border border-app-border"
+                                className="text-xs bg-app-bg-secondary text-app-text-secondary px-2 py-1 rounded border border-app-border whitespace-nowrap"
                               >
                                 {tag}
                               </span>
                             ))}
-                            {entry.tags.length > 3 && (
-                              <span className="text-xs text-app-text-muted">
-                                +{entry.tags.length - 3} more
+                            {entry.tags.length > 2 && (
+                              <span className="text-xs text-app-text-muted whitespace-nowrap">
+                                +{entry.tags.length - 2} more
                               </span>
                             )}
                           </div>
@@ -431,9 +441,9 @@ export function LeaderboardTable({
                       )}
                     </div>
 
-                    {/* Vote information */}
-                    <div className="flex-shrink-0 text-right ml-4">
-                      <div className="text-xl font-bold text-app-text-accent mb-1">
+                    {/* Vote information - responsive positioning */}
+                    <div className="flex-shrink-0 text-left sm:text-right sm:ml-4">
+                      <div className="text-lg sm:text-xl font-bold text-app-text-accent mb-1">
                         {LeaderboardService.formatVoteAmount(entry.totalVotes)}
                       </div>
                       <div className="text-xs text-app-text-secondary">
@@ -448,9 +458,9 @@ export function LeaderboardTable({
                   </div>
                 </div>
 
-                {/* External link indicator */}
+                {/* External link indicator - repositioned for mobile */}
                 {entry.sourceUrl && (
-                  <div className="flex-shrink-0">
+                  <div className="flex-shrink-0 self-start sm:self-center sm:order-3">
                     <ExternalLink className="h-4 w-4 text-app-text-secondary group-hover:text-app-text-accent transition-colors" />
                   </div>
                 )}
@@ -460,33 +470,47 @@ export function LeaderboardTable({
         </div>
       )}
 
-      {/* Pagination */}
+      {/* Pagination - Mobile-first responsive */}
       {showPagination && totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-app-text-secondary">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          <div className="text-xs sm:text-sm text-app-text-secondary text-center sm:text-left order-2 sm:order-1">
             Showing {((pagination.page - 1) * pagination.pageSize) + 1} to{' '}
             {Math.min(pagination.page * pagination.pageSize, totalCount)} of{' '}
             {totalCount.toLocaleString()} evermarks
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center justify-center space-x-2 order-1 sm:order-2">
             <button
               onClick={() => handlePageChange(pagination.page - 1)}
               disabled={!hasPreviousPage}
-              className={`${themeClasses.btnSecondary} disabled:opacity-50 disabled:cursor-not-allowed`}
+              className={cn(
+                themeClasses.btnSecondary,
+                "disabled:opacity-50 disabled:cursor-not-allowed",
+                "px-3 py-2 text-sm" // Consistent mobile sizing
+              )}
+              aria-label="Previous page"
             >
               <ChevronLeft className="h-4 w-4" />
+              <span className="hidden sm:inline ml-1">Prev</span>
             </button>
 
-            <span className="px-3 py-2 text-sm text-app-text-primary">
-              Page {pagination.page} of {totalPages}
-            </span>
+            <div className="flex items-center px-3 py-2 text-xs sm:text-sm text-app-text-primary bg-app-bg-secondary rounded-lg border border-app-border">
+              <span className="whitespace-nowrap">
+                Page {pagination.page} of {totalPages}
+              </span>
+            </div>
 
             <button
               onClick={() => handlePageChange(pagination.page + 1)}
               disabled={!hasNextPage}
-              className={`${themeClasses.btnSecondary} disabled:opacity-50 disabled:cursor-not-allowed`}
+              className={cn(
+                themeClasses.btnSecondary,
+                "disabled:opacity-50 disabled:cursor-not-allowed",
+                "px-3 py-2 text-sm" // Consistent mobile sizing
+              )}
+              aria-label="Next page"
             >
+              <span className="hidden sm:inline mr-1">Next</span>
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>

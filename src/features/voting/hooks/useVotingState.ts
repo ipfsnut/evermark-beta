@@ -1,7 +1,16 @@
-// src/features/voting/hooks/useVotingState.ts - Simplified for season-based voting
-import { useState, useCallback } from 'react';
+// src/features/voting/hooks/useVotingState.ts - Integrated with contract cycle system
+import React, { useState, useCallback, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useWalletAccount } from '@/hooks/core/useWalletAccount';
+import { useStakingData } from '@/features/staking/hooks/useStakingData';
+import { useSendTransaction } from 'thirdweb/react';
+import { prepareContractCall, waitForReceipt } from 'thirdweb';
+import { getEvermarkVotingContract } from '@/lib/contracts';
+import { client } from '@/lib/thirdweb';
+import { base } from 'thirdweb/chains';
 import { VotingService } from '../services/VotingService';
+import { VotingCacheService } from '../services/VotingCacheService';
+import { LeaderboardService } from '../../leaderboard/services/LeaderboardService';
 import type { 
   VotingPower, 
   VotingSeason, 
@@ -13,51 +22,120 @@ import type {
   UseVotingStateReturn,
   Vote
 } from '../types';
+import { VOTING_CONSTANTS } from '../types';
 
 export function useVotingState(): UseVotingStateReturn {
   const [error, setError] = useState<VotingError | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [isDelegating, setIsDelegating] = useState(false);
+  const [isUndelegating, setIsUndelegating] = useState(false);
   
   const account = useWalletAccount();
   const userAddress = account?.address;
   const isConnected = !!account && !!userAddress;
 
-  // Simplified implementation - returns default/empty values for compatibility
-  const votingPower: VotingPower | null = {
-    total: BigInt(0),
-    available: BigInt(0),
-    used: BigInt(0),
-    remaining: BigInt(0)
-  };
+  // Transaction hook for sending blockchain transactions
+  const { mutateAsync: sendTransaction } = useSendTransaction();
 
-  const currentSeason: VotingSeason | null = null;
-  const currentCycle: VotingCycle | null = null;
-  const votingStats: VotingStats | null = null;
-  const userVotes: Vote[] = [];
-  const votingHistory: Vote[] = [];
+  // Get real staking data for voting power
+  const stakingData = useStakingData(userAddress);
 
-  // Simple getters that return 0
-  const getEvermarkVotes = useCallback((_evermarkId: string): bigint => {
-    return BigInt(0);
+  // Use real voting power from staking data
+  const votingPower: VotingPower | null = stakingData ? {
+    total: stakingData.wEmarkBalance,
+    available: stakingData.availableVotingPower,
+    used: stakingData.delegatedPower,
+    remaining: stakingData.availableVotingPower
+  } : null;
+
+  // Fetch current cycle data from contract
+  const { data: currentCycle, isLoading: cycleLoading, error: cycleError } = useQuery({
+    queryKey: ['voting', 'currentCycle'],
+    queryFn: () => VotingService.getCurrentCycle(),
+    staleTime: VOTING_CONSTANTS.CACHE_DURATION,
+    refetchInterval: VOTING_CONSTANTS.REFRESH_INTERVAL,
+    enabled: isConnected
+  });
+
+  // Fetch voting stats
+  const { data: votingStats } = useQuery({
+    queryKey: ['voting', 'stats', userAddress],
+    queryFn: () => VotingService.getVotingStats(userAddress),
+    staleTime: VOTING_CONSTANTS.CACHE_DURATION,
+    enabled: isConnected && !!userAddress
+  });
+
+  // Fetch user voting history
+  const { data: votingHistory = [] } = useQuery({
+    queryKey: ['voting', 'history', userAddress],
+    queryFn: () => userAddress ? VotingService.fetchVotingHistory(userAddress) : Promise.resolve([]),
+    staleTime: VOTING_CONSTANTS.CACHE_DURATION,
+    enabled: isConnected && !!userAddress
+  });
+
+  // For backward compatibility
+  const currentSeason: VotingSeason | null = currentCycle ? {
+    seasonNumber: currentCycle.cycleNumber,
+    startTime: currentCycle.startTime,
+    endTime: currentCycle.endTime,
+    totalVotes: currentCycle.totalVotes,
+    totalVoters: currentCycle.totalVoters,
+    isActive: currentCycle.isActive,
+    activeEvermarksCount: currentCycle.activeEvermarksCount
+  } : null;
+  
+  const userVotes: Vote[] = votingHistory;
+
+  // Real contract-based getters
+  const getEvermarkVotes = useCallback(async (evermarkId: string): Promise<bigint> => {
+    try {
+      return await VotingService.getEvermarkVotes(evermarkId);
+    } catch (error) {
+      console.error('Failed to get evermark votes:', error);
+      return BigInt(0);
+    }
   }, []);
 
-  const getUserVotesForEvermark = useCallback((_evermarkId: string): bigint => {
-    return BigInt(0);
-  }, []);
+  const getUserVotesForEvermark = useCallback(async (evermarkId: string): Promise<bigint> => {
+    if (!userAddress) return BigInt(0);
+    try {
+      return await VotingService.getUserVotesForEvermark(userAddress, evermarkId);
+    } catch (error) {
+      console.error('Failed to get user votes for evermark:', error);
+      return BigInt(0);
+    }
+  }, [userAddress]);
 
-  const getUserVotes = useCallback((_userAddress: string): Vote[] => {
-    return [];
-  }, []);
-
-  // Placeholder vote function
-  const voteForEvermark = useCallback(async (_evermarkId: string, _amount: bigint): Promise<VotingTransaction> => {
-    throw new Error('Voting functionality not yet implemented for season-based system');
-  }, []);
+  const getUserVotes = useCallback((targetUserAddress: string): Vote[] => {
+    return votingHistory.filter(vote => vote.userAddress === targetUserAddress);
+  }, [votingHistory]);
 
   // Utility functions
   const validateVoteAmount = useCallback((amount: string, evermarkId?: string): VotingValidation => {
-    return VotingService.validateVoteAmount(amount, evermarkId);
-  }, []);
+    const baseValidation = VotingService.validateVoteAmount(amount, evermarkId);
+    
+    // Add user balance validation if we have voting power data
+    if (baseValidation.isValid && votingPower && amount) {
+      try {
+        const voteAmount = VotingService.parseVoteAmount(amount);
+        
+        // Check if user has sufficient voting power
+        if (voteAmount > votingPower.available) {
+          baseValidation.errors.push(`Insufficient voting power. Available: ${VotingService.formatVoteAmount(votingPower.available)} wEMARK`);
+          baseValidation.isValid = false;
+        }
+        
+        // Add helpful warnings
+        if (voteAmount > votingPower.available / BigInt(2)) {
+          baseValidation.warnings.push('You are voting with more than 50% of your available power');
+        }
+      } catch (error) {
+        // Amount parsing error is already handled by base validation
+      }
+    }
+    
+    return baseValidation;
+  }, [votingPower]);
 
   const calculateVotingPower = useCallback((stakedAmount: bigint): bigint => {
     return stakedAmount; // 1:1 ratio for now
@@ -67,21 +145,163 @@ export function useVotingState(): UseVotingStateReturn {
     return VotingService.formatVoteAmount(amount, decimals);
   }, []);
 
-  const getTimeRemainingInSeason = useCallback((): number => {
-    return 0;
+  const getTimeRemainingInSeason = useCallback(async (): Promise<number> => {
+    try {
+      return await VotingService.getTimeRemainingInCycle();
+    } catch (error) {
+      console.error('Failed to get time remaining:', error);
+      return 0;
+    }
   }, []);
 
-  const getTimeRemainingInCycle = useCallback((): number => {
-    return 0;
+  const getTimeRemainingInCycle = useCallback(async (): Promise<number> => {
+    try {
+      return await VotingService.getTimeRemainingInCycle();
+    } catch (error) {
+      console.error('Failed to get time remaining in cycle:', error);
+      return 0;
+    }
   }, []);
 
-  const delegateVotes = useCallback(async (_evermarkId: string, _amount: bigint): Promise<VotingTransaction> => {
-    throw new Error('Delegation functionality not yet implemented');
-  }, []);
+  const delegateVotes = useCallback(async (evermarkId: string, amount: bigint): Promise<VotingTransaction> => {
+    if (!userAddress) {
+      throw new Error('Wallet not connected');
+    }
 
-  const undelegateVotes = useCallback(async (_evermarkId: string, _amount: bigint): Promise<VotingTransaction> => {
-    throw new Error('Undelegation functionality not yet implemented');
-  }, []);
+    setIsDelegating(true);
+    setError(null);
+
+    try {
+      console.log('Delegating votes:', { evermarkId, amount: amount.toString(), userAddress });
+
+      // Get the voting contract
+      const votingContract = getEvermarkVotingContract();
+      
+      // Prepare the contract call for delegation
+      const transaction = prepareContractCall({
+        contract: votingContract,
+        method: "function voteForEvermark(uint256 evermarkId, uint256 votes) payable",
+        params: [BigInt(evermarkId), amount]
+      });
+
+      // Send the transaction
+      const result = await sendTransaction(transaction);
+      
+      // Wait for confirmation
+      await waitForReceipt({
+        client,
+        chain: base,
+        transactionHash: result.transactionHash
+      });
+
+      console.log('Delegation successful:', result.transactionHash);
+      setSuccess(`Successfully delegated ${VotingService.formatVoteAmount(amount)} wEMARK!`);
+
+      // Update cache with new vote data
+      if (currentCycle) {
+        await VotingCacheService.cacheUserVote(
+          userAddress,
+          evermarkId,
+          currentCycle.cycleNumber,
+          amount,
+          result.transactionHash
+        );
+      }
+
+      // Clear the leaderboard cache for this evermark so it shows updated votes
+      await LeaderboardService.clearVoteCacheForEvermark(evermarkId);
+
+      return {
+        hash: result.transactionHash,
+        type: 'vote',
+        evermarkId,
+        amount,
+        timestamp: new Date(),
+        status: 'confirmed'
+      };
+
+    } catch (error: unknown) {
+      console.error('Delegation failed:', error);
+      const votingError = VotingService.parseContractError(error);
+      setError(votingError);
+      throw error;
+    } finally {
+      setIsDelegating(false);
+    }
+  }, [userAddress, sendTransaction]);
+
+  const undelegateVotes = useCallback(async (evermarkId: string, amount: bigint): Promise<VotingTransaction> => {
+    if (!userAddress) {
+      throw new Error('Wallet not connected');
+    }
+
+    setIsUndelegating(true);
+    setError(null);
+
+    try {
+      console.log('Undelegating votes:', { evermarkId, amount: amount.toString(), userAddress });
+
+      // Get the voting contract
+      const votingContract = getEvermarkVotingContract();
+      
+      // Prepare the contract call for undelegation (withdraw votes)
+      const transaction = prepareContractCall({
+        contract: votingContract,
+        method: "function withdrawVotes(uint256 evermarkId, uint256 votes) payable",
+        params: [BigInt(evermarkId), amount]
+      });
+
+      // Send the transaction
+      const result = await sendTransaction(transaction);
+      
+      // Wait for confirmation
+      await waitForReceipt({
+        client,
+        chain: base,
+        transactionHash: result.transactionHash
+      });
+
+      console.log('Undelegation successful:', result.transactionHash);
+      setSuccess(`Successfully withdrew ${VotingService.formatVoteAmount(amount)} wEMARK!`);
+
+      // Update cache with reduced vote data
+      if (currentCycle) {
+        const currentUserVotes = await VotingService.getUserVotesForEvermark(userAddress, evermarkId);
+        await VotingCacheService.cacheUserVote(
+          userAddress,
+          evermarkId,
+          currentCycle.cycleNumber,
+          currentUserVotes,
+          result.transactionHash
+        );
+      }
+
+      // Clear the leaderboard cache for this evermark so it shows updated votes
+      await LeaderboardService.clearVoteCacheForEvermark(evermarkId);
+
+      return {
+        hash: result.transactionHash,
+        type: 'vote',
+        evermarkId,
+        amount,
+        timestamp: new Date(),
+        status: 'confirmed'
+      };
+
+    } catch (error: unknown) {
+      console.error('Undelegation failed:', error);
+      const votingError = VotingService.parseContractError(error);
+      setError(votingError);
+      throw error;
+    } finally {
+      setIsUndelegating(false);
+    }
+  }, [userAddress, sendTransaction]);
+
+  // Vote for evermark (same as delegate for now)
+  const voteForEvermark = useCallback(async (evermarkId: string, amount: bigint): Promise<VotingTransaction> => {
+    return delegateVotes(evermarkId, amount);
+  }, [delegateVotes]);
 
   // Placeholder utility functions
   const canVoteInCycle = useCallback((_cycleNumber: number): boolean => {
@@ -149,8 +369,20 @@ export function useVotingState(): UseVotingStateReturn {
     setSuccess(null);
   }, []);
 
+  // Auto-clear success messages after 5 seconds
+  React.useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => {
+        setSuccess(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+    return
+  }, [success]);
+
   const refetch = useCallback(async (): Promise<void> => {
-    // No-op for now
+    // Refetch all relevant data
+    // React Query will handle this automatically with queryClient.invalidateQueries
   }, []);
 
   return {
@@ -159,8 +391,8 @@ export function useVotingState(): UseVotingStateReturn {
     userVotes,
     votingHistory,
     currentSeason,
-    currentCycle,
-    votingStats,
+    currentCycle: currentCycle ?? null,
+    votingStats: votingStats ?? null,
     
     // Evermark-specific data
     getEvermarkVotes,
@@ -168,11 +400,11 @@ export function useVotingState(): UseVotingStateReturn {
     getUserVotes,
     
     // UI State
-    isLoading: false,
-    isVoting: false,
-    isDelegating: false,
-    isUndelegating: false,
-    error,
+    isLoading: stakingData.isLoading || cycleLoading,
+    isVoting: isDelegating || isUndelegating,
+    isDelegating,
+    isUndelegating,
+    error: error || (cycleError as VotingError | null),
     success,
     
     // Actions

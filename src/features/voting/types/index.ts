@@ -5,7 +5,7 @@ export interface Vote {
   userAddress: string;
   evermarkId: string;
   amount: bigint;
-  season: number;
+  season: number; // Keep for backward compatibility, but represents cycle
   timestamp: Date;
   transactionHash: string;
   status: 'pending' | 'confirmed' | 'failed';
@@ -15,7 +15,7 @@ export interface Vote {
 export interface Delegation {
   evermarkId: string;
   amount: bigint;
-  season: number;
+  cycle: number; // Changed from season to cycle to match contract
   timestamp: Date;
   transactionHash?: string;
   isActive: boolean;
@@ -87,8 +87,8 @@ export interface VotingConfiguration {
   votingContractAddress: string;
   wemarkAddress: string;
   
-  // Season parameters
-  seasonDuration: number; // seconds (7 days)
+  // Cycle parameters
+  cycleDuration: number; // seconds (7 days)
   minVotingAmount: bigint;
   maxVotingAmount: bigint;
   
@@ -109,8 +109,8 @@ export interface UseVotingStateReturn {
   votingStats: VotingStats | null;
   
   // Evermark-specific data
-  getEvermarkVotes: (evermarkId: string) => bigint;
-  getUserVotesForEvermark: (evermarkId: string) => bigint;
+  getEvermarkVotes: (evermarkId: string) => Promise<bigint>;
+  getUserVotesForEvermark: (evermarkId: string) => Promise<bigint>;
   getUserVotes: (userAddress: string) => Vote[];
   
   // UI State
@@ -130,8 +130,8 @@ export interface UseVotingStateReturn {
   validateVoteAmount: (amount: string, evermarkId?: string) => VotingValidation;
   calculateVotingPower: (stakedAmount: bigint) => bigint;
   formatVoteAmount: (amount: bigint, decimals?: number) => string;
-  getTimeRemainingInSeason: () => number;
-  getTimeRemainingInCycle: () => number;
+  getTimeRemainingInSeason: () => Promise<number>;
+  getTimeRemainingInCycle: () => Promise<number>;
   canVoteInCycle: (cycleNumber: number) => boolean;
   calculateVotingEfficiency: (userVotes: Vote[]) => number;
   generateVotingRecommendations: (availablePower: bigint) => Array<{evermarkId: string; suggestedAmount: bigint}>;
@@ -173,10 +173,10 @@ export interface VotingContractCall {
 
 // Configuration and constants
 export const VOTING_CONSTANTS = {
-  MIN_VOTE_AMOUNT: BigInt(1), // 1 wEMARK minimum
-  MAX_VOTE_AMOUNT: BigInt(1000000), // 1M wEMARK maximum
-  SEASON_DURATION: 7 * 24 * 60 * 60, // 7 days in seconds
-  CYCLE_DURATION: 7 * 24 * 60 * 60, // 7 days in seconds (alias for consistency)
+  MIN_VOTE_AMOUNT: BigInt(1) * BigInt(10 ** 18), // 1 wEMARK minimum (in wei)
+  // No MAX_VOTE_AMOUNT - users should be able to vote with all their wEMARK tokens
+  CYCLE_DURATION: 7 * 24 * 60 * 60, // 7 days in seconds
+  SEASON_DURATION: 7 * 24 * 60 * 60, // 7 days in seconds (deprecated - use CYCLE_DURATION)
   TRANSACTION_TIMEOUT: 60000, // 60 seconds
   RETRY_ATTEMPTS: 3,
   CACHE_DURATION: 30000, // 30 seconds

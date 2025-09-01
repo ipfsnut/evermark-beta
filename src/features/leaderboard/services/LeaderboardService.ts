@@ -11,22 +11,64 @@ import type {
   RankingPeriod
 } from '../types';
 
-// Import Evermark types and state to calculate rankings from
+// Import Evermark types and voting services
 import type { Evermark } from '../../evermarks/types';
+import { VotingService } from '../../voting/services/VotingService';
+import { VotingCacheService } from '../../voting/services/VotingCacheService';
 
 /**
  * Offchain Leaderboard Service
- * Calculates rankings from real evermark data without Supabase dependency
+ * Calculates rankings from real evermark data with live voting data
  */
 export class LeaderboardService {
   
   /**
+   * Get votes and voter count for an evermark using Supabase cache
+   */
+  private static async getCachedVotingData(evermarkId: string, fallbackVotes: number = 0): Promise<{ votes: bigint; voterCount: number }> {
+    try {
+      // First try to get from Supabase cache
+      const cachedData = await VotingCacheService.getCachedVotingData(evermarkId);
+      
+      // If we have cached data and it's not zeros, use it
+      if (cachedData.votes > BigInt(0) || cachedData.voterCount > 0) {
+        return cachedData;
+      }
+      
+      // Check if cache is stale and needs refresh
+      const isStale = await VotingCacheService.isCacheStale(evermarkId);
+      
+      if (isStale) {
+        // Sync fresh data from blockchain to cache
+        await VotingCacheService.syncEvermarkToCache(evermarkId);
+        
+        // Get the refreshed cached data
+        const refreshedData = await VotingCacheService.getCachedVotingData(evermarkId);
+        return refreshedData;
+      }
+      
+      // Return cached data (even if zeros)
+      return cachedData;
+      
+    } catch (error) {
+      console.warn(`⚠️ Failed to get cached voting data for evermark ${evermarkId}:`, error);
+      
+      // Fallback to original values
+      const fallbackBigInt = BigInt(fallbackVotes);
+      return { 
+        votes: fallbackBigInt, 
+        voterCount: fallbackVotes > 0 ? 1 : 0 
+      };
+    }
+  }
+  
+  /**
    * Calculate leaderboard entries from evermarks data - Top evermarks by votes
    */
-  static calculateLeaderboard(
+  static async calculateLeaderboard(
     evermarks: Evermark[],
-    period: string = 'season'
-  ): LeaderboardEntry[] {
+    period: string = 'current'
+  ): Promise<LeaderboardEntry[]> {
     
     // Filter evermarks by period if needed
     let filteredEvermarks = evermarks;
@@ -44,23 +86,31 @@ export class LeaderboardService {
       );
     }
     
-    // Convert evermarks to leaderboard entries showing individual evermarks
-    const entries: LeaderboardEntry[] = filteredEvermarks.map(evermark => {
-      const votes = evermark.votes ?? 0;
+    // Fetch voting data for all evermarks efficiently in bulk
+    const evermarkIds = filteredEvermarks.map(em => em.id);
+    const bulkVotingData = await VotingCacheService.getBulkVotingData(evermarkIds);
+    
+    // Convert evermarks to leaderboard entries using bulk cached data
+    const entries: LeaderboardEntry[] = filteredEvermarks.map((evermark) => {
+      // Get voting data from bulk fetch result
+      const votingData = bulkVotingData.get(evermark.id) || { votes: BigInt(evermark.votes ?? 0), voterCount: 0 };
+      const { votes: realVotes, voterCount } = votingData;
+
       const creator = evermark.creator || evermark.author || 'Unknown';
       const createdAt = new Date(evermark.createdAt);
       
-      // Calculate a simple score based on votes and verification
+      // Calculate a simple score based on real vote amounts and verification
+      const votesNumber = Number(realVotes / BigInt(10 ** 18)); // Convert wei to whole tokens for scoring
       const verificationBonus = evermark.verified ? 100 : 0;
       const freshnessBonus = Math.max(0, 30 - Math.floor((now.getTime() - createdAt.getTime()) / (24 * 60 * 60 * 1000))); // Bonus for recent content
-      const _score = votes + verificationBonus + freshnessBonus;
+      const _score = votesNumber + verificationBonus + freshnessBonus;
       
       return {
         id: evermark.id,
         evermarkId: evermark.id,
         rank: 0, // Will be set after sorting
-        totalVotes: BigInt(votes),
-        voteCount: votes, // Using votes as count for now
+        totalVotes: realVotes, // wEMARK token amount in wei
+        voteCount: voterCount, // Number of unique voters
         percentageOfTotal: 0, // Will be calculated after sorting
         title: evermark.title ?? 'Untitled',
         description: evermark.description ?? '',
@@ -104,7 +154,24 @@ export class LeaderboardService {
   }
   
   /**
-   * Get current season leaderboard with real data
+   * Clear the vote cache (useful when votes have been cast)
+   */
+  static async clearVoteCache(): Promise<void> {
+    await VotingCacheService.clearCache();
+    console.log('🧹 Cleared leaderboard vote cache');
+  }
+  
+  /**
+   * Clear cache for a specific evermark (useful when a vote is cast for that evermark)
+   */
+  static async clearVoteCacheForEvermark(evermarkId: string): Promise<void> {
+    await VotingCacheService.clearCache(evermarkId);
+    console.log(`🧹 Cleared vote cache for evermark ${evermarkId}`);
+  }
+
+  
+  /**
+   * Get current cycle leaderboard with real data
    */
   static async getCurrentLeaderboard(
     options: LeaderboardFeedOptions & { evermarks?: Evermark[] } = {}
@@ -131,9 +198,9 @@ export class LeaderboardService {
       };
     }
     
-    // Calculate leaderboard from evermarks
-    const period = filters.period ?? 'season';
-    const allEntries = this.calculateLeaderboard(evermarks, period);
+    // Calculate leaderboard from evermarks with real voting data
+    const period = filters.period ?? 'current';
+    const allEntries = await this.calculateLeaderboard(evermarks, period);
     
     // Apply search filter if provided
     let filteredEntries = allEntries;
@@ -190,9 +257,9 @@ export class LeaderboardService {
   }
 
   /**
-   * Get leaderboard stats for current season
+   * Get leaderboard stats for current cycle
    */
-  static async fetchLeaderboardStats(period: string = 'season'): Promise<LeaderboardStats> {
+  static async fetchLeaderboardStats(period: string = 'current'): Promise<LeaderboardStats> {
     return {
       totalEvermarks: 0,
       totalVotes: BigInt(0),
@@ -207,20 +274,36 @@ export class LeaderboardService {
   /**
    * Get available periods for filtering
    */
-  static getAvailablePeriods(): RankingPeriod[] {
-    return [
-      { id: 'season', label: 'Season', duration: 90 * 24 * 60 * 60, description: 'Current season' },
-      { id: 'month', label: 'Month', duration: 30 * 24 * 60 * 60, description: 'Last 30 days' },
-      { id: 'week', label: 'Week', duration: 7 * 24 * 60 * 60, description: 'Last 7 days' },
-      { id: 'all', label: 'All Time', duration: 0, description: 'All time' }
-    ];
+  static async getAvailablePeriods(): Promise<RankingPeriod[]> {
+    try {
+      const currentCycle = await VotingService.getCurrentCycle();
+      return [
+        { 
+          id: 'current', 
+          label: currentCycle ? `Cycle ${currentCycle.cycleNumber}` : 'Current Cycle', 
+          duration: currentCycle ? Math.floor((currentCycle.endTime.getTime() - currentCycle.startTime.getTime()) / 1000) : 0, 
+          description: currentCycle && currentCycle.isActive ? 'Active voting cycle' : 'Current cycle'
+        },
+        { id: 'month', label: 'Month', duration: 30 * 24 * 60 * 60, description: 'Last 30 days' },
+        { id: 'week', label: 'Week', duration: 7 * 24 * 60 * 60, description: 'Last 7 days' },
+        { id: 'all', label: 'All Time', duration: 0, description: 'All time' }
+      ];
+    } catch (error) {
+      console.error('Failed to get current cycle for periods:', error);
+      return [
+        { id: 'current', label: 'Current Cycle', duration: 0, description: 'Current voting cycle' },
+        { id: 'month', label: 'Month', duration: 30 * 24 * 60 * 60, description: 'Last 30 days' },
+        { id: 'week', label: 'Week', duration: 7 * 24 * 60 * 60, description: 'Last 7 days' },
+        { id: 'all', label: 'All Time', duration: 0, description: 'All time' }
+      ];
+    }
   }
   
   /**
    * Get period by ID
    */
-  static getPeriodById(periodId: string): RankingPeriod {
-    const periods = this.getAvailablePeriods();
+  static async getPeriodById(periodId: string): Promise<RankingPeriod> {
+    const periods = await this.getAvailablePeriods();
     return periods.find(p => p.id === periodId) ?? periods[0];
   }
   
@@ -229,7 +312,7 @@ export class LeaderboardService {
    */
   static getDefaultFilters(): LeaderboardFilters {
     return {
-      period: 'season'
+      period: 'current'
     };
   }
   
@@ -248,7 +331,7 @@ export class LeaderboardService {
   /**
    * Get specific evermark's ranking and votes
    */
-  static async getEvermarkRanking(_evermarkId: string, _season?: number): Promise<LeaderboardEntry | null> {
+  static async getEvermarkRanking(_evermarkId: string, _cycle?: number): Promise<LeaderboardEntry | null> {
     return null;
   }
 
@@ -282,14 +365,14 @@ export class LeaderboardService {
   /**
    * Get user's voting history and rankings
    */
-  static async getUserVotingHistory(_userAddress: string, _season?: number): Promise<any[]> {
+  static async getUserVotingHistory(_userAddress: string, _cycle?: number): Promise<any[]> {
     return [];
   }
 
   /**
    * Refresh leaderboard data (trigger sync from blockchain)
    */
-  static async refreshLeaderboard(_season?: number): Promise<void> {
+  static async refreshLeaderboard(_cycle?: number): Promise<void> {
     // No-op until Supabase integration is complete
   }
 
@@ -320,10 +403,10 @@ export class LeaderboardService {
   }
   
   /**
-   * Format vote amount for display (alias for formatVoteCount)
+   * Format vote amount for display - converts wei to readable wEMARK amounts
    */
   static formatVoteAmount(votes: bigint, useShortFormat = true): string {
-    return this.formatVoteCount(votes, useShortFormat);
+    return VotingService.formatVoteAmount(votes, useShortFormat ? 6 : 18);
   }
 
   /**

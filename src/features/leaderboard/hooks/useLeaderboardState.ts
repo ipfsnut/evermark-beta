@@ -93,16 +93,22 @@ export function useLeaderboardState(): UseLeaderboardStateReturn {
   const isRefreshing = isRefreshingEntries || isRefreshingStats;
   const error = entriesError?.message ?? statsError?.message ?? null;
 
-  // Available periods
-  const availablePeriods = useMemo(() => 
-    LeaderboardService.getAvailablePeriods(), []
-  );
+  // Available periods query
+  const { data: availablePeriods = [] } = useQuery({
+    queryKey: ['leaderboard', 'periods'],
+    queryFn: () => LeaderboardService.getAvailablePeriods(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 2
+  });
 
-  // Current period
-  const currentPeriod = useMemo(() => 
-    LeaderboardService.getPeriodById(filters.period ?? LEADERBOARD_CONSTANTS.DEFAULT_PERIOD), 
-    [filters.period]
-  );
+  // Current period query
+  const { data: currentPeriod } = useQuery({
+    queryKey: ['leaderboard', 'currentPeriod', filters.period],
+    queryFn: () => LeaderboardService.getPeriodById(filters.period ?? LEADERBOARD_CONSTANTS.DEFAULT_PERIOD),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 2,
+    enabled: !!filters.period
+  });
 
   // Computed properties
   const hasNextPage = useMemo(() => 

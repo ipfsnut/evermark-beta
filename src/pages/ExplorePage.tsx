@@ -125,7 +125,9 @@ const ExploreContent: React.FC<{
   isLoading: boolean;
   isEmpty: boolean;
   isDark: boolean;
-}> = ({ viewMode, evermarks: _evermarks, totalCount, isLoading, isEmpty, isDark }) => {
+  navigate: (path: string) => void;
+  showAdvancedFilters: boolean;
+}> = ({ viewMode, evermarks: _evermarks, totalCount, isLoading, isEmpty, isDark, navigate, showAdvancedFilters }) => {
   
   if (isLoading) {
     return (
@@ -193,8 +195,9 @@ const ExploreContent: React.FC<{
   return (
     <EvermarkFeed 
       variant={viewMode}
-      showFilters={false} // We have filters above
+      showFilters={showAdvancedFilters} // Show advanced filters when toggled
       className="space-y-4"
+      onEvermarkClick={(evermark) => navigate(`/evermark/${evermark.id}`)}
     />
   );
 };
@@ -210,6 +213,7 @@ export default function ExplorePage(): React.ReactNode {
   // Local state
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   
   // Get real evermarks data
   const {
@@ -218,13 +222,29 @@ export default function ExplorePage(): React.ReactNode {
     isLoading,
     isEmpty,
     setFilters,
-    setPagination: _setPagination
+    setPagination
   } = useEvermarksState();
   
   // Handle search
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
     setFilters({ search: value });
+  };
+
+  // Handle sorting
+  const handleSortChange = (value: string) => {
+    const sortMap: Record<string, {sortBy: 'created_at' | 'title' | 'author' | 'votes', sortOrder: 'asc' | 'desc'}> = {
+      'newest': { sortBy: 'created_at', sortOrder: 'desc' },
+      'oldest': { sortBy: 'created_at', sortOrder: 'asc' },
+      'title': { sortBy: 'title', sortOrder: 'asc' },
+      'author': { sortBy: 'author', sortOrder: 'asc' },
+      'votes': { sortBy: 'votes', sortOrder: 'desc' }
+    };
+    
+    const sort = sortMap[value];
+    if (sort) {
+      setPagination({ ...sort, page: 1 }); // Reset to page 1 when sorting
+    }
   };
 
   return (
@@ -292,23 +312,31 @@ export default function ExplorePage(): React.ReactNode {
           )}>
             <div className="flex items-center gap-3">
               {/* Filter Button */}
-              <button className={cn(
-                "flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors",
-                isDark 
-                  ? "bg-gray-800 border-gray-600 text-white hover:bg-gray-700"
-                  : "bg-app-bg-card border-app-border text-app-text-on-card hover:bg-app-bg-card-hover"
-              )}>
+              <button 
+                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors",
+                  isDark 
+                    ? "bg-gray-800 border-gray-600 text-white hover:bg-gray-700"
+                    : "bg-app-bg-card border-app-border text-app-text-on-card hover:bg-app-bg-card-hover",
+                  showAdvancedFilters && (isDark ? "border-cyan-500" : "border-purple-400")
+                )}
+              >
                 <FilterIcon className="h-4 w-4" />
                 Filters
               </button>
 
               {/* Sort Dropdown */}
-              <select className={cn(
-                "px-4 py-2 border rounded-lg transition-colors focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-20",
-                isDark 
-                  ? "bg-gray-800 border-gray-600 text-white hover:bg-gray-700 focus:border-cyan-400"
-                  : "bg-app-bg-card border-app-border text-app-text-on-card hover:bg-app-bg-card-hover focus:border-purple-400"
-              )}>
+              <select 
+                onChange={(e) => handleSortChange(e.target.value)}
+                defaultValue="newest"
+                className={cn(
+                  "px-4 py-2 border rounded-lg transition-colors focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-20",
+                  isDark 
+                    ? "bg-gray-800 border-gray-600 text-white hover:bg-gray-700 focus:border-cyan-400"
+                    : "bg-app-bg-card border-app-border text-app-text-on-card hover:bg-app-bg-card-hover focus:border-purple-400"
+                )}
+              >
                 <option value="newest">Newest First</option>
                 <option value="oldest">Oldest First</option>
                 <option value="title">Title A-Z</option>
@@ -374,6 +402,8 @@ export default function ExplorePage(): React.ReactNode {
               isLoading={isLoading}
               isEmpty={isEmpty}
               isDark={isDark}
+              navigate={navigate}
+              showAdvancedFilters={showAdvancedFilters}
             />
           </div>
 

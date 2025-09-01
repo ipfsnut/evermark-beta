@@ -1,0 +1,170 @@
+# Evermark Cycle System Integration Plan
+
+## Source of Truth: Smart Contract (EvermarkVoting.sol)
+The smart contract uses "cycles" terminology and provides the authoritative implementation.
+All frontend code should align with the contract's cycle-based approach.
+
+## Current State Analysis
+
+### Smart Contract Functions (Authoritative):
+- getCurrentCycle() -> uint256
+- getCycleInfo(uint256 cycle) -> (startTime, endTime, totalVotes, totalDelegations, finalized, activeEvermarksCount)
+- CYCLE_DURATION -> uint256 (7 days)
+- cycleStartTime -> uint256
+- getTimeRemainingInCurrentCycle() -> uint256
+- startNewVotingCycle()
+- delegateVotes(uint256 evermarkId, uint256 amount)
+- undelegateVotes(uint256 evermarkId, uint256 amount)
+- getEvermarkVotesInCycle(uint256 cycle, uint256 evermarkId) -> uint256
+- getUserVotesInCycle(uint256 cycle, address user, uint256 evermarkId) -> uint256
+
+### Frontend Issues (To Fix):
+- Uses "season" terminology instead of "cycle"
+- VotingService calls non-existent getCurrentSeason()/getSeasonInfo()
+- useVotingState returns null for all cycle data
+- Leaderboard uses hardcoded cycles instead of contract data
+
+## Integration Goals
+
+### Phase 1: Terminology Standardization
+1. Replace all "season" references with "cycle" in:
+   - src/features/voting/types/index.ts (VotingSeason -> VotingCycle)
+   - src/features/voting/services/VotingService.ts (getCurrentSeason -> getCurrentCycle)
+   - src/features/voting/hooks/useVotingState.ts (currentSeason -> currentCycle)
+   - src/features/voting/components/VotingPanel.tsx
+   - public/docs/curation-voting.md
+
+### Phase 2: Contract Integration Implementation
+1. Fix VotingService.ts:
+   - Implement getCurrentCycle() using contract method
+   - Implement getCycleInfo() using contract method
+   - Remove season-based methods that don't exist in contract
+   - Add getTimeRemainingInCurrentCycle() integration
+
+2. Fix useVotingState.ts:
+   - Connect currentCycle to real contract data
+   - Implement getEvermarkVotes using contract method
+   - Implement getUserVotesForEvermark using contract method
+   - Add real-time cycle state management
+
+3. Fix LeaderboardService integration:
+   - Remove hardcoded cycle periods
+   - Fetch cycle data dynamically from contract
+   - Update RANKING_PERIODS based on contract cycles
+
+### Phase 3: State Management Enhancement
+1. Add React Query integration for:
+   - Current cycle data with auto-refresh
+   - Cycle info caching with proper invalidation
+   - Time remaining updates every minute
+
+2. Implement cycle transition handling:
+   - Detect when cycles end
+   - Show cycle transition states
+   - Handle voting power reset between cycles
+
+### Phase 4: UI/UX Improvements
+1. Update VotingPanel to show:
+   - Current cycle number from contract
+   - Accurate time remaining
+   - Cycle transition notifications
+
+2. Update Leaderboard to show:
+   - Dynamic cycle selection from contract
+   - Historical cycle data
+   - Real vote counts per cycle
+
+## Implementation Path
+
+### Step 1: Contract Method Alignment (Critical)
+**Files to modify:**
+- src/features/voting/services/VotingService.ts
+  - Replace getCurrentSeason() with getCurrentCycle()
+  - Replace getSeasonInfo() with getCycleInfo()
+  - Add getTimeRemainingInCurrentCycle() method
+
+**Priority: HIGH** - This fixes the broken contract calls
+
+### Step 2: Type System Updates
+**Files to modify:**
+- src/features/voting/types/index.ts
+  - Rename VotingSeason -> VotingCycle consistently
+  - Update all season references to cycle
+  - Align constants with contract
+
+**Priority: HIGH** - Required for type consistency
+
+### Step 3: State Hook Implementation
+**Files to modify:**
+- src/features/voting/hooks/useVotingState.ts
+  - Connect to real contract data instead of returning null
+  - Implement actual cycle state management
+  - Add proper error handling
+
+**Priority: HIGH** - Core functionality is currently broken
+
+### Step 4: Leaderboard Integration
+**Files to modify:**
+- src/features/leaderboard/types/index.ts
+  - Remove hardcoded RANKING_PERIODS
+  - Add dynamic cycle fetching
+- src/features/leaderboard/services/LeaderboardService.ts
+  - Integrate with voting contract for cycle data
+
+**Priority: MEDIUM** - Enhances user experience
+
+### Step 5: Documentation Updates
+**Files to modify:**
+- public/docs/curation-voting.md
+  - Replace "seasonal" with "cycle" terminology
+  - Update to match actual contract behavior
+
+**Priority: LOW** - Documentation consistency
+
+## Expected Outcomes
+
+### After Phase 1 (Terminology):
+- Consistent vocabulary across codebase
+- No more season/cycle confusion
+
+### After Phase 2 (Integration):
+- Working cycle data from smart contract
+- Real vote counts and cycle information
+- Functional time remaining calculations
+
+### After Phase 3 (State Management):
+- Real-time cycle updates
+- Proper cache invalidation
+- Smooth cycle transitions
+
+### After Phase 4 (UI/UX):
+- Accurate cycle information display
+- Dynamic leaderboard periods
+- Better user experience during voting
+
+## Success Criteria
+
+1. ✅ All contract calls succeed (no more null returns)
+2. ✅ Current cycle number displays correctly from contract
+3. ✅ Vote counts match contract state
+4. ✅ Time remaining shows accurate countdown
+5. ✅ Leaderboard shows real cycle data, not hardcoded values
+6. ✅ Consistent "cycle" terminology throughout application
+7. ✅ Voting functionality works with real cycle constraints
+
+## Risk Mitigation
+
+### Breaking Changes:
+- Type renames may require updates in components
+- Contract method changes require thorough testing
+
+### Testing Strategy:
+- Test against actual deployed contract
+- Verify cycle transitions work correctly
+- Ensure vote counting matches contract state
+- Test time calculations against contract timestamps
+
+### Rollback Plan:
+- Keep current working voting functions during migration
+- Implement changes incrementally with feature flags if needed
+- Maintain backward compatibility where possible

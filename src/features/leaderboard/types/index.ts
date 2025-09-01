@@ -133,25 +133,14 @@ export interface UseLeaderboardStateReturn {
   isFiltered: boolean;
 }
 
-// Constants
+// Dynamic ranking periods - populated from voting contract
+// Note: RANKING_PERIODS is now deprecated - use dynamic cycle fetching instead
 export const RANKING_PERIODS: RankingPeriod[] = [
   {
-    id: '1',
-    label: 'Cycle 1',
+    id: 'current',
+    label: 'Current Cycle',
     duration: 0,
-    description: 'First voting cycle'
-  },
-  {
-    id: '2',
-    label: 'Cycle 2',
-    duration: 0,
-    description: 'Second voting cycle'
-  },
-  {
-    id: '3',
-    label: 'Cycle 3',
-    duration: 0,
-    description: 'Third voting cycle'
+    description: 'Active voting cycle'
   }
 ];
 

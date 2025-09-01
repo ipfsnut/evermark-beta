@@ -24,6 +24,9 @@ export function VotingPanel({
 }: VotingPanelProps) {
   const [voteAmount, setVoteAmount] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [totalVotes, setTotalVotes] = useState<bigint>(BigInt(0));
+  const [userVotes, setUserVotes] = useState<bigint>(BigInt(0));
+  const [timeRemaining, setTimeRemaining] = useState<number>(0);
   const { isDark } = useTheme();
   
   const {
@@ -41,10 +44,31 @@ export function VotingPanel({
     isConnected
   } = useVotingState();
 
-  // Get data for this specific evermark
-  const totalVotes = getEvermarkVotes(evermarkId);
-  const userVotes = getUserVotesForEvermark(evermarkId);
-  const timeRemaining = getTimeRemainingInCycle();
+  // Fetch data for this specific evermark
+  useEffect(() => {
+    if (!isConnected || !evermarkId) return;
+    
+    const fetchData = async () => {
+      try {
+        const [votes, userVoteCount, remaining] = await Promise.all([
+          getEvermarkVotes(evermarkId),
+          getUserVotesForEvermark(evermarkId),
+          getTimeRemainingInCycle()
+        ]);
+        setTotalVotes(votes);
+        setUserVotes(userVoteCount);
+        setTimeRemaining(remaining);
+      } catch (error) {
+        console.error('Failed to fetch voting data:', error);
+      }
+    };
+    
+    fetchData();
+    
+    // Refresh data every 30 seconds
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
+  }, [evermarkId, isConnected, getEvermarkVotes, getUserVotesForEvermark, getTimeRemainingInCycle]);
   
   // Clear messages after delay
   useEffect(() => {
