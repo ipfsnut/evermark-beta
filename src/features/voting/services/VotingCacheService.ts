@@ -22,8 +22,9 @@ interface UserVoteEntry {
   block_number?: bigint;
 }
 
-interface VotingCycleEntry {
-  cycle_number: number;
+// Database still uses cycle_number for backward compatibility
+interface VotingSeasonEntry {
+  cycle_number: number; // DB field name (legacy)
   start_time: string;
   end_time: string;
   total_votes: bigint;
@@ -33,6 +34,9 @@ interface VotingCycleEntry {
   finalized: boolean;
 }
 
+// Legacy interface for backward compatibility
+interface VotingCycleEntry extends VotingSeasonEntry {}
+
 export class VotingCacheService {
   
   /**
@@ -41,11 +45,11 @@ export class VotingCacheService {
   static async getCachedVotingData(evermarkId: string, cycle?: number): Promise<{votes: bigint; voterCount: number}> {
     try {
       if (!cycle) {
-        const currentCycle = await this.getCurrentCycle();
-        if (!currentCycle) {
+        const currentSeason = await this.getCurrentSeason();
+        if (!currentSeason) {
           return { votes: BigInt(0), voterCount: 0 };
         }
-        cycle = currentCycle.cycle_number;
+        cycle = currentSeason.cycle_number;
       }
 
       const { data, error } = await supabase
@@ -169,9 +173,9 @@ export class VotingCacheService {
   }
 
   /**
-   * Get current voting cycle from cache
+   * Get current voting season from cache
    */
-  static async getCurrentCycle(): Promise<VotingCycleEntry | null> {
+  static async getCurrentSeason(): Promise<VotingSeasonEntry | null> {
     try {
       const { data, error } = await supabase
         .from('voting_cycles_cache')
@@ -196,13 +200,20 @@ export class VotingCacheService {
         finalized: data.finalized
       };
     } catch (error) {
-      console.error('Failed to get current cycle from cache:', error);
+      console.error('Failed to get current season from cache:', error);
       return null;
     }
   }
+  
+  /**
+   * Legacy method - use getCurrentSeason instead
+   */
+  static async getCurrentCycle(): Promise<VotingCycleEntry | null> {
+    return this.getCurrentSeason();
+  }
 
   /**
-   * Update voting cycle cache
+   * Update voting season cache (legacy method name for backward compatibility)
    */
   static async updateVotingCycle(
     cycleNumber: number,
@@ -245,11 +256,11 @@ export class VotingCacheService {
   static async getBulkVotingData(evermarkIds: string[], cycle?: number): Promise<Map<string, {votes: bigint; voterCount: number}>> {
     try {
       if (!cycle) {
-        const currentCycle = await this.getCurrentCycle();
-        if (!currentCycle) {
+        const currentSeason = await this.getCurrentSeason();
+        if (!currentSeason) {
           return new Map();
         }
-        cycle = currentCycle.cycle_number;
+        cycle = currentSeason.cycle_number;
       }
 
       const { data, error } = await supabase
@@ -292,11 +303,11 @@ export class VotingCacheService {
   static async isCacheStale(evermarkId: string, cycle?: number, maxAgeSeconds: number = 30): Promise<boolean> {
     try {
       if (!cycle) {
-        const currentCycle = await this.getCurrentCycle();
-        if (!currentCycle) {
+        const currentSeason = await this.getCurrentSeason();
+        if (!currentSeason) {
           return true; // No cycle data, consider stale
         }
-        cycle = currentCycle.cycle_number;
+        cycle = currentSeason.cycle_number;
       }
 
       const { data, error } = await supabase
@@ -383,9 +394,9 @@ export class VotingCacheService {
       // and update the cache. For now, this is a placeholder for the sync mechanism.
       
       if (!cycle) {
-        const currentCycle = await this.getCurrentCycle();
-        if (!currentCycle) return;
-        cycle = currentCycle.cycle_number;
+        const currentSeason = await this.getCurrentSeason();
+        if (!currentSeason) return;
+        cycle = currentSeason.cycle_number;
       }
 
       // Import VotingService dynamically to avoid circular dependencies
@@ -410,9 +421,9 @@ export class VotingCacheService {
   static async batchSyncToCache(evermarkIds: string[], cycle?: number): Promise<void> {
     try {
       if (!cycle) {
-        const currentCycle = await this.getCurrentCycle();
-        if (!currentCycle) return;
-        cycle = currentCycle.cycle_number;
+        const currentSeason = await this.getCurrentSeason();
+        if (!currentSeason) return;
+        cycle = currentSeason.cycle_number;
       }
 
       // Process in chunks to avoid overwhelming the RPC

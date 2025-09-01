@@ -199,6 +199,7 @@ export function useVotingState(): UseVotingStateReturn {
 
       // Update cache with new vote data
       if (currentCycle) {
+        // Cache individual user vote
         await VotingCacheService.cacheUserVote(
           userAddress,
           evermarkId,
@@ -206,10 +207,21 @@ export function useVotingState(): UseVotingStateReturn {
           amount,
           result.transactionHash
         );
+        
+        // Update aggregate vote totals for this evermark
+        // Get current total votes from blockchain to ensure accuracy
+        const currentTotalVotes = await VotingService.getEvermarkVotes(evermarkId, currentCycle.cycleNumber);
+        
+        // Update the voting cache with new totals (voter count set to 0 since we don't track it)
+        await VotingCacheService.updateVotingCache(
+          evermarkId,
+          currentCycle.cycleNumber,
+          currentTotalVotes,
+          0 // Voter count disabled - we established this isn't efficiently available
+        );
+        
+        console.log(`🔄 Updated vote cache for evermark ${evermarkId}: ${VotingService.formatVoteAmount(currentTotalVotes)} total votes`);
       }
-
-      // Clear the leaderboard cache for this evermark so it shows updated votes
-      await LeaderboardService.clearVoteCacheForEvermark(evermarkId);
 
       return {
         hash: result.transactionHash,
@@ -266,7 +278,10 @@ export function useVotingState(): UseVotingStateReturn {
 
       // Update cache with reduced vote data
       if (currentCycle) {
+        // Get current user votes after withdrawal to cache the correct amount
         const currentUserVotes = await VotingService.getUserVotesForEvermark(userAddress, evermarkId);
+        
+        // Cache individual user vote with updated amount
         await VotingCacheService.cacheUserVote(
           userAddress,
           evermarkId,
@@ -274,10 +289,21 @@ export function useVotingState(): UseVotingStateReturn {
           currentUserVotes,
           result.transactionHash
         );
+        
+        // Update aggregate vote totals for this evermark
+        // Get current total votes from blockchain to ensure accuracy
+        const currentTotalVotes = await VotingService.getEvermarkVotes(evermarkId, currentCycle.cycleNumber);
+        
+        // Update the voting cache with new totals (voter count set to 0 since we don't track it)
+        await VotingCacheService.updateVotingCache(
+          evermarkId,
+          currentCycle.cycleNumber,
+          currentTotalVotes,
+          0 // Voter count disabled - we established this isn't efficiently available
+        );
+        
+        console.log(`🔄 Updated vote cache for evermark ${evermarkId} after withdrawal: ${VotingService.formatVoteAmount(currentTotalVotes)} total votes`);
       }
-
-      // Clear the leaderboard cache for this evermark so it shows updated votes
-      await LeaderboardService.clearVoteCacheForEvermark(evermarkId);
 
       return {
         hash: result.transactionHash,

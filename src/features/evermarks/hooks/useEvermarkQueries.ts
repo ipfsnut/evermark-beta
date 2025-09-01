@@ -247,12 +247,13 @@ async function fetchEvermarks(options: EvermarkFeedOptions): Promise<EvermarkFee
         creationTime: Date.parse(String(item.created_at || new Date().toISOString())),
         ipfsHash: item.ipfs_metadata_hash as string,
         supabaseImageUrl: item.processed_image_url as string,
-        image: item.processed_image_url ?? (item.ipfs_metadata_hash ? `ipfs://${item.ipfs_metadata_hash}` : undefined),
+        image: item.processed_image_url ?? (item.ipfs_image_hash ? `ipfs://${item.ipfs_image_hash}` : undefined),
         createdAt: String(item.created_at || new Date().toISOString()),
         updatedAt: String(item.updated_at || item.created_at || new Date().toISOString()),
         contentType: (item.content_type as Evermark['contentType']) || 'Custom',
         sourceUrl: item.source_url as string,
         imageStatus: 'processed' as const,
+        votes: 0, // Initialize votes to 0 (will be fetched from blockchain)
         extendedMetadata: { 
           tags,
           castData: item.cast_data as any
@@ -333,7 +334,7 @@ async function fetchEvermark(id: string): Promise<Evermark | null> {
       creationTime: Date.parse(String(item.created_at || new Date().toISOString())),
       ipfsHash: item.ipfs_metadata_hash as string,
       supabaseImageUrl: item.processed_image_url as string,
-      image: item.processed_image_url ?? (item.ipfs_metadata_hash ? `ipfs://${item.ipfs_metadata_hash}` : undefined),
+      image: item.processed_image_url ?? (item.ipfs_image_hash ? `ipfs://${item.ipfs_image_hash}` : undefined),
       createdAt: String(item.created_at || new Date().toISOString()),
       updatedAt: String(item.updated_at || item.created_at || new Date().toISOString()),
       contentType: (item.content_type as Evermark['contentType']) || 'Custom',

@@ -5,7 +5,7 @@ export interface Vote {
   userAddress: string;
   evermarkId: string;
   amount: bigint;
-  season: number; // Keep for backward compatibility, but represents cycle
+  season: number;
   timestamp: Date;
   transactionHash: string;
   status: 'pending' | 'confirmed' | 'failed';
@@ -15,20 +15,10 @@ export interface Vote {
 export interface Delegation {
   evermarkId: string;
   amount: bigint;
-  cycle: number; // Changed from season to cycle to match contract
+  season: number;
   timestamp: Date;
   transactionHash?: string;
   isActive: boolean;
-}
-
-export interface VotingCycle {
-  cycleNumber: number;
-  startTime: Date;
-  endTime: Date;
-  totalVotes: bigint;
-  totalVoters: number;
-  isActive: boolean;
-  activeEvermarksCount: number;
 }
 
 export interface VotingSeason {
@@ -39,6 +29,11 @@ export interface VotingSeason {
   totalVoters: number;
   isActive: boolean;
   activeEvermarksCount: number;
+}
+
+// Legacy interface for backward compatibility - will be removed
+export interface VotingCycle extends VotingSeason {
+  cycleNumber: number;
 }
 
 export interface VotingPower {

@@ -9,7 +9,8 @@ import { NotificationService } from '../../../services/NotificationService';
 const _CHAIN = base;
 import { 
   type Vote,
-  type VotingCycle,
+  type VotingSeason,
+  type VotingCycle, // Legacy support
   type VotingPower,
   type VotingStats,
   type VotingValidation,
@@ -23,43 +24,55 @@ import {
 export class VotingService {
   
   /**
-   * Get current voting cycle information
+   * Get current voting season information
    */
-  static async getCurrentCycle(): Promise<VotingCycle | null> {
+  static async getCurrentSeason(): Promise<VotingSeason | null> {
     try {
       const votingContract = getEvermarkVotingContract();
       
-      const currentCycle = await readContract({
+      const currentSeason = await readContract({
         contract: votingContract,
-        method: "function getCurrentCycle() view returns (uint256)",
+        method: "function getCurrentSeason() view returns (uint256)",
         params: []
       });
       
-      const cycleInfo = await readContract({
+      const seasonInfo = await readContract({
         contract: votingContract,
-        method: "function getCycleInfo(uint256 cycle) view returns (uint256 startTime, uint256 endTime, uint256 totalVotes, uint256 totalDelegations, bool finalized, uint256 activeEvermarksCount)",
-        params: [currentCycle]
+        method: "function getSeasonInfo(uint256 season) view returns (uint256 startTime, uint256 endTime, bool active, uint256 totalVotes)",
+        params: [currentSeason]
       }).catch(() => null);
 
-      if (!cycleInfo) {
+      if (!seasonInfo) {
         return null;
       }
 
-      const [startTime, endTime, totalVotes, totalDelegations, finalized, activeEvermarksCount] = cycleInfo as [bigint, bigint, bigint, bigint, boolean, bigint];
+      const [startTime, endTime, active, totalVotes] = seasonInfo as [bigint, bigint, boolean, bigint];
 
       return {
-        cycleNumber: Number(currentCycle),
+        seasonNumber: Number(currentSeason),
         startTime: new Date(Number(startTime) * 1000),
         endTime: new Date(Number(endTime) * 1000),
         totalVotes,
-        totalVoters: Number(totalDelegations), // Using totalDelegations as voter count proxy
-        isActive: !finalized && Date.now() < Number(endTime) * 1000,
-        activeEvermarksCount: Number(activeEvermarksCount)
+        totalVoters: 0, // Will need to be calculated separately
+        isActive: active,
+        activeEvermarksCount: 0 // Will need to be calculated separately
       };
     } catch (error) {
-      console.error('Failed to get current cycle:', error);
+      console.error('Failed to get current season:', error);
       return null;
     }
+  }
+  
+  /**
+   * Legacy method - use getCurrentSeason instead
+   */
+  static async getCurrentCycle(): Promise<VotingCycle | null> {
+    const season = await this.getCurrentSeason();
+    if (!season) return null;
+    return {
+      ...season,
+      cycleNumber: season.seasonNumber
+    };
   }
 
   /**
@@ -147,24 +160,24 @@ export class VotingService {
   }
 
   /**
-   * Get votes for a specific evermark in current cycle
+   * Get votes for a specific evermark in current season
    */
-  static async getEvermarkVotes(evermarkId: string, cycle?: number): Promise<bigint> {
+  static async getEvermarkVotes(evermarkId: string, season?: number): Promise<bigint> {
     try {
       const votingContract = getEvermarkVotingContract();
       
-      // Get current cycle if not specified
-      let targetCycle = cycle;
-      if (!targetCycle) {
-        const currentCycleData = await this.getCurrentCycle();
-        if (!currentCycleData) return BigInt(0);
-        targetCycle = currentCycleData.cycleNumber;
+      // Get current season if not specified
+      let targetSeason = season;
+      if (!targetSeason) {
+        const currentSeasonData = await this.getCurrentSeason();
+        if (!currentSeasonData) return BigInt(0);
+        targetSeason = currentSeasonData.seasonNumber;
       }
 
       const votes = await readContract({
         contract: votingContract,
-        method: "function getEvermarkVotesInCycle(uint256 cycle, uint256 evermarkId) view returns (uint256)",
-        params: [BigInt(targetCycle), BigInt(evermarkId)]
+        method: "function getEvermarkVotesInSeason(uint256 season, uint256 evermarkId) view returns (uint256)",
+        params: [BigInt(targetSeason), BigInt(evermarkId)]
       });
 
       return votes as bigint;
@@ -177,22 +190,22 @@ export class VotingService {
   /**
    * Get user's votes for a specific evermark in current cycle
    */
-  static async getUserVotesForEvermark(userAddress: string, evermarkId: string, cycle?: number): Promise<bigint> {
+  static async getUserVotesForEvermark(userAddress: string, evermarkId: string, season?: number): Promise<bigint> {
     try {
       const votingContract = getEvermarkVotingContract();
       
-      // Get current cycle if not specified
-      let targetCycle = cycle;
-      if (!targetCycle) {
-        const currentCycleData = await this.getCurrentCycle();
-        if (!currentCycleData) return BigInt(0);
-        targetCycle = currentCycleData.cycleNumber;
+      // Get current season if not specified
+      let targetSeason = season;
+      if (!targetSeason) {
+        const currentSeasonData = await this.getCurrentSeason();
+        if (!currentSeasonData) return BigInt(0);
+        targetSeason = currentSeasonData.seasonNumber;
       }
 
       const votes = await readContract({
         contract: votingContract,
-        method: "function getUserVotesInCycle(uint256 cycle, address user, uint256 evermarkId) view returns (uint256)",
-        params: [BigInt(targetCycle), userAddress, BigInt(evermarkId)]
+        method: "function getUserVotesInSeason(uint256 season, address user) view returns (uint256)",
+        params: [BigInt(targetSeason), userAddress]
       });
 
       return votes as bigint;
@@ -205,26 +218,26 @@ export class VotingService {
   /**
    * Get the number of unique voters for a specific evermark
    */
-  static async getEvermarkVoterCount(evermarkId: string, cycle?: number): Promise<number> {
+  static async getEvermarkVoterCount(evermarkId: string, season?: number): Promise<number> {
     try {
       const votingContract = getEvermarkVotingContract();
       
-      // Get current cycle if not specified
-      let targetCycle = cycle;
-      if (!targetCycle) {
-        const currentCycleData = await this.getCurrentCycle();
-        if (!currentCycleData) return 0;
-        targetCycle = currentCycleData.cycleNumber;
+      // Get current season if not specified
+      let targetSeason = season;
+      if (!targetSeason) {
+        const currentSeasonData = await this.getCurrentSeason();
+        if (!currentSeasonData) return 0;
+        targetSeason = currentSeasonData.seasonNumber;
       }
 
       // Fetch voting events and count unique voters
-      const voteDelegatedEvent = prepareEvent({
-        signature: "event VoteDelegated(address indexed user, uint256 indexed evermarkId, uint256 amount, uint256 indexed cycle)"
+      const voteCastEvent = prepareEvent({
+        signature: "event VoteCast(address indexed voter, uint256 indexed season, uint256 indexed evermarkId, uint256 votes)"
       });
 
       const events = await getContractEvents({
         contract: votingContract,
-        events: [voteDelegatedEvent],
+        events: [voteCastEvent],
         fromBlock: 0n,
         toBlock: 'latest'
       });
@@ -234,9 +247,9 @@ export class VotingService {
         events
           .filter(event => 
             event.args.evermarkId?.toString() === evermarkId &&
-            Number(event.args.cycle) === targetCycle
+            Number(event.args.season) === targetSeason
           )
-          .map(event => event.args.user)
+          .map(event => event.args.voter)
       );
 
       return uniqueVoters.size;
@@ -439,18 +452,18 @@ export class VotingService {
    */
   static async getVotingStats(_userAddress?: string): Promise<VotingStats | null> {
     try {
-      const currentCycle = await this.getCurrentCycle();
-      if (!currentCycle) {
+      const currentSeason = await this.getCurrentSeason();
+      if (!currentSeason) {
         return null;
       }
 
       // This would typically aggregate data from events or database
       // For now, return basic structure
       return {
-        totalVotesCast: currentCycle.totalVotes,
-        activeEvermarks: currentCycle.activeEvermarksCount,
-        averageVotesPerEvermark: currentCycle.activeEvermarksCount > 0 
-          ? currentCycle.totalVotes / BigInt(currentCycle.activeEvermarksCount)
+        totalVotesCast: currentSeason.totalVotes,
+        activeEvermarks: currentSeason.activeEvermarksCount,
+        averageVotesPerEvermark: currentSeason.activeEvermarksCount > 0 
+          ? currentSeason.totalVotes / BigInt(currentSeason.activeEvermarksCount)
           : BigInt(0),
         topEvermarkVotes: BigInt(0), // Would need to query top evermark
         userRanking: 0, // Would need to calculate user's ranking

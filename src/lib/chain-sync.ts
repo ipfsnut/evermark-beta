@@ -133,6 +133,9 @@ export async function syncRecentEvermarks(count: number = 10) {
 
       const metadata = nft.metadata;
       
+      // Extract image hash from metadata
+      const ipfsImageHash = _extractIpfsHash(metadata.image);
+      
       // Insert into database - using beta_evermarks schema
       const { error } = await supabase
         .from('beta_evermarks')
@@ -150,12 +153,14 @@ export async function syncRecentEvermarks(count: number = 10) {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           metadata_json: metadata ? JSON.stringify(metadata) : undefined,
+          ipfs_image_hash: ipfsImageHash,
+          image_processing_status: ipfsImageHash ? 'pending' : null,
           // Note: removed fields that don't exist in beta_evermarks
         }]);
 
       if (!error) {
         synced++;
-        if (metadata.image) needsCache++;
+        if (ipfsImageHash) needsCache++;
       }
     }
 

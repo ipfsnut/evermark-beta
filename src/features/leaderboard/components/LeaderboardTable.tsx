@@ -276,7 +276,7 @@ export function LeaderboardTable({
 
       {/* Stats Summary - Mobile-first responsive grid */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
           <div className={cn(themeClasses.card, "p-3 sm:p-4")}>
             <div className="text-xs sm:text-sm text-app-text-secondary mb-1">Total Evermarks</div>
             <div className="text-lg sm:text-xl font-bold text-app-text-primary">
@@ -287,18 +287,6 @@ export function LeaderboardTable({
             <div className="text-xs sm:text-sm text-app-text-secondary mb-1">Total Votes</div>
             <div className="text-lg sm:text-xl font-bold text-app-text-accent">
               {LeaderboardService.formatVoteAmount(stats.totalVotes)}
-            </div>
-          </div>
-          <div className={cn(themeClasses.card, "p-3 sm:p-4")}>
-            <div className="text-xs sm:text-sm text-app-text-secondary mb-1">Active Voters</div>
-            <div className="text-lg sm:text-xl font-bold text-app-brand-success">
-              {stats.activeVoters.toLocaleString()}
-            </div>
-          </div>
-          <div className={cn(themeClasses.card, "p-3 sm:p-4")}>
-            <div className="text-xs sm:text-sm text-app-text-secondary mb-1">Participation</div>
-            <div className="text-lg sm:text-xl font-bold text-app-brand-secondary">
-              {(stats.participationRate * 100).toFixed(1)}%
             </div>
           </div>
         </div>
@@ -445,9 +433,6 @@ export function LeaderboardTable({
                     <div className="flex-shrink-0 text-left sm:text-right sm:ml-4">
                       <div className="text-lg sm:text-xl font-bold text-app-text-accent mb-1">
                         {LeaderboardService.formatVoteAmount(entry.totalVotes)}
-                      </div>
-                      <div className="text-xs text-app-text-secondary">
-                        {entry.voteCount} voter{entry.voteCount !== 1 ? 's' : ''}
                       </div>
                       {entry.percentageOfTotal > 0 && (
                         <div className="text-xs text-app-text-muted">

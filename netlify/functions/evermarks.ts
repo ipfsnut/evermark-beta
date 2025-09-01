@@ -36,6 +36,8 @@ interface EvermarkRecord {
   processed_image_url?: string;
   image_processing_status?: string;
   image_processed_at?: string;
+  ipfs_image_hash?: string;
+  ipfs_metadata_hash?: string;
   ipfs_metadata?: Record<string, unknown>;
   referrer_address?: string;
 }

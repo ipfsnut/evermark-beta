@@ -15,6 +15,8 @@ import type {
 import type { Evermark } from '../../evermarks/types';
 import { VotingService } from '../../voting/services/VotingService';
 import { VotingCacheService } from '../../voting/services/VotingCacheService';
+import { LeaderboardSyncService } from './LeaderboardSyncService';
+import { BlockchainLeaderboardService } from './BlockchainLeaderboardService';
 
 /**
  * Offchain Leaderboard Service
@@ -64,36 +66,61 @@ export class LeaderboardService {
   
   /**
    * Calculate leaderboard entries from evermarks data - Top evermarks by votes
+   * Uses cache first, then falls back to direct blockchain queries
    */
   static async calculateLeaderboard(
     evermarks: Evermark[],
     period: string = 'current'
   ): Promise<LeaderboardEntry[]> {
     
-    // Filter evermarks by period if needed
+    // For season-based periods, we'll use all evermarks but filter votes by season
     let filteredEvermarks = evermarks;
-    const now = new Date();
+    let targetSeason: number | undefined;
     
-    if (period === 'week') {
-      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      filteredEvermarks = evermarks.filter(em => 
-        new Date(em.createdAt) >= weekAgo
-      );
-    } else if (period === 'month') {
-      const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      filteredEvermarks = evermarks.filter(em => 
-        new Date(em.createdAt) >= monthAgo
-      );
+    // Extract season number from period ID
+    if (period.startsWith('season-')) {
+      targetSeason = parseInt(period.replace('season-', ''));
+    } else if (period === 'current') {
+      // Use current season for live leaderboard
+      const currentSeason = await VotingService.getCurrentSeason();
+      targetSeason = currentSeason?.seasonNumber;
     }
     
-    // Fetch voting data for all evermarks efficiently in bulk
+    // Check if we should use blockchain directly (if cache is mostly empty)
     const evermarkIds = filteredEvermarks.map(em => em.id);
     const bulkVotingData = await VotingCacheService.getBulkVotingData(evermarkIds);
     
-    // Convert evermarks to leaderboard entries using bulk cached data
-    const entries: LeaderboardEntry[] = filteredEvermarks.map((evermark) => {
+    // If cache has very little data or no significant votes, use blockchain service directly
+    const cacheHitRate = bulkVotingData.size / Math.max(evermarkIds.length, 1);
+    const hasSignificantVotes = Array.from(bulkVotingData.values()).some(data => data.votes > BigInt(0));
+    
+    // Use blockchain service if cache is empty OR has no real voting data
+    if (cacheHitRate < 0.8 || !hasSignificantVotes) {
+      console.log(`🔗 Using blockchain leaderboard service (cache hit rate: ${(cacheHitRate * 100).toFixed(1)}%, has votes: ${hasSignificantVotes})`);
+      return await BlockchainLeaderboardService.calculateBlockchainLeaderboard(filteredEvermarks, targetSeason);
+    }
+    
+    // Convert evermarks to leaderboard entries with blockchain fallback for individual items
+    const entries: LeaderboardEntry[] = await Promise.all(
+      filteredEvermarks.map(async (evermark) => {
       // Get voting data from bulk fetch result
-      const votingData = bulkVotingData.get(evermark.id) || { votes: BigInt(evermark.votes ?? 0), voterCount: 0 };
+      let votingData = bulkVotingData.get(evermark.id) || { votes: BigInt(evermark.votes ?? 0), voterCount: 0 };
+      
+      // If cache data is zero, try to get real blockchain data
+      if (votingData.votes === BigInt(0) && votingData.voterCount === 0) {
+        try {
+          const blockchainData = await LeaderboardSyncService.getEvermarkRankingData(evermark.id);
+          if (blockchainData.votes > BigInt(0)) {
+            votingData = {
+              votes: blockchainData.votes,
+              voterCount: blockchainData.totalVoters || 1 // At least 1 if there are votes
+            };
+          }
+        } catch (error) {
+          console.warn(`Failed to get blockchain data for evermark ${evermark.id}:`, error);
+        }
+      }
+      
       const { votes: realVotes, voterCount } = votingData;
 
       const creator = evermark.creator || evermark.author || 'Unknown';
@@ -102,7 +129,7 @@ export class LeaderboardService {
       // Calculate a simple score based on real vote amounts and verification
       const votesNumber = Number(realVotes / BigInt(10 ** 18)); // Convert wei to whole tokens for scoring
       const verificationBonus = evermark.verified ? 100 : 0;
-      const freshnessBonus = Math.max(0, 30 - Math.floor((now.getTime() - createdAt.getTime()) / (24 * 60 * 60 * 1000))); // Bonus for recent content
+      const freshnessBonus = Math.max(0, 30 - Math.floor((Date.now() - createdAt.getTime()) / (24 * 60 * 60 * 1000))); // Bonus for recent content
       const _score = votesNumber + verificationBonus + freshnessBonus;
       
       return {
@@ -126,7 +153,8 @@ export class LeaderboardService {
           positions: 0
         }
       };
-    });
+    })
+    );
     
     // Sort by votes (descending)
     entries.sort((a, b) => Number(b.totalVotes - a.totalVotes));
@@ -276,25 +304,44 @@ export class LeaderboardService {
    */
   static async getAvailablePeriods(): Promise<RankingPeriod[]> {
     try {
-      const currentCycle = await VotingService.getCurrentCycle();
-      return [
-        { 
+      const currentSeason = await VotingService.getCurrentSeason();
+      const periods: RankingPeriod[] = [];
+      
+      // Current active season
+      if (currentSeason) {
+        periods.push({
           id: 'current', 
-          label: currentCycle ? `Cycle ${currentCycle.cycleNumber}` : 'Current Cycle', 
-          duration: currentCycle ? Math.floor((currentCycle.endTime.getTime() - currentCycle.startTime.getTime()) / 1000) : 0, 
-          description: currentCycle && currentCycle.isActive ? 'Active voting cycle' : 'Current cycle'
-        },
-        { id: 'month', label: 'Month', duration: 30 * 24 * 60 * 60, description: 'Last 30 days' },
-        { id: 'week', label: 'Week', duration: 7 * 24 * 60 * 60, description: 'Last 7 days' },
-        { id: 'all', label: 'All Time', duration: 0, description: 'All time' }
-      ];
+          label: `Season ${currentSeason.seasonNumber}`,
+          duration: Math.floor((currentSeason.endTime.getTime() - currentSeason.startTime.getTime()) / 1000), 
+          description: currentSeason.isActive ? 'Active voting season' : 'Current season'
+        });
+      } else {
+        periods.push({
+          id: 'current', 
+          label: 'Current Season',
+          duration: 0, 
+          description: 'Current voting season'
+        });
+      }
+      
+      // Previous completed seasons (we'll need to implement this with proper storage)
+      // For now, we'll add a placeholder for the previous season
+      if (currentSeason && currentSeason.seasonNumber > 1) {
+        for (let i = currentSeason.seasonNumber - 1; i >= Math.max(1, currentSeason.seasonNumber - 3); i--) {
+          periods.push({
+            id: `season-${i}`,
+            label: `Season ${i}`,
+            duration: 0, // Historical seasons don't need duration
+            description: 'Completed season'
+          });
+        }
+      }
+      
+      return periods;
     } catch (error) {
-      console.error('Failed to get current cycle for periods:', error);
+      console.error('Failed to get available periods:', error);
       return [
-        { id: 'current', label: 'Current Cycle', duration: 0, description: 'Current voting cycle' },
-        { id: 'month', label: 'Month', duration: 30 * 24 * 60 * 60, description: 'Last 30 days' },
-        { id: 'week', label: 'Week', duration: 7 * 24 * 60 * 60, description: 'Last 7 days' },
-        { id: 'all', label: 'All Time', duration: 0, description: 'All time' }
+        { id: 'current', label: 'Current Season', duration: 0, description: 'Current voting season' }
       ];
     }
   }
