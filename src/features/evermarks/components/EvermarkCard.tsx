@@ -199,121 +199,123 @@ export function EvermarkCard({
   // List variant layout
   if (variant === 'list') {
     return (
-      <div 
-        className={`${getVariantClasses()} ${className}`}
-        onClick={handleClick}
-      >
-        {/* FIXED: Responsive Image Component with dynamic borders */}
-        {showImage && (
-          <div className="relative overflow-hidden rounded-lg w-24 h-24 sm:w-32 sm:h-32 flex-shrink-0">
-            <ResponsiveEvermarkImage
-              tokenId={evermark.tokenId}
-              ipfsHash={evermark.ipfsHash}
-              originalUrl={evermark.supabaseImageUrl}
-              variant="list"
-              maintainContainer={true}
-              detectAspectRatio={true}
-              onLoad={() => {
-                if (showPerformanceInfo) {
-                  console.log(`✅ List image loaded for evermark #${evermark.tokenId}`);
-                }
-              }}
-              onError={(error) => {
-                console.warn(`❌ List image error for #${evermark.tokenId}:`, error);
-              }}
-            />
-            <PerformanceIndicator />
-          </div>
-        )}
+      <>
+        <div 
+          className={`${getVariantClasses()} ${className}`}
+          onClick={handleClick}
+        >
+          {/* FIXED: Responsive Image Component with dynamic borders */}
+          {showImage && (
+            <div className="relative overflow-hidden rounded-lg w-24 h-24 sm:w-32 sm:h-32 flex-shrink-0">
+              <ResponsiveEvermarkImage
+                tokenId={evermark.tokenId}
+                ipfsHash={evermark.ipfsHash}
+                originalUrl={evermark.supabaseImageUrl}
+                variant="list"
+                maintainContainer={true}
+                detectAspectRatio={true}
+                onLoad={() => {
+                  if (showPerformanceInfo) {
+                    console.log(`✅ List image loaded for evermark #${evermark.tokenId}`);
+                  }
+                }}
+                onError={(error) => {
+                  console.warn(`❌ List image error for #${evermark.tokenId}:`, error);
+                }}
+              />
+              <PerformanceIndicator />
+            </div>
+          )}
 
-        {/* Content */}
-        <div className="flex-1 min-w-0 p-4 flex flex-col justify-between">
-          <div>
-            <h3 className={cn(
-              getTitleClasses(),
-              "group-hover:text-purple-400 transition-colors mb-1 line-clamp-2"
-            )}>
-              {evermark.title}
-            </h3>
-            
-            <div className={cn(
-              "flex items-center gap-3 text-sm mb-2",
-              isDark ? "text-gray-400" : "text-gray-600"
-            )}>
-              <div className="flex items-center min-w-0 flex-1">
-                <User className="h-3 w-3 mr-1 flex-shrink-0" />
-                <span className="truncate">{evermark.author}</span>
-                {evermark.verified && (
-                  <button
-                    onClick={handleVerificationClick}
-                    className="ml-1 flex-shrink-0 hover:scale-110 transition-transform"
-                  >
-                    <CheckCircle className="h-3 w-3 text-green-400" />
-                  </button>
-                )}
+          {/* Content */}
+          <div className="flex-1 min-w-0 p-4 flex flex-col justify-between">
+            <div>
+              <h3 className={cn(
+                getTitleClasses(),
+                "group-hover:text-purple-400 transition-colors mb-1 line-clamp-2"
+              )}>
+                {evermark.title}
+              </h3>
+              
+              <div className={cn(
+                "flex items-center gap-3 text-sm mb-2",
+                isDark ? "text-gray-400" : "text-gray-600"
+              )}>
+                <div className="flex items-center min-w-0 flex-1">
+                  <User className="h-3 w-3 mr-1 flex-shrink-0" />
+                  <span className="truncate">{evermark.author}</span>
+                  {evermark.verified && (
+                    <button
+                      onClick={handleVerificationClick}
+                      className="ml-1 flex-shrink-0 hover:scale-110 transition-transform"
+                    >
+                      <CheckCircle className="h-3 w-3 text-green-400" />
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center flex-shrink-0">
+                  {getContentTypeIcon(evermark.contentType)}
+                  <span className="ml-1">{evermark.contentType}</span>
+                </div>
               </div>
-              <div className="flex items-center flex-shrink-0">
-                {getContentTypeIcon(evermark.contentType)}
-                <span className="ml-1">{evermark.contentType}</span>
-              </div>
+
+              {evermark.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {evermark.tags.slice(0, 3).map((tag, index) => (
+                    <span
+                      key={index}
+                      className={cn(
+                        "text-xs px-2 py-1 rounded border",
+                        isDark 
+                          ? "bg-purple-900/30 text-purple-300 border-purple-500/30" 
+                          : "bg-purple-100 text-purple-700 border-purple-300"
+                      )}
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                  {evermark.tags.length > 3 && (
+                    <span className={cn(
+                      "text-xs",
+                      isDark ? "text-gray-500" : "text-gray-600"
+                    )}>
+                      +{evermark.tags.length - 3} more
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
-            {evermark.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 mb-2">
-                {evermark.tags.slice(0, 3).map((tag, index) => (
-                  <span
-                    key={index}
-                    className={cn(
-                      "text-xs px-2 py-1 rounded border",
-                      isDark 
-                        ? "bg-purple-900/30 text-purple-300 border-purple-500/30" 
-                        : "bg-purple-100 text-purple-700 border-purple-300"
-                    )}
-                  >
-                    {tag}
+            <div className={cn(
+              "flex items-center justify-between text-xs",
+              isDark ? "text-gray-500" : "text-gray-600"
+            )}>
+              <div className="flex items-center gap-3">
+                <span>{Formatters.formatRelativeTime(evermark.createdAt)}</span>
+                {showViews && evermark.viewCount !== undefined && (
+                  <span className="flex items-center text-cyan-400">
+                    <Eye className="h-3 w-3 mr-1" />
+                    {formatCount(evermark.viewCount)}
                   </span>
-                ))}
-                {evermark.tags.length > 3 && (
-                  <span className={cn(
-                    "text-xs",
-                    isDark ? "text-gray-500" : "text-gray-600"
-                  )}>
-                    +{evermark.tags.length - 3} more
+                )}
+                {showVotes && evermark.votes !== undefined && evermark.votes > 0 && (
+                  <span className="flex items-center text-green-400">
+                    <Vote className="h-3 w-3 mr-1" />
+                    {formatCount(evermark.votes)}
                   </span>
                 )}
               </div>
-            )}
-          </div>
-
-          <div className={cn(
-            "flex items-center justify-between text-xs",
-            isDark ? "text-gray-500" : "text-gray-600"
-          )}>
-            <div className="flex items-center gap-3">
-              <span>{Formatters.formatRelativeTime(evermark.createdAt)}</span>
-              {showViews && evermark.viewCount !== undefined && (
-                <span className="flex items-center text-cyan-400">
-                  <Eye className="h-3 w-3 mr-1" />
-                  {formatCount(evermark.viewCount)}
-                </span>
-              )}
-              {showVotes && evermark.votes !== undefined && evermark.votes > 0 && (
-                <span className="flex items-center text-green-400">
-                  <Vote className="h-3 w-3 mr-1" />
-                  {formatCount(evermark.votes)}
-                </span>
-              )}
             </div>
           </div>
         </div>
-      </div>
-      
-      {/* Attestation Popup */}
-      <AttestationPopup 
-        evermark={evermark}
-        isOpen={showAttestationPopup}
-        onClose={() => setShowAttestationPopup(false)}
-      />
+        
+        {/* Attestation Popup */}
+        <AttestationPopup 
+          evermark={evermark}
+          isOpen={showAttestationPopup}
+          onClose={() => setShowAttestationPopup(false)}
+        />
+      </>
     );
   }
 
