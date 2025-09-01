@@ -92,7 +92,7 @@ async function checkForDuplicate(sourceUrl: string): Promise<DuplicateCheckRespo
     patterns: searchPatterns.length
   });
   
-  let duplicateData = null;
+  let duplicateData: any[] | null = null;
   
   try {
     // Search strategy based on identifier type
@@ -110,7 +110,7 @@ async function checkForDuplicate(sourceUrl: string): Promise<DuplicateCheckRespo
           console.error('❌ Cast query error:', castError);
         }
         
-        duplicateData = castData;
+        duplicateData = castData || null;
         break;
         
       case 'doi':
@@ -119,7 +119,7 @@ async function checkForDuplicate(sourceUrl: string): Promise<DuplicateCheckRespo
           .from(EVERMARKS_TABLE)
           .select('*')
           .or(searchPatterns.map(pattern => `source_url.ilike.${pattern}`).join(','));
-        duplicateData = doiData;
+        duplicateData = doiData || null;
         break;
         
       case 'isbn':
@@ -128,7 +128,7 @@ async function checkForDuplicate(sourceUrl: string): Promise<DuplicateCheckRespo
           .from(EVERMARKS_TABLE)
           .select('*')
           .or(searchPatterns.map(pattern => `source_url.ilike.${pattern}`).join(','));
-        duplicateData = isbnData;
+        duplicateData = isbnData || null;
         break;
         
       case 'tweet_id':
@@ -137,7 +137,7 @@ async function checkForDuplicate(sourceUrl: string): Promise<DuplicateCheckRespo
           .from(EVERMARKS_TABLE)
           .select('*')
           .or(searchPatterns.map(pattern => `source_url.ilike.${pattern}`).join(','));
-        duplicateData = tweetData;
+        duplicateData = tweetData || null;
         break;
         
       case 'youtube_id':
@@ -146,7 +146,7 @@ async function checkForDuplicate(sourceUrl: string): Promise<DuplicateCheckRespo
           .from(EVERMARKS_TABLE)
           .select('*')
           .or(searchPatterns.map(pattern => `source_url.ilike.${pattern}`).join(','));
-        duplicateData = youtubeData;
+        duplicateData = youtubeData || null;
         break;
         
       case 'github_resource':
@@ -155,7 +155,7 @@ async function checkForDuplicate(sourceUrl: string): Promise<DuplicateCheckRespo
           .from(EVERMARKS_TABLE)
           .select('*')
           .or(searchPatterns.map(pattern => `source_url.ilike.${pattern}`).join(','));
-        duplicateData = githubData;
+        duplicateData = githubData || null;
         break;
         
       case 'normalized_url':
@@ -164,7 +164,7 @@ async function checkForDuplicate(sourceUrl: string): Promise<DuplicateCheckRespo
           .from(EVERMARKS_TABLE)
           .select('*')
           .in('source_url', searchPatterns);
-        duplicateData = urlData;
+        duplicateData = urlData || null;
         break;
     }
     
@@ -178,7 +178,7 @@ async function checkForDuplicate(sourceUrl: string): Promise<DuplicateCheckRespo
     });
     
     return {
-      exists,
+      exists: !!exists,
       confidence: identifier.confidence,
       existingTokenId: existingEvermark?.token_id,
       existingEvermark: existingEvermark ? {
@@ -189,7 +189,7 @@ async function checkForDuplicate(sourceUrl: string): Promise<DuplicateCheckRespo
         // TODO: Add vote count and staking data when available
         vote_count: 0,
         total_staked: '0',
-        leaderboard_rank: null
+        leaderboard_rank: undefined
       } : undefined,
       duplicateType: identifier.type,
       message: getDuplicateMessage(identifier.type, existingEvermark?.token_id)

@@ -59,7 +59,7 @@ async function fetchCastMetadata(sourceUrl: string) {
 async function repairCastEvermark(tokenId: number, sourceUrl: string) {
   console.log(`🔧 Repairing cast evermark #${tokenId}: ${sourceUrl}`);
 
-  let castData = null;
+  let castData: any = null;
   let isPlaceholder = false;
 
   try {
@@ -286,7 +286,7 @@ export const handler: Handler = async (event, context) => {
     }
 
     // Repair each cast
-    const repairs = [];
+    const repairs: any[] = [];
     for (const cast of castsToRepair) {
       const result = await repairCastEvermark(cast.token_id, cast.source_url);
       repairs.push(result);
