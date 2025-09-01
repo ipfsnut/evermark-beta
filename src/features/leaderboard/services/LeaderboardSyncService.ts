@@ -10,42 +10,42 @@ export class LeaderboardSyncService {
   /**
    * Check if a season is initialized in the database
    */
-  static async isSeasonInitialized(season: number): Promise<boolean> {
+  static async isSeasonInitialized(_season: number): Promise<boolean> {
     return true;
   }
 
   /**
    * Sync voting data from blockchain to database
    */
-  static async syncVotingData(season?: number): Promise<void> {
+  static async syncVotingData(_season?: number): Promise<void> {
     // No-op until Supabase integration is complete
   }
 
   /**
    * Update leaderboard rankings for a season
    */
-  static async updateLeaderboardRankings(season: number): Promise<void> {
+  static async updateLeaderboardRankings(_season: number): Promise<void> {
     // No-op until Supabase integration is complete
   }
 
   /**
    * Process vote events from the blockchain
    */
-  static async processVoteEvents(fromBlock?: number, toBlock?: number): Promise<void> {
+  static async processVoteEvents(_fromBlock?: number, _toBlock?: number): Promise<void> {
     // No-op until Supabase integration is complete
   }
 
   /**
    * Initialize a new voting season in the database
    */
-  static async initializeSeason(seasonNumber: number, startTime: Date, endTime: Date): Promise<void> {
+  static async initializeSeason(_seasonNumber: number, _startTime: Date, _endTime: Date): Promise<void> {
     // No-op until Supabase integration is complete
   }
 
   /**
    * Get sync status for a season
    */
-  static async getSyncStatus(season: number): Promise<{
+  static async getSyncStatus(_season: number): Promise<{
     lastSyncBlock: number;
     lastSyncTime: Date;
     totalVotesProcessed: number;

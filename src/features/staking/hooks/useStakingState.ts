@@ -1,25 +1,26 @@
 import { useCallback, useMemo } from 'react';
-import { useActiveAccount } from 'thirdweb/react';
+import { useWalletAccount } from '@/hooks/core/useWalletAccount';
 
 import { useStakingData } from './useStakingData';
 import { useStakingStats } from './useStakingStats';
 import { useStakingTransactions } from './useStakingTransactions';
 
 import { StakingService } from '../services/StakingService';
-import type { 
-  UseStakingStateReturn,
-  StakingInfo,
-  StakingStats,
-  StakingValidation,
+import { 
+  STAKING_CONSTANTS, 
+  STAKING_ERRORS,
+  type UseStakingStateReturn,
+  type StakingInfo,
+  type StakingStats,
+  type StakingValidation,
 } from '../types';
-import { STAKING_CONSTANTS, STAKING_ERRORS } from '../types';
 
 /**
  * ✅ UPDATED: Main staking state management hook using internal feature hooks
  * No longer depends on external shared hooks - completely self-contained
  */
 export function useStakingState(userAddress?: string): UseStakingStateReturn {
-  const account = useActiveAccount();
+  const account = useWalletAccount();
   const effectiveAddress = userAddress || account?.address;
   
   // ✅ Use internal feature hooks instead of external shared hooks
@@ -115,7 +116,7 @@ export function useStakingState(userAddress?: string): UseStakingStateReturn {
   }, []);
 
   const calculateStakingYield = useCallback((): number => {
-    return stakingStats?.stakingYield || 0;
+    return stakingStats?.stakingYield ?? 0;
   }, [stakingStats]);
 
   // ✅ Stake action (assumes approval already done via UI)
@@ -138,7 +139,7 @@ export function useStakingState(userAddress?: string): UseStakingStateReturn {
     try {
       // Stake the tokens
       await transactions.stake(amount);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Stake failed:', error);
       throw StakingService.parseContractError(error);
     }
@@ -155,7 +156,7 @@ export function useStakingState(userAddress?: string): UseStakingStateReturn {
 
     try {
       await transactions.requestUnstake(amount);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Request unstake failed:', error);
       throw StakingService.parseContractError(error);
     }
@@ -178,7 +179,7 @@ export function useStakingState(userAddress?: string): UseStakingStateReturn {
 
     try {
       await transactions.completeUnstake();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Complete unstake failed:', error);
       throw StakingService.parseContractError(error);
     }
@@ -201,7 +202,7 @@ export function useStakingState(userAddress?: string): UseStakingStateReturn {
 
     try {
       await transactions.cancelUnbonding();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Cancel unbonding failed:', error);
       throw StakingService.parseContractError(error);
     }

@@ -1,6 +1,6 @@
 // features/staking/components/UnstakeForm.tsx - Unstake form component
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { toWei } from 'thirdweb/utils';
 import { 
   UnlockIcon, 
@@ -79,7 +79,7 @@ export function UnstakeForm({ stakingState, onSuccess, className = '' }: Unstake
       setLocalSuccess(`Unstaking request submitted for ${amount} wEMARK!`);
       setAmount('');
       onSuccess?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Unstake submission failed:', error);
       setLocalError(error.message || 'Unstaking request failed. Please try again.');
     } finally {
@@ -175,7 +175,7 @@ export function UnstakeForm({ stakingState, onSuccess, className = '' }: Unstake
             </span>
             {amount && validation.isValid && (
               <span>
-                You'll receive: {amount} EMARK (after unbonding)
+                You&apos;ll receive: {amount} EMARK (after unbonding)
               </span>
             )}
           </div>

@@ -1,4 +1,5 @@
 // src/components/FarcasterMeta.tsx - Dynamic Farcaster Mini App meta tags
+import React from 'react';
 import { Helmet } from 'react-helmet-async';
 
 interface FarcasterMetaProps {
@@ -60,10 +61,10 @@ interface EvermarkMetaProps {
 }
 
 export function EvermarkMeta({ evermark }: EvermarkMetaProps) {
-  const title = evermark.title || `Evermark #${evermark.id}`;
-  const description = evermark.description || 
-    `A preserved piece of content by ${evermark.author || 'Anonymous'} on Evermark`;
-  const imageUrl = evermark.image || 'https://evermarks.net/og-image.png';
+  const title = evermark.title ?? `Evermark #${evermark.id}`;
+  const description = evermark.description ?? 
+    `A preserved piece of content by ${evermark.author ?? 'Anonymous'} on Evermark`;
+  const imageUrl = evermark.image ?? 'https://evermarks.net/og-image.png';
   const url = `https://evermarks.net/evermark/${evermark.id}`;
   
   return (

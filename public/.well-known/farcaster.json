@@ -9,8 +9,6 @@
     "name": "Evermark",
     "iconUrl": "https://evermarks.net/icon.png",
     "homeUrl": "https://evermarks.net/",
-    "imageUrl": "https://evermarks.net/og-image.png",
-    "buttonTitle": "📖 Open Evermark",
     "splashImageUrl": "https://evermarks.net/splash.png",
     "splashBackgroundColor": "#7c3aed",
     "webhookUrl": "https://evermarks.net/.netlify/functions/webhook",
@@ -27,32 +25,6 @@
     "requiredCapabilities": [
       "actions.signIn",
       "wallet.getEthereumProvider"
-    ],
-    "manifestUrl": "https://evermarks.net/manifest.json",
-    "urlPatterns": [
-      "https://evermarks.net/*",
-      "https://evermarks.net/evermark/*",
-      "https://evermarks.net/docs/*",
-      "https://evermarks.net/explore/*",
-      "https://evermarks.net/create/*",
-      "https://evermarks.net/staking/*"
-    ],
-    "intentFilters": [
-      {
-        "action": "VIEW",
-        "data": [
-          {
-            "scheme": "https",
-            "host": "evermarks.net",
-            "pathPattern": "/evermark/.*"
-          },
-          {
-            "scheme": "https", 
-            "host": "evermarks.net",
-            "pathPattern": "/docs/.*"
-          }
-        ]
-      }
     ]
   }
 }

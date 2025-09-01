@@ -162,7 +162,7 @@ const formatContentType = (contentType: Evermark['contentType']) => {
   }
 };
 
-export default function EvermarkDetailPage() {
+export default function EvermarkDetailPage(): React.ReactNode {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAuthenticated } = useAppAuth();

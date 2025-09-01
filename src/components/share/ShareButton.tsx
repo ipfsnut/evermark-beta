@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   ShareIcon,
   LinkIcon,
-  CheckIcon,
   ExternalLinkIcon
 } from 'lucide-react';
 import { useAppAuth } from '../../providers/AppContext';

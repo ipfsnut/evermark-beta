@@ -12,7 +12,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useActiveAccount } from 'thirdweb/react';
 import { useTheme } from '@/providers/ThemeProvider';
 import { cn } from '@/utils/responsive';
-import { RewardsService, type UserRewardInfo } from '../services/RewardsService';
+import { RewardsService } from '../services/RewardsService';
 
 interface RewardsClaimingProps {
   className?: string;
@@ -39,7 +39,7 @@ export function RewardsClaiming({ className = '', userStakedAmount = BigInt(0) }
   });
 
   // Query reward rates
-  const { data: rewardRates } = useQuery({
+  const { data: _rewardRates } = useQuery({
     queryKey: ['reward-rates'],
     queryFn: () => RewardsService.getRewardRates(),
     refetchInterval: 60000, // Refetch every minute

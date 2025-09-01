@@ -10,10 +10,18 @@ import {
   ChevronUpIcon
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { useActiveAccount } from 'thirdweb/react';
+import { useWalletAccount } from '@/hooks/core/useWalletAccount';
 import { useTheme } from '@/providers/ThemeProvider';
 import { cn } from '@/utils/responsive';
 import { useNFTStaking } from '../hooks/useNFTStaking';
+
+interface NFT {
+  token_id: number;
+  title?: string;
+  description?: string;
+  image?: string;
+  [key: string]: unknown;
+}
 
 interface NFTStakingPanelProps {
   className?: string;
@@ -21,7 +29,7 @@ interface NFTStakingPanelProps {
 
 export function NFTStakingPanel({ className = '' }: NFTStakingPanelProps) {
   const { isDark } = useTheme();
-  const account = useActiveAccount();
+  const account = useWalletAccount();
   const [isExpanded, setIsExpanded] = useState(false);
   
   const {
@@ -34,11 +42,11 @@ export function NFTStakingPanel({ className = '' }: NFTStakingPanelProps) {
     stakingError,
     stakeNFT,
     unstakeNFT,
-    formatStakingTime,
+    _formatStakingTime,
   } = useNFTStaking();
 
   // Query user's NFTs (for staking)
-  const { data: userNFTs = [], isLoading: nftsLoading } = useQuery({
+  const { data: userNFTs = [], isLoading: nftsLoading } = useQuery<NFT[]>({
     queryKey: ['user-nfts', account?.address],
     queryFn: async () => {
       if (!account?.address) return [];
@@ -125,7 +133,7 @@ export function NFTStakingPanel({ className = '' }: NFTStakingPanelProps) {
     );
   }
 
-  const availableNFTs = userNFTs.filter((nft: any) => !stakedNFTs.includes(nft.token_id));
+  const availableNFTs = userNFTs.filter((nft: NFT) => !stakedNFTs.includes(nft.token_id));
   const hasStakedNFTs = stakedNFTs.length > 0;
   const hasAvailableNFTs = availableNFTs.length > 0;
 
@@ -243,7 +251,7 @@ export function NFTStakingPanel({ className = '' }: NFTStakingPanelProps) {
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {stakedNFTs.map((tokenId) => {
-                  const nft = userNFTs.find((n: any) => n.token_id === tokenId);
+                  const nft = userNFTs.find((n: NFT) => n.token_id === tokenId);
                   return (
                     <div
                       key={tokenId}
@@ -306,7 +314,7 @@ export function NFTStakingPanel({ className = '' }: NFTStakingPanelProps) {
                 Available to Stake ({availableNFTs.length})
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {availableNFTs.slice(0, 4).map((nft: any) => (
+                {availableNFTs.slice(0, 4).map((nft: NFT) => (
                   <div
                     key={nft.token_id}
                     className={cn(
@@ -369,7 +377,7 @@ export function NFTStakingPanel({ className = '' }: NFTStakingPanelProps) {
                 "text-sm",
                 isDark ? "text-gray-400" : "text-gray-600"
               )}>
-                You don't have any Evermark NFTs to stake.
+                You don&apos;t have any Evermark NFTs to stake.
               </p>
               <p className={cn(
                 "text-xs mt-1",

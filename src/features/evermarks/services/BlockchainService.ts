@@ -152,7 +152,7 @@ export class EvermarkBlockchainService {
       console.error('❌ Failed to get contract info:', error);
       throw new StorageError(
         `Failed to fetch contract information: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        'CONTRACT_ERROR' as any
+        'CONTRACT_ERROR'
       );
     }
   }
@@ -178,7 +178,7 @@ export class EvermarkBlockchainService {
       console.warn('Failed to get minting fee from contract:', error);
       throw new StorageError(
         `Failed to read minting fee: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        'CONTRACT_ERROR' as any
+        'CONTRACT_ERROR'
       );
     }
   }
@@ -197,7 +197,7 @@ export class EvermarkBlockchainService {
         contract: {
           address: CONTRACTS.EVERMARK_NFT,
           chain: getEvermarkNFTContract().chain,
-        } as any,
+        },
         method: "function REFERRAL_PERCENTAGE() view returns (uint256)",
         params: []
       });
@@ -206,7 +206,7 @@ export class EvermarkBlockchainService {
       console.warn('Failed to get referral percentage from contract:', error);
       throw new StorageError(
         `Failed to read referral percentage: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        'CONTRACT_ERROR' as any
+        'CONTRACT_ERROR'
       );
     }
   }
@@ -227,7 +227,7 @@ export class EvermarkBlockchainService {
         contract: {
           address: CONTRACTS.EVERMARK_NFT,
           chain: getEvermarkNFTContract().chain,
-        } as any,
+        },
         method: "function paused() view returns (bool)",
         params: []
       });
@@ -236,7 +236,7 @@ export class EvermarkBlockchainService {
       console.warn('Failed to check if contract is paused:', error);
       throw new StorageError(
         `Failed to read pause status: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        'CONTRACT_ERROR' as any
+        'CONTRACT_ERROR'
       );
     }
   }
@@ -512,7 +512,7 @@ export class EvermarkBlockchainService {
       const balanceBigInt = BigInt(balance as string);
       
       // Use provided minting fee or use a reasonable default
-      const fee = mintingFee || BigInt('1000000000000000'); // 0.001 ETH default
+      const fee = mintingFee ?? BigInt('1000000000000000'); // 0.001 ETH default
       
       // Add gas buffer (estimated 0.001 ETH for gas)
       const gasBuffer = BigInt('1000000000000000'); // 0.001 ETH
@@ -547,7 +547,7 @@ export class EvermarkBlockchainService {
         contract: {
           address: CONTRACTS.EVERMARK_NFT,
           chain: getEvermarkNFTContract().chain,
-        } as any,
+        },
         method: "function totalSupply() view returns (uint256)",
         params: []
       });
@@ -557,7 +557,7 @@ export class EvermarkBlockchainService {
       console.error('Failed to get total supply:', error);
       throw new StorageError(
         `Failed to read total supply: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        'CONTRACT_ERROR' as any
+        'CONTRACT_ERROR'
       );
     }
   }
@@ -619,9 +619,9 @@ export class EvermarkBlockchainService {
   /**
    * Extract token ID from transaction receipt
    */
-  private static extractTokenIdFromReceipt(receipt: any): bigint | null {
+  private static extractTokenIdFromReceipt(receipt: { logs?: Array<{ topics?: string[]; [key: string]: unknown }> }): bigint | null {
     try {
-      const logs = receipt.logs || [];
+      const logs = receipt.logs ?? [];
       
       // ERC721 Transfer event signature: Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
       const transferSignature = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
@@ -685,7 +685,7 @@ export class EvermarkBlockchainService {
       console.warn('Failed to get pending referral payment:', error);
       throw new StorageError(
         `Failed to read pending referral payment: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        'CONTRACT_ERROR' as any
+        'CONTRACT_ERROR'
       );
     }
   }

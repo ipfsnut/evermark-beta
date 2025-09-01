@@ -17,7 +17,7 @@ export function ThemeToggle({
   showLabel = false,
   className 
 }: ThemeToggleProps) {
-  const { theme, toggleTheme, isDark } = useTheme();
+  const { theme: _theme, toggleTheme, isDark } = useTheme();
 
   const sizeClasses = {
     sm: 'w-8 h-8 p-1.5',

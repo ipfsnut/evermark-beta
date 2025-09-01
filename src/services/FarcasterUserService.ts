@@ -293,10 +293,10 @@ export class FarcasterUserService {
     try {
       // Pattern matching for different Farcaster clients
       const patterns = [
-        /warpcast\.com\/[^\/]+\/(0x[a-fA-F0-9]+)/,
-        /farcaster\.xyz\/[^\/]+\/(0x[a-fA-F0-9]+)/, 
-        /supercast\.xyz\/[^\/]+\/(0x[a-fA-F0-9]+)/,
-        /cast\.k3l\.io\/[^\/]+\/(0x[a-fA-F0-9]+)/
+        /warpcast\.com\/[^/]+\/(0x[a-fA-F0-9]+)/,
+        /farcaster\.xyz\/[^/]+\/(0x[a-fA-F0-9]+)/, 
+        /supercast\.xyz\/[^/]+\/(0x[a-fA-F0-9]+)/,
+        /cast\.k3l\.io\/[^/]+\/(0x[a-fA-F0-9]+)/
       ];
 
       for (const pattern of patterns) {

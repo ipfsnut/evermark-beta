@@ -60,7 +60,7 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
             className="text-sm font-medium text-white hover:text-cyber-primary transition-colors cursor-pointer"
             title="Click to logout"
           >
-            {displayName || shortAddress}
+            {displayName ?? shortAddress}
           </button>
         </div>
       );
@@ -78,7 +78,7 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
             className="text-sm font-medium text-white hover:text-cyber-primary transition-colors cursor-pointer text-left"
             title="Click to logout"
           >
-            {displayName || shortAddress}
+            {displayName ?? shortAddress}
           </button>
           <span className="text-xs text-gray-400">
             {context === 'farcaster' ? 'Farcaster' : 'Connected'}

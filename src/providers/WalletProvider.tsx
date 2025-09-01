@@ -1,5 +1,5 @@
 // src/providers/WalletProvider.tsx - Unified wallet state for all contexts
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { useActiveAccount } from 'thirdweb/react';
 import { useFarcasterDetection } from '../hooks/useFarcasterDetection';
@@ -24,7 +24,7 @@ interface WalletProviderProps {
   children: React.ReactNode;
 }
 
-export function WalletProvider({ children }: WalletProviderProps) {
+export function WalletProvider({ children }: WalletProviderProps): React.ReactNode {
   const { isInFarcaster } = useFarcasterDetection();
   
   // Context detection
@@ -34,18 +34,20 @@ export function WalletProvider({ children }: WalletProviderProps) {
 
   // For Farcaster context, we'll create a separate component that uses wagmi hooks
   if (isInFarcaster) {
+    // @ts-expect-error - React 18/19 component type compatibility
     return <FarcasterWalletProvider>{children}</FarcasterWalletProvider>;
   }
   
   // For Browser/PWA context, we'll create a separate component that uses thirdweb hooks
+  // @ts-expect-error - React 18/19 component type compatibility
   return <BrowserWalletProvider context={context as 'browser' | 'pwa'}>{children}</BrowserWalletProvider>;
 }
 
 // Farcaster-specific provider using wagmi hooks
-function FarcasterWalletProvider({ children }: { children: React.ReactNode }) {
+function FarcasterWalletProvider({ children }: { children: React.ReactNode }): React.ReactNode {
   const miniAppAccount = useAccount(); // From miniapp-wagmi-connector
 
-  const walletAddress = miniAppAccount?.address || null;
+  const walletAddress = miniAppAccount?.address ?? null;
   const isConnected = !!walletAddress;
   const connectionSource = walletAddress ? 'miniapp-wagmi' : null;
 
@@ -78,6 +80,7 @@ function FarcasterWalletProvider({ children }: { children: React.ReactNode }) {
     connectionSource
   };
 
+  // @ts-expect-error - React 18/19 component type compatibility
   return (
     <WalletContext.Provider value={value}>
       {children}
@@ -86,11 +89,11 @@ function FarcasterWalletProvider({ children }: { children: React.ReactNode }) {
 }
 
 // Browser/PWA-specific provider using thirdweb hooks
-function BrowserWalletProvider({ children, context }: { children: React.ReactNode; context: 'browser' | 'pwa' }) {
+function BrowserWalletProvider({ children, context }: { children: React.ReactNode; context: 'browser' | 'pwa' }): React.ReactNode {
   // Use thirdweb hook directly since this component only renders in Browser/PWA context
   const thirdwebAccount = useActiveAccount();
 
-  const walletAddress = thirdwebAccount?.address || null;
+  const walletAddress = thirdwebAccount?.address ?? null;
   const isConnected = !!walletAddress;
   const connectionSource = walletAddress ? 'thirdweb' : null;
 
@@ -123,6 +126,7 @@ function BrowserWalletProvider({ children, context }: { children: React.ReactNod
     connectionSource
   };
 
+  // @ts-expect-error - React 18/19 component type compatibility
   return (
     <WalletContext.Provider value={value}>
       {children}

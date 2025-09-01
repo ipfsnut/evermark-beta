@@ -13,7 +13,7 @@ import {
   XIcon,
   ExternalLinkIcon
 } from 'lucide-react';
-import { useAppAuth, useAppUI } from '../../providers/AppContext';
+import { useAppAuth } from '../../providers/AppContext';
 import { useFarcasterDetection } from '../../hooks/useFarcasterDetection';
 import { useTheme } from '../../providers/ThemeProvider';
 import { cn } from '../../utils/responsive';
@@ -90,7 +90,7 @@ interface MobileMenuProps {
 
 export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
   const { isAuthenticated, user } = useAppAuth();
-  const { isInFarcaster } = useFarcasterDetection();
+  const { isInFarcaster: _isInFarcaster } = useFarcasterDetection();
   const { isDark } = useTheme();
 
   const renderNavItem = (item: NavItem, onClick?: () => void) => {

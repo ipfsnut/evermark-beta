@@ -1,5 +1,5 @@
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useState } from 'react';
 import { 
   MenuIcon, 
   BellIcon, 
@@ -8,17 +8,15 @@ import {
 } from 'lucide-react';
 import { useAppUI, useAppAuth } from '../../providers/AppContext';
 import { useFarcasterDetection } from '../../hooks/useFarcasterDetection';
-import { useTheme } from '../../providers/ThemeProvider';
 import { ThemeToggle } from '../ui/ThemeToggle';
 import { WalletConnect } from '../ConnectButton';
 import { NotificationDropdown } from '../notifications/NotificationDropdown';
-import { cn, useIsMobile } from '../../utils/responsive';
+import { useIsMobile } from '../../utils/responsive';
 
 export function Header() {
   const { toggleSidebar, notifications } = useAppUI();
   const { isAuthenticated, user } = useAppAuth();
   const { isInFarcaster } = useFarcasterDetection();
-  const { isDark } = useTheme();
   const isMobile = useIsMobile();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 

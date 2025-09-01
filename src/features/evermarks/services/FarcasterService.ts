@@ -21,9 +21,9 @@ export class FarcasterService {
 
     // Check for Farcaster URLs
     const urlPatterns = [
-      /^https:\/\/warpcast\.com\/[^\/]+\/0x[a-fA-F0-9]+/,
-      /^https:\/\/farcaster\.xyz\/[^\/]+\/0x[a-fA-F0-9]+/,
-      /^https:\/\/supercast\.xyz\/[^\/]+\/0x[a-fA-F0-9]+/
+      /^https:\/\/warpcast\.com\/[^/]+\/0x[a-fA-F0-9]+/,
+      /^https:\/\/farcaster\.xyz\/[^/]+\/0x[a-fA-F0-9]+/,
+      /^https:\/\/supercast\.xyz\/[^/]+\/0x[a-fA-F0-9]+/
     ];
 
     for (const pattern of urlPatterns) {

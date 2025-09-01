@@ -1,6 +1,7 @@
 /// <reference types="vite/client" />
-/// <reference types="react" />
 /// <reference types="react-dom" />
+
+import type * as React from 'react';
 
 interface ImportMetaEnv {
   // Blockchain
@@ -52,7 +53,7 @@ interface ImportMetaEnv {
   readonly VITE_ENABLE_SWAP?: string;
 }
 
-interface ImportMeta {
+interface _ImportMeta {
   readonly env: ImportMetaEnv;
 }
 
@@ -60,20 +61,23 @@ interface ImportMeta {
 declare global {
   interface Window {
     __evermark_farcaster_detected?: boolean;
-    FrameSDK?: any;
+    FrameSDK?: unknown;
   }
   
   // React 19 types compatibility
   namespace JSX {
     interface IntrinsicElements {
-      [elemName: string]: any;
+      [elemName: string]: unknown;
     }
-    interface Element extends React.ReactElement<any, any> { }
-    interface ElementClass extends React.Component<any> {
+    interface Element extends React.ReactElement<unknown, unknown> {
+      // JSX Element interface
+      key?: React.Key | null | undefined;
+    }
+    interface ElementClass extends React.Component<unknown> {
       render(): React.ReactNode;
     }
-    interface ElementAttributesProperty { props: {}; }
-    interface ElementChildrenAttribute { children: {}; }
+    interface ElementAttributesProperty { props: object; }
+    interface ElementChildrenAttribute { children: object; }
   }
 }
 
@@ -88,7 +92,7 @@ declare module 'react/jsx-dev-runtime' {
 
 // Module declarations for external libraries
 declare module '*.json' {
-  const value: any;
+  const value: unknown;
   export default value;
 }
 

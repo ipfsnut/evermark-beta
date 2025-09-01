@@ -16,13 +16,12 @@ import {
 // Removed ImageUpload component - using simple file input with IPFS-first approach in EvermarkService
 
 import { useEvermarksState } from '../hooks/useEvermarkState';
-import { type CreateEvermarkInput, type EvermarkMetadata } from '../types';
+import { type CreateEvermarkInput, type EvermarkMetadata, type Evermark } from '../types';
 import { useAppAuth } from '@/providers/AppContext';
 import { useUserForEvermarks } from '@/providers/IntegratedUserProvider';
 import { useTheme } from '@/providers/ThemeProvider';
 import { cn } from '@/utils/responsive';
 import { themeClasses } from '@/utils/theme';
-import { WalletConnect } from '@/components/ConnectButton';
 
 // Simple mobile detection hook
 function useIsMobile(): boolean {
@@ -223,7 +222,7 @@ const HelpModal: React.FC<{
 
 // Main CreateEvermarkForm Component
 interface CreateEvermarkFormProps {
-  onSuccess?: (evermark: any) => void;
+  onSuccess?: (evermark: Evermark) => void;
   onCancel?: () => void;
   className?: string;
 }
@@ -461,7 +460,9 @@ export function CreateEvermarkForm({
     selectedImage,
     createEvermark, 
     onSuccess, 
-    navigate
+    navigate,
+    hasWallet,
+    referrer
   ]);
 
   // Add this import at the top if not already imported

@@ -113,7 +113,7 @@ export function useTheme(): ThemeContextType {
 
 // Hook to get theme-aware classes
 export function useThemeClasses() {
-  const { isDark, isLight } = useTheme();
+  const { isDark, isLight: _isLight } = useTheme();
   
   return {
     // Background classes - card-focused design

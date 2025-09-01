@@ -4,8 +4,22 @@ import { DelegateButton } from './components/DelegateButton';
 import { VotingPanel } from './components/VotingPanel';
 import { useVotingState } from './hooks/useVotingState';
 import { VotingService } from './services/VotingService';
-import type { BatchVotingRequest, EvermarkRanking, VotingAnalytics, VotingError, VotingErrorCode, VotingFeatureFlags, VotingNotification, VotingPerformanceMetrics, VotingPower, VotingTheme, VotingTransaction, VotingValidation, Vote } from './types';
-import { VOTING_CONSTANTS } from './types';
+import { 
+  VOTING_CONSTANTS,
+  type BatchVotingRequest, 
+  type EvermarkRanking, 
+  type VotingAnalytics, 
+  type VotingError, 
+  type VotingErrorCode, 
+  type VotingFeatureFlags, 
+  type VotingNotification, 
+  type VotingPerformanceMetrics, 
+  type VotingPower, 
+  type VotingTheme, 
+  type VotingTransaction, 
+  type VotingValidation, 
+  type Vote 
+} from './types';
 
 // Types - Export all public interfaces
 export type {
@@ -187,7 +201,7 @@ export const votingUtils = {
   /**
    * Calculate time remaining from end time
    */
-  getTimeRemaining: async (endTime: Date): Promise<number> => {
+  getTimeRemaining: async (_endTime: Date): Promise<number> => {
     return await VotingService.getTimeRemainingInCycle();
   },
   
@@ -218,7 +232,7 @@ export const votingUtils = {
   calculateDistribution: (
     availablePower: bigint,
     targetEvermarks: string[],
-    strategy: 'equal' | 'weighted' | 'concentrated' = 'equal'
+    _strategy: 'equal' | 'weighted' | 'concentrated' = 'equal'
   ): Record<string, bigint> => {
     return VotingService.calculateOptimalDistribution(targetEvermarks, availablePower);
   },
@@ -264,7 +278,7 @@ export const votingUtils = {
   createError: (
     code: VotingErrorCode,
     message: string,
-    details?: Record<string, any>
+    _details?: Record<string, any>
   ): VotingError => {
     return VotingService.createError(code, message);
   },

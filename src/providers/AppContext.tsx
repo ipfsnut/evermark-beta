@@ -29,7 +29,7 @@ interface Notification {
   read?: boolean;
   evermarkId?: string;
   userAddress?: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 type Theme = 'dark' | 'light' | 'system';

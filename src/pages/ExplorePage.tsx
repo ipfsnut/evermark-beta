@@ -1,5 +1,5 @@
 // src/pages/ExplorePage.tsx - Fixed without feature dependencies
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   SearchIcon, 
@@ -125,7 +125,7 @@ const ExploreContent: React.FC<{
   isLoading: boolean;
   isEmpty: boolean;
   isDark: boolean;
-}> = ({ viewMode, evermarks, totalCount, isLoading, isEmpty, isDark }) => {
+}> = ({ viewMode, evermarks: _evermarks, totalCount, isLoading, isEmpty, isDark }) => {
   
   if (isLoading) {
     return (
@@ -200,7 +200,7 @@ const ExploreContent: React.FC<{
 };
 
 // Main ExplorePage component
-export default function ExplorePage() {
+export default function ExplorePage(): React.ReactNode {
   const navigate = useNavigate();
   const { isAuthenticated } = useAppAuth();
   const { isInFarcaster } = useFarcasterDetection();
@@ -218,7 +218,7 @@ export default function ExplorePage() {
     isLoading,
     isEmpty,
     setFilters,
-    setPagination
+    setPagination: _setPagination
   } = useEvermarksState();
   
   // Handle search

@@ -1,11 +1,108 @@
-// src/pages/SwapPage.tsx - Token swap interface (stub)
-import React from 'react';
-import { ArrowUpDownIcon, InfoIcon, ZapIcon } from 'lucide-react';
+// src/pages/SwapPage.tsx - Context-aware token swap interface
+import React, { useState, useEffect } from 'react';
+import { ArrowUpDownIcon, InfoIcon, ZapIcon, ExternalLinkIcon } from 'lucide-react';
 import { themeClasses, cn } from '@/utils/theme';
 import { useTheme } from '@/providers/ThemeProvider';
-export default function SwapPage() {
+import { CONTRACTS } from '@/lib/contracts';
+// Context detection hook
+function useFarcasterContext() {
+  const [isFarcasterMiniApp, setIsFarcasterMiniApp] = useState(false);
+  const [farcasterSDK, setFarcasterSDK] = useState<any>(null);
+
+  useEffect(() => {
+    // Detect if running in Farcaster Mini App context
+    const isEmbedded = window.parent !== window;
+    const hasFarcasterSDK = typeof window !== 'undefined' && (window as any).farcasterSDK;
+    
+    setIsFarcasterMiniApp(isEmbedded || hasFarcasterSDK);
+    
+    if (hasFarcasterSDK) {
+      setFarcasterSDK((window as any).farcasterSDK);
+    }
+  }, []);
+
+  return { isFarcasterMiniApp, farcasterSDK };
+}
+
+// Farcaster Mini App swap interface
+function FarcasterSwapInterface() {
   const { isDark } = useTheme();
-  
+  const { farcasterSDK } = useFarcasterContext();
+  const [isSwapping, setIsSwapping] = useState(false);
+
+  const handleSwap = async () => {
+    if (!farcasterSDK) return;
+    
+    try {
+      setIsSwapping(true);
+      await farcasterSDK.actions.swapToken({
+        fromToken: 'ETH',
+        toToken: CONTRACTS.EMARK_TOKEN,
+        amount: '0.01' // Example amount
+      });
+    } catch (error) {
+      console.error('Swap failed:', error);
+    } finally {
+      setIsSwapping(false);
+    }
+  };
+
+  return (
+    <div className={themeClasses.page}>
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-md mx-auto">
+          <div className={cn(
+            "rounded-lg p-6 border",
+            isDark 
+              ? "bg-gray-800/50 border-gray-700" 
+              : "bg-app-bg-card border-app-border"
+          )}>
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center">
+                <ArrowUpDownIcon className="h-8 w-8 text-black" />
+              </div>
+              <h2 className={cn(
+                "text-xl font-bold",
+                isDark ? "text-white" : "text-gray-900"
+              )}>
+                Swap Tokens
+              </h2>
+            </div>
+            
+            <button
+              onClick={handleSwap}
+              disabled={isSwapping || !farcasterSDK}
+              className={cn(
+                "w-full py-3 px-4 rounded-lg font-medium transition-colors",
+                "bg-gradient-to-r from-green-400 to-blue-500 text-black",
+                "hover:from-green-500 hover:to-blue-600",
+                "disabled:opacity-50 disabled:cursor-not-allowed"
+              )}
+            >
+              {isSwapping ? 'Swapping...' : 'Swap ETH → EMARK'}
+            </button>
+            
+            {!farcasterSDK && (
+              <p className={cn(
+                "text-sm text-center mt-4",
+                isDark ? "text-yellow-400" : "text-yellow-600"
+              )}>
+                Farcaster SDK not available
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Browser/PWA swap interface
+function BrowserSwapInterface() {
+  const { isDark } = useTheme();
+  const emarkAddress = CONTRACTS.EMARK_TOKEN;
+  const uniswapUrl = `https://app.uniswap.org/#/swap?outputCurrency=${emarkAddress}&chain=base`;
+
   return (
     <div className={themeClasses.page}>
       {/* Header */}
@@ -20,7 +117,7 @@ export default function SwapPage() {
                 <ArrowUpDownIcon className="h-7 w-7 text-black" />
               </div>
               <h1 className={themeClasses.headingHero}>
-                TOKEN SWAP <span className="text-2xl md:text-3xl text-cyan-400 font-normal">[COMING SOON]</span>
+                TOKEN SWAP
               </h1>
             </div>
             
@@ -28,7 +125,7 @@ export default function SwapPage() {
               "max-w-3xl mx-auto text-lg",
               isDark ? "text-gray-300" : "text-gray-700"
             )}>
-              Seamlessly swap between EMARK and other tokens on Base network with optimal rates and low fees.
+              Swap ETH for EMARK tokens on Uniswap with optimal rates and low fees.
             </p>
           </div>
         </div>
@@ -36,7 +133,7 @@ export default function SwapPage() {
 
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-2xl mx-auto">
-          {/* Coming Soon Card */}
+          {/* Uniswap Integration Card */}
           <div className={cn(
             "rounded-lg p-8 border text-center",
             isDark 
@@ -51,57 +148,32 @@ export default function SwapPage() {
               "text-2xl font-bold mb-4",
               isDark ? "text-white" : "text-gray-900"
             )}>
-              Swap Feature Coming Soon
+              Swap on Uniswap
             </h2>
             
             <p className={cn(
               "text-lg mb-6 leading-relaxed",
               isDark ? "text-gray-300" : "text-gray-700"
             )}>
-              We're building a powerful token swap interface that will allow you to easily exchange EMARK tokens 
-              and interact with DeFi protocols on Base network.
+              Trade EMARK tokens on Uniswap V3 with deep liquidity and competitive rates.
             </p>
 
-            {/* Feature Preview */}
-            <div className="space-y-4 mb-8">
-              <div className={cn(
-                "p-4 rounded-lg border",
-                isDark 
-                  ? "bg-gray-700/30 border-gray-600" 
-                  : "bg-app-bg-secondary border-app-border"
-              )}>
-                <h3 className={cn(
-                  "font-semibold mb-2",
-                  isDark ? "text-white" : "text-gray-900"
-                )}>
-                  Planned Features:
-                </h3>
-                <ul className={cn(
-                  "text-left space-y-2",
-                  isDark ? "text-gray-300" : "text-gray-700"
-                )}>
-                  <li className="flex items-center">
-                    <span className="w-2 h-2 bg-green-400 rounded-full mr-3"></span>
-                    Swap EMARK ↔ ETH, USDC, and other Base tokens
-                  </li>
-                  <li className="flex items-center">
-                    <span className="w-2 h-2 bg-blue-400 rounded-full mr-3"></span>
-                    Real-time price quotes and slippage protection
-                  </li>
-                  <li className="flex items-center">
-                    <span className="w-2 h-2 bg-purple-400 rounded-full mr-3"></span>
-                    Integration with popular DEX aggregators
-                  </li>
-                  <li className="flex items-center">
-                    <span className="w-2 h-2 bg-cyan-400 rounded-full mr-3"></span>
-                    Gas-optimized transactions and MEV protection
-                  </li>
-                </ul>
-              </div>
-            </div>
-
+            <a
+              href={uniswapUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(
+                "inline-flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors",
+                "bg-gradient-to-r from-green-400 to-blue-500 text-black",
+                "hover:from-green-500 hover:to-blue-600"
+              )}
+            >
+              <span>Open Uniswap</span>
+              <ExternalLinkIcon className="h-4 w-4" />
+            </a>
+            
             <div className={cn(
-              "p-4 rounded-lg border",
+              "mt-6 p-4 rounded-lg border",
               isDark 
                 ? "bg-blue-900/20 border-blue-500/30" 
                 : "bg-blue-100/50 border-blue-300/50"
@@ -116,57 +188,25 @@ export default function SwapPage() {
                     "text-sm leading-relaxed",
                     isDark ? "text-blue-200" : "text-blue-800"
                   )}>
-                    <strong>Stay tuned!</strong> The swap feature is currently in development. 
-                    Follow our updates for the latest progress and launch timeline.
+                    You&apos;ll be redirected to Uniswap with EMARK pre-selected. 
+                    Connect your wallet there to complete the swap.
                   </p>
                 </div>
               </div>
-            </div>
-          </div>
-
-          {/* Current Alternative */}
-          <div className={cn(
-            "mt-8 p-6 rounded-lg border",
-            isDark 
-              ? "bg-gray-800/30 border-gray-700" 
-              : "bg-app-bg-card border-app-border"
-          )}>
-            <h3 className={cn(
-              "text-lg font-semibold mb-3",
-              isDark ? "text-white" : "text-gray-900"
-            )}>
-              For Now: External DEX Options
-            </h3>
-            <p className={cn(
-              "text-sm mb-4",
-              isDark ? "text-gray-400" : "text-gray-600"
-            )}>
-              While we build our integrated swap feature, you can trade EMARK tokens on these platforms:
-            </p>
-            <div className="space-y-2">
-              <a
-                href="https://app.uniswap.org/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={cn(
-                  "block p-3 rounded-lg border transition-colors",
-                  isDark 
-                    ? "bg-gray-700/30 border-gray-600 hover:border-purple-400/50 text-purple-400 hover:text-purple-300" 
-                    : "bg-app-bg-card border-app-border hover:border-app-border-hover text-app-text-accent hover:text-app-text-primary"
-                )}
-              >
-                <span className="font-medium">Uniswap V3</span>
-                <span className={cn(
-                  "block text-xs mt-1",
-                  isDark ? "text-gray-400" : "text-gray-600"
-                )}>
-                  Leading DEX on Base network
-                </span>
-              </a>
             </div>
           </div>
         </div>
       </div>
     </div>
   );
+}
+
+export default function SwapPage(): React.ReactNode {
+  const { isFarcasterMiniApp } = useFarcasterContext();
+  
+  if (isFarcasterMiniApp) {
+    return <FarcasterSwapInterface />;
+  }
+  
+  return <BrowserSwapInterface />;
 }

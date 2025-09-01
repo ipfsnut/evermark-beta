@@ -1,10 +1,11 @@
 // src/pages/CreatePage.tsx - Create Evermark page
+import React from 'react';
 import { CreateEvermarkForm } from '@/features/evermarks';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeftIcon } from 'lucide-react';
 import { themeClasses } from '@/utils/theme';
 
-export default function CreatePage() {
+export default function CreatePage(): React.ReactNode {
   const navigate = useNavigate();
 
   const handleSuccess = () => {

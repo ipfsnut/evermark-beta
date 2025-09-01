@@ -1,3 +1,4 @@
+import React from 'react';
 import { Navigation } from './Navigation';
 import { useTheme } from '../../providers/ThemeProvider';
 import { cn } from '@/utils/responsive';
@@ -8,7 +9,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ className }: SidebarProps) {
-  const { isDark } = useTheme();
+  const { isDark: _isDark } = useTheme();
 
   return (
     <aside className={cn(

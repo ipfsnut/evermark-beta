@@ -10,12 +10,12 @@ export const AUTH_CONSTANTS = {
 export const IPFS_CONFIG = {
   PINATA_API_KEY: import.meta.env.VITE_PINATA_API_KEY as string,
   PINATA_SECRET_KEY: import.meta.env.VITE_PINATA_SECRET_KEY as string,
-  GATEWAY_URL: import.meta.env.VITE_PINATA_GATEWAY || 'https://gateway.pinata.cloud',
+  GATEWAY_URL: import.meta.env.VITE_PINATA_GATEWAY ?? 'https://gateway.pinata.cloud',
 };
 
 // Network configuration
 export const NETWORK_CONFIG = {
-  RPC_URL: import.meta.env.VITE_RPC_URL || 'https://mainnet.base.org',
+  RPC_URL: import.meta.env.VITE_RPC_URL ?? 'https://mainnet.base.org',
   CHAIN_ID: 8453, // Base Mainnet
 };
 

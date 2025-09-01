@@ -1,9 +1,8 @@
 // hooks/core/useTransactionUtils.ts - Utility hook for transaction management
 
 import { useState, useCallback } from 'react';
-import { prepareContractCall, sendTransaction } from 'thirdweb';
+import { prepareContractCall, sendTransaction, type ThirdwebContract } from 'thirdweb';
 import { useActiveAccount } from 'thirdweb/react';
-import type { ThirdwebContract } from 'thirdweb';
 
 export interface TransactionResult {
   success: boolean;
@@ -13,7 +12,7 @@ export interface TransactionResult {
 
 export interface TransactionOptions {
   successMessage?: string;
-  errorContext?: Record<string, any>;
+  errorContext?: Record<string, unknown>;
 }
 
 export function useTransactionUtils() {
@@ -30,7 +29,7 @@ export function useTransactionUtils() {
   const executeTransaction = useCallback(async (
     contract: ThirdwebContract,
     functionName: string,
-    params: any[] = [],
+    params: unknown[] = [],
     options: TransactionOptions = {}
   ): Promise<TransactionResult> => {
     if (!account) {
@@ -57,7 +56,7 @@ export function useTransactionUtils() {
         account
       });
 
-      const successMsg = options.successMessage || 'Transaction completed successfully';
+      const successMsg = options.successMessage ?? 'Transaction completed successfully';
       setSuccess(successMsg);
       
       return { 
@@ -65,9 +64,9 @@ export function useTransactionUtils() {
         hash: result.transactionHash 
       };
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Transaction failed:', err, options.errorContext);
-      const errorMsg = err.message || 'Transaction failed';
+      const errorMsg = err instanceof Error ? err.message : 'Transaction failed';
       setError(errorMsg);
       
       return { 
@@ -83,7 +82,7 @@ export function useTransactionUtils() {
     transactions: Array<{
       contractAddress: string;
       functionName: string;
-      params: any[];
+      params: unknown[];
       options?: TransactionOptions;
     }>
   ): Promise<TransactionResult[]> => {

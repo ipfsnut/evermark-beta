@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { FilterIcon,  CalendarIcon, CheckIcon } from 'lucide-react';
-import type { EvermarkFilters } from '../types';
+import type { EvermarkFilters as EvermarkFiltersType } from '../types';
 
 interface EvermarkFiltersProps {
-  filters: EvermarkFilters;
-  onFiltersChange: (filters: Partial<EvermarkFilters>) => void;
+  filters: EvermarkFiltersType;
+  onFiltersChange: (filters: Partial<EvermarkFiltersType>) => void;
   onClearFilters: () => void;
   className?: string;
 }

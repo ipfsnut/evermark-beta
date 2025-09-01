@@ -170,7 +170,7 @@ export interface StakingServiceParams {
 export interface StakingContractCall {
   contractAddress: string;
   functionName: string;
-  params: any[];
+  params: unknown[];
   value?: bigint;
 }
 

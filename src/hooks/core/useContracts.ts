@@ -111,11 +111,7 @@ export function useContractsStatus() {
   return status;
 }
 
-// Export individual contracts for direct access if needed
-export const getIndividualContract = (contractName: keyof ReturnType<typeof useContracts>) => {
-  const contracts = useContracts();
-  return contracts[contractName];
-};
+// Individual contracts must be accessed via useContracts() hook within React components
 
 // Type exports for external use
 export type ContractsType = ReturnType<typeof useContracts>;

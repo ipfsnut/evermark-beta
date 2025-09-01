@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useActiveAccount } from 'thirdweb/react';
+import { useWalletAccount } from '@/hooks/core/useWalletAccount';
 import { NFTStakingService, type NFTStakeInfo, type NFTStakingStats } from '../services/NFTStakingService';
 
 export interface UseNFTStakingReturn {
@@ -35,7 +35,7 @@ const QUERY_KEYS = {
 } as const;
 
 export function useNFTStaking(): UseNFTStakingReturn {
-  const account = useActiveAccount();
+  const account = useWalletAccount();
   const queryClient = useQueryClient();
   
   // Local state

@@ -1,6 +1,6 @@
 // src/pages/AboutPage.tsx - About page with contract addresses from .env
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link as _Link } from 'react-router-dom';
 import { 
   ExternalLinkIcon, 
   BookOpenIcon, 
@@ -13,7 +13,7 @@ import {
 import { themeClasses, cn } from '@/utils/theme';
 import { useTheme } from '@/providers/ThemeProvider';
 
-export default function AboutPage() {
+export default function AboutPage(): React.ReactNode {
   const { isDark } = useTheme();
   
   // Get contract addresses from environment variables
@@ -143,7 +143,7 @@ export default function AboutPage() {
               isDark ? "text-gray-300" : "text-gray-700"
             )}>
               Evermark is a decentralized platform for preserving valuable content on the blockchain. 
-              Users can mint "Evermarks" - NFTs that permanently store important articles, research, 
+              Users can mint &quot;Evermarks&quot; - NFTs that permanently store important articles, research, 
               social media posts, and other digital content on IPFS and Base blockchain.
             </p>
             <p className={cn(

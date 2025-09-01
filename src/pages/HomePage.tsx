@@ -1,5 +1,5 @@
 // src/pages/HomePage.tsx - Updated with Supabase test and real evermarks
-import { useState, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import packageJson from '../../package.json';
 import { 
@@ -20,7 +20,6 @@ import { useFarcasterDetection } from '../hooks/useFarcasterDetection';
 import { useTheme } from '../providers/ThemeProvider';
 import { themeClasses } from '../utils/theme';
 import { cn, useIsMobile } from '../utils/responsive';
-import { devLog } from '../utils/debug';
 
 // Evermarks feature
 import { useEvermarksState, EvermarkFeed } from '../features/evermarks';
@@ -209,7 +208,7 @@ const QuickActions: React.FC = () => {
 
 // Real Evermarks Feed Component
 const EvermarksFeed: React.FC = () => {
-  const { evermarks, isLoading, error, isEmpty } = useEvermarksState();
+  const { evermarks: _evermarks, isLoading, error, isEmpty } = useEvermarksState();
 
   if (error) {
     return (
@@ -279,10 +278,10 @@ const EvermarksFeed: React.FC = () => {
 };
 
 // Main HomePage component
-export default function HomePage() {
+const HomePage: React.FC = () => {
   const { isAuthenticated } = useAppAuth();
   const { isInFarcaster } = useFarcasterDetection();
-  const { isDark } = useTheme();
+  const { isDark: _isDark } = useTheme();
   const isMobile = useIsMobile();
 
   return (
@@ -617,4 +616,6 @@ export default function HomePage() {
       )}
     </div>
   );
-}
+};
+
+export default HomePage;

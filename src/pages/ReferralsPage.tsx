@@ -6,7 +6,7 @@ import { ReferralPanel, ReferralEarnings } from '@/features/evermarks';
 import { WalletConnect } from '@/components/ConnectButton';
 import { useActiveAccount } from 'thirdweb/react';
 
-export default function ReferralsPage() {
+export default function ReferralsPage(): React.ReactNode {
   const { isDark } = useTheme();
   const account = useActiveAccount();
 

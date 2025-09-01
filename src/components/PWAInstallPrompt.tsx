@@ -109,8 +109,8 @@ export function PWAInstallPrompt() {
             </p>
             <div className="text-xs text-gray-400 space-y-1">
               <p>1. Tap the share button <span className="text-blue-400">􀈂</span></p>
-              <p>2. Scroll and tap "Add to Home Screen"</p>
-              <p>3. Tap "Add" in the top right</p>
+              <p>2. Scroll and tap &quot;Add to Home Screen&quot;</p>
+              <p>3. Tap &quot;Add&quot; in the top right</p>
             </div>
           </div>
         </div>

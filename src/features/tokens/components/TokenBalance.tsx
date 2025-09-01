@@ -1,6 +1,6 @@
 // features/tokens/components/TokenBalance.tsx - Token balance display component
 
-import { useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { 
   CoinsIcon,
   RefreshCwIcon,

@@ -40,9 +40,9 @@ export class Validators {
    */
   static isValidFarcasterInput(input: string): boolean {
     const urlPatterns = [
-      /^https:\/\/warpcast\.com\/[^\/]+\/0x[a-fA-F0-9]+/,
-      /^https:\/\/farcaster\.xyz\/[^\/]+\/0x[a-fA-F0-9]+/,
-      /^https:\/\/supercast\.xyz\/[^\/]+\/0x[a-fA-F0-9]+/
+      /^https:\/\/warpcast\.com\/[^/]+\/0x[a-fA-F0-9]+/,
+      /^https:\/\/farcaster\.xyz\/[^/]+\/0x[a-fA-F0-9]+/,
+      /^https:\/\/supercast\.xyz\/[^/]+\/0x[a-fA-F0-9]+/
     ];
 
     // Check URL patterns
@@ -105,75 +105,79 @@ export class EvermarkValidator {
   /**
    * Validate evermark metadata - requires EvermarkMetadata type from feature
    */
-  static validateMetadata(metadata: any): ValidationResult {
+  static validateMetadata(metadata: unknown): ValidationResult {
     const errors: ValidationFieldError[] = [];
     const warnings: ValidationFieldError[] = [];
+    
+    // Cast metadata to any for property access - this is a validation function
+    // that needs to handle arbitrary input
+    const meta = metadata as any;
 
     // Title validation
-    if (!metadata.title?.trim()) {
+    if (!meta.title?.trim()) {
       errors.push({ field: 'title', message: 'Title is required' });
-    } else if (metadata.title.length > 100) {
+    } else if (meta.title.length > 100) {
       errors.push({ field: 'title', message: 'Title must be 100 characters or less' });
-    } else if (metadata.title.length < 3) {
+    } else if (meta.title.length < 3) {
       warnings.push({ field: 'title', message: 'Title should be at least 3 characters' });
     }
 
     // Description validation
-    if (!metadata.description?.trim()) {
+    if (!meta.description?.trim()) {
       warnings.push({ field: 'description', message: 'Description is recommended for better discoverability' });
-    } else if (metadata.description.length > 1000) {
+    } else if (meta.description.length > 1000) {
       errors.push({ field: 'description', message: 'Description must be 1000 characters or less' });
     }
 
     // Author validation
-    if (!metadata.author?.trim()) {
+    if (!meta.author?.trim()) {
       errors.push({ field: 'author', message: 'Author is required' });
-    } else if (metadata.author.length > 50) {
+    } else if (meta.author.length > 50) {
       errors.push({ field: 'author', message: 'Author name must be 50 characters or less' });
     }
 
     // URL validation
-    if (metadata.sourceUrl?.trim()) {
-      if (!Validators.isValidUrl(metadata.sourceUrl)) {
+    if (meta.sourceUrl?.trim()) {
+      if (!Validators.isValidUrl(meta.sourceUrl)) {
         errors.push({ field: 'sourceUrl', message: 'Source URL must be a valid URL' });
       }
     }
 
     // Content-type specific validation
-    if (metadata.contentType === 'DOI' && metadata.doi) {
-      if (!Validators.isValidDOI(metadata.doi)) {
+    if (meta.contentType === 'DOI' && meta.doi) {
+      if (!Validators.isValidDOI(meta.doi)) {
         errors.push({ field: 'doi', message: 'Invalid DOI format' });
       }
     }
 
-    if (metadata.contentType === 'ISBN' && metadata.isbn) {
-      if (!Validators.isValidISBN(metadata.isbn)) {
+    if (meta.contentType === 'ISBN' && meta.isbn) {
+      if (!Validators.isValidISBN(meta.isbn)) {
         errors.push({ field: 'isbn', message: 'Invalid ISBN format' });
       }
     }
 
-    if (metadata.contentType === 'Cast' && metadata.castUrl) {
-      if (!Validators.isValidFarcasterInput(metadata.castUrl)) {
+    if (meta.contentType === 'Cast' && meta.castUrl) {
+      if (!Validators.isValidFarcasterInput(meta.castUrl)) {
         errors.push({ field: 'castUrl', message: 'Invalid Farcaster cast URL or hash' });
       }
     }
 
     // Image file validation
-    if (metadata.imageFile) {
-      const imageValidation = Validators.validateImageFile(metadata.imageFile);
+    if (meta.imageFile) {
+      const imageValidation = Validators.validateImageFile(meta.imageFile);
       if (!imageValidation.isValid) {
         errors.push({ field: 'imageFile', message: imageValidation.error! });
       }
     }
 
     // Tags validation
-    if (metadata.tags && metadata.tags.length > 10) {
+    if (meta.tags && meta.tags.length > 10) {
       warnings.push({ field: 'tags', message: 'Consider using fewer tags for better organization' });
     }
 
     // Custom fields validation
-    if (metadata.customFields) {
-      metadata.customFields.forEach((field: any, index: number) => {
+    if (meta.customFields) {
+      meta.customFields.forEach((field: { key: string; value: string }, index: number) => {
         if (!field.key?.trim()) {
           errors.push({ field: `customFields.${index}.key`, message: 'Custom field key is required' });
         } else if (!Validators.validateCustomFieldKey(field.key)) {

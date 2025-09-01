@@ -1,4 +1,5 @@
 // src/pages/NotFoundPage.tsx - 404 error page with cyber theme
+import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { themeClasses } from '../utils/theme';
 import { 
@@ -74,7 +75,7 @@ const ActionCard: React.FC<{
   );
 };
 
-export default function NotFoundPage() {
+export default function NotFoundPage(): React.ReactNode {
   const navigate = useNavigate();
   const { isInFarcaster } = useFarcasterDetection();
   const { isAuthenticated } = useAppAuth();
@@ -112,9 +113,9 @@ export default function NotFoundPage() {
               Oops! Page Not Found
             </h1>
             <p className="text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
-              The page you're looking for seems to have vanished into the{' '}
+              The page you&apos;re looking for seems to have vanished into the{' '}
               <span className="text-cyan-400 font-bold">digital void</span>. 
-              Don't worry, even in the matrix, some links get corrupted.
+              Don&apos;t worry, even in the matrix, some links get corrupted.
             </p>
             
             {/* Context-aware messaging */}

@@ -2,8 +2,7 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useSendTransaction } from 'thirdweb/react';
-import { useActiveAccount } from 'thirdweb/react';
+import { useSendTransaction, useActiveAccount } from 'thirdweb/react';
 import { prepareContractCall, getContract, readContract } from 'thirdweb';
 import { client } from '@/lib/thirdweb';
 import { base } from 'thirdweb/chains';
@@ -11,8 +10,8 @@ import { base } from 'thirdweb/chains';
 // Local contract constants to avoid @/lib/contracts dependency
 const CHAIN = base;
 const LOCAL_CONTRACTS = {
-  EMARK_TOKEN: import.meta.env.VITE_EMARK_ADDRESS || '',
-  WEMARK_STAKING: import.meta.env.VITE_WEMARK_ADDRESS || '', // Using WEMARK as the EMARK staking contract
+  EMARK_TOKEN: import.meta.env.VITE_EMARK_ADDRESS ?? '',
+  WEMARK_STAKING: import.meta.env.VITE_WEMARK_ADDRESS ?? '', // Using WEMARK as the EMARK staking contract
 } as const;
 
 // Import ABIs from the actual JSON files
@@ -58,7 +57,7 @@ export function useTokenState(): UseTokenStateReturn {
         client,
         chain: CHAIN,
         address: LOCAL_CONTRACTS.EMARK_TOKEN,
-        abi: EMARK_ABI as any
+        abi: EMARK_ABI as readonly unknown[]
       });
     } catch (error) {
       if (!LOCAL_CONTRACTS.EMARK_TOKEN) {
@@ -183,7 +182,7 @@ export function useTokenState(): UseTokenStateReturn {
           success: true,
           hash: result.transactionHash
         } as const;
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Approval failed:', error);
         const tokenError = TokenService.parseContractError(error);
         throw tokenError;
@@ -213,8 +212,8 @@ export function useTokenState(): UseTokenStateReturn {
     }
 
     return TokenService.calculateTokenBalance(
-      emarkBalance || BigInt(0),
-      stakingAllowance || BigInt(0)
+      emarkBalance ?? BigInt(0),
+      stakingAllowance ?? BigInt(0)
     );
   }, [isConnected, emarkBalance, stakingAllowance]);
 
@@ -223,9 +222,9 @@ export function useTokenState(): UseTokenStateReturn {
 
     return {
       ...tokenInfoData,
-      userBalance: emarkBalance || BigInt(0),
+      userBalance: emarkBalance ?? BigInt(0),
       userAllowances: {
-        [stakingContractAddress]: stakingAllowance || BigInt(0)
+        [stakingContractAddress]: stakingAllowance ?? BigInt(0)
       }
     };
   }, [tokenInfoData, userAddress, emarkBalance, stakingAllowance, stakingContractAddress]);
@@ -263,7 +262,7 @@ export function useTokenState(): UseTokenStateReturn {
 
     try {
       // Use provided amount or calculate optimal amount
-      const approvalAmount = amount || TokenService.calculateApprovalAmount(
+      const approvalAmount = amount ?? TokenService.calculateApprovalAmount(
         tokenBalance.emarkBalance,
         false // Don't use unlimited by default
       );
@@ -277,7 +276,7 @@ export function useTokenState(): UseTokenStateReturn {
       if (!validation.isValid) {
         return { 
           success: false, 
-          error: validation.errors[0] || 'Validation failed' 
+          error: validation.errors[0] ?? 'Validation failed' 
         } as const;
       }
 
@@ -287,8 +286,8 @@ export function useTokenState(): UseTokenStateReturn {
       });
 
       return result;
-    } catch (error: any) {
-      const errorMessage = error?.message || 'Approval failed';
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Approval failed';
       return { 
         success: false, 
         error: errorMessage
@@ -308,7 +307,7 @@ export function useTokenState(): UseTokenStateReturn {
     try {
       // Return cached value if it's the staking contract
       if (spender === stakingContractAddress) {
-        return stakingAllowance || BigInt(0);
+        return stakingAllowance ?? BigInt(0);
       }
 
       // For other spenders, make a fresh contract call
@@ -342,9 +341,9 @@ export function useTokenState(): UseTokenStateReturn {
   }, []);
 
   const needsApproval = useCallback((amount: bigint, spender?: string): boolean => {
-    const relevantSpender = spender || stakingContractAddress;
+    const relevantSpender = spender ?? stakingContractAddress;
     const currentAllowance = relevantSpender === stakingContractAddress 
-      ? (stakingAllowance || BigInt(0))
+      ? (stakingAllowance ?? BigInt(0))
       : BigInt(0);
     
     return TokenService.needsApproval(amount, currentAllowance);

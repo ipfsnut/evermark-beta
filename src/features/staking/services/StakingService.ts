@@ -1,15 +1,16 @@
 // features/staking/services/StakingService.ts - Business logic for staking operations
 
 import { toWei } from 'thirdweb/utils';
-import type { 
-  StakingInfo,
-  StakingStats,
-  StakingValidation,
-  StakingError,
-  StakingTransaction,
-  StakingErrorCode
+import { 
+  STAKING_CONSTANTS, 
+  STAKING_ERRORS,
+  type StakingInfo,
+  type StakingStats,
+  type StakingValidation,
+  type StakingError,
+  type StakingTransaction,
+  type StakingErrorCode
 } from '../types';
-import { STAKING_CONSTANTS, STAKING_ERRORS } from '../types';
 
 /**
  * StakingService - Pure business logic for staking operations
@@ -249,7 +250,7 @@ export class StakingService {
   /**
    * Parse contract errors into user-friendly messages
    */
-  static parseContractError(error: any): StakingError {
+  static parseContractError(error: unknown): StakingError {
     const timestamp = Date.now();
     let code: StakingErrorCode = STAKING_ERRORS.CONTRACT_ERROR;
     let message = 'Transaction failed';
@@ -288,7 +289,7 @@ export class StakingService {
     // Only add details if there's meaningful error info
     if (error?.message || error?.stack) {
       result.details = {
-        originalError: error.message || 'Unknown error',
+        originalError: error.message ?? 'Unknown error',
         ...(error.stack && { stack: error.stack })
       };
     }
@@ -302,7 +303,7 @@ export class StakingService {
   static createError(
     code: StakingErrorCode, 
     message: string, 
-    details?: Record<string, any>
+    details?: Record<string, unknown>
   ): StakingError {
     // ✅ FIX: Only include details if provided and not empty
     const result: StakingError = {

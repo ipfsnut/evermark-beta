@@ -1,6 +1,5 @@
 // src/components/ui/ErrorBoundary.tsx - Error boundary for graceful error handling
-import type { ErrorInfo, ReactNode } from 'react';
-import { Component } from 'react';
+import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { AlertTriangleIcon, RefreshCwIcon, HomeIcon } from 'lucide-react';
 import { themeClasses } from '../../utils/theme';
 
@@ -71,7 +70,7 @@ export class ErrorBoundary extends Component<Props, State> {
               Something went wrong
             </h1>
             <p className="text-gray-400 mb-6">
-              We encountered an unexpected error. This has been logged and we'll investigate.
+              We encountered an unexpected error. This has been logged and we&apos;ll investigate.
             </p>
 
             {/* Error details in development */}

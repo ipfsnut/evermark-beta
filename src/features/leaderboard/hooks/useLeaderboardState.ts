@@ -2,15 +2,14 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { LeaderboardService } from '../services/LeaderboardService';
-import type { 
-  LeaderboardEntry, 
-  LeaderboardStats,
-  LeaderboardFeedOptions,
-  LeaderboardFilters,
-  LeaderboardPagination,
-  UseLeaderboardStateReturn,
+import { 
+  LEADERBOARD_CONSTANTS,
+  type LeaderboardEntry, 
+  type LeaderboardFeedOptions,
+  type LeaderboardFilters,
+  type LeaderboardPagination,
+  type UseLeaderboardStateReturn,
 } from '../types';
-import { LEADERBOARD_CONSTANTS } from '../types';
 
 // Import evermarks state to calculate leaderboard from
 import { useEvermarksState } from '../../evermarks';
@@ -20,14 +19,14 @@ const QUERY_KEYS = {
   leaderboard: (options: LeaderboardFeedOptions) => 
     ['leaderboard', 'entries', options],
   stats: (period?: string) => 
-    ['leaderboard', 'stats', period || LEADERBOARD_CONSTANTS.DEFAULT_PERIOD],
+    ['leaderboard', 'stats', period ?? LEADERBOARD_CONSTANTS.DEFAULT_PERIOD],
 } as const;
 
 /**
  * Hook for managing leaderboard state and data fetching - Uses real evermarks data
  */
 export function useLeaderboardState(): UseLeaderboardStateReturn {
-  const queryClient = useQueryClient();
+  const _queryClient = useQueryClient();
 
   // Get real evermarks data to calculate leaderboard from
   const { evermarks, isLoading: isLoadingEvermarks } = useEvermarksState();
@@ -76,7 +75,7 @@ export function useLeaderboardState(): UseLeaderboardStateReturn {
   } = useQuery({
     queryKey: QUERY_KEYS.stats(filters.period),
     queryFn: () => LeaderboardService.fetchLeaderboardStats(
-      filters.period || LEADERBOARD_CONSTANTS.DEFAULT_PERIOD
+      filters.period ?? LEADERBOARD_CONSTANTS.DEFAULT_PERIOD
     ),
     staleTime: 30 * 1000, // 30 seconds
     retry: 2,
@@ -84,15 +83,15 @@ export function useLeaderboardState(): UseLeaderboardStateReturn {
   });
 
   // Extract data from queries
-  const entries = leaderboardData?.entries || [];
-  const totalCount = leaderboardData?.totalCount || 0;
-  const totalPages = leaderboardData?.totalPages || 0;
-  const lastUpdated = leaderboardData?.lastUpdated || null;
+  const entries = leaderboardData?.entries ?? [];
+  const totalCount = leaderboardData?.totalCount ?? 0;
+  const totalPages = leaderboardData?.totalPages ?? 0;
+  const lastUpdated = leaderboardData?.lastUpdated ?? null;
 
   // Combined loading and error states
   const isLoading = isLoadingEntries || isLoadingStats;
   const isRefreshing = isRefreshingEntries || isRefreshingStats;
-  const error = entriesError?.message || statsError?.message || null;
+  const error = entriesError?.message ?? statsError?.message ?? null;
 
   // Available periods
   const availablePeriods = useMemo(() => 
@@ -101,7 +100,7 @@ export function useLeaderboardState(): UseLeaderboardStateReturn {
 
   // Current period
   const currentPeriod = useMemo(() => 
-    LeaderboardService.getPeriodById(filters.period || LEADERBOARD_CONSTANTS.DEFAULT_PERIOD), 
+    LeaderboardService.getPeriodById(filters.period ?? LEADERBOARD_CONSTANTS.DEFAULT_PERIOD), 
     [filters.period]
   );
 
@@ -182,7 +181,7 @@ export function useLeaderboardState(): UseLeaderboardStateReturn {
 
   // Entry lookup functions
   const getEntryByEvermarkId = useCallback((evermarkId: string): LeaderboardEntry | null => {
-    return entries.find(entry => entry.evermarkId === evermarkId) || null;
+    return entries.find(entry => entry.evermarkId === evermarkId) ?? null;
   }, [entries]);
 
   const getEntryRank = useCallback((evermarkId: string): number | null => {
@@ -196,7 +195,7 @@ export function useLeaderboardState(): UseLeaderboardStateReturn {
   return {
     // Data
     entries,
-    stats: stats || null,
+    stats: stats ?? null,
     currentPeriod,
     availablePeriods,
     

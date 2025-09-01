@@ -1,6 +1,6 @@
 // features/voting/components/VotingPanel.tsx - Main voting interface component
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   VoteIcon, 
   TrendingUpIcon, 

@@ -21,7 +21,7 @@ export function useVotingEvents({ votingContract, enabled = true }: VotingEvents
     if (!enabled || !votingContract || !userAddress) return;
 
     let isSubscribed = true;
-    let pollTimer: NodeJS.Timeout;
+    let pollTimer: ReturnType<typeof setTimeout>;
 
     const setupEventListening = async () => {
       try {

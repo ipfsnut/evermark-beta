@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { 
   VoteIcon, 
   ZapIcon, 
@@ -90,7 +90,7 @@ export function DelegateButton({
       
       onSuccess?.(transaction);
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Delegation failed:', error);
       setLocalError(error.message || 'Failed to delegate votes');
     } finally {
@@ -126,7 +126,7 @@ export function DelegateButton({
       
       onSuccess?.(transaction);
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Undelegation failed:', error);
       setLocalError(error.message || 'Failed to undelegate votes');
     } finally {
@@ -159,7 +159,7 @@ export function DelegateButton({
       
       onSuccess?.(transaction);
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Quick delegation failed:', error);
       setLocalError(error.message || 'Quick delegation failed');
     } finally {

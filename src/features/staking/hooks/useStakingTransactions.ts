@@ -1,11 +1,12 @@
 // src/features/staking/hooks/useStakingTransactions.ts - Fixed for Thirdweb v5
 import { useState, useCallback } from 'react';
-import { useActiveAccount, useSendTransaction } from 'thirdweb/react';
+import { useSendTransaction } from 'thirdweb/react';
+import { useWalletAccount } from '@/hooks/core/useWalletAccount';
 import { prepareContractCall, waitForReceipt } from 'thirdweb';
 import { useContracts } from '@/hooks/core/useContracts';
 import { client } from '@/lib/thirdweb';
 import { base } from 'thirdweb/chains';
-import { devLog, prodLog, prodError } from '@/utils/debug';
+import { devLog, prodLog } from '@/utils/debug';
 
 // Local constants to avoid @/lib/contracts dependency
 const CHAIN = base;
@@ -30,7 +31,7 @@ export interface StakingTransactions {
 }
 
 export function useStakingTransactions(): StakingTransactions {
-  const account = useActiveAccount();
+  const account = useWalletAccount();
   const { wemark, emarkToken } = useContracts();
   const { mutateAsync: sendTransaction } = useSendTransaction();
   

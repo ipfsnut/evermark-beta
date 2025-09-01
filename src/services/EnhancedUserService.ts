@@ -57,7 +57,7 @@ class ENSResolver {
       if (!response.ok) return null;
       
       const data = await response.json();
-      return data.address || null;
+      return data.address ?? null;
     } catch (error) {
       console.warn('ENS name resolution failed:', error);
       return null;
@@ -314,7 +314,7 @@ export class EnhancedUserService {
       if (!user.farcaster) {
         // If no Farcaster, ENS name becomes primary display name
         newDisplayName = ensData.name; // PRIORITY 2: ENS name
-        newAvatar = ensData.avatar || user.avatar;
+        newAvatar = ensData.avatar ?? user.avatar;
         newSource = 'ens';
       } else {
         // If we have Farcaster, it stays primary but we note it's hybrid
@@ -419,10 +419,10 @@ export class EnhancedUserService {
       hasFarcaster: !!user.farcaster,
       hasENS: !!user.ens,
       hasWallet: !!user.wallet,
-      isVerified: user.farcaster?.isVerified || false,
-      hasPowerBadge: user.farcaster?.hasPowerBadge || false,
-      hasVerifiedAddress: (user.farcaster?.verifiedAddresses.length || 0) > 0,
-      followerCount: user.farcaster?.followerCount || 0
+      isVerified: user.farcaster?.isVerified ?? false,
+      hasPowerBadge: user.farcaster?.hasPowerBadge ?? false,
+      hasVerifiedAddress: (user.farcaster?.verifiedAddresses.length ?? 0) > 0,
+      followerCount: user.farcaster?.followerCount ?? 0
     };
   }
 
@@ -448,6 +448,6 @@ export class EnhancedUserService {
     if (user.ens?.name) return user.ens.name;
     if (user.wallet?.shortAddress) return user.wallet.shortAddress;
     
-    return user.displayName || 'Unknown User';
+    return user.displayName ?? 'Unknown User';
   }
 }

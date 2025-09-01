@@ -14,13 +14,13 @@ export { CHAIN };
 
 // Contract addresses with validation
 export const CONTRACTS = {
-  EMARK_TOKEN: import.meta.env.VITE_EMARK_ADDRESS || '',
-  WEMARK: import.meta.env.VITE_WEMARK_ADDRESS || '',
-  EVERMARK_NFT: import.meta.env.VITE_EVERMARK_NFT_ADDRESS || '',
-  EVERMARK_VOTING: import.meta.env.VITE_EVERMARK_VOTING_ADDRESS || '',
-  NFT_STAKING: import.meta.env.VITE_NFT_STAKING_ADDRESS || '',
-  EVERMARK_REWARDS: import.meta.env.VITE_EVERMARK_REWARDS_ADDRESS || '',
-  FEE_COLLECTOR: import.meta.env.VITE_FEE_COLLECTOR_ADDRESS || '',
+  EMARK_TOKEN: import.meta.env.VITE_EMARK_ADDRESS ?? '',
+  WEMARK: import.meta.env.VITE_WEMARK_ADDRESS ?? '',
+  EVERMARK_NFT: import.meta.env.VITE_EVERMARK_NFT_ADDRESS ?? '',
+  EVERMARK_VOTING: import.meta.env.VITE_EVERMARK_VOTING_ADDRESS ?? '',
+  NFT_STAKING: import.meta.env.VITE_NFT_STAKING_ADDRESS ?? '',
+  EVERMARK_REWARDS: import.meta.env.VITE_EVERMARK_REWARDS_ADDRESS ?? '',
+  FEE_COLLECTOR: import.meta.env.VITE_FEE_COLLECTOR_ADDRESS ?? '',
 } as const;
 
 // Placeholder ABIs - These will be imported from features when needed

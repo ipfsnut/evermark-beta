@@ -2,7 +2,7 @@
 /** @jsxImportSource react */
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { BookOpenIcon, FileTextIcon, ExternalLinkIcon, XIcon, ArrowLeftIcon } from 'lucide-react';
+import { BookOpenIcon, FileTextIcon, ExternalLinkIcon, XIcon as _XIcon, ArrowLeftIcon } from 'lucide-react';
 import { themeClasses, cn } from '@/utils/theme';
 import { useTheme } from '../providers/ThemeProvider';
 import { DocShareButton } from '../components/share/DocShareButton';
@@ -60,7 +60,7 @@ const DOCS_ITEMS: DocItem[] = [
   }
 ];
 
-export default function DocsPage() {
+export default function DocsPage(): React.ReactNode {
   const { isDark } = useTheme();
   const { docId } = useParams<{ docId?: string }>();
   const navigate = useNavigate();

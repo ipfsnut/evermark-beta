@@ -29,22 +29,12 @@ function generateFrameHTML(evermark: any, baseUrl: string) {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${title} - Evermark Protocol</title>
   
-  <!-- Farcaster Frame Meta Tags -->
-  <meta name="fc:frame" content="vNext" />
-  <meta name="fc:frame:image" content="${image}" />
-  <meta name="fc:frame:image:aspect_ratio" content="1.91:1" />
-  
-  <meta name="fc:frame:button:1" content="🔗 View Evermark" />
-  <meta name="fc:frame:button:1:action" content="link" />
-  <meta name="fc:frame:button:1:target" content="${baseUrl}/evermark/${tokenId}" />
-  
-  <meta name="fc:frame:button:2" content="🗳️ Vote" />
-  <meta name="fc:frame:button:2:action" content="post" />
-  <meta name="fc:frame:button:2:target" content="${baseUrl}/api/frame/vote/${tokenId}" />
-  
-  <meta name="fc:frame:button:3" content="🚀 Explore More" />
-  <meta name="fc:frame:button:3:action" content="link" />
-  <meta name="fc:frame:button:3:target" content="${baseUrl}/explore" />
+  <!-- Farcaster Mini App Meta Tags -->
+  <meta name="fc:miniapp" content="1" />
+  <meta name="fc:miniapp:image" content="${image}" />
+  <meta name="fc:miniapp:button:1" content="🔗 View Evermark" />
+  <meta name="fc:miniapp:button:1:action" content="link" />
+  <meta name="fc:miniapp:button:1:target" content="${baseUrl}/evermark/${tokenId}" />
   
   <!-- Open Graph -->
   <meta property="og:title" content="${title}" />

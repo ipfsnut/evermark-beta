@@ -6,8 +6,6 @@ import {
   CompassIcon,
   PlusIcon,
   TrendingUpIcon,
-  UserIcon,
-  Layers,
   ShareIcon
 } from 'lucide-react';
 import { useAppAuth } from '../../providers/AppContext';

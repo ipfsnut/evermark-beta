@@ -49,39 +49,40 @@ const TempEvermarkService = {
       const data = await response.json();
       
       // Transform the response to match our expected format
-      const totalCount = data.pagination?.total || data.total || 0;
-      const pageSize = options.pageSize || 12;
-      const currentPage = options.page || 1;
+      const totalCount = data.pagination?.total ?? data.total ?? 0;
+      const pageSize = options.pageSize ?? 12;
+      const currentPage = options.page ?? 1;
       
       // Transform database fields to frontend format
-      const transformedEvermarks = (data.evermarks || []).map((item: any) => {
+      const transformedEvermarks = (data.evermarks ?? []).map((item: unknown) => {
+        const evermarkItem = item as Record<string, unknown>;
         // Parse tags from metadata if available
         let tags: string[] = [];
         try {
-          if (item.metadata) {
-            const metadata = typeof item.metadata === 'string' ? JSON.parse(item.metadata) : item.metadata;
-            tags = metadata.tags || [];
+          if (evermarkItem.metadata) {
+            const metadata = typeof evermarkItem.metadata === 'string' ? JSON.parse(evermarkItem.metadata as string) : evermarkItem.metadata as Record<string, unknown>;
+            tags = (metadata.tags as string[]) ?? [];
           }
-        } catch (e) {
+        } catch {
           // Failed to parse metadata, use empty tags
         }
         
         return {
-          ...item,
-          id: item.token_id,
-          tokenId: item.token_id, // Add tokenId for components
+          ...evermarkItem,
+          id: evermarkItem.token_id as string,
+          tokenId: evermarkItem.token_id as string, // Add tokenId for components
           tags, // Ensure tags is always an array
-          ipfsHash: item.ipfs_image_hash, // Map IPFS hash
-          image: item.supabase_image_url || (item.ipfs_image_hash ? `ipfs://${item.ipfs_image_hash}` : undefined), // Prioritize Supabase cached images
-          createdAt: item.created_at || new Date().toISOString(),
-          updatedAt: item.updated_at || item.created_at || new Date().toISOString(),
-          contentType: item.content_type,
-          sourceUrl: item.source_url,
-          tokenUri: item.token_uri,
-          verificationStatus: item.verified ? 'verified' : 'unverified',
-          creator: item.owner || item.author, // Add creator field
+          ipfsHash: evermarkItem.ipfs_image_hash as string, // Map IPFS hash
+          image: (evermarkItem.supabase_image_url as string) ?? (evermarkItem.ipfs_image_hash ? `ipfs://${evermarkItem.ipfs_image_hash}` : undefined), // Prioritize Supabase cached images
+          createdAt: (evermarkItem.created_at as string) ?? new Date().toISOString(),
+          updatedAt: (evermarkItem.updated_at as string) ?? (evermarkItem.created_at as string) ?? new Date().toISOString(),
+          contentType: evermarkItem.content_type as string,
+          sourceUrl: evermarkItem.source_url as string,
+          tokenUri: evermarkItem.token_uri as string,
+          verificationStatus: evermarkItem.verified ? 'verified' as const : 'unverified' as const,
+          creator: (evermarkItem.owner as string) ?? (evermarkItem.author as string), // Add creator field
           extendedMetadata: { tags } // Add extendedMetadata for compatibility
-        };
+        } as Evermark;
       });
       
       return {
@@ -118,13 +119,13 @@ const TempEvermarkService = {
       }
       
       const data = await response.json();
-      return data.evermark || null;
+      return data.evermark ?? null;
     } catch (error) {
       console.error('Failed to fetch evermark:', error);
       return null;
     }
   },
-  createEvermark: async (input: CreateEvermarkInput, account: any): Promise<CreateEvermarkResult> => {
+  createEvermark: async (input: CreateEvermarkInput, account: { address: string | { toString(): string } }): Promise<CreateEvermarkResult> => {
     try {
       console.log('🚀 Starting blockchain-first evermark creation...');
       
@@ -173,17 +174,17 @@ const TempEvermarkService = {
       // Step 2: Create NFT metadata
       const nftMetadata = {
         name: metadata.title,
-        description: metadata.description || '',
+        description: metadata.description ?? '',
         image: `ipfs://${imageUploadResult.hash}`,
-        external_url: metadata.sourceUrl || metadata.url || metadata.castUrl,
+        external_url: metadata.sourceUrl ?? metadata.url ?? metadata.castUrl,
         attributes: [
           {
             trait_type: 'Content Type',
-            value: metadata.contentType || 'Custom'
+            value: metadata.contentType ?? 'Custom'
           },
           {
             trait_type: 'Creator',
-            value: metadata.author || accountAddress
+            value: metadata.author ?? accountAddress
           },
           {
             trait_type: 'Creation Date',
@@ -245,7 +246,7 @@ const TempEvermarkService = {
           accountReferrer = userSettings.settings?.referrer_address;
           console.log('✅ Account referrer found:', accountReferrer || 'None set');
         }
-      } catch (error) {
+      } catch {
         console.log('⚠️ Could not fetch account referrer, continuing without');
       }
 
@@ -296,7 +297,7 @@ const TempEvermarkService = {
               token_id: parseInt(mintResult.tokenId),
               tx_hash: mintResult.txHash,
               title: metadata.title,
-              description: metadata.description || '',
+              description: metadata.description ?? '',
               content_type: metadata.contentType || 'Custom',
               source_url: metadata.sourceUrl || metadata.url || metadata.castUrl,
               token_uri: metadataUploadResult.url,

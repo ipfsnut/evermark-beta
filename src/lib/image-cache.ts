@@ -39,7 +39,7 @@ export async function cacheImage(tokenId: number, originalUrl: string) {
 
     // Store in Supabase (keep original filename/format)
     const fileName = `evermarks/${tokenId}.jpg`; // Simple naming
-    const { data, error } = await supabase!.storage
+    const { data: _data, error } = await supabase!.storage
       .from('evermark-images')
       .upload(fileName, imageBuffer, {
         contentType: 'image/jpeg',

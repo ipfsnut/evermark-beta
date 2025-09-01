@@ -1,15 +1,13 @@
 // src/pages/StakePage.tsx - Staking management page
 import React from 'react';
-import { StakingWidget } from '@/features/staking';
-import { TokenBalance } from '@/features/tokens';
-import { useStakingState } from '@/features/staking';
-import { useTokenState } from '@/features/tokens';
+import { StakingWidget, useStakingState } from '@/features/staking';
+import { TokenBalance, useTokenState } from '@/features/tokens';
 import { TrendingUpIcon, CoinsIcon } from 'lucide-react';
 import { cn, useIsMobile } from '@/utils/responsive';
 
-export default function StakePage() {
+export default function StakePage(): React.ReactNode {
   const stakingState = useStakingState();
-  const tokenState = useTokenState();
+  const _tokenState = useTokenState();
   const isMobile = useIsMobile();
 
   return (

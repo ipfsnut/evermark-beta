@@ -8,7 +8,7 @@ import '../index.css';
 import './styles/mobile-first.css';
 
 // Import dev logging utilities
-import { devLog, prodLog } from './utils/debug';
+import { prodLog } from './utils/debug';
 
 // Initialize Farcaster Mini App SDK as early as possible
 (async () => {
@@ -20,7 +20,7 @@ import { devLog, prodLog } from './utils/debug';
     
     // Set a global flag to indicate SDK is ready
     (window as any).__evermark_farcaster_sdk_ready = true;
-  } catch (error) {
+  } catch {
     console.log('🌐 Not in Farcaster context - browser/PWA mode');
     (window as any).__evermark_farcaster_sdk_ready = false;
   }

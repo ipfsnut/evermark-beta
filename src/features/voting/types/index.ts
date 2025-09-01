@@ -139,7 +139,7 @@ export interface UseVotingStateReturn {
   validateBatchVoting: (votes: Array<{evermarkId: string; amount: bigint}>) => VotingValidation;
   calculateDelegationImpact: (evermarkId: string, amount: bigint) => {rankChange: number; powerIncrease: number};
   estimateDelegationRewards: (evermarkId: string, amount: bigint) => bigint;
-  parseContractError: (error: any) => VotingError;
+  parseContractError: (error: unknown) => VotingError;
   createError: (code: string, message: string) => VotingError;
   generateDelegationSummary: (delegations: Delegation[]) => {totalAmount: bigint; activeCount: number; topDelegate: string};
   calculateEvermarkRanking: (evermarkId: string) => EvermarkRanking;
@@ -167,7 +167,7 @@ export interface VotingServiceParams {
 export interface VotingContractCall {
   contractAddress: string;
   functionName: string;
-  params: any[];
+  params: unknown[];
   value?: bigint;
 }
 

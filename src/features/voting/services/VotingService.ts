@@ -1,13 +1,12 @@
 // src/features/voting/services/VotingService.ts - Direct voting with seasons
 import { formatUnits, parseUnits } from 'viem';
-import { readContract, getContractEvents, estimateGas, getGasPrice, prepareEvent, prepareContractCall } from 'thirdweb';
-import { client } from '@/lib/thirdweb';
+import { readContract, getContractEvents, estimateGas, prepareEvent, prepareContractCall } from 'thirdweb';
 import { base } from 'thirdweb/chains';
-import { getEvermarkVotingContract, getWEMARKContract } from '@/lib/contracts';
+import { getEvermarkVotingContract } from '@/lib/contracts';
 import { NotificationService } from '../../../services/NotificationService';
 
 // Local constants to avoid @/lib/contracts dependency
-const CHAIN = base;
+const _CHAIN = base;
 import { 
   type Vote,
   type VotingSeason,
@@ -15,7 +14,6 @@ import {
   type VotingStats,
   type VotingValidation,
   type VotingError,
-  type VotingErrorCode,
   type VotingTransaction,
   type EvermarkRanking,
   VOTING_CONSTANTS,
@@ -118,7 +116,7 @@ export class VotingService {
       }
 
       // Prepare the contract call
-      const transaction = prepareContractCall({
+      const _transaction = prepareContractCall({
         contract: votingContract,
         method: "function voteForEvermark(uint256 evermarkId, uint256 votes) payable",
         params: [BigInt(evermarkId), votes]
@@ -223,8 +221,8 @@ export class VotingService {
       const events = await getContractEvents({
         contract: votingContract,
         events: [voteCastEvent],
-        fromBlock: fromBlock || 0n,
-        toBlock: toBlock || 'latest'
+        fromBlock: fromBlock ?? 0n,
+        toBlock: toBlock ?? 'latest'
       });
 
       return events
@@ -232,8 +230,8 @@ export class VotingService {
         .map((event, index) => ({
           id: `${event.transactionHash}-${index}`,
           userAddress,
-          evermarkId: event.args.evermarkId?.toString() || '',
-          amount: event.args.votes || BigInt(0),
+          evermarkId: event.args.evermarkId?.toString() ?? '',
+          amount: event.args.votes ?? BigInt(0),
           season: Number(event.args.season) || 0,
           timestamp: new Date(), // Use current time for now
           transactionHash: event.transactionHash,
@@ -251,8 +249,8 @@ export class VotingService {
    */
   static validateVoteAmount(
     amount: string,
-    evermarkId?: string,
-    userAddress?: string
+    _evermarkId?: string,
+    _userAddress?: string
   ): VotingValidation {
     const errors: string[] = [];
     const warnings: string[] = [];
@@ -275,7 +273,7 @@ export class VotingService {
         errors.push('Vote amount must be greater than 0');
       }
 
-    } catch (error) {
+    } catch {
       errors.push('Invalid vote amount format');
     }
 
@@ -383,7 +381,7 @@ export class VotingService {
         errors.push('Cannot undelegate more than currently delegated');
       }
 
-    } catch (error) {
+    } catch {
       errors.push('Invalid amount format');
     }
 
@@ -397,7 +395,7 @@ export class VotingService {
   /**
    * Get voting statistics for current season
    */
-  static async getVotingStats(userAddress?: string): Promise<VotingStats | null> {
+  static async getVotingStats(_userAddress?: string): Promise<VotingStats | null> {
     try {
       const currentSeason = await this.getCurrentSeason();
       if (!currentSeason) {
@@ -425,11 +423,11 @@ export class VotingService {
   /**
    * Admin function to start new season
    */
-  static async startNewSeason(adminAddress: string): Promise<VotingTransaction> {
+  static async startNewSeason(_adminAddress: string): Promise<VotingTransaction> {
     try {
       const votingContract = getEvermarkVotingContract();
       
-      const transaction = prepareContractCall({
+      const _transaction = prepareContractCall({
         contract: votingContract,
         method: "function startNewSeason() payable",
         params: []
@@ -473,7 +471,7 @@ export class VotingService {
   /**
    * Get user-friendly error message from error object
    */
-  static getUserFriendlyError(error: any): string {
+  static getUserFriendlyError(error: unknown): string {
     if (typeof error === 'string') {
       return error;
     }
@@ -514,7 +512,7 @@ export class VotingService {
   /**
    * Check if user can vote in specific cycle
    */
-  static canVoteInCycle(cycleNumber: number): boolean {
+  static canVoteInCycle(_cycleNumber: number): boolean {
     // For now, assume user can vote in current cycle
     return true;
   }
@@ -531,7 +529,7 @@ export class VotingService {
   /**
    * Generate voting recommendations
    */
-  static generateVotingRecommendations(availablePower: bigint): Array<{evermarkId: string; suggestedAmount: bigint}> {
+  static generateVotingRecommendations(_availablePower: bigint): Array<{evermarkId: string; suggestedAmount: bigint}> {
     // Placeholder implementation
     return [];
   }
@@ -591,7 +589,7 @@ export class VotingService {
   /**
    * Estimate delegation rewards
    */
-  static estimateDelegationRewards(evermarkId: string, amount: bigint): bigint {
+  static estimateDelegationRewards(_evermarkId: string, _amount: bigint): bigint {
     // Placeholder implementation
     return BigInt(0);
   }
@@ -599,7 +597,7 @@ export class VotingService {
   /**
    * Parse contract error into VotingError
    */
-  static parseContractError(error: any): VotingError {
+  static parseContractError(error: unknown): VotingError {
     return {
       code: VOTING_ERRORS.CONTRACT_ERROR,
       message: this.getUserFriendlyError(error),
@@ -623,7 +621,7 @@ export class VotingService {
   /**
    * Generate delegation summary
    */
-  static generateDelegationSummary(delegations: any[]): {totalAmount: bigint; activeCount: number; topDelegate: string} {
+  static generateDelegationSummary(_delegations: unknown[]): {totalAmount: bigint; activeCount: number; topDelegate: string} {
     return {
       totalAmount: BigInt(0),
       activeCount: 0,
@@ -652,13 +650,13 @@ export class VotingService {
     try {
       const votingContract = getEvermarkVotingContract();
       
-      const transaction = prepareContractCall({
+      const _transaction = prepareContractCall({
         contract: votingContract,
         method: "function voteForEvermark(uint256 evermarkId, uint256 votes) payable",
         params: [BigInt(evermarkId), amount]
       });
 
-      const gasEstimate = await estimateGas({ transaction });
+      const gasEstimate = await estimateGas({ transaction: _transaction });
 
       return gasEstimate;
     } catch (error) {

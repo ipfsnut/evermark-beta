@@ -1,6 +1,5 @@
 // src/providers/BlockchainProvider.tsx - Simple blockchain state management
-import type { ReactNode } from 'react';
-import { createContext, useContext } from 'react';
+import React, { createContext, useContext, type ReactNode } from 'react';
 import { useActiveAccount } from 'thirdweb/react';
 import { validateContractAddresses } from '../lib/contracts';
 
@@ -24,7 +23,7 @@ interface BlockchainProviderProps {
   children: ReactNode;
 }
 
-export function BlockchainProvider({ children }: BlockchainProviderProps) {
+export function BlockchainProvider({ children }: BlockchainProviderProps): React.ReactNode {
   const account = useActiveAccount();
   
   // Validate contract configuration
@@ -32,7 +31,7 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
   
   const state: BlockchainState = {
     isConnected: !!account?.address,
-    address: account?.address || null,
+    address: account?.address ?? null,
     isContractsValid: contractValidation.isValid,
     missingContracts: contractValidation.missing,
     networkName: 'Base',
@@ -49,6 +48,7 @@ export function BlockchainProvider({ children }: BlockchainProviderProps) {
     refreshContracts
   };
 
+  // @ts-expect-error - React 18/19 component type compatibility
   return (
     <BlockchainContext.Provider value={value}>
       {children}

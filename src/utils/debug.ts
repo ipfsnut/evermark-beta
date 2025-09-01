@@ -16,7 +16,7 @@ function getCurrentWallet(): string | null {
       if ((window as any).__evermark_current_wallet) {
         return (window as any).__evermark_current_wallet.toLowerCase();
       }
-    } catch (e) {
+    } catch {
       // Ignore localStorage errors
     }
   }
@@ -25,28 +25,28 @@ function getCurrentWallet(): string | null {
 }
 
 // Dev-only logging functions
-export const devLog = (...args: any[]) => {
+export const devLog = (...args: unknown[]) => {
   const currentWallet = getCurrentWallet();
   if (currentWallet === DEV_WALLET) {
     console.log('🔧 [DEV]', ...args);
   }
 };
 
-export const devWarn = (...args: any[]) => {
+export const devWarn = (...args: unknown[]) => {
   const currentWallet = getCurrentWallet();
   if (currentWallet === DEV_WALLET) {
     console.warn('⚠️ [DEV]', ...args);
   }
 };
 
-export const devError = (...args: any[]) => {
+export const devError = (...args: unknown[]) => {
   const currentWallet = getCurrentWallet();
   if (currentWallet === DEV_WALLET) {
     console.error('❌ [DEV]', ...args);
   }
 };
 
-export const devInfo = (...args: any[]) => {
+export const devInfo = (...args: unknown[]) => {
   const currentWallet = getCurrentWallet();
   if (currentWallet === DEV_WALLET) {
     console.info('ℹ️ [DEV]', ...args);
@@ -64,7 +64,7 @@ export const setCurrentWallet = (address: string | null) => {
         localStorage.removeItem('evermark-wallet-address');
         delete (window as any).__evermark_current_wallet;
       }
-    } catch (e) {
+    } catch {
       // Ignore localStorage errors
     }
   }
@@ -76,14 +76,14 @@ export const isDevWallet = (): boolean => {
 };
 
 // Production-safe logging (always shows, but with clear prefixes)
-export const prodLog = (...args: any[]) => {
+export const prodLog = (...args: unknown[]) => {
   console.log('🔵 [EVERMARK]', ...args);
 };
 
-export const prodWarn = (...args: any[]) => {
+export const prodWarn = (...args: unknown[]) => {
   console.warn('🟡 [EVERMARK]', ...args);
 };
 
-export const prodError = (...args: any[]) => {
+export const prodError = (...args: unknown[]) => {
   console.error('🔴 [EVERMARK]', ...args);
 };

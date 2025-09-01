@@ -186,7 +186,7 @@ export function ReferralPanel({ className = '' }: ReferralPanelProps) {
           <div className="pt-2 border-t border-gray-600">
             <p className="text-xs">
               Share this link with friends. When they create an Evermark using your link,
-              you'll automatically receive 10% of the minting fee.
+              you&apos;ll automatically receive 10% of the minting fee.
             </p>
           </div>
         </div>

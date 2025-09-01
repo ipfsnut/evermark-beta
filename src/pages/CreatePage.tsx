@@ -4,7 +4,7 @@ import { CreateEvermarkForm } from '@/features/evermarks';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeftIcon } from 'lucide-react';
 
-export default function CreatePage() {
+export default function CreatePage(): React.ReactNode {
   const navigate = useNavigate();
 
   const handleSuccess = () => {

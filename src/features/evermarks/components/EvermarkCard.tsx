@@ -1,3 +1,4 @@
+import React from 'react';
 import { 
   User, 
   Calendar, 
@@ -7,11 +8,8 @@ import {
   Hash,
   FileText,
   MessageCircle,
-  CheckCircle,
-  AlertCircle,
   Clock,
-  Zap,
-  RotateCcw
+  Zap
 } from 'lucide-react';
 import { Formatters } from '../../../utils/formatters';
 import { useTheme } from '../../../providers/ThemeProvider';
@@ -51,7 +49,7 @@ export function EvermarkCard({
   showDescription = true,
   showImage = true,
   showPerformanceInfo = import.meta.env.NODE_ENV === 'development',
-  enableRetry = true,
+  _enableRetry = true,
   className = ''
 }: EvermarkCardProps) {
   const { isDark } = useTheme();
@@ -135,7 +133,7 @@ export function EvermarkCard({
   const isImageCached = () => {
     if (!evermark.supabaseImageUrl && !evermark.thumbnailUrl) return false;
     
-    const primaryUrl = variant === 'compact' || variant === 'list' 
+    const _primaryUrl = variant === 'compact' || variant === 'list' 
       ? evermark.thumbnailUrl || evermark.supabaseImageUrl
       : evermark.supabaseImageUrl || evermark.thumbnailUrl;
       
@@ -189,40 +187,6 @@ export function EvermarkCard({
     );
   };
 
-  // Enhanced error placeholder with retry functionality
-  const EnhancedErrorPlaceholder = ({ onRetry }: { onRetry?: () => void }) => (
-    <div className="absolute inset-0 bg-gradient-to-br from-red-500/20 to-red-700/20 flex flex-col items-center justify-center cursor-pointer group">
-      <div className="text-center" onClick={onRetry}>
-        <AlertCircle className="h-8 w-8 text-red-400 mb-2 mx-auto" />
-        <div className="text-red-300 text-sm font-medium mb-1">Failed to load</div>
-        {enableRetry && (
-          <button 
-            className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 transition-colors bg-red-900/30 px-2 py-1 rounded border border-red-500/30"
-            onClick={(e) => {
-              e.stopPropagation();
-              onRetry?.();
-            }}
-          >
-            <RotateCcw className="h-3 w-3" />
-            Retry
-          </button>
-        )}
-      </div>
-    </div>
-  );
-
-  // Progressive loading placeholder
-  const ProgressiveLoadingPlaceholder = ({ progress }: { progress?: number }) => (
-    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex flex-col items-center justify-center">
-      <div className="text-center">
-        <div className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin mb-2 mx-auto"></div>
-        <div className="text-blue-300 text-sm font-medium">Loading...</div>
-        {typeof progress === 'number' && (
-          <div className="text-xs text-blue-400 mt-1">{Math.round(progress)}%</div>
-        )}
-      </div>
-    </div>
-  );
 
   // List variant layout
   if (variant === 'list') {

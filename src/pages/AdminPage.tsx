@@ -6,14 +6,11 @@ import {
   Settings, 
   Play, 
   RefreshCw, 
-  AlertTriangle, 
-  CheckCircle, 
   Users,
   BarChart3,
   Clock,
   Shield,
   DollarSign,
-  Pause,
   PlayCircle
 } from 'lucide-react';
 import { useActiveAccount, useReadContract, useSendTransaction } from 'thirdweb/react';
@@ -58,7 +55,7 @@ interface ContractStatus {
   rewards: { totalRewards: bigint };
 }
 
-export default function AdminPage() {
+export default function AdminPage(): React.ReactNode {
   const account = useActiveAccount();
   const { mutate: sendTransaction, isPending } = useSendTransaction();
   
@@ -225,7 +222,7 @@ export default function AdminPage() {
       });
 
       sendTransaction(transaction, {
-        onSuccess: (result) => {
+        onSuccess: (_result) => {
           setActionStatus('New season started successfully!');
           setTimeout(() => setActionStatus(''), 3000);
           // Trigger data refresh
@@ -255,7 +252,7 @@ export default function AdminPage() {
       });
 
       sendTransaction(transaction, {
-        onSuccess: (result) => {
+        onSuccess: (_result) => {
           setActionStatus('WETH forwarded to rewards successfully!');
           setTimeout(() => setActionStatus(''), 3000);
           // Trigger data refresh
@@ -285,7 +282,7 @@ export default function AdminPage() {
       });
 
       sendTransaction(transaction, {
-        onSuccess: (result) => {
+        onSuccess: (_result) => {
           setActionStatus('EMARK forwarded to rewards successfully!');
           setTimeout(() => setActionStatus(''), 3000);
           // Trigger data refresh
@@ -338,7 +335,7 @@ export default function AdminPage() {
       });
 
       sendTransaction(transaction, {
-        onSuccess: (result) => {
+        onSuccess: (_result) => {
           setActionStatus('New rewards cycle started successfully!');
           setTimeout(() => setActionStatus(''), 3000);
           // Trigger data refresh
@@ -388,7 +385,7 @@ export default function AdminPage() {
       });
 
       sendTransaction(transaction, {
-        onSuccess: (result) => {
+        onSuccess: (_result) => {
           setActionStatus('New rewards period started successfully!');
           setTimeout(() => setActionStatus(''), 3000);
           // Trigger data refresh
@@ -418,7 +415,7 @@ export default function AdminPage() {
       });
 
       sendTransaction(transaction, {
-        onSuccess: (result) => {
+        onSuccess: (_result) => {
           setActionStatus('Rewards distributed successfully!');
           setTimeout(() => setActionStatus(''), 3000);
           // Trigger data refresh

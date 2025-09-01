@@ -42,7 +42,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
           }
 
           // Count shares by platform
-          const shareStats = (data || []).reduce((acc: any, share: any) => {
+          const shareStats = (data || []).reduce((acc: Record<string, number>, share: { platform: string }) => {
             acc[share.platform] = (acc[share.platform] || 0) + 1;
             return acc;
           }, {});

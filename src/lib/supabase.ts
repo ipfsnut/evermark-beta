@@ -1,8 +1,7 @@
 // src/lib/supabase.ts
 // Fixed Supabase client configuration with proper type safety
 
-import { createClient } from '@supabase/supabase-js';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 // Environment variable validation
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;

@@ -1,5 +1,7 @@
 /// <reference types="vite/client" />
 
+import type * as React from 'react';
+
 // Global JSX namespace for React 19 compatibility
 // This restores the global JSX namespace that many libraries still expect
 declare global {
@@ -57,7 +59,6 @@ declare global {
 
 // Module declarations for assets
 declare module '*.svg' {
-  import type * as React from 'react';
   const ReactComponent: React.FunctionComponent<React.SVGProps<SVGSVGElement> & { title?: string }>;
   const src: string;
   export default src;

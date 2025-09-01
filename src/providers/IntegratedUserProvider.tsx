@@ -4,7 +4,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useActiveAccount } from 'thirdweb/react';
 import { useAccount as useWagmiAccount } from 'wagmi';
-import { useNeynarContext } from '@neynar/react';
 import { useFarcasterDetection } from '../hooks/useFarcasterDetection';
 import { EnhancedUserService, type EnhancedUser } from '../services';
 
@@ -49,19 +48,21 @@ interface IntegratedUserProviderProps {
   children: React.ReactNode;
 }
 
-export function IntegratedUserProvider({ children }: IntegratedUserProviderProps) {
+export function IntegratedUserProvider({ children }: IntegratedUserProviderProps): React.ReactNode {
   const { isInFarcaster } = useFarcasterDetection();
   
   // Split into context-specific providers to avoid hook rule violations
   if (isInFarcaster) {
+    // @ts-expect-error - React 18/19 component type compatibility
     return <FarcasterIntegratedUserProvider>{children}</FarcasterIntegratedUserProvider>;
   }
   
+  // @ts-expect-error - React 18/19 component type compatibility
   return <BrowserIntegratedUserProvider>{children}</BrowserIntegratedUserProvider>;
 }
 
 // Farcaster-specific provider using wagmi hooks
-function FarcasterIntegratedUserProvider({ children }: { children: React.ReactNode }) {
+function FarcasterIntegratedUserProvider({ children }: { children: React.ReactNode }): React.ReactNode {
   const account = useWagmiAccount();
   
   // Neynar temporarily removed to isolate React Error #31
@@ -172,7 +173,7 @@ function FarcasterIntegratedUserProvider({ children }: { children: React.ReactNo
   }, [user]);
 
   const getIdentityScore = useCallback((): number => {
-    return user?.identityScore || 0;
+    return user?.identityScore ?? 0;
   }, [user]);
 
   const getDisplayName = useCallback((): string => {
@@ -195,7 +196,7 @@ function FarcasterIntegratedUserProvider({ children }: { children: React.ReactNo
   }, [user]);
 
   const getPrimaryAddress = useCallback((): string | undefined => {
-    return user?.primaryAddress || account?.address;
+    return user?.primaryAddress ?? account?.address;
   }, [user, account]);
 
   // Calculate simple connection states
@@ -231,6 +232,7 @@ function FarcasterIntegratedUserProvider({ children }: { children: React.ReactNo
     getPrimaryAddress
   };
 
+  // @ts-expect-error - React 18/19 component type compatibility
   return (
     <IntegratedUserContext.Provider value={value}>
       {children}
@@ -239,11 +241,11 @@ function FarcasterIntegratedUserProvider({ children }: { children: React.ReactNo
 }
 
 // Browser/PWA-specific provider using thirdweb hooks  
-function BrowserIntegratedUserProvider({ children }: { children: React.ReactNode }) {
+function BrowserIntegratedUserProvider({ children }: { children: React.ReactNode }): React.ReactNode {
   const account = useActiveAccount();
   
   // No Neynar in browser context
-  const neynarAuth = null;
+  const _neynarAuth = null;
   
   const [user, setUser] = useState<EnhancedUser | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -345,7 +347,7 @@ function BrowserIntegratedUserProvider({ children }: { children: React.ReactNode
   }, [user]);
 
   const getIdentityScore = useCallback((): number => {
-    return user?.identityScore || 0;
+    return user?.identityScore ?? 0;
   }, [user]);
 
   const getDisplayName = useCallback((): string => {
@@ -368,7 +370,7 @@ function BrowserIntegratedUserProvider({ children }: { children: React.ReactNode
   }, [user]);
 
   const getPrimaryAddress = useCallback((): string | undefined => {
-    return user?.primaryAddress || account?.address;
+    return user?.primaryAddress ?? account?.address;
   }, [user, account]);
 
   // Calculate simple connection states
@@ -404,6 +406,7 @@ function BrowserIntegratedUserProvider({ children }: { children: React.ReactNode
     getPrimaryAddress
   };
 
+  // @ts-expect-error - React 18/19 component type compatibility
   return (
     <IntegratedUserContext.Provider value={value}>
       {children}

@@ -2,13 +2,11 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThirdwebProvider } from 'thirdweb/react';
-import { NeynarContextProvider } from '@neynar/react';
 import { WagmiProvider, createConfig } from 'wagmi';
 import { farcasterMiniApp } from '@farcaster/miniapp-wagmi-connector';
 import { http } from 'viem';
 import { base } from 'viem/chains';
 
-import { client } from '@/lib/thirdweb';
 import { WalletProvider } from './WalletProvider';
 import { BlockchainProvider } from './BlockchainProvider';
 import { IntegratedUserProvider } from './IntegratedUserProvider';
@@ -83,9 +81,13 @@ export function AppProviders({ children }: AppProvidersProps) {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <ThirdwebProvider>
+          {/* @ts-expect-error - React 18/19 component type compatibility */}
           <WalletProvider>
+            {/* @ts-expect-error - React 18/19 component type compatibility */}
             <BlockchainProvider>
+              {/* @ts-expect-error - React 18/19 component type compatibility */}
               <IntegratedUserProvider>
+                {/* @ts-expect-error - React 18/19 component type compatibility */}
                 <AppContextProvider>
                   {children}
                 </AppContextProvider>

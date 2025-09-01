@@ -1,7 +1,6 @@
 import { prepareContractCall, sendTransaction, readContract } from 'thirdweb';
+import type { Account } from 'thirdweb/wallets';
 import { getNFTStakingContract, getEvermarkNFTContract } from '@/lib/contracts';
-import NFTStakingABI from '../abis/NFTStaking.abi.json';
-import EvermarkNFTABI from '../../evermarks/abis/EvermarkNFT.abi.json';
 
 export interface NFTStakeInfo {
   tokenId: number;
@@ -22,7 +21,7 @@ export class NFTStakingService {
   /**
    * Stake an NFT to earn rewards
    */
-  static async stakeNFT(account: any, tokenId: number): Promise<{ success: boolean; txHash?: string; error?: string }> {
+  static async stakeNFT(account: Account, tokenId: number): Promise<{ success: boolean; txHash?: string; error?: string }> {
     try {
       const contract = getNFTStakingContract();
       
@@ -88,11 +87,11 @@ export class NFTStakingService {
         success: true,
         txHash: result.transactionHash
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Stake NFT error:', error);
       return {
         success: false,
-        error: error.message || 'Failed to stake NFT'
+        error: error instanceof Error ? error.message : 'Failed to stake NFT'
       };
     }
   }
@@ -100,7 +99,7 @@ export class NFTStakingService {
   /**
    * Unstake an NFT
    */
-  static async unstakeNFT(account: any, tokenId: number): Promise<{ success: boolean; txHash?: string; error?: string }> {
+  static async unstakeNFT(account: Account, tokenId: number): Promise<{ success: boolean; txHash?: string; error?: string }> {
     try {
       const contract = getNFTStakingContract();
       
@@ -130,11 +129,11 @@ export class NFTStakingService {
         success: true,
         txHash: result.transactionHash
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Unstake NFT error:', error);
       return {
         success: false,
-        error: error.message || 'Failed to unstake NFT'
+        error: error instanceof Error ? error.message : 'Failed to unstake NFT'
       };
     }
   }
@@ -266,7 +265,7 @@ export class NFTStakingService {
   /**
    * Emergency unstake (admin only, in case of emergency)
    */
-  static async emergencyUnstake(account: any, tokenId: number): Promise<{ success: boolean; txHash?: string; error?: string }> {
+  static async emergencyUnstake(account: Account, tokenId: number): Promise<{ success: boolean; txHash?: string; error?: string }> {
     try {
       const contract = getNFTStakingContract();
       
@@ -285,11 +284,11 @@ export class NFTStakingService {
         success: true,
         txHash: result.transactionHash
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Emergency unstake error:', error);
       return {
         success: false,
-        error: error.message || 'Emergency unstake failed'
+        error: error instanceof Error ? error.message : 'Emergency unstake failed'
       };
     }
   }

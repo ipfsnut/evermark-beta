@@ -1,4 +1,5 @@
 import { prepareContractCall, sendTransaction, readContract } from 'thirdweb';
+import type { Account } from 'thirdweb/wallets';
 import { getEvermarkRewardsContract } from '@/lib/contracts';
 
 export interface UserRewardInfo {
@@ -131,7 +132,7 @@ export class RewardsService {
   /**
    * Claim all available rewards (both ETH and EMARK)
    */
-  static async claimRewards(account: any): Promise<{ success: boolean; txHash?: string; error?: string }> {
+  static async claimRewards(account: Account): Promise<{ success: boolean; txHash?: string; error?: string }> {
     try {
       const contract = getEvermarkRewardsContract();
       
@@ -156,11 +157,11 @@ export class RewardsService {
         success: true,
         txHash: result.transactionHash
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Claim rewards error:', error);
       return {
         success: false,
-        error: error.message || 'Failed to claim rewards'
+        error: error instanceof Error ? error.message : 'Failed to claim rewards'
       };
     }
   }
@@ -170,7 +171,7 @@ export class RewardsService {
    */
   static async getContractBalances(): Promise<{ ethBalance: bigint; emarkBalance: bigint } | null> {
     try {
-      const contract = getEvermarkRewardsContract();
+      const _contract = getEvermarkRewardsContract();
       
       // Note: This would require additional contract methods to check balances
       // For now, returning null - would need to be implemented based on actual contract

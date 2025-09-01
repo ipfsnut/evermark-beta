@@ -46,14 +46,14 @@ export class LeaderboardService {
     
     // Convert evermarks to leaderboard entries showing individual evermarks
     const entries: LeaderboardEntry[] = filteredEvermarks.map(evermark => {
-      const votes = evermark.votes || 0;
+      const votes = evermark.votes ?? 0;
       const creator = evermark.creator || evermark.author || 'Unknown';
       const createdAt = new Date(evermark.createdAt);
       
       // Calculate a simple score based on votes and verification
       const verificationBonus = evermark.verified ? 100 : 0;
       const freshnessBonus = Math.max(0, 30 - Math.floor((now.getTime() - createdAt.getTime()) / (24 * 60 * 60 * 1000))); // Bonus for recent content
-      const score = votes + verificationBonus + freshnessBonus;
+      const _score = votes + verificationBonus + freshnessBonus;
       
       return {
         id: evermark.id,
@@ -62,14 +62,14 @@ export class LeaderboardService {
         totalVotes: BigInt(votes),
         voteCount: votes, // Using votes as count for now
         percentageOfTotal: 0, // Will be calculated after sorting
-        title: evermark.title || 'Untitled',
-        description: evermark.description || '',
+        title: evermark.title ?? 'Untitled',
+        description: evermark.description ?? '',
         creator,
         createdAt: createdAt.toISOString(),
         sourceUrl: evermark.sourceUrl,
         image: evermark.image,
-        contentType: (evermark.contentType as LeaderboardEntry['contentType']) || 'Custom',
-        tags: evermark.tags || [],
+        contentType: (evermark.contentType as LeaderboardEntry['contentType']) ?? 'Custom',
+        tags: evermark.tags ?? [],
         verified: evermark.verified,
         change: {
           direction: 'same' as const,
@@ -132,7 +132,7 @@ export class LeaderboardService {
     }
     
     // Calculate leaderboard from evermarks
-    const period = filters.period || 'season';
+    const period = filters.period ?? 'season';
     const allEntries = this.calculateLeaderboard(evermarks, period);
     
     // Apply search filter if provided
@@ -140,10 +140,10 @@ export class LeaderboardService {
     if (filters.searchQuery) {
       const searchLower = filters.searchQuery.toLowerCase();
       filteredEntries = allEntries.filter(entry => {
-        const title = entry.title || '';
-        const description = entry.description || '';
-        const creator = entry.creator || '';
-        const contentType = entry.contentType || '';
+        const title = entry.title ?? '';
+        const description = entry.description ?? '';
+        const creator = entry.creator ?? '';
+        const contentType = entry.contentType ?? '';
         
         return (
           title.toLowerCase().includes(searchLower) ||
@@ -221,7 +221,7 @@ export class LeaderboardService {
    */
   static getPeriodById(periodId: string): RankingPeriod {
     const periods = this.getAvailablePeriods();
-    return periods.find(p => p.id === periodId) || periods[0];
+    return periods.find(p => p.id === periodId) ?? periods[0];
   }
   
   /**
@@ -248,7 +248,7 @@ export class LeaderboardService {
   /**
    * Get specific evermark's ranking and votes
    */
-  static async getEvermarkRanking(evermarkId: string, season?: number): Promise<LeaderboardEntry | null> {
+  static async getEvermarkRanking(_evermarkId: string, _season?: number): Promise<LeaderboardEntry | null> {
     return null;
   }
 
@@ -263,33 +263,33 @@ export class LeaderboardService {
       entries: [],
       totalCount: 0,
       totalPages: 1,
-      currentPage: options.page || 1,
-      pageSize: options.pageSize || 50,
+      currentPage: options.page ?? 1,
+      pageSize: options.pageSize ?? 50,
       hasNextPage: false,
       hasPreviousPage: false,
       lastUpdated: new Date(),
-      filters: options.filters || {}
+      filters: options.filters ?? {}
     };
   }
 
   /**
    * Get trending evermarks (biggest gainers/losers)
    */
-  static async getTrendingEvermarks(period: string = 'day'): Promise<LeaderboardEntry[]> {
+  static async getTrendingEvermarks(_period: string = 'day'): Promise<LeaderboardEntry[]> {
     return [];
   }
 
   /**
    * Get user's voting history and rankings
    */
-  static async getUserVotingHistory(userAddress: string, season?: number): Promise<any[]> {
+  static async getUserVotingHistory(_userAddress: string, _season?: number): Promise<any[]> {
     return [];
   }
 
   /**
    * Refresh leaderboard data (trigger sync from blockchain)
    */
-  static async refreshLeaderboard(season?: number): Promise<void> {
+  static async refreshLeaderboard(_season?: number): Promise<void> {
     // No-op until Supabase integration is complete
   }
 

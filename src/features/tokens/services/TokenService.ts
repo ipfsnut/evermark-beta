@@ -118,7 +118,7 @@ export class TokenService {
         warnings.push('This is a large approval amount');
       }
       
-    } catch (error) {
+    } catch {
       errors.push('Invalid amount format');
     }
 
@@ -191,7 +191,7 @@ export class TokenService {
   static createError(
     code: TokenErrorCode,
     message: string,
-    details?: Record<string, any>
+    details?: Record<string, unknown>
   ): TokenError {
     return {
       code,
@@ -217,8 +217,8 @@ export class TokenService {
   /**
    * Parse contract error into user-friendly message
    */
-  static parseContractError(error: any): TokenError {
-    const errorMessage = error?.message || error?.toString() || 'Unknown error';
+  static parseContractError(error: unknown): TokenError {
+    const errorMessage = error?.message ?? error?.toString() ?? 'Unknown error';
     
     // Common error patterns
     if (errorMessage.includes('insufficient allowance')) {
@@ -436,7 +436,7 @@ spender: string, amount: bigint, isUnlimited = false  ): {
   /**
    * Format transaction receipt for display
    */
-  static formatTransactionReceipt(receipt: any): {
+  static formatTransactionReceipt(receipt: { status?: number; transactionHash?: string; gasUsed?: unknown; blockNumber?: number; confirmations?: number }): {
     status: 'success' | 'failed';
     hash: string;
     gasUsed: string;
@@ -449,8 +449,8 @@ spender: string, amount: bigint, isUnlimited = false  ): {
       status: receipt.status === 1 ? 'success' : 'failed',
       hash: receipt.transactionHash,
       gasUsed: receipt.gasUsed ? this.formatTokenAmount(BigInt(receipt.gasUsed), 18) : 'Unknown',
-      blockNumber: receipt.blockNumber || 0,
-      confirmations: receipt.confirmations || 0
+      blockNumber: receipt.blockNumber ?? 0,
+      confirmations: receipt.confirmations ?? 0
     };
   }
 
@@ -537,7 +537,7 @@ spender: string, amount: bigint, isUnlimited = false  ): {
       case TOKEN_ERRORS.NETWORK_ERROR:
         return 'Network error. Please check your connection and try again';
       default:
-        return error.message || 'An unexpected error occurred';
+        return error.message ?? 'An unexpected error occurred';
     }
   }
 }

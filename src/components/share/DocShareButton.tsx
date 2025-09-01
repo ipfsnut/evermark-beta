@@ -155,7 +155,7 @@ export function DocShareButton({
             {/* Share menu */}
             <div className="absolute bottom-full right-0 mb-4 w-56 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-20">
               <div className="p-4">
-                <h3 className="text-sm font-medium text-white mb-3">Share "{docTitle}"</h3>
+                <h3 className="text-sm font-medium text-white mb-3">Share &quot;{docTitle}&quot;</h3>
                 
                 <div className="space-y-2">
                   <button

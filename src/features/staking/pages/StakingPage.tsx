@@ -1,13 +1,13 @@
 // src/pages/StakePage.tsx - Staking management page
-import { StakingWidget, NFTStakingPanel } from '@/features/staking';
+import React from 'react';
+import { StakingWidget, NFTStakingPanel, useStakingState } from '@/features/staking';
 import { TokenBalance, RewardsClaiming } from '@/features/tokens';
-import { useStakingState } from '@/features/staking';
 import { useContractsStatus } from '@/hooks/core/useContracts';
 import { TrendingUpIcon, CoinsIcon, AlertCircleIcon, CheckCircleIcon } from 'lucide-react';
 import { cn, useIsMobile } from '@/utils/responsive';
 import { themeClasses } from '@/utils/theme';
 
-export default function StakePage() {
+export default function StakePage(): React.ReactNode {
   const stakingState = useStakingState();
   const contractsStatus = useContractsStatus();
   const isMobile = useIsMobile();

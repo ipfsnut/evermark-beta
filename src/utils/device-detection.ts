@@ -85,7 +85,7 @@ export function useIsMobileDevice(): boolean {
 
   useEffect(() => {
     // Debounce the check to prevent rapid state changes
-    let timeoutId: NodeJS.Timeout;
+    let timeoutId: number;
     
     const checkDevice = () => {
       clearTimeout(timeoutId);
@@ -108,7 +108,7 @@ export function useIsMobileDevice(): boolean {
     
     // Also listen for media query changes
     const mediaQuery = window.matchMedia('(max-width: 768px)');
-    const handleMediaChange = (e: MediaQueryListEvent) => {
+    const handleMediaChange = () => {
       checkDevice();
     };
     

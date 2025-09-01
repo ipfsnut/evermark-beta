@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { SearchIcon, XIcon, FilterIcon,  } from 'lucide-react';
 import type { EvermarkFilters } from '../types';
 
@@ -34,7 +34,7 @@ export function EvermarkSearch({
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Debounced search
-const searchTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);  
+const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);  
   const handleSearchChange = useCallback((value: string) => {
     setSearchQuery(value);
     
@@ -55,7 +55,7 @@ const searchTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
     searchInputRef.current?.focus();
   }, [onSearch]);
 
-  const handleFilterChange = useCallback((key: keyof EvermarkFilters, value: any) => {
+  const handleFilterChange = useCallback((key: keyof EvermarkFilters, value: unknown) => {
     const newFilters = { ...localFilters, [key]: value };
     setLocalFilters(newFilters);
     onFiltersChange(newFilters);

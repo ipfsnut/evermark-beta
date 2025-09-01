@@ -93,7 +93,7 @@ export function UserAvatar({
   const [imageLoading, setImageLoading] = useState(true);
 
   // Determine the seed for fallback generation
-  const seed = fallbackSeed || user?.username || address || 'default';
+  const seed = fallbackSeed ?? user?.username ?? address ?? 'default';
   
   // Get the primary image URL (Farcaster PFP takes priority)
   const primaryImageUrl = user?.pfpUrl;
@@ -157,7 +157,7 @@ export function UserAvatar({
         <>
           <img
             src={imageUrl}
-            alt={user?.displayName || user?.username || 'User avatar'}
+            alt={user?.displayName ?? user?.username ?? 'User avatar'}
             className={cn(imageClasses, 'w-full h-full')}
             onLoad={handleImageLoad}
             onError={handleImageError}
@@ -260,7 +260,7 @@ export function UserAvatarWithInfo({
   showAddress?: boolean;
   layout?: 'horizontal' | 'vertical';
 }) {
-  const displayName = user?.displayName || user?.username;
+  const displayName = user?.displayName ?? user?.username;
   const displayAddress = `${address?.slice(0, 6)  }...${  address?.slice(-4)}`;
 
   return (

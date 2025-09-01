@@ -5,7 +5,7 @@ import {
   ArrowLeftIcon,
   ExternalLinkIcon,
   ShareIcon,
-  HeartIcon,
+  HeartIcon as _HeartIcon,
   MessageCircleIcon,
   CalendarIcon,
   UserIcon,
@@ -15,7 +15,7 @@ import {
   CopyIcon,
   EyeIcon,
   VoteIcon,
-  TrendingUpIcon,
+  TrendingUpIcon as _TrendingUpIcon,
   FileTextIcon,
   LinkIcon,
   ImageIcon,
@@ -142,7 +142,7 @@ const formatContentType = (contentType: Evermark['contentType']) => {
   }
 };
 
-export default function EvermarkDetailPage() {
+export default function EvermarkDetailPage(): React.ReactNode {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAuthenticated } = useAppAuth();

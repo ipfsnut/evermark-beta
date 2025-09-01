@@ -103,7 +103,7 @@ export interface TokenServiceParams {
 export interface TokenContractCall {
   contractAddress: string;
   functionName: string;
-  params: any[];
+  params: unknown[];
   value?: bigint;
 }
 

@@ -1,6 +1,6 @@
 // features/staking/components/StakeForm.tsx - Stake form component
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { toWei } from 'thirdweb/utils';
 import { 
   LockIcon, 
@@ -90,7 +90,7 @@ export function StakeForm({ stakingState, onSuccess, className = '', disabled = 
       
       setLocalSuccess(`Successfully approved ${amount} EMARK for staking!`);
       setNeedsApproval(false); // Reset approval state after successful approval
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Approval failed:', error);
       setLocalError(error.message || 'Approval failed. Please try again.');
     }
@@ -115,7 +115,7 @@ export function StakeForm({ stakingState, onSuccess, className = '', disabled = 
       setLocalSuccess(`Successfully staked ${formatTokenAmount(amountWei, 18)} EMARK!`);
       setAmount('');
       onSuccess?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Stake submission failed:', error);
       setLocalError(error.message || 'Staking failed. Please try again.');
     } finally {
@@ -228,7 +228,7 @@ export function StakeForm({ stakingState, onSuccess, className = '', disabled = 
             </span>
             {amount && validation.isValid && (
               <span>
-                You'll receive: {amount} wEMARK
+                You&apos;ll receive: {amount} wEMARK
               </span>
             )}
           </div>

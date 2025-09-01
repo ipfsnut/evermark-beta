@@ -1,15 +1,14 @@
 // src/features/tokens/components/TokenTransfer.tsx - Fixed contract integration
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { 
   Send,
   
   CheckCircle,
   AlertCircle
 } from 'lucide-react';
-import { prepareContractCall } from 'thirdweb';
+import { prepareContractCall, getContract } from 'thirdweb';
 import { useSendTransaction } from 'thirdweb/react';
-import { getContract } from 'thirdweb';
 import { client } from '@/lib/thirdweb';
 import { base } from 'thirdweb/chains';
 
@@ -23,9 +22,10 @@ const LOCAL_CONTRACTS = {
 import EMARK_ABI from '@/features/tokens/abis/EMARK.json';
 
 import { TokenService } from '../services/TokenService';
+import type { UseTokenStateReturn } from '../types';
 
 interface TokenTransferProps {
-  tokenState: any;
+  tokenState: UseTokenStateReturn;
   className?: string;
 }
 
@@ -109,7 +109,7 @@ export function TokenTransfer({ tokenState, className = '' }: TokenTransferProps
       
       // Refresh token balance
       await tokenState.refetch();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Transfer failed:', error);
       const parsedError = TokenService.parseContractError(error);
       setLocalError(TokenService.getUserFriendlyError(parsedError));

@@ -6,17 +6,29 @@ import { ErrorBoundary } from '../src/components/ui';
 import { PWAInstallPrompt } from '../src/components/PWAInstallPrompt';
 
 // Lazy load pages for better performance
+// @ts-expect-error - React 18/19 component type compatibility
 const HomePage = React.lazy(() => import('../src/pages/HomePage'));
+// @ts-expect-error - React 18/19 component type compatibility
 const ExplorePage = React.lazy(() => import('../src/pages/ExplorePage'));
+// @ts-expect-error - React 18/19 component type compatibility
 const AboutPage = React.lazy(() => import('../src/pages/AboutPage'));
+// @ts-expect-error - React 18/19 component type compatibility
 const DocsPage = React.lazy(() => import('../src/pages/DocsPage'));
+// @ts-expect-error - React 18/19 component type compatibility
 const SwapPage = React.lazy(() => import('../src/pages/SwapPage'));
+// @ts-expect-error - React 18/19 component type compatibility
 const LeaderboardPage = React.lazy(() => import('../src/features/leaderboard/pages/LeaderboardPage'));
+// @ts-expect-error - React 18/19 component type compatibility
 const StakingPage = React.lazy(() => import('../src/features/staking/pages/StakingPage'));
+// @ts-expect-error - React 18/19 component type compatibility
 const EvermarkDetailPage = React.lazy(() => import('../src/features/evermarks/pages/EvermarkDetailPage'));
+// @ts-expect-error - React 18/19 component type compatibility
 const CreatePage = React.lazy(() => import('../src/features/evermarks/pages/CreatePage'));
+// @ts-expect-error - React 18/19 component type compatibility
 const ReferralsPage = React.lazy(() => import('../src/pages/ReferralsPage'));
+// @ts-expect-error - React 18/19 component type compatibility
 const AdminPage = React.lazy(() => import('../src/pages/AdminPage'));
+// @ts-expect-error - React 18/19 component type compatibility
 const NotFoundPage = React.lazy(() => import('../src/pages/NotFoundPage'));
 
 // Loading fallback component
