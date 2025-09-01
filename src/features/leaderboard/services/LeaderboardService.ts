@@ -17,6 +17,7 @@ import { VotingService } from '../../voting/services/VotingService';
 import { VotingCacheService } from '../../voting/services/VotingCacheService';
 import { LeaderboardSyncService } from './LeaderboardSyncService';
 import { BlockchainLeaderboardService } from './BlockchainLeaderboardService';
+import { FinalizationService } from './FinalizationService';
 
 /**
  * Offchain Leaderboard Service
@@ -72,6 +73,21 @@ export class LeaderboardService {
     evermarks: Evermark[],
     period: string = 'current'
   ): Promise<LeaderboardEntry[]> {
+    
+    // For season-based periods, check if it's a finalized season first
+    if (period.startsWith('season-')) {
+      const seasonNumber = parseInt(period.replace('season-', ''));
+      
+      // Check if this season is finalized and we have stored data
+      const hasFinalized = await FinalizationService.hasStoredFinalization(seasonNumber);
+      if (hasFinalized) {
+        console.log(`📊 Using finalized leaderboard data for season ${seasonNumber}`);
+        const finalizedEntries = await FinalizationService.getFinalizedLeaderboard(seasonNumber);
+        
+        // Enhance with evermark metadata
+        return this.enhanceFinalizedEntries(finalizedEntries, evermarks);
+      }
+    }
     
     // For season-based periods, we'll use all evermarks but filter votes by season
     let filteredEvermarks = evermarks;
@@ -182,6 +198,47 @@ export class LeaderboardService {
   }
   
   /**
+   * Enhance finalized leaderboard entries with evermark metadata
+   */
+  private static enhanceFinalizedEntries(
+    finalizedEntries: LeaderboardEntry[],
+    evermarks: Evermark[]
+  ): LeaderboardEntry[] {
+    // Create lookup map for evermarks by ID
+    const evermarkMap = new Map<string, Evermark>();
+    evermarks.forEach(evermark => {
+      evermarkMap.set(evermark.id, evermark);
+    });
+    
+    // Enhance finalized entries with evermark data
+    return finalizedEntries.map(entry => {
+      const evermark = evermarkMap.get(entry.evermarkId);
+      
+      if (!evermark) {
+        // If evermark not found, return as-is (may have been deleted)
+        return entry;
+      }
+      
+      return {
+        ...entry,
+        title: evermark.title ?? 'Untitled',
+        description: evermark.description ?? '',
+        creator: evermark.creator || evermark.author || 'Unknown',
+        createdAt: new Date(evermark.createdAt).toISOString(),
+        sourceUrl: evermark.sourceUrl,
+        image: evermark.image,
+        contentType: (evermark.contentType as LeaderboardEntry['contentType']) ?? 'Custom',
+        tags: evermark.tags ?? [],
+        verified: evermark.verified,
+        change: {
+          direction: 'same' as const, // Historical data shows no change
+          positions: 0
+        }
+      };
+    });
+  }
+
+  /**
    * Clear the vote cache (useful when votes have been cast)
    */
   static async clearVoteCache(): Promise<void> {
@@ -289,6 +346,27 @@ export class LeaderboardService {
    */
   static async fetchLeaderboardStats(period: string = 'current', evermarks?: Evermark[]): Promise<LeaderboardStats> {
     try {
+      // For finalized seasons, use stored statistics for better performance
+      if (period.startsWith('season-')) {
+        const seasonNumber = parseInt(period.replace('season-', ''));
+        const hasFinalized = await FinalizationService.hasStoredFinalization(seasonNumber);
+        
+        if (hasFinalized) {
+          const finalizedStats = await FinalizationService.getFinalizedSeasonStats(seasonNumber);
+          if (finalizedStats) {
+            return {
+              totalEvermarks: finalizedStats.totalEvermarks,
+              totalVotes: finalizedStats.totalVotes,
+              activeVoters: 0, // We don't track individual voters
+              averageVotesPerEvermark: finalizedStats.averageVotes,
+              topEvermarkVotes: finalizedStats.topEvermarkVotes,
+              participationRate: 0, // Participation rate disabled
+              period
+            };
+          }
+        }
+      }
+      
       // If no evermarks provided, return empty stats
       if (!evermarks || evermarks.length === 0) {
         return {
@@ -376,18 +454,16 @@ export class LeaderboardService {
         });
       }
       
-      // Previous completed seasons (we'll need to implement this with proper storage)
-      // For now, we'll add a placeholder for the previous season
-      if (currentSeason && currentSeason.seasonNumber > 1) {
-        for (let i = currentSeason.seasonNumber - 1; i >= Math.max(1, currentSeason.seasonNumber - 3); i--) {
-          periods.push({
-            id: `season-${i}`,
-            label: `Season ${i}`,
-            duration: 0, // Historical seasons don't need duration
-            description: 'Completed season'
-          });
-        }
-      }
+      // Get actually finalized seasons from database
+      const finalizedSeasons = await FinalizationService.getAllFinalizedSeasons();
+      finalizedSeasons.forEach(season => {
+        periods.push({
+          id: `season-${season.season_number}`,
+          label: `Season ${season.season_number}`,
+          duration: Math.floor((new Date(season.end_time).getTime() - new Date(season.start_time).getTime()) / 1000),
+          description: `Finalized ${new Date(season.finalized_at).toLocaleDateString()}`
+        });
+      });
       
       return periods;
     } catch (error) {

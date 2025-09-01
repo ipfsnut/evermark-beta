@@ -27,6 +27,7 @@ import { Formatters } from '../../../utils/formatters';
 import { useTheme } from '../../../providers/ThemeProvider';
 import { cn } from '../../../utils/responsive';
 import { themeClasses } from '../../../utils/theme';
+import { SimpleEvermarkImage } from '../../../components/images/SimpleEvermarkImage';
 
 import useLeaderboardState from '../hooks/useLeaderboardState';
 import { LeaderboardService } from '../services/LeaderboardService';
@@ -354,33 +355,65 @@ export function LeaderboardTable({
                 compactMode ? "p-3" : "p-3 sm:p-4"
               )}
             >
-              {/* Mobile-first responsive layout */}
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-                {/* Mobile: Rank and content type in header row */}
-                <div className="flex items-center justify-between sm:contents">
-                  {/* Rank */}
-                  <div className="flex-shrink-0">
-                    {formatRankWithChange(entry)}
-                  </div>
-
-                  {/* Content type icon - visible on mobile */}
-                  <div className="flex-shrink-0 sm:order-2">
-                    <div className="w-6 h-6 sm:w-8 sm:h-8 bg-app-bg-secondary rounded-lg flex items-center justify-center text-app-text-secondary">
-                      {getContentTypeIcon(entry.contentType)}
+              {/* Enhanced visual layout with images */}
+              <div className="flex gap-3 sm:gap-4">
+                {/* Evermark Image - prominent on left */}
+                <div className="flex-shrink-0">
+                  <div className="relative">
+                    <SimpleEvermarkImage
+                      tokenId={parseInt(entry.evermarkId)}
+                      ipfsHash={entry.image?.replace('ipfs://', '')}
+                      originalUrl={entry.sourceUrl}
+                      alt={entry.title}
+                      variant="list"
+                      className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg border border-app-border group-hover:border-app-text-accent transition-colors"
+                    />
+                    
+                    {/* Rank overlay on image */}
+                    <div className="absolute -top-2 -left-2 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-app-bg-primary border-2 border-app-border flex items-center justify-center">
+                      <span className={cn(
+                        "text-xs sm:text-sm font-bold",
+                        entry.rank === 1 && "text-app-brand-warning",
+                        entry.rank === 2 && "text-app-text-secondary", 
+                        entry.rank === 3 && "text-app-brand-warning",
+                        entry.rank > 3 && "text-app-text-primary"
+                      )}>
+                        {entry.rank}
+                      </span>
                     </div>
+                    
+                    {/* Verification badge */}
+                    {entry.verified && (
+                      <div className="absolute -top-1 -right-1 w-5 h-5 bg-app-brand-success rounded-full flex items-center justify-center">
+                        <Star className="h-3 w-3 text-white" />
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Main content - full width on mobile */}
-                <div className="flex-1 min-w-0 sm:order-1">
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
+                {/* Content area - flexible middle section */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-base sm:text-lg font-semibold text-app-text-on-card group-hover:text-app-text-accent transition-colors line-clamp-2 sm:truncate">
-                        {entry.title}
-                      </h3>
+                      {/* Title with ranking change indicator */}
+                      <div className="flex items-start gap-2 mb-1">
+                        <h3 className="text-base sm:text-lg font-semibold text-app-text-on-card group-hover:text-app-text-accent transition-colors line-clamp-2 flex-1">
+                          {entry.title}
+                        </h3>
+                        <div className="flex-shrink-0 mt-1">
+                          {getRankingChangeIcon(entry.change)}
+                        </div>
+                      </div>
                       
-                      {/* Mobile: Stack metadata vertically, Desktop: horizontal */}
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs sm:text-sm text-app-text-secondary mt-1">
+                      {/* Description - now visible on mobile too */}
+                      {entry.description && (
+                        <p className="text-sm text-app-text-secondary mb-2 line-clamp-2 sm:line-clamp-1">
+                          {entry.description}
+                        </p>
+                      )}
+                      
+                      {/* Metadata row - creator and date */}
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs sm:text-sm text-app-text-muted mb-2">
                         <div className="flex items-center min-w-0">
                           <User className="h-3 w-3 mr-1 flex-shrink-0" />
                           <span className="truncate">{entry.creator}</span>
@@ -391,64 +424,53 @@ export function LeaderboardTable({
                           <span>{Formatters.formatRelativeTime(entry.createdAt)}</span>
                         </div>
                         
-                        {entry.verified && (
-                          <div className="flex items-center text-app-brand-success">
-                            <Star className="h-3 w-3" />
-                            <span className="ml-1 text-xs sm:hidden">Verified</span>
-                          </div>
-                        )}
+                        {/* Content type indicator */}
+                        <div className="flex items-center">
+                          {getContentTypeIcon(entry.contentType)}
+                          <span className="ml-1 capitalize text-xs">{entry.contentType}</span>
+                        </div>
                       </div>
 
-                      {/* Description (if not compact) - hidden on mobile for space */}
-                      {!compactMode && entry.description && (
-                        <p className="hidden sm:block text-sm text-app-text-on-card mt-2 line-clamp-2">
-                          {entry.description}
-                        </p>
-                      )}
-
-                      {/* Tags - responsive display */}
+                      {/* Tags - improved mobile display */}
                       {entry.tags.length > 0 && (
-                        <div className="flex items-center space-x-2 mt-2">
-                          <Tag className="h-3 w-3 text-app-text-muted flex-shrink-0" />
-                          <div className="flex flex-wrap gap-1 min-w-0">
-                            {entry.tags.slice(0, 2).map((tag, index) => (
-                              <span
-                                key={index}
-                                className="text-xs bg-app-bg-secondary text-app-text-secondary px-2 py-1 rounded border border-app-border whitespace-nowrap"
-                              >
-                                {tag}
-                              </span>
-                            ))}
-                            {entry.tags.length > 2 && (
-                              <span className="text-xs text-app-text-muted whitespace-nowrap">
-                                +{entry.tags.length - 2} more
-                              </span>
-                            )}
-                          </div>
+                        <div className="flex flex-wrap gap-1">
+                          {entry.tags.slice(0, 3).map((tag, index) => (
+                            <span
+                              key={index}
+                              className="text-xs bg-app-bg-secondary text-app-text-secondary px-2 py-1 rounded-full border border-app-border"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                          {entry.tags.length > 3 && (
+                            <span className="text-xs text-app-text-muted px-2 py-1">
+                              +{entry.tags.length - 3}
+                            </span>
+                          )}
                         </div>
                       )}
                     </div>
 
-                    {/* Vote information - responsive positioning */}
-                    <div className="flex-shrink-0 text-left sm:text-right sm:ml-4">
+                    {/* Vote stats - right side */}
+                    <div className="flex-shrink-0 text-right">
                       <div className="text-lg sm:text-xl font-bold text-app-text-accent mb-1">
                         {LeaderboardService.formatVoteAmount(entry.totalVotes)}
                       </div>
                       {entry.percentageOfTotal > 0 && (
-                        <div className="text-xs text-app-text-muted">
+                        <div className="text-xs text-app-text-muted mb-1">
                           {entry.percentageOfTotal.toFixed(1)}% of total
+                        </div>
+                      )}
+                      
+                      {/* External link indicator */}
+                      {entry.sourceUrl && (
+                        <div className="flex justify-end">
+                          <ExternalLink className="h-4 w-4 text-app-text-secondary group-hover:text-app-text-accent transition-colors" />
                         </div>
                       )}
                     </div>
                   </div>
                 </div>
-
-                {/* External link indicator - repositioned for mobile */}
-                {entry.sourceUrl && (
-                  <div className="flex-shrink-0 self-start sm:self-center sm:order-3">
-                    <ExternalLink className="h-4 w-4 text-app-text-secondary group-hover:text-app-text-accent transition-colors" />
-                  </div>
-                )}
               </div>
             </div>
           ))}
