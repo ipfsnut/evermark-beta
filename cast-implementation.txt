@@ -1,0 +1,322 @@
+# Farcaster Cast Evermarks Implementation Plan
+
+## Problem Analysis
+
+### Current Issues
+1. **Missing API Endpoint**: `FarcasterService.fetchCastMetadata()` calls non-existent `/.netlify/functions/farcaster-cast`
+2. **No Cast Metadata Fetching**: Creation flow in `useEvermarkCreation.ts` doesn't fetch cast data during creation
+3. **Broken Cast Images**: `generate-cast-image.ts` fails because cast metadata is missing from database
+4. **Inconsistent Data**: Cast #3 has rich metadata, but #4-5 only have minimal data
+
+### What Works
+- Neynar API integration (API key available: in .env.local)
+- Cast validation in `FarcasterService.validateFarcasterInput()`
+- Cast image generation logic (when metadata is available)
+- Cast #3 shows proper metadata structure and image generation
+
+---
+
+## Architecture Plan
+
+### Phase 1: Create Missing API Endpoint
+**File**: `netlify/functions/farcaster-cast.ts`
+
+```typescript
+// New endpoint to fetch cast metadata from Neynar API
+// GET /.netlify/functions/farcaster-cast?hash={castHash}
+// Returns: FarcasterCastData structure
+```
+
+**Responsibilities**:
+- Extract cast hash from query parameters
+- Validate hash format
+- Call Neynar API with proper authentication
+- Transform Neynar response to our `FarcasterCastData` interface
+- Handle rate limits and errors gracefully
+- Return consistent data structure
+
+### Phase 2: Integrate Cast Metadata Fetching in Creation Flow
+**File**: `src/features/evermarks/hooks/useEvermarkCreation.ts`
+
+**Current Flow**:
+```
+1. Validate inputs
+2. Upload image to IPFS
+3. Create NFT metadata
+4. Mint on blockchain
+5. Sync to database
+```
+
+**New Flow**:
+```
+1. Validate inputs
+2. [NEW] If contentType === 'Cast': Fetch cast metadata via FarcasterService
+3. Upload image to IPFS
+4. Create NFT metadata (include cast data)
+5. Mint on blockchain
+6. Sync to database (include rich cast metadata)
+```
+
+**Integration Point**: Line 162-214 where NFT metadata is created
+
+### Phase 3: Enhance Cast Image Generation
+**File**: `netlify/functions/generate-cast-image.ts`
+
+**Current Issues**:
+- Relies on cast data being in `metadata_json`
+- Falls back to empty defaults when data is missing
+- Not automatically triggered for new casts
+
+**Improvements**:
+- Better error handling when cast data is missing
+- Automatic image generation after cast creation
+- Support for different cast types (text, with embeds, etc.)
+- Retry mechanism for failed generations
+
+### Phase 4: Fix Existing Broken Casts
+**Strategy**: Create migration/repair function
+- Identify cast evermarks with minimal metadata (casts #4, #5)
+- Re-fetch their cast data from Neynar API
+- Update database records with rich metadata
+- Regenerate cast preview images
+
+---
+
+## Detailed Implementation
+
+### 1. Netlify Function: `farcaster-cast.ts`
+
+```typescript
+interface NeynarCastResponse {
+  cast: {
+    hash: string;
+    author: {
+      username: string;
+      display_name: string;
+      pfp_url: string;
+      fid: number;
+    };
+    text: string;
+    timestamp: string;
+    reactions: {
+      likes_count: number;
+      recasts_count: number;
+    };
+    replies: {
+      count: number;
+    };
+  };
+}
+
+// Transform to our FarcasterCastData interface
+```
+
+**Error Handling**:
+- Invalid hash format
+- Cast not found on Neynar
+- API rate limits
+- Network errors
+
+**Caching Strategy**:
+- Cache successful responses for 1 hour
+- Use cast hash as cache key
+
+### 2. Creation Flow Integration
+
+**In `createEvermarkWithBlockchain()`**:
+
+```typescript
+// After line 162 (metadata validation)
+let castData: FarcasterCastData | undefined;
+
+if (metadata.contentType === 'Cast') {
+  const castInput = metadata.sourceUrl || metadata.castUrl;
+  if (castInput) {
+    try {
+      onProgress(30, 'Fetching Farcaster cast data...');
+      castData = await FarcasterService.fetchCastMetadata(castInput);
+    } catch (error) {
+      console.warn('Cast metadata fetch failed:', error);
+      // Continue creation without cast data (graceful degradation)
+    }
+  }
+}
+
+// Update NFT metadata creation (line 175-214)
+const nftMetadata = {
+  // ... existing fields ...
+  evermark: {
+    // ... existing fields ...
+    castData, // Add cast data
+    castUrl: metadata.sourceUrl || metadata.castUrl,
+  }
+};
+
+// Update database sync (line 285-296)
+metadata: JSON.stringify({
+  // ... existing fields ...
+  cast: castData, // Add cast data for image generation
+}),
+```
+
+### 3. Database Schema Considerations
+
+**Current `metadata_json` structure for working cast**:
+```json
+{
+  "cast": {
+    "text": "...",
+    "author_username": "...", 
+    "author_display_name": "...",
+    "likes": 32,
+    "recasts": 5,
+    "replies": 16,
+    "timestamp": "...",
+    "hash": "..."
+  },
+  "tags": ["farcaster", "cast"],
+  "customFields": [...]
+}
+```
+
+**Ensure consistency** between:
+- IPFS metadata (`evermark.castData`)
+- Database metadata (`metadata_json.cast`)
+- Custom fields backup
+
+### 4. Automatic Image Generation
+
+**Current**: Manual trigger via `generate-cast-image.ts`
+**New**: Automatic trigger after cast creation
+
+**Integration options**:
+1. **In creation flow**: Call image generation after database sync
+2. **Database trigger**: PostgreSQL function/trigger on insert
+3. **Background job**: Queue-based processing
+
+**Recommended**: Option 1 (simplest integration)
+
+```typescript
+// After database sync success (line 318)
+if (castData && mintResult.tokenId) {
+  try {
+    onProgress(98, 'Generating cast preview image...');
+    await fetch('/.netlify/functions/generate-cast-image', {
+      method: 'POST',
+      body: JSON.stringify({ token_id: mintResult.tokenId })
+    });
+  } catch {
+    // Don't fail creation if image generation fails
+  }
+}
+```
+
+---
+
+## Migration Plan for Broken Casts
+
+### Repair Function: `netlify/functions/repair-cast-metadata.ts`
+
+**Purpose**: Fix existing casts #4 and #5
+
+**Logic**:
+1. Query casts with `content_type = 'Cast'` and minimal metadata
+2. Extract cast hash from `source_url`
+3. Fetch metadata from Neynar API
+4. Update `metadata_json` with rich cast data
+5. Trigger image generation
+
+**Manual trigger** for safety, then automate if needed
+
+---
+
+## Testing Strategy
+
+### Unit Tests
+- `FarcasterService.fetchCastMetadata()` with various inputs
+- Cast hash extraction and validation
+- Metadata transformation logic
+
+### Integration Tests
+- End-to-end cast creation flow
+- Image generation with rich metadata
+- Error handling (invalid hashes, API failures)
+
+### Manual Testing
+- Create new cast evermark with working cast hash
+- Verify metadata is fetched and stored correctly
+- Verify image generation works
+- Test with various cast types (text only, with images, etc.)
+
+---
+
+## Rollout Plan
+
+### Phase 1: Foundation (Day 1)
+- [ ] Create `farcaster-cast.ts` netlify function
+- [ ] Test with existing cast hashes
+- [ ] Verify `FarcasterService.fetchCastMetadata()` works end-to-end
+
+### Phase 2: Integration (Day 2)
+- [ ] Integrate cast fetching into creation flow
+- [ ] Test new cast creation with metadata fetching
+- [ ] Ensure backward compatibility
+
+### Phase 3: Image Generation (Day 3)
+- [ ] Add automatic image generation after cast creation
+- [ ] Test image generation with rich metadata
+- [ ] Handle edge cases (missing data, API failures)
+
+### Phase 4: Migration (Day 4)
+- [ ] Create repair function for broken casts
+- [ ] Fix casts #4 and #5
+- [ ] Verify all cast evermarks have proper images
+
+### Phase 5: Monitoring (Ongoing)
+- [ ] Monitor cast creation success rates
+- [ ] Track image generation success
+- [ ] Monitor Neynar API usage and rates
+
+---
+
+## Risk Mitigation
+
+### API Dependencies
+- **Risk**: Neynar API downtime/rate limits
+- **Mitigation**: Graceful degradation, retry logic, caching
+
+### Data Consistency
+- **Risk**: Mismatched metadata between IPFS and database
+- **Mitigation**: Consistent data transformation, validation
+
+### Performance
+- **Risk**: Cast creation becomes slower
+- **Mitigation**: Parallel operations, progress indicators
+
+### Backward Compatibility
+- **Risk**: Breaking existing cast evermarks
+- **Mitigation**: Thorough testing, gradual rollout
+
+---
+
+## Success Metrics
+
+- [ ] All new cast evermarks have rich metadata
+- [ ] Cast preview images generate successfully
+- [ ] Creation flow completes in <30 seconds
+- [ ] Zero regression on existing functionality
+- [ ] Casts #4 and #5 are repaired and functional
+
+---
+
+## Open Questions
+
+1. **Rate Limits**: What are Neynar API rate limits? Need caching strategy?
+2. **Error UX**: How to handle cast-not-found errors in UI?
+3. **Image Storage**: Continue using Supabase Storage for cast images?
+4. **Metadata Version**: Should we version metadata schema for future changes?
+5. **Bulk Migration**: Process for fixing other broken casts beyond #4-5?
+
+---
+
+This plan provides a comprehensive approach to fixing the Farcaster cast evermark system while maintaining reliability and performance.

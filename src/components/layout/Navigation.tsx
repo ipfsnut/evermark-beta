@@ -45,11 +45,6 @@ const navigationItems: NavItem[] = [
     label: 'Staking',
     icon: CoinsIcon,
   },
-  {
-    to: '/referrals',
-    label: 'Referrals',
-    icon: ShareIcon,
-  },
 ];
 
 // Secondary actions

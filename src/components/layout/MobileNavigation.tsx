@@ -42,11 +42,6 @@ const mobileNavItems: NavItem[] = [
     label: 'Ranks',
     icon: TrendingUpIcon,
   },
-  {
-    to: '/referrals',
-    label: 'Refer',
-    icon: ShareIcon,
-  },
 ];
 
 export function MobileNavigation() {
