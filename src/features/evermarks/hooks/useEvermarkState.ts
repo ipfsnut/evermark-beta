@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useWalletAccount, useThirdwebAccount } from '@/hooks/core/useWalletAccount';
+import { useWallet } from '@/providers/WalletProvider';
 import type { Account } from 'thirdweb/wallets';
 
 import {
@@ -15,7 +16,9 @@ import {
 } from '../types';
 // Production services for blockchain-first evermark creation
 import { EvermarkBlockchainService } from '../services/BlockchainService';
+import { ContextualBlockchainService } from '../services/ContextualBlockchainService';
 import { pinataService } from '@/services/PinataService';
+import { useContextualTransactions } from '@/hooks/core/useContextualTransactions';
 
 // Temporary service replacement until SDK issues are fixed
 const TempEvermarkService = {
@@ -190,7 +193,16 @@ const TempEvermarkService = {
       return null;
     }
   },
-  createEvermark: async (input: CreateEvermarkInput, account: Account): Promise<CreateEvermarkResult> => {
+  createEvermark: async (
+    input: CreateEvermarkInput, 
+    account: Account | { address: string; [key: string]: any },
+    sendTransaction: (tx: {
+      contract: any;
+      method: string;
+      params: any[];
+      value?: bigint;
+    }) => Promise<{ transactionHash: string }>
+  ): Promise<CreateEvermarkResult> => {
     try {
       console.log('🚀 Starting blockchain-first evermark creation...');
       
@@ -329,12 +341,13 @@ const TempEvermarkService = {
         note: 'Using accountAddress instead of metadata.author for blockchain calls'
       });
 
-      const mintResult = await EvermarkBlockchainService.mintEvermark(
+      const mintResult = await ContextualBlockchainService.mintEvermark(
         account,
         metadataUploadResult.url,
         metadata.title,
         creatorAddress,
-        finalReferrer
+        finalReferrer,
+        sendTransaction
       );
       
       if (!mintResult.success) {
@@ -451,6 +464,8 @@ export function useEvermarksState(): UseEvermarksResult {
   // Get the active account for blockchain operations
   const account = useWalletAccount();
   const thirdwebAccount = useThirdwebAccount();
+  const { context } = useWallet();
+  const { sendTransaction } = useContextualTransactions();
   
   // Local state for pagination and filtering
   const [pagination, setPaginationState] = useState<EvermarkPagination>(
@@ -495,15 +510,21 @@ export function useEvermarksState(): UseEvermarksResult {
   const createMutation = useMutation({
     mutationFn: async (input: CreateEvermarkInput) => {
       // Check if we have an account before starting creation
-      if (!account || !thirdwebAccount) {
+      if (!account) {
         throw new Error('No wallet connected. Please connect your wallet to create an Evermark.');
+      }
+      
+      // Use thirdwebAccount if available (browser/PWA), otherwise use the unified account for Farcaster
+      const accountForTransactions = thirdwebAccount || account;
+      if (!accountForTransactions) {
+        throw new Error('No wallet account available for blockchain transactions.');
       }
 
       setCreateProgress(0);
       setCreateStep('Validating inputs...');
       
       // Call the blockchain-first creation service
-      const result = await TempEvermarkService.createEvermark(input, thirdwebAccount);
+      const result = await TempEvermarkService.createEvermark(input, accountForTransactions, sendTransaction);
       
       if (result.success) {
         setCreateProgress(100);

@@ -1,15 +1,11 @@
-// src/features/staking/hooks/useStakingTransactions.ts - Fixed for Thirdweb v5
+// src/features/staking/hooks/useStakingTransactions.ts - Context-aware transactions
 import { useState, useCallback } from 'react';
-import { useSendTransaction } from 'thirdweb/react';
 import { useWalletAccount } from '@/hooks/core/useWalletAccount';
-import { prepareContractCall, waitForReceipt } from 'thirdweb';
+import { useContextualTransactions } from '@/hooks/core/useContextualTransactions';
 import { useContracts } from '@/hooks/core/useContracts';
-import { client } from '@/lib/thirdweb';
-import { base } from 'thirdweb/chains';
 import { devLog, prodLog } from '@/utils/debug';
 
-// Local constants to avoid @/lib/contracts dependency
-const CHAIN = base;
+// Remove unused imports
 
 export interface StakingTransactions {
   // Transaction states
@@ -33,7 +29,7 @@ export interface StakingTransactions {
 export function useStakingTransactions(): StakingTransactions {
   const account = useWalletAccount();
   const { wemark, emarkToken } = useContracts();
-  const { mutateAsync: sendTransaction } = useSendTransaction();
+  const { sendTransaction } = useContextualTransactions();
   
   // Transaction states
   const [isStaking, setIsStaking] = useState(false);
@@ -56,20 +52,10 @@ export function useStakingTransactions(): StakingTransactions {
         user: account.address
       });
       
-      // Fixed: Use prepareContractCall with thirdweb v5 pattern
-      const transaction = prepareContractCall({
+      const result = await sendTransaction({
         contract: emarkToken,
         method: "function approve(address spender, uint256 amount) returns (bool)",
         params: [wemark.address, amount]
-      });
-      
-      const result = await sendTransaction(transaction);
-      
-      // Wait for confirmation
-      await waitForReceipt({
-        client,
-        chain: CHAIN,
-        transactionHash: result.transactionHash
       });
       
       prodLog("EMARK approval successful:", result.transactionHash);
@@ -91,20 +77,10 @@ export function useStakingTransactions(): StakingTransactions {
         user: account.address
       });
       
-      // Fixed: Use prepareContractCall with thirdweb v5 pattern
-      const transaction = prepareContractCall({
+      const result = await sendTransaction({
         contract: wemark,
         method: "function stake(uint256 amount)",
         params: [amount]
-      });
-      
-      const result = await sendTransaction(transaction);
-      
-      // Wait for confirmation
-      await waitForReceipt({
-        client,
-        chain: CHAIN,
-        transactionHash: result.transactionHash
       });
       
       prodLog("Staking successful:", result.transactionHash);
@@ -126,20 +102,10 @@ export function useStakingTransactions(): StakingTransactions {
         user: account.address
       });
       
-      // Fixed: Use prepareContractCall with thirdweb v5 pattern
-      const transaction = prepareContractCall({
+      const result = await sendTransaction({
         contract: wemark,
         method: "function startUnbonding(uint256 amount)",
         params: [amount]
-      });
-      
-      const result = await sendTransaction(transaction);
-      
-      // Wait for confirmation
-      await waitForReceipt({
-        client,
-        chain: CHAIN,
-        transactionHash: result.transactionHash
       });
       
       prodLog("Unstake request successful:", result.transactionHash);
@@ -160,20 +126,10 @@ export function useStakingTransactions(): StakingTransactions {
         user: account.address
       });
       
-      // Fixed: Use prepareContractCall with thirdweb v5 pattern
-      const transaction = prepareContractCall({
+      const result = await sendTransaction({
         contract: wemark,
         method: "function withdraw()",
         params: []
-      });
-      
-      const result = await sendTransaction(transaction);
-      
-      // Wait for confirmation
-      await waitForReceipt({
-        client,
-        chain: CHAIN,
-        transactionHash: result.transactionHash
       });
       
       prodLog("Unstake completion successful:", result.transactionHash);
@@ -194,20 +150,10 @@ export function useStakingTransactions(): StakingTransactions {
         user: account.address
       });
       
-      // Fixed: Use prepareContractCall with thirdweb v5 pattern
-      const transaction = prepareContractCall({
+      const result = await sendTransaction({
         contract: wemark,
         method: "function cancelUnbonding()",
         params: []
-      });
-      
-      const result = await sendTransaction(transaction);
-      
-      // Wait for confirmation
-      await waitForReceipt({
-        client,
-        chain: CHAIN,
-        transactionHash: result.transactionHash
       });
       
       prodLog("Unbonding cancellation successful:", result.transactionHash);
