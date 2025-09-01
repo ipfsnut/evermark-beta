@@ -1,0 +1,279 @@
+# Evermark Stake-in Verification System Implementation Plan
+
+## Overview
+A verification system where users stake their Evermark NFTs to request verification of content ownership. Failed verification results in forced unstaking and permanent ban from verification.
+
+## Core Principles
+- Only staked NFTs can be verified
+- Verification requires manual admin review
+- Failed verification = forced unstake + permanent ban
+- Verified status requires continuous staking
+- Challengers must stake tokens to prevent spam
+
+## System Flow
+
+### 1. Verification Request
+- User stakes their Evermark NFT
+- Submits verification request with optional proof of ownership
+- Enters 7-day challenge period
+
+### 2. Challenge Period
+- Anyone can challenge with evidence
+- Challenger must stake 100 $EMARK tokens (anti-spam)
+- Triggers manual review by admin
+
+### 3. Admin Review
+- Admin reviews evidence from both sides
+- Makes determination: verified or rejected
+
+### 4. Outcomes
+**If VERIFIED:**
+- NFT remains staked (shows commitment)
+- Gets verified badge/status
+- Appears in verified-only sections
+- Challenger loses stake
+
+**If REJECTED:**
+- Admin force unstakes NFT → NFT returned to owner
+- Permanently marked verification_failed in database
+- Can never be verified again (verification_locked = true)
+- Loses all verification privileges forever
+- Challenger gets reward
+
+## Database Schema
+
+### verification_requests table
+```sql
+CREATE TABLE verification_requests (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  token_id INTEGER NOT NULL UNIQUE REFERENCES beta_evermarks(token_id),
+  requester_address TEXT NOT NULL,
+  stake_tx_hash TEXT,
+  status TEXT NOT NULL DEFAULT 'pending', 
+  -- pending, under_review, verified, rejected, cancelled
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  reviewed_at TIMESTAMP WITH TIME ZONE,
+  reviewed_by TEXT,
+  rejection_reason TEXT,
+  evidence_url TEXT, -- Link to proof of ownership
+  
+  CONSTRAINT check_address_format 
+    CHECK (requester_address ~ '^0x[a-fA-F0-9]{40}$')
+);
+```
+
+### verification_challenges table
+```sql
+CREATE TABLE verification_challenges (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  request_id UUID REFERENCES verification_requests(id),
+  token_id INTEGER NOT NULL REFERENCES beta_evermarks(token_id),
+  challenger_address TEXT NOT NULL,
+  stake_amount TEXT NOT NULL, -- Wei amount as string
+  stake_tx_hash TEXT,
+  evidence TEXT NOT NULL, -- Why this is fraudulent
+  status TEXT NOT NULL DEFAULT 'pending',
+  -- pending, upheld, rejected, refunded
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  resolved_at TIMESTAMP WITH TIME ZONE,
+  resolution_tx_hash TEXT,
+  
+  CONSTRAINT check_challenger_address 
+    CHECK (challenger_address ~ '^0x[a-fA-F0-9]{40}$')
+);
+```
+
+### Update beta_evermarks table
+```sql
+ALTER TABLE beta_evermarks 
+ADD COLUMN verification_status TEXT DEFAULT 'unverified',
+ADD COLUMN verification_locked BOOLEAN DEFAULT FALSE,
+ADD COLUMN stake_status TEXT DEFAULT 'not_staked';
+```
+
+## API Endpoints
+
+### POST /api/verification?action=request_verification
+Request verification for a staked NFT
+- Requires: tokenId, walletAddress, evidenceUrl (optional)
+- Returns: requestId, success status
+
+### POST /api/verification?action=challenge
+Challenge a verification request
+- Requires: tokenId, challengerAddress, evidence, stakeTxHash
+- Returns: challengeId, success status
+
+### POST /api/verification?action=admin_review
+Admin submits verdict on verification request
+- Requires: requestId, verdict (verified/rejected), reason (if rejected)
+- Returns: success status
+
+### GET /api/verification?token_id={id}
+Get verification status for a specific token
+- Returns: verification status, stake status, challenges
+
+### GET /api/verification?status=pending_review
+Get all pending verification requests (admin only)
+- Returns: array of pending requests with challenges
+
+## Frontend Components
+
+### VerificationPanel.tsx
+- Shows current verification status
+- Allows owners to request verification
+- Handles NFT staking if not already staked
+- Shows challenge period countdown
+
+### AdminVerificationPage.tsx
+- Lists all pending verification requests
+- Shows challenges and evidence
+- Allows admin to approve/reject
+- Triggers smart contract calls for forced unstaking
+
+### Verification Badge
+- Green checkmark badge for verified Evermarks
+- Shows on cards, detail pages, leaderboard
+- Only visible when verification_status === 'verified'
+
+## Smart Contract Integration
+
+### Uses Existing Functions
+- `stakeNFT()` - User stakes to request verification
+- `emergencyUnstakeNFT()` - Admin force unstakes on rejection
+- `isStaked()` - Check if NFT is staked
+
+### No Contract Changes Needed
+- Leverages existing NFT staking contract
+- Admin role already has emergency unstake powers
+- 7-day unbonding period provides commitment
+
+## Economic Model
+
+### Costs
+- **Verification Request**: Must stake NFT (opportunity cost)
+- **Challenge**: 100 $EMARK tokens stake
+
+### Rewards
+- **Successful Challenge**: Get back stake + portion of NFT owner's stake
+- **Failed Challenge**: Lose 100 $EMARK to NFT owner
+
+### Penalties
+- **Failed Verification**: Lose verification privileges forever + forced unstake
+- **False Challenge**: Lose 100 $EMARK stake
+
+## Implementation Phases
+
+### Phase 1: Database & API (Week 1)
+- Create database tables
+- Implement verification API endpoints
+- Add verification status to existing queries
+
+### Phase 2: Frontend UI (Week 2)
+- Build VerificationPanel component
+- Add verification badges to cards
+- Create admin management page
+
+### Phase 3: Integration (Week 3)
+- Connect to NFT staking contract
+- Test challenge/review flow
+- Add verification filtering to explore/leaderboard
+
+### Phase 4: Testing & Launch (Week 4)
+- Test with real NFTs on testnet
+- Document verification process
+- Launch with selected beta users
+
+## Security Considerations
+
+### Attack Vectors
+- **Spam Challenges**: Mitigated by 100 $EMARK stake requirement
+- **False Verification**: Manual admin review prevents automation
+- **Stake Manipulation**: NFT must remain staked to keep status
+
+### Admin Powers
+- Can force unstake any NFT
+- Can reject/approve any verification
+- Actions are logged in database
+
+### Economic Security
+- Staking creates opportunity cost
+- Challenge stakes prevent frivolous disputes
+- Permanent consequences deter fraud
+
+## Success Metrics
+
+### Launch Goals
+- 10% of Evermarks request verification in first month
+- <5% rejection rate (quality submissions)
+- <1% false challenge rate (good anti-spam)
+
+### Long-term Goals
+- 50% of top leaderboard items verified
+- Verified-only filter becomes default
+- Community trusts verification badge
+
+## Future Enhancements
+
+### Phase 2 Features
+- Automated verification for known creators (ENS, Twitter verified)
+- Reputation system for frequent verifiers
+- Delegation of verification review to trusted community members
+
+### Phase 3 Features
+- On-chain verification state
+- Decentralized review via DAO voting
+- Slashing mechanism for false verifications
+
+## FAQ
+
+### Why stake to verify?
+Staking shows commitment and creates economic consequences for fraud.
+
+### What happens to rejected NFTs?
+They are force unstaked and returned to the owner, but permanently banned from verification.
+
+### Can I re-verify after rejection?
+No, failed verification is permanent for that token.
+
+### How long is the challenge period?
+7 days from verification request.
+
+### Who can challenge?
+Anyone who stakes 100 $EMARK tokens.
+
+### Who reviews challenges?
+Initially admin team, eventually DAO governance.
+
+## Technical Requirements
+
+### Dependencies
+- Existing NFT staking contract
+- Admin role permissions
+- Supabase database
+- Thirdweb SDK for contract calls
+
+### No New Contracts Needed
+- Uses emergencyUnstakeNFT() for penalties
+- Uses existing staking flow
+- Admin role already has needed permissions
+
+## Risk Assessment
+
+### Low Risk
+- Database changes are additive only
+- No smart contract modifications needed
+- Can disable system without affecting core functionality
+
+### Medium Risk
+- Manual review creates bottleneck
+- Admin centralization initially
+- Economic model needs tuning
+
+### Mitigation
+- Start with small beta group
+- Clear documentation of rules
+- Gradual rollout with monitoring
+
+---
+
+This system creates meaningful verification without requiring contract changes, leveraging existing staking infrastructure to create economic security.
