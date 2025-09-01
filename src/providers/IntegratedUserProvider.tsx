@@ -53,11 +53,9 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
   
   // Split into context-specific providers to avoid hook rule violations
   if (isInFarcaster) {
-    // @ts-expect-error - React 18/19 component type compatibility
     return <FarcasterIntegratedUserProvider>{children}</FarcasterIntegratedUserProvider>;
   }
   
-  // @ts-expect-error - React 18/19 component type compatibility
   return <BrowserIntegratedUserProvider>{children}</BrowserIntegratedUserProvider>;
 }
 
@@ -232,7 +230,6 @@ function FarcasterIntegratedUserProvider({ children }: { children: React.ReactNo
     getPrimaryAddress
   };
 
-  // @ts-expect-error - React 18/19 component type compatibility
   return (
     <IntegratedUserContext.Provider value={value}>
       {children}
@@ -406,7 +403,6 @@ function BrowserIntegratedUserProvider({ children }: { children: React.ReactNode
     getPrimaryAddress
   };
 
-  // @ts-expect-error - React 18/19 component type compatibility
   return (
     <IntegratedUserContext.Provider value={value}>
       {children}

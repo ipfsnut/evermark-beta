@@ -57,38 +57,6 @@ interface _ImportMeta {
   readonly env: ImportMetaEnv;
 }
 
-// Global declarations for React 19 compatibility
-declare global {
-  interface Window {
-    __evermark_farcaster_detected?: boolean;
-    FrameSDK?: unknown;
-  }
-  
-  // React 19 types compatibility
-  namespace JSX {
-    interface IntrinsicElements {
-      [elemName: string]: unknown;
-    }
-    interface Element extends React.ReactElement<unknown, unknown> {
-      // JSX Element interface
-      key?: React.Key | null | undefined;
-    }
-    interface ElementClass extends React.Component<unknown> {
-      render(): React.ReactNode;
-    }
-    interface ElementAttributesProperty { props: object; }
-    interface ElementChildrenAttribute { children: object; }
-  }
-}
-
-// Ensure React JSX runtime is available
-declare module 'react/jsx-runtime' {
-  export * from 'react/jsx-runtime';
-}
-
-declare module 'react/jsx-dev-runtime' {
-  export * from 'react/jsx-dev-runtime';
-}
 
 // Module declarations for external libraries
 declare module '*.json' {

@@ -35,7 +35,7 @@ export { useTokenState } from './hooks/useTokenState';
 
 // Components - Export UI components
 export { TokenBalance } from './components/TokenBalance';
-// export { RewardsClaiming } from './components/RewardsClaiming'; // Unused
+export { RewardsClaiming } from './components/RewardsClaiming';
 
 // Feature configuration and utilities
 export const tokensConfig = {

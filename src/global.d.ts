@@ -2,17 +2,26 @@
 
 import type * as React from 'react';
 
-// Global JSX namespace for React 19 compatibility
-// This restores the global JSX namespace that many libraries still expect
+// Fix React 18/19 type compatibility issues
+declare module 'react' {
+  // Override ReactNode to include JSX.Element
+  type ReactNode = 
+    | ReactElement 
+    | string 
+    | number 
+    | boolean 
+    | null 
+    | undefined 
+    | ReactFragment 
+    | ReactPortal
+    | JSX.Element;
+}
+
+// Global JSX namespace - use React's JSX types directly
 declare global {
-  /**
-   * Global JSX namespace for backward compatibility with libraries
-   * that haven't updated to React 19's React.JSX namespace yet
-   */
   namespace JSX {
-    // Import React JSX types into global namespace
     type Element = React.JSX.Element;
-    type ElementType = React.JSX.ElementType;
+    type ElementType = React.JSX.ElementType; 
     type ElementClass = React.JSX.ElementClass;
     type ElementAttributesProperty = React.JSX.ElementAttributesProperty;
     type ElementChildrenAttribute = React.JSX.ElementChildrenAttribute;

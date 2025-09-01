@@ -81,13 +81,9 @@ export function AppProviders({ children }: AppProvidersProps) {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <ThirdwebProvider>
-          {/* @ts-expect-error - React 18/19 component type compatibility */}
           <WalletProvider>
-            {/* @ts-expect-error - React 18/19 component type compatibility */}
             <BlockchainProvider>
-              {/* @ts-expect-error - React 18/19 component type compatibility */}
               <IntegratedUserProvider>
-                {/* @ts-expect-error - React 18/19 component type compatibility */}
                 <AppContextProvider>
                   {children}
                 </AppContextProvider>

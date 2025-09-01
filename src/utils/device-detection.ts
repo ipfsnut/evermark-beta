@@ -85,7 +85,7 @@ export function useIsMobileDevice(): boolean {
 
   useEffect(() => {
     // Debounce the check to prevent rapid state changes
-    let timeoutId: number;
+    let timeoutId: NodeJS.Timeout;
     
     const checkDevice = () => {
       clearTimeout(timeoutId);

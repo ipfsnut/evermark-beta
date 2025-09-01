@@ -49,7 +49,7 @@ export function EvermarkCard({
   showDescription = true,
   showImage = true,
   showPerformanceInfo = import.meta.env.NODE_ENV === 'development',
-  _enableRetry = true,
+  enableRetry = true,
   className = ''
 }: EvermarkCardProps) {
   const { isDark } = useTheme();

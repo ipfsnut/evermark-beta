@@ -48,7 +48,6 @@ export function BlockchainProvider({ children }: BlockchainProviderProps): React
     refreshContracts
   };
 
-  // @ts-expect-error - React 18/19 component type compatibility
   return (
     <BlockchainContext.Provider value={value}>
       {children}

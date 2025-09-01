@@ -34,12 +34,10 @@ export function WalletProvider({ children }: WalletProviderProps): React.ReactNo
 
   // For Farcaster context, we'll create a separate component that uses wagmi hooks
   if (isInFarcaster) {
-    // @ts-expect-error - React 18/19 component type compatibility
     return <FarcasterWalletProvider>{children}</FarcasterWalletProvider>;
   }
   
   // For Browser/PWA context, we'll create a separate component that uses thirdweb hooks
-  // @ts-expect-error - React 18/19 component type compatibility
   return <BrowserWalletProvider context={context as 'browser' | 'pwa'}>{children}</BrowserWalletProvider>;
 }
 
@@ -80,7 +78,6 @@ function FarcasterWalletProvider({ children }: { children: React.ReactNode }): R
     connectionSource
   };
 
-  // @ts-expect-error - React 18/19 component type compatibility
   return (
     <WalletContext.Provider value={value}>
       {children}
@@ -126,7 +123,6 @@ function BrowserWalletProvider({ children, context }: { children: React.ReactNod
     connectionSource
   };
 
-  // @ts-expect-error - React 18/19 component type compatibility
   return (
     <WalletContext.Provider value={value}>
       {children}

@@ -42,7 +42,7 @@ export function NFTStakingPanel({ className = '' }: NFTStakingPanelProps) {
     stakingError,
     stakeNFT,
     unstakeNFT,
-    _formatStakingTime,
+    formatStakingTime,
   } = useNFTStaking();
 
   // Query user's NFTs (for staking)
