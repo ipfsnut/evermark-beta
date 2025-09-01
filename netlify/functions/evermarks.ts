@@ -325,6 +325,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
           const search = queryStringParameters?.search;
           const author = queryStringParameters?.author;
           const owner = queryStringParameters?.owner;
+          const creator = queryStringParameters?.creator; // Filter by creator (owner) address
           const verified = queryStringParameters?.verified;
           const sortBy = queryStringParameters?.sort_by || 'created_at';
           const sortOrder = queryStringParameters?.sort_order || 'desc';
@@ -344,6 +345,9 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
           }
           if (owner) {
             query = query.eq('owner', owner);
+          }
+          if (creator && isValidWalletAddress(creator)) {
+            query = query.eq('owner', creator.toLowerCase());
           }
           if (verified !== undefined) {
             query = query.eq('verified', verified === 'true');

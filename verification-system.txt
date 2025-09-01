@@ -1,7 +1,12 @@
 # Evermark Stake-in Verification System Implementation Plan
 
+## PRODUCTION SYSTEM ONLY
+⚠️ This is a PRODUCTION verification system with real economic consequences.
+⚠️ Failed verification results in permanent loss of verification privileges.
+⚠️ NO NFT BURNING - NFTs are returned to owner but lose verification forever.
+
 ## Overview
-A verification system where users stake their Evermark NFTs to request verification of content ownership. Failed verification results in forced unstaking and permanent ban from verification.
+A verification system where users stake their Evermark NFTs to request verification of content ownership. Failed verification results in forced unstaking and permanent ban from verification status.
 
 ## Core Principles
 - Only staked NFTs can be verified
@@ -28,17 +33,18 @@ A verification system where users stake their Evermark NFTs to request verificat
 
 ### 4. Outcomes
 **If VERIFIED:**
-- NFT remains staked (shows commitment)
-- Gets verified badge/status
-- Appears in verified-only sections
-- Challenger loses stake
+- NFT remains staked (shows ongoing commitment)
+- Gets verified badge/status displayed throughout app
+- Appears in verified-only sections and filters
+- Challenger loses their $EMARK stake
 
 **If REJECTED:**
-- Admin force unstakes NFT → NFT returned to owner
+- Admin force unstakes NFT → **NFT returned to original owner**
+- **NO NFT BURNING OR DESTRUCTION**
 - Permanently marked verification_failed in database
-- Can never be verified again (verification_locked = true)
-- Loses all verification privileges forever
-- Challenger gets reward
+- verification_locked = true (can never attempt verification again)
+- Loses all verification privileges forever on this token
+- Challenger receives reward from verification stake pool
 
 ## Database Schema
 

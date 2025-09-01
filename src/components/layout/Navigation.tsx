@@ -9,7 +9,8 @@ import {
   BookOpenIcon,
   InfoIcon,
   ShareIcon,
-  ArrowUpDownIcon
+  ArrowUpDownIcon,
+  UserIcon
 } from 'lucide-react';
 import { useAppAuth } from '../../providers/AppContext';
 import { useTheme } from '../../providers/ThemeProvider';
@@ -35,6 +36,12 @@ const navigationItems: NavItem[] = [
     to: '/explore',
     label: 'Explore',
     icon: CompassIcon,
+  },
+  {
+    to: '/my-evermarks',
+    label: 'My Evermarks',
+    icon: UserIcon,
+    requireAuth: true,
   },
   {
     to: '/leaderboard',
@@ -69,11 +76,6 @@ const infoItems: NavItem[] = [
     label: 'About',
     icon: InfoIcon,
   },
-  {
-    to: '/docs',
-    label: 'Docs',
-    icon: BookOpenIcon,
-  },
 ];
 
 export function Navigation() {
@@ -93,11 +95,14 @@ export function Navigation() {
   const renderNavItem = (item: NavItem, variant: 'primary' | 'action' = 'primary') => {
     const Icon = item.icon;
     const isActive = isActiveRoute(item.to);
+    const isDisabled = item.requireAuth && !isAuthenticated;
 
     const baseClasses = cn(
       'flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 group',
-      isDark ? 'hover:bg-gray-800 hover:text-white' : 'hover:bg-gray-200 hover:text-gray-900',
-      variant === 'action' && 'bg-gradient-to-r from-cyber-primary/20 to-cyber-secondary/20 border border-cyber-primary/30'
+      isDisabled 
+        ? (isDark ? 'text-gray-600 cursor-not-allowed' : 'text-gray-400 cursor-not-allowed')
+        : (isDark ? 'hover:bg-gray-800 hover:text-white' : 'hover:bg-gray-200 hover:text-gray-900'),
+      variant === 'action' && !isDisabled && 'bg-gradient-to-r from-cyber-primary/20 to-cyber-secondary/20 border border-cyber-primary/30'
     );
 
     const activeClasses = cn(
@@ -108,12 +113,37 @@ export function Navigation() {
 
     const iconClasses = cn(
       'h-5 w-5 mr-3 transition-colors',
-      isActive 
-        ? 'text-cyber-primary' 
-        : isDark 
-          ? 'text-gray-400 group-hover:text-white' 
-          : 'text-gray-500 group-hover:text-gray-900'
+      isDisabled 
+        ? (isDark ? 'text-gray-600' : 'text-gray-400')
+        : isActive 
+          ? 'text-cyber-primary' 
+          : isDark 
+            ? 'text-gray-400 group-hover:text-white' 
+            : 'text-gray-500 group-hover:text-gray-900'
     );
+
+    if (isDisabled) {
+      return (
+        <div
+          key={item.to}
+          className={baseClasses}
+        >
+          <Icon className={iconClasses} />
+          <span className={cn(
+            'font-medium',
+            isDark ? 'text-gray-600' : 'text-gray-400'
+          )}>
+            {item.label}
+          </span>
+          <span className={cn(
+            'ml-auto text-xs',
+            isDark ? 'text-gray-700' : 'text-gray-500'
+          )}>
+            Sign in required
+          </span>
+        </div>
+      );
+    }
 
     return (
       <NavLink

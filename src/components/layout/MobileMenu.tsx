@@ -11,7 +11,8 @@ import {
   ArrowUpDownIcon,
   LayersIcon,
   XIcon,
-  ExternalLinkIcon
+  ExternalLinkIcon,
+  UserIcon
 } from 'lucide-react';
 import { useAppAuth } from '../../providers/AppContext';
 import { useFarcasterDetection } from '../../hooks/useFarcasterDetection';
@@ -38,6 +39,12 @@ const MAIN_NAV_ITEMS: NavItem[] = [
     icon: CompassIcon,
   },
   {
+    to: '/my-evermarks',
+    label: 'My Evermarks',
+    icon: UserIcon,
+    requireAuth: true,
+  },
+  {
     to: '/create',
     label: 'Create',
     icon: PlusIcon,
@@ -62,11 +69,6 @@ const MAIN_NAV_ITEMS: NavItem[] = [
 ];
 
 const SECONDARY_NAV_ITEMS: NavItem[] = [
-  {
-    to: '/docs',
-    label: 'Documentation',
-    icon: BookOpenIcon,
-  },
   {
     to: '/about',
     label: 'About',

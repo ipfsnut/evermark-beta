@@ -11,6 +11,7 @@ const ExplorePage = React.lazy(() => import('../src/pages/ExplorePage'));
 const AboutPage = React.lazy(() => import('../src/pages/AboutPage'));
 const DocsPage = React.lazy(() => import('../src/pages/DocsPage'));
 const SwapPage = React.lazy(() => import('../src/pages/SwapPage'));
+const MyEvermarksPage = React.lazy(() => import('../src/pages/MyEvermarksPage'));
 const LeaderboardPage = React.lazy(() => import('../src/features/leaderboard/pages/LeaderboardPage'));
 const StakingPage = React.lazy(() => import('../src/features/staking/pages/StakingPage'));
 const EvermarkDetailPage = React.lazy(() => import('../src/features/evermarks/pages/EvermarkDetailPage'));
@@ -62,6 +63,7 @@ function AppContent() {
             {/* Core feature routes */}
             <Route path="/" element={<HomePage />} />
             <Route path="/explore" element={<ExplorePage />} />
+            <Route path="/my-evermarks" element={<MyEvermarksPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/docs" element={<DocsPage />} />
             <Route path="/docs/:docId" element={<DocsPage />} />
