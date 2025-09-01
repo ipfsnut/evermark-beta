@@ -6,18 +6,18 @@
 @layer base {
   /* Root CSS variables for theme switching */
   :root {
-    /* Light Mode - High contrast readable components on dark gradient background */
-    --app-bg-primary: #1e293b;      /* not used - page always has gradient */
-    --app-bg-secondary: rgba(203, 213, 225, 0.2);  /* light grey layout sections */
-    --app-bg-tertiary: rgba(203, 213, 225, 0.1);   /* very subtle areas */
-    --app-bg-card: rgba(241, 245, 249, 0.85);      /* softer light cards, less bright */
-    --app-bg-card-hover: rgba(248, 250, 252, 0.90); /* slightly more opaque on hover */
-    --app-bg-input: rgba(248, 250, 252, 0.90);      /* softer inputs, less bright */
+    /* Light Mode - High contrast readable components on light background */
+    --app-bg-primary: #ffffff;      /* white background for main content */
+    --app-bg-secondary: #f8fafc;    /* very light grey layout sections */
+    --app-bg-tertiary: #f1f5f9;     /* light grey subtle areas */
+    --app-bg-card: #ffffff;         /* white cards for maximum contrast */
+    --app-bg-card-hover: #f8fafc;   /* very subtle hover state */
+    --app-bg-input: #ffffff;        /* white inputs for clarity */
     
-    --app-text-primary: #1e293b;    /* dark text on light gradient background */
-    --app-text-secondary: #475569;  /* dark secondary text on light gradient */
-    --app-text-muted: #64748b;      /* muted dark text on light gradient */
-    --app-text-on-card: #0f172a;    /* midnight black text on light cards ALWAYS */
+    --app-text-primary: #0f172a;    /* dark text on white background */
+    --app-text-secondary: #475569;  /* dark secondary text */
+    --app-text-muted: #64748b;      /* muted dark text */
+    --app-text-on-card: #0f172a;    /* dark text on white cards */
     --app-text-accent: #0891b2;     /* cyan accent */
     
     --app-border: rgba(148, 163, 184, 0.3);     /* subtle borders */

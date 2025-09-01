@@ -54,7 +54,7 @@ export function useStakingTransactions(): StakingTransactions {
       
       const result = await sendTransaction({
         contract: emarkToken,
-        method: "function approve(address spender, uint256 amount) returns (bool)",
+        method: "function approve(address spender, uint256 value) returns (bool)",
         params: [wemark.address, amount]
       });
       

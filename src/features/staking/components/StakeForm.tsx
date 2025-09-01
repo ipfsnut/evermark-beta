@@ -9,7 +9,7 @@ import {
   CheckCircleIcon 
 } from 'lucide-react';
 import { StakingService } from '../services/StakingService';
-import { useTheme } from '@/providers/ThemeProvider';
+import { useTheme, useThemeClasses } from '@/providers/ThemeProvider';
 import { cn } from '@/utils/responsive';
 import type { UseStakingStateReturn, StakingValidation } from '../types';
 
@@ -32,6 +32,7 @@ export function StakeForm({ stakingState, onSuccess, className = '', disabled = 
   const [localSuccess, setLocalSuccess] = useState<string | null>(null);
   const [needsApproval, setNeedsApproval] = useState(false);
   const { isDark } = useTheme();
+  const themeClasses = useThemeClasses();
 
   const { stakingInfo, isStaking, formatTokenAmount, currentAllowance, isApproving, approveStaking, refreshAllowance } = stakingState;
 
@@ -150,8 +151,8 @@ export function StakeForm({ stakingState, onSuccess, className = '', disabled = 
       )}>
         <div className="text-center py-8">
           <LockIcon className="mx-auto h-12 w-12 text-gray-500 mb-4" />
-          <h3 className="text-lg font-medium text-white mb-2">Connect Wallet</h3>
-          <p className="text-gray-400">Connect your wallet to start staking EMARK tokens</p>
+          <h3 className={`text-lg font-medium ${themeClasses.text.primary} mb-2`}>Connect Wallet</h3>
+          <p className={themeClasses.text.muted}>Connect your wallet to start staking EMARK tokens</p>
         </div>
       </div>
     );
@@ -170,8 +171,8 @@ export function StakeForm({ stakingState, onSuccess, className = '', disabled = 
           <LockIcon className="h-5 w-5 text-purple-400" />
         </div>
         <div>
-          <h3 className="text-lg font-medium text-white">Stake EMARK</h3>
-          <p className="text-sm text-gray-400">Convert EMARK to wEMARK for voting power</p>
+          <h3 className={`text-lg font-medium ${themeClasses.text.primary}`}>Stake EMARK</h3>
+          <p className={`text-sm ${themeClasses.text.muted}`}>Convert EMARK to wEMARK for voting power</p>
         </div>
       </div>
 
@@ -193,7 +194,7 @@ export function StakeForm({ stakingState, onSuccess, className = '', disabled = 
       <div className="space-y-4">
         {/* Amount Input */}
         <div>
-          <label htmlFor="stake-amount" className="block text-sm font-medium text-gray-300 mb-2">
+          <label htmlFor="stake-amount" className={`block text-sm font-medium ${themeClasses.text.secondary} mb-2`}>
             Amount to Stake
           </label>
           
@@ -227,7 +228,7 @@ export function StakeForm({ stakingState, onSuccess, className = '', disabled = 
           </div>
 
           {/* Balance Display */}
-          <div className="mt-2 flex justify-between text-xs text-gray-400">
+          <div className={`mt-2 flex justify-between text-xs ${themeClasses.text.muted}`}>
             <span>
               Available: {stakingInfo ? formatTokenAmount(stakingInfo.emarkBalance, 18) : '0'} EMARK
             </span>
@@ -348,8 +349,8 @@ export function StakeForm({ stakingState, onSuccess, className = '', disabled = 
               ? "bg-gray-900/50 border border-gray-600"
               : "bg-white/60 border border-yellow-300"
           )}>
-            <div className="text-sm text-gray-400 mb-1">Current Stake</div>
-            <div className="text-lg font-medium text-white">
+            <div className={`text-sm ${themeClasses.text.muted} mb-1`}>Current Stake</div>
+            <div className={`text-lg font-medium ${themeClasses.text.primary}`}>
               {formatTokenAmount(stakingInfo.totalStaked)} wEMARK
             </div>
           </div>
@@ -359,8 +360,8 @@ export function StakeForm({ stakingState, onSuccess, className = '', disabled = 
               ? "bg-gray-900/50 border border-gray-600"
               : "bg-white/60 border border-yellow-300"
           )}>
-            <div className="text-sm text-gray-400 mb-1">Voting Power</div>
-            <div className="text-lg font-medium text-white">
+            <div className={`text-sm ${themeClasses.text.muted} mb-1`}>Voting Power</div>
+            <div className={`text-lg font-medium ${themeClasses.text.primary}`}>
               {formatTokenAmount(stakingInfo.availableVotingPower)} wEMARK
             </div>
           </div>

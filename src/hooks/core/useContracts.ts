@@ -5,6 +5,8 @@ import { useMemo } from 'react';
 import { getContract } from 'thirdweb';
 import { client } from '@/lib/thirdweb';
 import { base } from 'thirdweb/chains';
+import EMARKABI from '@/features/tokens/abis/EMARK.json';
+import type { Abi } from 'abitype';
 
 // Contract addresses from environment variables
 const getContractAddress = (envVar: string | undefined, contractName: string): `0x${string}` => {
@@ -25,8 +27,8 @@ export function useContracts() {
         emarkToken: getContract({
           client,
           chain: base,
-          address: getContractAddress(import.meta.env.VITE_EMARK_ADDRESS, 'EMARK Token')
-          // ABI omitted - thirdweb v5 will auto-resolve for verified contracts
+          address: getContractAddress(import.meta.env.VITE_EMARK_ADDRESS, 'EMARK Token'),
+          abi: EMARKABI as Abi
         }),
         
         wemark: getContract({

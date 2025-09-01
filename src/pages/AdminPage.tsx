@@ -23,6 +23,7 @@ import {
   getEvermarkRewardsContract 
 } from '@/lib/contracts';
 import { EvermarkBlockchainService } from '@/features/evermarks/services/BlockchainService';
+import { useThemeClasses } from '@/providers/ThemeProvider';
 
 interface SeasonInfo {
   seasonNumber: number;
@@ -58,6 +59,7 @@ interface ContractStatus {
 export default function AdminPage(): React.ReactNode {
   const account = useActiveAccount();
   const { mutate: sendTransaction, isPending } = useSendTransaction();
+  const themeClasses = useThemeClasses();
   
   const [seasonInfo, setSeasonInfo] = useState<SeasonInfo | null>(null);
   const [balances, setBalances] = useState<ContractBalances | null>(null);
@@ -169,34 +171,18 @@ export default function AdminPage(): React.ReactNode {
         if (rewardsPeriodStatus) {
           const [currentPeriod, periodEnd, wethRate, emarkRate] = rewardsPeriodStatus as [bigint, bigint, bigint, bigint];
           
-          
-          // Check if periodEnd looks like a reasonable timestamp
-          const periodEndNum = Number(periodEnd);
-          const currentTimestamp = Math.floor(Date.now() / 1000);
-          
-          let periodEndDate: Date;
-          let timeRemaining: number;
-          
-          // If the period end is 0, way too far in the future (more than 2 years), or in the past by more than 1 year, treat as invalid
-          const oneYearFromNow = currentTimestamp + (365 * 24 * 3600);
-          const twoYearsFromNow = currentTimestamp + (2 * 365 * 24 * 3600);
-          const oneYearAgo = currentTimestamp - (365 * 24 * 3600);
-          
-          if (periodEndNum === 0 || periodEndNum > twoYearsFromNow || periodEndNum < oneYearAgo) {
-            periodEndDate = new Date(currentTimestamp * 1000); // Current time
-            timeRemaining = 0; // Expired
-          } else {
-            periodEndDate = new Date(periodEndNum * 1000);
-            timeRemaining = Math.max(0, Math.floor((periodEndDate.getTime() - Date.now()) / 1000));
-          }
-          
+          console.log('Raw contract data:', {
+            currentPeriod: currentPeriod.toString(),
+            periodEnd: periodEnd.toString(),
+            periodEndAsDate: new Date(Number(periodEnd) * 1000).toISOString()
+          });
           
           setRewardsPeriod({
             currentPeriod: Number(currentPeriod),
-            periodEnd: periodEndDate,
+            periodEnd: new Date(Number(periodEnd) * 1000),
             wethRate,
             emarkRate,
-            timeRemaining
+            timeRemaining: Math.max(0, Math.floor((Number(periodEnd) - Date.now() / 1000)))
           });
         }
 
@@ -369,11 +355,11 @@ export default function AdminPage(): React.ReactNode {
 
   if (!account) {
     return (
-      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+      <div className={`min-h-screen ${themeClasses.bg.primary} ${themeClasses.text.primary} flex items-center justify-center`}>
         <div className="text-center">
           <Shield className="w-12 h-12 mx-auto mb-4 text-blue-400" />
           <h1 className="text-2xl font-bold mb-2">Admin Access Required</h1>
-          <p className="text-gray-400">Please connect your wallet to access the admin panel.</p>
+          <p className={themeClasses.text.muted}>Please connect your wallet to access the admin panel.</p>
         </div>
       </div>
     );
@@ -381,17 +367,17 @@ export default function AdminPage(): React.ReactNode {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+      <div className={`min-h-screen ${themeClasses.bg.primary} ${themeClasses.text.primary} flex items-center justify-center`}>
         <div className="text-center">
           <RefreshCw className="w-8 h-8 mx-auto mb-4 text-blue-400 animate-spin" />
-          <p className="text-gray-400">Loading admin data...</p>
+          <p className={themeClasses.text.muted}>Loading admin data...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className={`min-h-screen ${themeClasses.bg.primary} ${themeClasses.text.primary}`}>
       <div className="container mx-auto px-6 py-8">
         <div className="flex items-center mb-8">
           <Settings className="w-8 h-8 mr-3 text-blue-400" />
@@ -407,9 +393,9 @@ export default function AdminPage(): React.ReactNode {
 
         {/* Current Season Info */}
         {seasonInfo && (
-          <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 mb-8">
+          <div className={`${themeClasses.bg.card} p-6 rounded-lg ${themeClasses.border.primary} border mb-8`}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold flex items-center">
+              <h2 className={`text-xl font-bold flex items-center ${themeClasses.text.primary}`}>
                 <Clock className="w-6 h-6 mr-2 text-blue-400" />
                 Current Voting Season
               </h2>
@@ -454,30 +440,30 @@ export default function AdminPage(): React.ReactNode {
               </div>
             </div>
 
-            <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
+            <div className={`${themeClasses.bg.card} p-6 rounded-lg ${themeClasses.border.primary} border`}>
               <div className="flex items-center mb-4">
                 <BarChart3 className="w-6 h-6 mr-2 text-blue-400" />
-                <h3 className="text-lg font-semibold">NFTs</h3>
+                <h3 className={`text-lg font-semibold ${themeClasses.text.primary}`}>NFTs</h3>
               </div>
-              <p className="text-gray-400 text-sm">{contractStatus.nft.totalSupply} minted</p>
+              <p className={`${themeClasses.text.muted} text-sm`}>{contractStatus.nft.totalSupply} minted</p>
               <div className="mt-2 text-sm text-green-400">✓ Operational</div>
             </div>
 
-            <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
+            <div className={`${themeClasses.bg.card} p-6 rounded-lg ${themeClasses.border.primary} border`}>
               <div className="flex items-center mb-4">
                 <Shield className="w-6 h-6 mr-2 text-yellow-400" />
-                <h3 className="text-lg font-semibold">WEMARK</h3>
+                <h3 className={`text-lg font-semibold ${themeClasses.text.primary}`}>WEMARK</h3>
               </div>
-              <p className="text-gray-400 text-sm">{formatEther(contractStatus.wemark.totalStaked)} staked</p>
+              <p className={`${themeClasses.text.muted} text-sm`}>{formatEther(contractStatus.wemark.totalStaked)} staked</p>
               <div className="mt-2 text-sm text-green-400">✓ Active</div>
             </div>
 
-            <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
+            <div className={`${themeClasses.bg.card} p-6 rounded-lg ${themeClasses.border.primary} border`}>
               <div className="flex items-center mb-4">
                 <DollarSign className="w-6 h-6 mr-2 text-purple-400" />
-                <h3 className="text-lg font-semibold">Rewards</h3>
+                <h3 className={`text-lg font-semibold ${themeClasses.text.primary}`}>Rewards</h3>
               </div>
-              <p className="text-gray-400 text-sm">Dual token system</p>
+              <p className={`${themeClasses.text.muted} text-sm`}>Dual token system</p>
               <div className="mt-2 text-sm text-green-400">✓ Active</div>
             </div>
           </div>
