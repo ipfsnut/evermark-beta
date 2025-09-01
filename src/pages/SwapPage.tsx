@@ -18,14 +18,17 @@ function FarcasterSwapInterface() {
     try {
       setIsSwapping(true);
       
-      // Use the Farcaster Mini App SDK for in-app swaps
+      // Use the Farcaster Mini App SDK for native in-app swaps
       const { sdk } = await import('@farcaster/miniapp-sdk');
       
-      // Open external URL to Uniswap with EMARK pre-selected
+      // Use native Farcaster swap instead of redirecting to Uniswap
       const emarkAddress = CONTRACTS.EMARK_TOKEN;
-      const uniswapUrl = `https://app.uniswap.org/#/swap?outputCurrency=${emarkAddress}&chain=base`;
       
-      await sdk.actions.openUrl(uniswapUrl);
+      await sdk.actions.openSwap({
+        tokenIn: "ETH", // or native token address
+        tokenOut: emarkAddress,
+        chain: "base"
+      });
       
     } catch (error) {
       console.error('Swap failed:', error);
@@ -66,7 +69,7 @@ function FarcasterSwapInterface() {
                 "disabled:opacity-50 disabled:cursor-not-allowed"
               )}
             >
-              {isSwapping ? 'Opening Uniswap...' : 'Swap ETH → EMARK'}
+              {isSwapping ? 'Opening Farcaster Swap...' : 'Swap ETH → EMARK'}
             </button>
             
             {!isFrameSDKReady && (
