@@ -248,7 +248,7 @@ export function EvermarkCard({
                     onClick={handleVerificationClick}
                     className="ml-1 flex-shrink-0 hover:scale-110 transition-transform"
                   >
-                    <CheckCircle className="h-3 w-3 text-green-400" title="Verified - Click to view attestation" />
+                    <CheckCircle className="h-3 w-3 text-green-400" />
                   </button>
                 )}
               </div>
@@ -306,14 +306,14 @@ export function EvermarkCard({
             </div>
           </div>
         </div>
-        
-        {/* Attestation Popup */}
-        <AttestationPopup 
-          evermark={evermark}
-          isOpen={showAttestationPopup}
-          onClose={() => setShowAttestationPopup(false)}
-        />
       </div>
+      
+      {/* Attestation Popup */}
+      <AttestationPopup 
+        evermark={evermark}
+        isOpen={showAttestationPopup}
+        onClose={() => setShowAttestationPopup(false)}
+      />
     );
   }
 
@@ -361,7 +361,7 @@ export function EvermarkCard({
                 onClick={handleVerificationClick}
                 className="ml-1 flex-shrink-0 hover:scale-110 transition-transform"
               >
-                <CheckCircle className="h-4 w-4 text-green-400" title="Verified - Click to view attestation" />
+                <CheckCircle className="h-4 w-4 text-green-400" />
               </button>
             )}
           </div>

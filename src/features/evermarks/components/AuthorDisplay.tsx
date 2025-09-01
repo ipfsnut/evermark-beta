@@ -10,7 +10,13 @@ interface AuthorInfo {
 
 interface AuthorDisplayProps {
   author: string;
-  metadata?: any; // Flexible to handle current and future metadata structures
+  metadata?: {
+    academic?: {
+      authors?: AuthorInfo[];
+      primaryAuthor?: string;
+      journal?: string;
+    };
+  };
   className?: string;
   showExpandable?: boolean;
 }

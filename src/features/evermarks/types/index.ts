@@ -71,6 +71,8 @@ export interface Evermark {
     };
     tags?: string[];
     customFields?: Array<{ key: string; value: string }>;
+    txHash?: string;
+    blockNumber?: number;
   };
   
   // Optional analytics

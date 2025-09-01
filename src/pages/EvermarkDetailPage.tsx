@@ -309,7 +309,7 @@ export default function EvermarkDetailPage(): React.ReactNode {
               <div className={`flex flex-wrap items-center gap-4 ${themeClasses.text.muted}`}>
                 <AuthorDisplay 
                   author={evermark.author}
-                  metadata={evermark.extendedMetadata}
+                  metadata={{ academic: evermark.extendedMetadata?.academic }}
                   className=""
                   showExpandable={true}
                 />

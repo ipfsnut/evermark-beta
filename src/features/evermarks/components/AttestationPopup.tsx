@@ -74,8 +74,10 @@ export function AttestationPopup({ evermark, isOpen, onClose }: AttestationPopup
   };
 
   const handleViewOnBasescan = () => {
-    if (evermark.extendedMetadata?.txHash) {
-      window.open(`https://basescan.org/tx/${evermark.extendedMetadata.txHash}`, '_blank');
+    // Use tx_hash from database if available, or fall back to extended metadata
+    const txHash = (evermark as any).tx_hash || evermark.extendedMetadata?.txHash;
+    if (txHash) {
+      window.open(`https://basescan.org/tx/${txHash}`, '_blank');
     }
   };
 
@@ -252,6 +254,7 @@ export function AttestationPopup({ evermark, isOpen, onClose }: AttestationPopup
               )}
             </div>
           )}
+        </div>
       </div>
     </div>
   );
