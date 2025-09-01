@@ -169,14 +169,6 @@ export default function AdminPage(): React.ReactNode {
         if (rewardsPeriodStatus) {
           const [currentPeriod, periodEnd, wethRate, emarkRate] = rewardsPeriodStatus as [bigint, bigint, bigint, bigint];
           
-          // Debug logging to understand the timestamp format
-          console.log('🔍 Rewards Period Debug:', {
-            currentPeriod: Number(currentPeriod),
-            periodEndRaw: periodEnd.toString(),
-            periodEndAsNumber: Number(periodEnd),
-            currentTimestamp: Math.floor(Date.now() / 1000),
-            currentDate: new Date().toISOString()
-          });
           
           // Check if periodEnd looks like a reasonable timestamp
           const periodEndNum = Number(periodEnd);
@@ -191,14 +183,6 @@ export default function AdminPage(): React.ReactNode {
           const oneYearAgo = currentTimestamp - (365 * 24 * 3600);
           
           if (periodEndNum === 0 || periodEndNum > twoYearsFromNow || periodEndNum < oneYearAgo) {
-            console.warn('⚠️ Invalid or suspicious periodEnd timestamp:', {
-              periodEndNum,
-              currentTimestamp,
-              periodEndDate: new Date(periodEndNum * 1000).toISOString(),
-              reason: periodEndNum === 0 ? 'zero' : 
-                     periodEndNum > twoYearsFromNow ? 'too far future' : 
-                     'too far past'
-            });
             periodEndDate = new Date(currentTimestamp * 1000); // Current time
             timeRemaining = 0; // Expired
           } else {
@@ -206,11 +190,6 @@ export default function AdminPage(): React.ReactNode {
             timeRemaining = Math.max(0, Math.floor((periodEndDate.getTime() - Date.now()) / 1000));
           }
           
-          console.log('🔍 Calculated values:', {
-            periodEndDate: periodEndDate.toISOString(),
-            timeRemaining,
-            isExpired: timeRemaining === 0
-          });
           
           setRewardsPeriod({
             currentPeriod: Number(currentPeriod),
@@ -249,96 +228,56 @@ export default function AdminPage(): React.ReactNode {
     loadData();
   }, [currentSeason, seasonDetails, nftTotalSupply, wemarkTotalStaked, feeCollectorBalances, rewardsPeriodStatus, rewardsBalances, pendingReferralData]);
 
+  // Consolidated transaction handler
+  const executeTransaction = async (contract: any, method: string, params: any[], successMessage: string, loadingMessage: string) => {
+    if (!account) return;
+    
+    try {
+      setActionStatus(loadingMessage);
+      
+      const transaction = prepareContractCall({ contract, method, params });
+
+      sendTransaction(transaction, {
+        onSuccess: () => {
+          setActionStatus(successMessage);
+          setTimeout(() => setActionStatus(''), 3000);
+          window.location.reload();
+        },
+        onError: (error) => {
+          setActionStatus(`Failed: ${error.message}`);
+          setTimeout(() => setActionStatus(''), 5000);
+        }
+      });
+    } catch (error) {
+      setActionStatus(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setTimeout(() => setActionStatus(''), 5000);
+    }
+  };
+
   // Admin Actions
-  const startNewSeason = async () => {
-    if (!account) return;
-    
-    try {
-      setActionStatus('Starting new voting season...');
-      
-      const transaction = prepareContractCall({
-        contract: votingContract,
-        method: "function startNewSeason()",
-        params: []
-      });
+  const startNewSeason = () => executeTransaction(
+    votingContract, 
+    "function startNewSeason()", 
+    [], 
+    'New season started!', 
+    'Starting new voting season...'
+  );
 
-      sendTransaction(transaction, {
-        onSuccess: (_result) => {
-          setActionStatus('New season started successfully!');
-          setTimeout(() => setActionStatus(''), 3000);
-          // Trigger data refresh
-          window.location.reload();
-        },
-        onError: (error) => {
-          setActionStatus(`Failed to start season: ${error.message}`);
-          setTimeout(() => setActionStatus(''), 5000);
-        }
-      });
-    } catch (error) {
-      setActionStatus(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      setTimeout(() => setActionStatus(''), 5000);
-    }
-  };
+  const forwardWethToRewards = () => executeTransaction(
+    feeCollectorContract,
+    "function forwardAllWethToRewards()",
+    [],
+    'WETH forwarded to rewards!',
+    'Forwarding WETH to rewards...'
+  );
 
-  const forwardWethToRewards = async () => {
-    if (!account) return;
-    
-    try {
-      setActionStatus('Forwarding WETH to rewards...');
-      
-      const transaction = prepareContractCall({
-        contract: feeCollectorContract,
-        method: "function forwardAllWethToRewards()",
-        params: []
-      });
-
-      sendTransaction(transaction, {
-        onSuccess: (_result) => {
-          setActionStatus('WETH forwarded to rewards successfully!');
-          setTimeout(() => setActionStatus(''), 3000);
-          // Trigger data refresh
-          window.location.reload();
-        },
-        onError: (error) => {
-          setActionStatus(`Failed to forward WETH: ${error.message}`);
-          setTimeout(() => setActionStatus(''), 5000);
-        }
-      });
-    } catch (error) {
-      setActionStatus(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      setTimeout(() => setActionStatus(''), 5000);
-    }
-  };
-
-  const forwardEmarkToRewards = async () => {
-    if (!account) return;
-    
-    try {
-      setActionStatus('Forwarding EMARK to rewards...');
-      
-      const transaction = prepareContractCall({
-        contract: feeCollectorContract,
-        method: "function forwardAllEmarkToRewards()",
-        params: []
-      });
-
-      sendTransaction(transaction, {
-        onSuccess: (_result) => {
-          setActionStatus('EMARK forwarded to rewards successfully!');
-          setTimeout(() => setActionStatus(''), 3000);
-          // Trigger data refresh
-          window.location.reload();
-        },
-        onError: (error) => {
-          setActionStatus(`Failed to forward EMARK: ${error.message}`);
-          setTimeout(() => setActionStatus(''), 5000);
-        }
-      });
-    } catch (error) {
-      setActionStatus(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      setTimeout(() => setActionStatus(''), 5000);
-    }
-  };
+  const forwardEmarkToRewards = () => executeTransaction(
+    feeCollectorContract,
+    "function forwardAllEmarkToRewards()",
+    [],
+    'EMARK forwarded to rewards!',
+    'Forwarding EMARK to rewards...'
+  );
 
   const claimReferralPayment = async () => {
     if (!account) return;
@@ -363,35 +302,13 @@ export default function AdminPage(): React.ReactNode {
     }
   };
 
-  const startNewRewardsCycle = async () => {
-    if (!account) return;
-    
-    try {
-      setActionStatus('Starting new rewards cycle...');
-      
-      const transaction = prepareContractCall({
-        contract: rewardsContract,
-        method: "function manualRebalance()",
-        params: []
-      });
-
-      sendTransaction(transaction, {
-        onSuccess: (_result) => {
-          setActionStatus('New rewards cycle started successfully!');
-          setTimeout(() => setActionStatus(''), 3000);
-          // Trigger data refresh
-          window.location.reload();
-        },
-        onError: (error) => {
-          setActionStatus(`Failed to start rewards cycle: ${error.message}`);
-          setTimeout(() => setActionStatus(''), 5000);
-        }
-      });
-    } catch (error) {
-      setActionStatus(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      setTimeout(() => setActionStatus(''), 5000);
-    }
-  };
+  const startNewRewardsCycle = () => executeTransaction(
+    rewardsContract,
+    "function manualRebalance()",
+    [],
+    'Rewards cycle started!',
+    'Starting new rewards cycle...'
+  );
 
   const syncFromChain = async () => {
     try {
@@ -413,65 +330,21 @@ export default function AdminPage(): React.ReactNode {
     }
   };
 
-  const startNewRewardsPeriod = async () => {
-    if (!account) return;
-    
-    try {
-      setActionStatus('Starting new rewards period...');
-      
-      const transaction = prepareContractCall({
-        contract: rewardsContract,
-        method: "function startNewPeriod()",
-        params: []
-      });
+  const startNewRewardsPeriod = () => executeTransaction(
+    rewardsContract,
+    "function startNewPeriod()",
+    [],
+    'New rewards period started!',
+    'Starting new rewards period...'
+  );
 
-      sendTransaction(transaction, {
-        onSuccess: (_result) => {
-          setActionStatus('New rewards period started successfully!');
-          setTimeout(() => setActionStatus(''), 3000);
-          // Trigger data refresh
-          window.location.reload();
-        },
-        onError: (error) => {
-          setActionStatus(`Failed to start rewards period: ${error.message}`);
-          setTimeout(() => setActionStatus(''), 5000);
-        }
-      });
-    } catch (error) {
-      setActionStatus(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      setTimeout(() => setActionStatus(''), 5000);
-    }
-  };
-
-  const distributeRewards = async () => {
-    if (!account) return;
-    
-    try {
-      setActionStatus('Distributing rewards...');
-      
-      const transaction = prepareContractCall({
-        contract: rewardsContract,
-        method: "function distributeRewards()",
-        params: []
-      });
-
-      sendTransaction(transaction, {
-        onSuccess: (_result) => {
-          setActionStatus('Rewards distributed successfully!');
-          setTimeout(() => setActionStatus(''), 3000);
-          // Trigger data refresh
-          window.location.reload();
-        },
-        onError: (error) => {
-          setActionStatus(`Failed to distribute rewards: ${error.message}`);
-          setTimeout(() => setActionStatus(''), 5000);
-        }
-      });
-    } catch (error) {
-      setActionStatus(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      setTimeout(() => setActionStatus(''), 5000);
-    }
-  };
+  const distributeRewards = () => executeTransaction(
+    rewardsContract,
+    "function distributeRewards()",
+    [],
+    'Rewards distributed!',
+    'Distributing rewards...'
+  );
 
   const formatEther = (value: bigint, decimals: number = 4): string => {
     const ether = Number(value) / 1e18;
@@ -676,24 +549,10 @@ export default function AdminPage(): React.ReactNode {
                   <div>
                     <p className="text-gray-400 text-sm mb-2">WETH Balance</p>
                     <p className="text-xl font-bold text-blue-400">{formatEther(balances.feeCollectorWeth)} WETH</p>
-                    <button
-                      onClick={forwardWethToRewards}
-                      disabled={isPending || balances.feeCollectorWeth === BigInt(0)}
-                      className="mt-2 px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded text-sm transition-colors"
-                    >
-                      Forward to Rewards
-                    </button>
                   </div>
                   <div>
                     <p className="text-gray-400 text-sm mb-2">EMARK Balance</p>
                     <p className="text-xl font-bold text-purple-400">{formatEther(balances.feeCollectorEmark)} EMARK</p>
-                    <button
-                      onClick={forwardEmarkToRewards}
-                      disabled={isPending || balances.feeCollectorEmark === BigInt(0)}
-                      className="mt-2 px-3 py-1 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded text-sm transition-colors"
-                    >
-                      Forward to Rewards
-                    </button>
                   </div>
                   <div>
                     <p className="text-gray-400 text-sm mb-2">Pending Referral Payment</p>
@@ -769,7 +628,7 @@ export default function AdminPage(): React.ReactNode {
                   disabled={isPending || !balances || balances.feeCollectorWeth === BigInt(0)}
                   className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg text-sm transition-colors"
                 >
-                  Forward All WETH
+                  Forward WETH ({balances ? formatEther(balances.feeCollectorWeth, 2) : '0'})
                 </button>
                 
                 <button
@@ -777,7 +636,7 @@ export default function AdminPage(): React.ReactNode {
                   disabled={isPending || !balances || balances.feeCollectorEmark === BigInt(0)}
                   className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg text-sm transition-colors"
                 >
-                  Forward All EMARK
+                  Forward EMARK ({balances ? formatEther(balances.feeCollectorEmark, 0) : '0'})
                 </button>
               </div>
               
@@ -843,36 +702,11 @@ export default function AdminPage(): React.ReactNode {
               
               {/* Placeholder for future tools */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-orange-400">Debug Info (Copy-Paste Ready)</h3>
-                <div className="bg-gray-800 p-3 rounded text-xs font-mono text-gray-300 space-y-1 max-h-40 overflow-y-auto">
-                  <div>CONTRACTS:</div>
-                  <div>• NFT: {getEvermarkNFTContract().address}</div>
-                  <div>• Voting: {getEvermarkVotingContract().address}</div>
-                  <div>• WEMARK: {getWEMARKContract().address}</div>
-                  <div>• FeeCollector: {getFeeCollectorContract().address}</div>
-                  <div>• Rewards: {getEvermarkRewardsContract().address}</div>
-                  <div className="pt-2">STATUS:</div>
-                  <div>• NFTs Minted: {contractStatus?.nft.totalSupply || 0}</div>
-                  <div>• WEMARK Staked: {contractStatus?.wemark.totalStaked ? `${(Number(contractStatus.wemark.totalStaked) / 1e18).toFixed(2)}` : '0'} EMARK</div>
-                  <div>• Voting Season: #{contractStatus?.voting.currentSeason || 'N/A'} {contractStatus?.voting.isActive ? '(Active)' : '(Inactive)'}</div>
-                  {balances && (
-                    <>
-                      <div className="pt-2">BALANCES:</div>
-                      <div>• FeeCollector WETH: {formatEther(balances.feeCollectorWeth)}</div>
-                      <div>• FeeCollector EMARK: {formatEther(balances.feeCollectorEmark)}</div>
-                      <div>• Pending Referral: {formatEther(balances.pendingReferralPayment)} ETH</div>
-                      <div>• Rewards WETH: {formatEther(balances.rewardsWeth)}</div>
-                      <div>• Rewards EMARK: {formatEther(balances.rewardsEmark)}</div>
-                    </>
-                  )}
-                  {rewardsPeriod && (
-                    <>
-                      <div className="pt-2">REWARDS PERIOD:</div>
-                      <div>• Period: #{rewardsPeriod.currentPeriod}</div>
-                      <div>• Ends: {rewardsPeriod.periodEnd.toLocaleString()}</div>
-                      <div>• Time Left: {Math.floor(rewardsPeriod.timeRemaining / 3600)}h {Math.floor((rewardsPeriod.timeRemaining % 3600) / 60)}m</div>
-                    </>
-                  )}
+                <h3 className="text-lg font-semibold text-orange-400">System Status</h3>
+                <div className="text-sm space-y-2">
+                  <div>NFTs: <span className="text-blue-400">{contractStatus?.nft.totalSupply || 0}</span></div>
+                  <div>Staked: <span className="text-purple-400">{contractStatus?.wemark.totalStaked ? formatEther(contractStatus.wemark.totalStaked, 0) : '0'} EMARK</span></div>
+                  <div>Season: <span className="text-green-400">#{contractStatus?.voting.currentSeason || 'N/A'}</span></div>
                 </div>
               </div>
               
