@@ -29,7 +29,7 @@ import { FarcasterMeta } from '../components/FarcasterMeta';
 // Real Protocol Stats using the evermarks hook
 const ProtocolStats: React.FC = () => {
   const isMobile = useIsMobile();
-  const themeClasses = useThemeClasses();
+  const dynamicTheme = useThemeClasses();
   const { totalCount, evermarks, isLoading } = useEvermarksState();
   
   // Calculate stats from real data with null checks
@@ -90,7 +90,7 @@ const ProtocolStats: React.FC = () => {
         <div
           key={index}
           className={cn(
-            `${themeClasses.bg.card} ${themeClasses.border.primary} border rounded-lg transition-all duration-300 ${themeClasses.border.hover}`,
+            `${dynamicTheme.bg.card} ${dynamicTheme.border.primary} border rounded-lg transition-all duration-300 ${dynamicTheme.border.hover}`,
             stat.glow,
             isMobile ? "p-3 flex items-center space-x-3" : "p-4 text-center"
           )}
@@ -106,13 +106,13 @@ const ProtocolStats: React.FC = () => {
           </div>
           <div className={cn(isMobile ? "flex-1" : "")}>
             <div className={cn(
-              `font-bold ${themeClasses.text.primary}`,
+              `font-bold ${dynamicTheme.text.primary}`,
               isMobile ? "text-base mb-0" : "text-xl mb-1"
             )}>
               {stat.value}
             </div>
             <div className={cn(
-              themeClasses.text.muted,
+              dynamicTheme.text.muted,
               isMobile ? "text-xs" : "text-sm"
             )}>
               {stat.label}
@@ -127,7 +127,7 @@ const ProtocolStats: React.FC = () => {
 // Quick Actions component
 const QuickActions: React.FC = () => {
   const { isAuthenticated } = useAppAuth();
-  const themeClasses = useThemeClasses();
+  const dynamicTheme = useThemeClasses();
   const isMobile = useIsMobile();
 
   const actions = [
@@ -179,7 +179,7 @@ const QuickActions: React.FC = () => {
           key={index}
           to={action.href}
           className={cn(
-            `group ${themeClasses.bg.card} ${themeClasses.border.primary} border rounded-lg ${themeClasses.border.hover} transition-all duration-300 hover:shadow-lg`,
+            `group ${dynamicTheme.bg.card} ${dynamicTheme.border.primary} border rounded-lg ${dynamicTheme.border.hover} transition-all duration-300 hover:shadow-lg`,
             isMobile ? "p-4 text-center" : "p-4"
           )}
         >
@@ -191,13 +191,13 @@ const QuickActions: React.FC = () => {
             {action.icon}
           </div>
           <h3 className={cn(
-            `font-medium ${themeClasses.text.primary} mb-1 group-hover:${themeClasses.text.secondary}`,
+            `font-medium ${dynamicTheme.text.primary} mb-1 group-hover:${dynamicTheme.text.secondary}`,
             isMobile ? "text-sm" : ""
           )}>
             {action.label}
           </h3>
           <p className={cn(
-            `${themeClasses.text.muted} group-hover:${themeClasses.text.secondary}`,
+            `${dynamicTheme.text.muted} group-hover:${dynamicTheme.text.secondary}`,
             isMobile ? "text-xs" : "text-sm"
           )}>
             {action.description}
@@ -210,12 +210,12 @@ const QuickActions: React.FC = () => {
 
 // Real Evermarks Feed Component
 const EvermarksFeed: React.FC = () => {
-  const themeClasses = useThemeClasses();
+  const dynamicTheme = useThemeClasses();
   const { evermarks: _evermarks, isLoading, error, isEmpty } = useEvermarksState();
 
   if (error) {
     return (
-      <div className={`${themeClasses.bg.card} border ${themeClasses.border.primary} rounded-lg p-6 text-center bg-red-900/30 border-red-500/50`}>
+      <div className={`${dynamicTheme.bg.card} border ${dynamicTheme.border.primary} rounded-lg p-6 text-center bg-red-900/30 border-red-500/50`}>
         <div className="w-16 h-16 mx-auto mb-4 bg-red-600/20 rounded-full flex items-center justify-center">
           <GridIcon className="h-8 w-8 text-red-400" />
         </div>
@@ -233,24 +233,24 @@ const EvermarksFeed: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className={`${themeClasses.bg.card} border ${themeClasses.border.primary} rounded-lg p-8 text-center`}>
+      <div className={`${dynamicTheme.bg.card} border ${dynamicTheme.border.primary} rounded-lg p-8 text-center`}>
         <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full flex items-center justify-center animate-pulse">
           <GridIcon className="h-8 w-8 text-black" />
         </div>
-        <h3 className={`text-xl font-semibold ${themeClasses.text.primary} mb-2`}>Loading Evermarks...</h3>
-        <p className={themeClasses.text.muted}>Fetching the latest preserved content</p>
+        <h3 className={`text-xl font-semibold ${dynamicTheme.text.primary} mb-2`}>Loading Evermarks...</h3>
+        <p className={dynamicTheme.text.muted}>Fetching the latest preserved content</p>
       </div>
     );
   }
 
   if (isEmpty) {
     return (
-      <div className={`${themeClasses.bg.card} border ${themeClasses.border.primary} rounded-lg p-8 text-center`}>
+      <div className={`${dynamicTheme.bg.card} border ${dynamicTheme.border.primary} rounded-lg p-8 text-center`}>
         <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full flex items-center justify-center">
           <GridIcon className="h-8 w-8 text-black" />
         </div>
-        <h3 className={`text-xl font-semibold ${themeClasses.text.primary} mb-2`}>No Evermarks Yet</h3>
-        <p className={`${themeClasses.text.muted} mb-6`}>
+        <h3 className={`text-xl font-semibold ${dynamicTheme.text.primary} mb-2`}>No Evermarks Yet</h3>
+        <p className={`${dynamicTheme.text.muted} mb-6`}>
           Be the first to preserve content forever on the blockchain!
         </p>
         <Link
@@ -285,6 +285,7 @@ const HomePage: React.FC = () => {
   const { isAuthenticated } = useAppAuth();
   const { isInFarcaster } = useFarcasterDetection();
   const { isDark: _isDark } = useTheme();
+  const dynamicTheme = useThemeClasses();
   const isMobile = useIsMobile();
 
   return (
@@ -349,7 +350,7 @@ const HomePage: React.FC = () => {
               </h1>
               
               <p className={cn(
-                `${themeClasses.text.secondary} leading-relaxed max-w-3xl mx-auto`,
+                `${dynamicTheme.text.secondary} leading-relaxed max-w-3xl mx-auto`,
                 isMobile ? "text-base sm:text-lg px-2" : "text-xl md:text-2xl"
               )}>
                 Discover amazing content online and earn rewards by sharing Evermarks through{' '}
@@ -412,11 +413,11 @@ const HomePage: React.FC = () => {
           isMobile ? "mb-6" : "mb-8"
         )}>
           <h2 className={cn(
-            `font-bold ${themeClasses.text.primary} mb-2`,
+            `font-bold ${dynamicTheme.text.primary} mb-2`,
             isMobile ? "text-xl" : "text-2xl"
           )}>Get Started</h2>
           <p className={cn(
-            themeClasses.text.muted,
+            dynamicTheme.text.muted,
             isMobile ? "text-sm px-4" : ""
           )}>Choose your path in the Evermark ecosystem</p>
         </div>
@@ -437,7 +438,7 @@ const HomePage: React.FC = () => {
           )}>
             <div className="flex items-center justify-between">
               <h2 className={cn(
-                `font-bold ${themeClasses.text.primary}`,
+                `font-bold ${dynamicTheme.text.primary}`,
                 isMobile ? "text-xl" : "text-2xl"
               )}>Community Feed</h2>
               <Link 
@@ -457,19 +458,19 @@ const HomePage: React.FC = () => {
             {/* Connect prompt for non-authenticated users */}
             {!isAuthenticated ? (
               <div className={cn(
-                `${themeClasses.bg.card} border ${themeClasses.border.primary} rounded-lg text-center`,
+                `${dynamicTheme.bg.card} border ${dynamicTheme.border.primary} rounded-lg text-center`,
                 isMobile ? "p-4" : "p-6"
               )}>
                 <VoteIcon className={cn(
-                  `mx-auto ${themeClasses.text.muted} mb-4`,
+                  `mx-auto ${dynamicTheme.text.muted} mb-4`,
                   isMobile ? "h-10 w-10" : "h-12 w-12"
                 )} />
                 <h3 className={cn(
-                  `font-medium ${themeClasses.text.primary} mb-2`,
+                  `font-medium ${dynamicTheme.text.primary} mb-2`,
                   isMobile ? "text-base" : "text-lg"
                 )}>Join the Community</h3>
                 <p className={cn(
-                  `${themeClasses.text.muted} mb-4`,
+                  `${dynamicTheme.text.muted} mb-4`,
                   isMobile ? "text-sm" : ""
                 )}>
                   Connect your wallet to vote on content and earn rewards
@@ -491,19 +492,19 @@ const HomePage: React.FC = () => {
               </div>
             ) : (
               <div className={cn(
-                `${themeClasses.bg.card} border ${themeClasses.border.primary} rounded-lg text-center`,
+                `${dynamicTheme.bg.card} border ${dynamicTheme.border.primary} rounded-lg text-center`,
                 isMobile ? "p-4" : "p-6"
               )}>
                 <CoinsIcon className={cn(
-                  `mx-auto ${themeClasses.text.muted} mb-4`,
+                  `mx-auto ${dynamicTheme.text.muted} mb-4`,
                   isMobile ? "h-10 w-10" : "h-12 w-12"
                 )} />
                 <h3 className={cn(
-                  `font-medium ${themeClasses.text.primary} mb-2`,
+                  `font-medium ${dynamicTheme.text.primary} mb-2`,
                   isMobile ? "text-base" : "text-lg"
                 )}>Welcome Back!</h3>
                 <p className={cn(
-                  `${themeClasses.text.muted} mb-4`,
+                  `${dynamicTheme.text.muted} mb-4`,
                   isMobile ? "text-sm" : ""
                 )}>
                   Your wallet is connected. Start creating and curating content.
@@ -523,11 +524,11 @@ const HomePage: React.FC = () => {
 
             {/* Community Insights */}
             <div className={cn(
-              `${themeClasses.bg.card} border ${themeClasses.border.primary} rounded-lg`,
+              `${dynamicTheme.bg.card} border ${dynamicTheme.border.primary} rounded-lg`,
               isMobile ? "p-4" : "p-6"
             )}>
               <h3 className={cn(
-                `font-semibold ${themeClasses.text.primary} mb-4`,
+                `font-semibold ${dynamicTheme.text.primary} mb-4`,
                 isMobile ? "text-base" : "text-lg"
               )}>Protocol Insights</h3>
               <div className={cn(
@@ -535,22 +536,22 @@ const HomePage: React.FC = () => {
                 isMobile ? "text-xs" : "text-sm"
               )}>
                 <div className="flex justify-between">
-                  <span className={themeClasses.text.muted}>Network:</span>
+                  <span className={dynamicTheme.text.muted}>Network:</span>
                   <span className="text-green-400 font-medium">Base Mainnet</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className={themeClasses.text.muted}>Storage:</span>
+                  <span className={dynamicTheme.text.muted}>Storage:</span>
                   <span className="text-cyan-400 font-medium">IPFS + Blockchain</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className={themeClasses.text.muted}>Status:</span>
+                  <span className={dynamicTheme.text.muted}>Status:</span>
                   <span className="text-green-400 font-medium flex items-center">
                     <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
                     Live
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className={themeClasses.text.muted}>Version:</span>
+                  <span className={dynamicTheme.text.muted}>Version:</span>
                   <span className="text-purple-400 font-medium">Beta v{packageJson.version}</span>
                 </div>
               </div>
@@ -566,7 +567,7 @@ const HomePage: React.FC = () => {
           isMobile ? "py-12" : "py-16"
         )}>
           <div className={cn(
-            `${themeClasses.bg.secondary} border ${themeClasses.border.primary} rounded-2xl text-center`,
+            `${dynamicTheme.bg.secondary} border ${dynamicTheme.border.primary} rounded-2xl text-center`,
             isMobile ? "p-6" : "p-8 md:p-12"
           )}>
             <div className="max-w-3xl mx-auto">
@@ -577,7 +578,7 @@ const HomePage: React.FC = () => {
                 Ready to Preserve Something Amazing?
               </h2>
               <p className={cn(
-                `${themeClasses.text.secondary} leading-relaxed`,
+                `${dynamicTheme.text.secondary} leading-relaxed`,
                 isMobile ? "text-base mb-6" : "text-lg mb-8"
               )}>
                 Transform any online content into a permanent, shareable Evermark. 
@@ -603,7 +604,7 @@ const HomePage: React.FC = () => {
                 <Link
                   to="/explore"
                   className={cn(
-                    `inline-flex items-center justify-center ${themeClasses.button.secondary} rounded-lg transition-colors`,
+                    `inline-flex items-center justify-center ${dynamicTheme.button.secondary} rounded-lg transition-colors`,
                     isMobile ? "px-6 py-3 text-sm" : "px-8 py-4"
                   )}
                 >
