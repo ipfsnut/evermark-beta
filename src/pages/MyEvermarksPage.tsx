@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 
 import { useEvermarksState } from '@/features/evermarks';
 import { EvermarkCard } from '@/features/evermarks/components/EvermarkCard';
+import { useVotingState } from '@/features/voting';
 import { useAppAuth } from '@/providers/AppContext';
 import { useThemeClasses } from '@/providers/ThemeProvider';
 import { cn } from '@/utils/responsive';
@@ -12,6 +13,7 @@ export default function MyEvermarksPage() {
   const { isAuthenticated, user } = useAppAuth();
   const themeClasses = useThemeClasses();
   const { evermarks, isLoading, error, loadEvermarks } = useEvermarksState();
+  const { votingHistory } = useVotingState();
   const [activeTab, setActiveTab] = useState<'created' | 'supported'>('created');
 
   // Filter evermarks by current wallet
@@ -19,10 +21,20 @@ export default function MyEvermarksPage() {
     user?.address && evermark.creator.toLowerCase() === user.address.toLowerCase()
   );
   
-  // TODO: Add support for filtering supported evermarks when voting is implemented
-  const mySupportedEvermarks = evermarks.filter(evermark => 
-    evermark.votes && evermark.votes > 0 // Placeholder logic
-  );
+  // Supported evermarks: ones where user has delegated votes
+  const mySupportedEvermarks = evermarks.filter(evermark => {
+    // User is not the creator
+    if (evermark.creator.toLowerCase() === user?.address?.toLowerCase()) {
+      return false;
+    }
+    
+    // Check if user has voted on this evermark
+    const hasVoted = votingHistory?.some(vote => 
+      vote.evermarkId === evermark.id && vote.amount > 0
+    );
+    
+    return hasVoted || false;
+  });
 
   useEffect(() => {
     // Load all evermarks and then filter client-side for now

@@ -253,7 +253,8 @@ async function fetchEvermarks(options: EvermarkFeedOptions): Promise<EvermarkFee
         contentType: (item.content_type as Evermark['contentType']) || 'Custom',
         sourceUrl: item.source_url as string,
         imageStatus: 'processed' as const,
-        votes: 0, // Initialize votes to 0 (will be fetched from blockchain)
+        votes: item.votes || 0, // Use votes from API or default to 0
+        viewCount: item.access_count || 0, // Map access_count to viewCount
         extendedMetadata: { 
           tags,
           castData: item.cast_data as any
@@ -341,6 +342,8 @@ async function fetchEvermark(id: string): Promise<Evermark | null> {
       contentType: (item.content_type as Evermark['contentType']) || 'Custom',
       sourceUrl: item.source_url as string,
       imageStatus: 'processed' as const,
+      votes: item.votes || 0, // Use votes from API or default to 0
+      viewCount: item.access_count || 0, // Map access_count to viewCount
       extendedMetadata: { 
         tags,
         castData: parsedMetadata.cast || item.cast_data,
