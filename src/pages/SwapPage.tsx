@@ -4,42 +4,29 @@ import { ArrowUpDownIcon, InfoIcon, ZapIcon, ExternalLinkIcon } from 'lucide-rea
 import { themeClasses, cn } from '@/utils/theme';
 import { useTheme } from '@/providers/ThemeProvider';
 import { CONTRACTS } from '@/lib/contracts';
-// Context detection hook
-function useFarcasterContext() {
-  const [isFarcasterMiniApp, setIsFarcasterMiniApp] = useState(false);
-  const [farcasterSDK, setFarcasterSDK] = useState<any>(null);
-
-  useEffect(() => {
-    // Detect if running in Farcaster Mini App context
-    const isEmbedded = window.parent !== window;
-    const hasFarcasterSDK = typeof window !== 'undefined' && (window as any).farcasterSDK;
-    
-    setIsFarcasterMiniApp(isEmbedded || hasFarcasterSDK);
-    
-    if (hasFarcasterSDK) {
-      setFarcasterSDK((window as any).farcasterSDK);
-    }
-  }, []);
-
-  return { isFarcasterMiniApp, farcasterSDK };
-}
+import { useFarcasterDetection } from '@/hooks/useFarcasterDetection';
 
 // Farcaster Mini App swap interface
 function FarcasterSwapInterface() {
   const { isDark } = useTheme();
-  const { farcasterSDK } = useFarcasterContext();
+  const { miniAppContext, isFrameSDKReady } = useFarcasterDetection();
   const [isSwapping, setIsSwapping] = useState(false);
 
   const handleSwap = async () => {
-    if (!farcasterSDK) return;
+    if (!isFrameSDKReady) return;
     
     try {
       setIsSwapping(true);
-      await farcasterSDK.actions.swapToken({
-        fromToken: 'ETH',
-        toToken: CONTRACTS.EMARK_TOKEN,
-        amount: '0.01' // Example amount
-      });
+      
+      // Use the Farcaster Mini App SDK for in-app swaps
+      const { sdk } = await import('@farcaster/miniapp-sdk');
+      
+      // Open external URL to Uniswap with EMARK pre-selected
+      const emarkAddress = CONTRACTS.EMARK_TOKEN;
+      const uniswapUrl = `https://app.uniswap.org/#/swap?outputCurrency=${emarkAddress}&chain=base`;
+      
+      await sdk.actions.openUrl(uniswapUrl);
+      
     } catch (error) {
       console.error('Swap failed:', error);
     } finally {
@@ -71,7 +58,7 @@ function FarcasterSwapInterface() {
             
             <button
               onClick={handleSwap}
-              disabled={isSwapping || !farcasterSDK}
+              disabled={isSwapping || !isFrameSDKReady}
               className={cn(
                 "w-full py-3 px-4 rounded-lg font-medium transition-colors",
                 "bg-gradient-to-r from-green-400 to-blue-500 text-black",
@@ -79,15 +66,15 @@ function FarcasterSwapInterface() {
                 "disabled:opacity-50 disabled:cursor-not-allowed"
               )}
             >
-              {isSwapping ? 'Swapping...' : 'Swap ETH → EMARK'}
+              {isSwapping ? 'Opening Uniswap...' : 'Swap ETH → EMARK'}
             </button>
             
-            {!farcasterSDK && (
+            {!isFrameSDKReady && (
               <p className={cn(
                 "text-sm text-center mt-4",
                 isDark ? "text-yellow-400" : "text-yellow-600"
               )}>
-                Farcaster SDK not available
+                Farcaster SDK not ready
               </p>
             )}
           </div>
@@ -202,9 +189,9 @@ function BrowserSwapInterface() {
 }
 
 export default function SwapPage(): React.ReactNode {
-  const { isFarcasterMiniApp } = useFarcasterContext();
+  const { isInFarcaster } = useFarcasterDetection();
   
-  if (isFarcasterMiniApp) {
+  if (isInFarcaster) {
     return <FarcasterSwapInterface />;
   }
   

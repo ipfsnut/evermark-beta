@@ -44,17 +44,14 @@ export function useFarcasterDetection() {
         // Now get the context
         const context = await sdk.context;
         
-        // Only consider it Farcaster if we have a real user context AND we're not on localhost
-        const isLocalhost = typeof window !== 'undefined' && 
-          (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-        
-        if (context?.user && !isLocalhost) {
+        // Consider it Farcaster if we have a real user context (even on localhost for testing)
+        if (context?.user) {
           setIsInFarcaster(true);
           setMiniAppContext(context);
           console.log('🎯 Farcaster Mini App context detected with user:', context.user);
         } else {
           setIsInFarcaster(false);
-          console.log('🌐 Browser/PWA mode (localhost or no user context)');
+          console.log('🌐 Browser/PWA mode (no user context)');
         }
       } catch (error) {
         setIsInFarcaster(false);

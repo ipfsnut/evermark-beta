@@ -48,10 +48,10 @@ export function DelegateButton({
 
   // Load user's current votes for this evermark
   useEffect(() => {
-    function loadUserVotes() {
+    async function loadUserVotes() {
       if (isConnected && evermarkId) {
         try {
-          const votes = getUserVotesForEvermark(evermarkId);
+          const votes = await getUserVotesForEvermark(evermarkId);
           setUserVotes(votes);
         } catch (error) {
           console.error('Failed to load user votes:', error);
@@ -85,7 +85,7 @@ export function DelegateButton({
       setLocalSuccess(`Successfully delegated ${amount} wEMARK!`);
       
       // Reload user votes
-      const newVotes = getUserVotesForEvermark(evermarkId);
+      const newVotes = await getUserVotesForEvermark(evermarkId);
       setUserVotes(newVotes);
       
       onSuccess?.(transaction);
@@ -121,7 +121,7 @@ export function DelegateButton({
       setLocalSuccess(`Successfully undelegated ${amount} wEMARK!`);
       
       // Reload user votes
-      const newVotes = getUserVotesForEvermark(evermarkId);
+      const newVotes = await getUserVotesForEvermark(evermarkId);
       setUserVotes(newVotes);
       
       onSuccess?.(transaction);
@@ -154,7 +154,7 @@ export function DelegateButton({
       setLocalSuccess(`Quick delegation successful!`);
       
       // Reload user votes
-      const newVotes = getUserVotesForEvermark(evermarkId);
+      const newVotes = await getUserVotesForEvermark(evermarkId);
       setUserVotes(newVotes);
       
       onSuccess?.(transaction);

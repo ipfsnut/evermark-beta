@@ -202,7 +202,7 @@ export function useLeaderboardState(): UseLeaderboardStateReturn {
     // Data
     entries,
     stats: stats ?? null,
-    currentPeriod,
+    currentPeriod: currentPeriod ?? { id: 'current', label: 'Current', duration: 0, description: 'Current cycle' },
     availablePeriods,
     
     // Pagination & filtering

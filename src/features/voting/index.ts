@@ -137,10 +137,10 @@ export const votingUtils = {
   },
   
   /**
-   * Get maximum vote amount for a chain
+   * Get maximum vote amount for a user (their available voting power)
    */
-  getMaxVoteAmount: (): bigint => {
-    return VOTING_CONSTANTS.MAX_VOTE_AMOUNT;
+  getMaxVoteAmount: (votingPower?: bigint): bigint => {
+    return votingPower ?? BigInt(0);
   },
   
   /**
