@@ -87,15 +87,14 @@ export function StakeForm({ stakingState, onSuccess, className = '', disabled = 
       const amountWei = toWei(amount);
       
       // Call the actual blockchain approval
-      const txHash = await approveStaking(amountWei);
+      await approveStaking(amountWei);
       
-      // Wait a moment for transaction to be mined, then refresh allowance
-      setTimeout(async () => {
-        await refreshAllowance();
-        setNeedsApproval(false);
-      }, 3000); // Wait 3 seconds for block confirmation
+      setLocalSuccess(`Successfully approved ${amount} EMARK for staking! You can now stake your tokens.`);
       
-      setLocalSuccess(`Successfully approved ${amount} EMARK for staking! Transaction: ${txHash ? txHash.slice(0, 10) + '...' : 'confirmed'}`);
+      // Immediately refresh allowance and update approval state
+      await refreshAllowance();
+      setNeedsApproval(false);
+      
     } catch (error: unknown) {
       console.error('Approval failed:', error);
       setLocalError(error instanceof Error ? error.message : 'Approval failed. Please try again.');
@@ -115,7 +114,12 @@ export function StakeForm({ stakingState, onSuccess, className = '', disabled = 
     try {
       const amountWei = toWei(amount);
       
-      // The stake method handles approval internally
+      // Double-check approval before staking
+      if (currentAllowance < amountWei) {
+        setLocalError('Insufficient approval. Please approve EMARK spending first.');
+        return;
+      }
+      
       await stakingState.stake(amountWei);
       
       setLocalSuccess(`Successfully staked ${formatTokenAmount(amountWei, 18)} EMARK!`);
@@ -127,7 +131,7 @@ export function StakeForm({ stakingState, onSuccess, className = '', disabled = 
     } finally {
       setIsSubmitting(false);
     }
-  }, [validation.isValid, amount, isSubmitting, stakingState, formatTokenAmount, onSuccess]);
+  }, [validation.isValid, amount, isSubmitting, stakingState, formatTokenAmount, onSuccess, currentAllowance]);
 
   // Handle amount input changes
   const handleAmountChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {

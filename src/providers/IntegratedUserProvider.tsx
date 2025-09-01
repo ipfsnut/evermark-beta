@@ -62,35 +62,39 @@ export function IntegratedUserProvider({ children }: IntegratedUserProviderProps
 // Farcaster-specific provider using wagmi hooks
 function FarcasterIntegratedUserProvider({ children }: { children: React.ReactNode }): React.ReactNode {
   const account = useWagmiAccount();
-  
-  // Neynar temporarily removed to isolate React Error #31
-  // const neynarAuth: { user?: { fid?: number } } | null = null;
+  const { miniAppContext } = useFarcasterDetection();
   
   const [user, setUser] = useState<EnhancedUser | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load user profile when wallet changes
+  // Load user profile when wallet changes OR when Farcaster context becomes available
   useEffect(() => {
     loadUserProfile();
-  }, [account?.address]);
+  }, [account?.address, miniAppContext]);
 
   const loadUserProfile = useCallback(async () => {
-    if (!account?.address) {
-      setUser(null);
-      return;
-    }
-
     setIsLoading(true);
     setError(null);
 
     try {
       let enhancedUser: EnhancedUser | null = null;
 
-      // Priority 1: Wallet address (Neynar temporarily disabled)
-      if (account?.address) {
+      // Priority 1: Farcaster SDK context user (if available)
+      if (miniAppContext?.user) {
+        console.log('🎯 Loading profile from Farcaster SDK context:', miniAppContext.user);
+        enhancedUser = await EnhancedUserService.getUserByFarcasterFID(miniAppContext.user.fid);
+      }
+      // Priority 2: Wallet address lookup
+      else if (account?.address) {
         console.log('🎯 Loading profile from wallet address:', account.address);
         enhancedUser = await EnhancedUserService.getUserByAddress(account.address);
+      }
+      // No connection available
+      else {
+        setUser(null);
+        setIsLoading(false);
+        return;
       }
 
       if (enhancedUser) {
@@ -98,6 +102,7 @@ function FarcasterIntegratedUserProvider({ children }: { children: React.ReactNo
         console.log('✅ Enhanced user profile loaded:', {
           source: enhancedUser.source,
           identityScore: enhancedUser.identityScore,
+          displayName: enhancedUser.displayName,
           hasFarcaster: !!enhancedUser.farcaster,
           hasENS: !!enhancedUser.ens,
           hasWallet: !!enhancedUser.wallet
@@ -113,7 +118,7 @@ function FarcasterIntegratedUserProvider({ children }: { children: React.ReactNo
     } finally {
       setIsLoading(false);
     }
-  }, [account?.address]);
+  }, [account?.address, miniAppContext]);
 
   const refreshUser = useCallback(async () => {
     EnhancedUserService.clearCache();

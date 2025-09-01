@@ -195,6 +195,40 @@ export class FarcasterUserService {
   }
 
   /**
+   * Fetch user by wallet address with caching
+   */
+  async fetchUserByAddress(address: string): Promise<AppFarcasterUser | null> {
+    try {
+      // If offline, return null
+      if (this.isOffline) {
+        console.warn(`Cannot fetch user by address ${address} - offline`);
+        return null;
+      }
+
+      // Check if Neynar is configured
+      if (!neynarClient.isConfigured()) {
+        console.warn('Neynar client not configured - cannot fetch user data');
+        return null;
+      }
+
+      // Fetch verifications for this address to find the associated FID
+      const response = await neynarClient.getVerifications(0); // We need FID, but first get verifications for address
+      
+      // For now, we'll use a different approach - search by the address
+      // This is a limitation of the current Neynar API structure
+      console.log('🔍 Looking up Farcaster user by address:', address);
+      
+      // Since we can't directly lookup by address, we'll return null for now
+      // This should be enhanced when we have proper address-to-FID lookup
+      return null;
+      
+    } catch (error) {
+      console.error(`Failed to fetch user by address ${address}:`, error);
+      return null;
+    }
+  }
+
+  /**
    * Fetch multiple users efficiently
    */
   async fetchUsersBatch(fids: number[]): Promise<AppFarcasterUser[]> {
