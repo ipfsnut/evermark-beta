@@ -30,6 +30,7 @@ import { useAppAuth } from '@/providers/AppContext';
 import { useFarcasterUser } from '@/hooks/useFarcasterDetection';
 import { useThemeClasses } from '@/providers/ThemeProvider';
 import { cn, useIsMobile } from '@/utils/responsive';
+import { EvermarkMeta } from '@/components/FarcasterMeta';
 
 // Share modal component
 const ShareModal: React.FC<{
@@ -236,6 +237,10 @@ export default function EvermarkDetailPage(): React.ReactNode {
 
   return (
     <div className={`min-h-screen ${themeClasses.bg.primary} ${themeClasses.text.primary}`}>
+      {/* Dynamic meta tags for sharing */}
+      {evermark && (
+        <EvermarkMeta evermark={evermark} />
+      )}
       {/* Header */}
       <div className={`${themeClasses.bg.secondary} border-b ${themeClasses.border.primary} sticky top-0 z-40 backdrop-blur-sm`}>
         <div className="container mx-auto px-4 py-4">

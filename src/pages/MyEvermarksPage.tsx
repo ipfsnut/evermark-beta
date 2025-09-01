@@ -1,22 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { useAccount } from 'wagmi';
 import { FileText, Clock, Eye, Vote, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { useEvermarksState } from '@/features/evermarks';
 import { EvermarkCard } from '@/features/evermarks/components/EvermarkCard';
+import { useAppAuth } from '@/providers/AppContext';
 import { useThemeClasses } from '@/providers/ThemeProvider';
 import { cn } from '@/utils/responsive';
 
 export default function MyEvermarksPage() {
-  const { address, isConnected } = useAccount();
+  const { isAuthenticated, user } = useAppAuth();
   const themeClasses = useThemeClasses();
   const { evermarks, isLoading, error, loadEvermarks } = useEvermarksState();
   const [activeTab, setActiveTab] = useState<'created' | 'supported'>('created');
 
   // Filter evermarks by current wallet
   const myCreatedEvermarks = evermarks.filter(evermark => 
-    evermark.creator.toLowerCase() === address?.toLowerCase()
+    user?.address && evermark.creator.toLowerCase() === user.address.toLowerCase()
   );
   
   // TODO: Add support for filtering supported evermarks when voting is implemented
@@ -31,7 +31,7 @@ export default function MyEvermarksPage() {
   }, [loadEvermarks]);
 
   // Not connected state
-  if (!isConnected) {
+  if (!isAuthenticated) {
     return (
       <div className={`min-h-screen ${themeClasses.bg.primary} ${themeClasses.text.primary}`}>
         <div className="container mx-auto px-4 py-8">
