@@ -7,6 +7,7 @@ import { createWallet, inAppWallet } from 'thirdweb/wallets';
 import { client } from '@/lib/thirdweb';
 import { CHAIN } from '@/lib/contracts';
 import { useWallet } from '../providers/WalletProvider';
+import { useAppAuth } from '@/providers/AppContext';
 import { useThemeClasses } from '@/providers/ThemeProvider';
 
 interface WalletConnectProps {
@@ -29,34 +30,48 @@ const getPWAWallets = () => [
 
 export function WalletConnect({ className = '', variant = 'default' }: WalletConnectProps) {
   const { address, isConnected, context, disconnect } = useWallet();
+  const { user } = useAppAuth();
   const themeClasses = useThemeClasses();
   
-  // Get display info based on context
+  // Get display info from integrated user system
   const getDisplayInfo = () => {
-    if (context === 'farcaster') {
-      // TODO: Get from Neynar user object when available
+    const shortAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null;
+    
+    if (user) {
+      // Use enhanced user data with proper fallback chain
+      const displayName = user.displayName || user.username || user.ensName;
       return {
-        displayName: null,
-        shortAddress: address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null
+        displayName,
+        shortAddress,
+        avatar: user.avatar || user.pfpUrl
       };
     }
     
     return {
       displayName: null,
-      shortAddress: address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null
+      shortAddress,
+      avatar: null
     };
   };
 
-  const { displayName, shortAddress } = getDisplayInfo();
+  const { displayName, shortAddress, avatar } = getDisplayInfo();
 
   // Connected state - show user info
   if (isConnected && address) {
     if (variant === 'compact') {
       return (
         <div className={`flex items-center space-x-2 px-3 py-2 ${themeClasses.bg.card} border ${themeClasses.border.primary} rounded-lg ${className}`}>
-          <div className="w-6 h-6 bg-gradient-to-r from-cyber-primary to-cyber-secondary rounded-full flex items-center justify-center">
-            <UserIcon className="h-3 w-3 text-black" />
-          </div>
+          {avatar ? (
+            <img 
+              src={avatar} 
+              alt={displayName || shortAddress || 'User'} 
+              className="w-6 h-6 rounded-full"
+            />
+          ) : (
+            <div className="w-6 h-6 bg-gradient-to-r from-cyber-primary to-cyber-secondary rounded-full flex items-center justify-center">
+              <UserIcon className="h-3 w-3 text-black" />
+            </div>
+          )}
           <button
             onClick={disconnect}
             className={`text-sm font-medium ${themeClasses.text.primary} hover:text-cyber-primary transition-colors cursor-pointer`}
@@ -71,9 +86,17 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
     // Default variant
     return (
       <div className={`flex items-center space-x-2 px-4 py-2 ${themeClasses.bg.card} border ${themeClasses.border.primary} rounded-lg ${className}`}>
-        <div className="w-8 h-8 bg-gradient-to-r from-cyber-primary to-cyber-secondary rounded-full flex items-center justify-center">
-          <UserIcon className="h-4 w-4 text-black" />
-        </div>
+        {avatar ? (
+          <img 
+            src={avatar} 
+            alt={displayName || shortAddress || 'User'} 
+            className="w-8 h-8 rounded-full"
+          />
+        ) : (
+          <div className="w-8 h-8 bg-gradient-to-r from-cyber-primary to-cyber-secondary rounded-full flex items-center justify-center">
+            <UserIcon className="h-4 w-4 text-black" />
+          </div>
+        )}
         <div className="flex flex-col">
           <button
             onClick={disconnect}
@@ -83,7 +106,9 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
             {displayName ?? shortAddress}
           </button>
           <span className={`text-xs ${themeClasses.text.muted}`}>
-            {context === 'farcaster' ? 'Farcaster' : 'Connected'}
+            {user?.authType === 'farcaster' ? 'Farcaster' : 
+             user?.authType === 'ens' ? 'ENS' :
+             context === 'farcaster' ? 'Farcaster' : 'Connected'}
           </span>
         </div>
         <LogOutIcon className={`h-4 w-4 ${themeClasses.text.muted} hover:text-cyber-primary transition-colors cursor-pointer`} onClick={disconnect} />
@@ -132,22 +157,35 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
 // Simplified connect button for basic usage
 export function SimpleConnectButton({ className = '' }: { className?: string }) {
   const { address, isConnected, context } = useWallet();
+  const { user } = useAppAuth();
   const themeClasses = useThemeClasses();
 
   if (isConnected && address) {
     const shortAddress = `${address.slice(0, 6)}...${address.slice(-4)}`;
+    const displayName = user?.displayName || user?.username || user?.ensName;
+    const avatar = user?.avatar || user?.pfpUrl;
     
     return (
       <div className={`flex items-center space-x-2 px-4 py-2 ${themeClasses.bg.card} border ${themeClasses.border.primary} rounded-lg ${className}`}>
-        <div className="w-8 h-8 bg-gradient-to-r from-cyber-primary to-cyber-secondary rounded-full flex items-center justify-center">
-          <UserIcon className="h-4 w-4 text-black" />
-        </div>
+        {avatar ? (
+          <img 
+            src={avatar} 
+            alt={displayName || shortAddress} 
+            className="w-8 h-8 rounded-full"
+          />
+        ) : (
+          <div className="w-8 h-8 bg-gradient-to-r from-cyber-primary to-cyber-secondary rounded-full flex items-center justify-center">
+            <UserIcon className="h-4 w-4 text-black" />
+          </div>
+        )}
         <div className="flex flex-col">
           <span className={`text-sm font-medium ${themeClasses.text.primary}`}>
-            {shortAddress}
+            {displayName ?? shortAddress}
           </span>
           <span className={`text-xs ${themeClasses.text.muted}`}>
-            {context === 'farcaster' ? 'Farcaster' : 'Connected'}
+            {user?.authType === 'farcaster' ? 'Farcaster' : 
+             user?.authType === 'ens' ? 'ENS' :
+             context === 'farcaster' ? 'Farcaster' : 'Connected'}
           </span>
         </div>
       </div>
