@@ -62,6 +62,14 @@ export interface FarcasterCastData {
     recasts: number;
     replies: number;
   };
+  // Enhanced fields for better image generation
+  author_pfp?: string;
+  author_fid?: number;
+  channel?: string;
+  embeds?: Array<{
+    url?: string;
+    cast_id?: any;
+  }>;
 }
 
 export interface EvermarkMetadata {

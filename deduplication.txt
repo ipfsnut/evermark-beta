@@ -1,0 +1,256 @@
+# Evermark Content Deduplication System
+
+## Overview
+Prevent duplicate Evermarks by detecting identical content and redirecting users to vote on existing content instead of creating redundant NFTs.
+
+## Content Classification & Deduplication Strategy
+
+### Tier 1: Immutable Identifiers (Strict Prevention)
+Content with cryptographically unique, immutable identifiers that guarantee identical content.
+
+#### Farcaster Casts
+- **Identifier**: Cast hash (e.g., `0x1a2b3c...`)
+- **Detection**: Extract hash from cast URL or direct hash input
+- **Logic**: Same hash = identical cast content forever
+- **Action**: Hard redirect to existing Evermark + voting UI
+
+#### DOI (Digital Object Identifier)
+- **Identifier**: DOI string (e.g., `10.1038/nature12373`)
+- **Detection**: Extract from `doi.org` URLs or direct DOI input
+- **Logic**: Same DOI = same academic paper/article
+- **Action**: Hard redirect to existing Evermark + voting UI
+
+#### ISBN (International Standard Book Number)
+- **Identifier**: 10 or 13 digit ISBN (e.g., `9780123456789`)
+- **Detection**: Extract from book URLs or direct ISBN input
+- **Logic**: Same ISBN = same book edition
+- **Action**: Hard redirect to existing Evermark + voting UI
+
+### Tier 2: Platform-Specific IDs (Strong Prevention)
+Platform identifiers that are stable but might have URL variations.
+
+#### Twitter/X Posts
+- **Identifier**: Tweet ID (e.g., `1234567890123456789`)
+- **Detection**: Extract from twitter.com/x.com status URLs
+- **Normalization**: 
+  - `twitter.com/user/status/123` → Tweet ID: `123`
+  - `x.com/user/status/123` → Tweet ID: `123`
+- **Action**: Show duplicate modal with option to proceed
+
+#### YouTube Videos
+- **Identifier**: Video ID (e.g., `dQw4w9WgXcQ`)
+- **Detection**: Extract from youtube.com/youtu.be URLs
+- **Normalization**:
+  - `youtube.com/watch?v=abc123` → Video ID: `abc123`
+  - `youtu.be/abc123` → Video ID: `abc123`
+- **Action**: Show duplicate modal with option to proceed
+
+#### GitHub Resources
+- **Identifier**: Repo + commit/tag (e.g., `owner/repo@commit`)
+- **Detection**: Extract from github.com URLs
+- **Logic**: Same repo at same commit = identical code state
+- **Action**: Show duplicate modal with option to proceed
+
+### Tier 3: Normalized URLs (Soft Prevention)
+General web content with URL normalization for common variations.
+
+#### URL Normalization Rules
+```typescript
+const normalizeURL = (url: string): string => {
+  let normalized = url.trim().toLowerCase();
+  
+  // Protocol normalization
+  if (!normalized.startsWith('http')) {
+    normalized = 'https://' + normalized;
+  }
+  normalized = normalized.replace(/^http:/, 'https:');
+  
+  // Domain normalization
+  normalized = normalized.replace(/^https:\/\/www\./, 'https://');
+  
+  // Path normalization
+  normalized = normalized.replace(/\/$/, ''); // Remove trailing slash
+  
+  // Parameter cleanup
+  const url = new URL(normalized);
+  // Remove common tracking parameters
+  ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 
+   'ref', 'source', 'fbclid', 'gclid'].forEach(param => {
+    url.searchParams.delete(param);
+  });
+  
+  return url.toString();
+};
+```
+
+#### Action
+- Show "Similar content exists" modal
+- Allow user to view existing or proceed with creation
+- Less aggressive than Tier 1/2 prevention
+
+## Technical Implementation
+
+### Phase 1: API Enhancement
+**File**: `netlify/functions/evermarks.ts`
+
+Add duplicate check endpoint:
+```typescript
+// GET /api/evermarks?check_duplicate=true&content_id={id}&source_url={url}
+interface DuplicateCheckResponse {
+  exists: boolean;
+  confidence: 'exact' | 'high' | 'medium' | 'low';
+  existingTokenId?: number;
+  existingEvermark?: {
+    token_id: number;
+    title: string;
+    author: string;
+    created_at: string;
+    vote_count?: number;
+    total_staked?: string;
+    leaderboard_rank?: number;
+  };
+  duplicateType: 'cast_hash' | 'doi' | 'isbn' | 'tweet_id' | 'youtube_id' | 'github_resource' | 'normalized_url';
+}
+```
+
+**Implementation Logic**:
+```typescript
+async function checkForDuplicate(sourceUrl: string): Promise<DuplicateCheckResponse> {
+  // 1. Extract content identifier
+  const contentId = extractContentIdentifier(sourceUrl);
+  const duplicateType = getIdentifierType(contentId);
+  
+  // 2. Query database based on type
+  let query;
+  switch (duplicateType) {
+    case 'cast_hash':
+      // Check metadata_json.cast.hash or source_url patterns
+      query = supabase.from('beta_evermarks')
+        .select('*')
+        .or(`source_url.ilike.%${contentId}%,metadata_json->cast->>hash.eq.${contentId}`);
+      break;
+      
+    case 'doi':
+      // Check for DOI in source_url or metadata
+      query = supabase.from('beta_evermarks')
+        .select('*')
+        .or(`source_url.ilike.%${contentId}%,metadata_json->doi.eq.${contentId}`);
+      break;
+      
+    case 'normalized_url':
+      const normalized = normalizeURL(sourceUrl);
+      query = supabase.from('beta_evermarks')
+        .select('*')
+        .eq('source_url', normalized);
+      break;
+  }
+  
+  const { data } = await query;
+  
+  return {
+    exists: data && data.length > 0,
+    confidence: getConfidenceLevel(duplicateType),
+    existingTokenId: data?.[0]?.token_id,
+    existingEvermark: data?.[0],
+    duplicateType
+  };
+}
+```
+
+### Phase 2: Content Identifier Extraction
+**File**: `src/utils/contentIdentifiers.ts`
+
+```typescript
+interface ContentIdentifier {
+  id: string;
+  type: 'cast_hash' | 'doi' | 'isbn' | 'tweet_id' | 'youtube_id' | 'github_resource' | 'normalized_url';
+  confidence: 'exact' | 'high' | 'medium' | 'low';
+}
+
+export function extractContentIdentifier(url: string): ContentIdentifier {
+  // Farcaster cast hash
+  const castMatch = url.match(/cast\/0x([a-fA-F0-9]{40})/);
+  if (castMatch) {
+    return { id: `0x${castMatch[1]}`, type: 'cast_hash', confidence: 'exact' };
+  }
+  
+  // DOI patterns
+  const doiMatch = url.match(/doi\.org\/(.+)$/) || url.match(/10\.\d+\/[^\s]+/);
+  if (doiMatch) {
+    return { id: doiMatch[1] || doiMatch[0], type: 'doi', confidence: 'exact' };
+  }
+  
+  // ISBN patterns
+  const isbnMatch = url.match(/(?:isbn[:\s]?)?(\d{9}[\d|X]|\d{13})/i);
+  if (isbnMatch) {
+    return { id: isbnMatch[1], type: 'isbn', confidence: 'exact' };
+  }
+  
+  // Twitter/X tweet ID
+  const tweetMatch = url.match(/(?:twitter\.com|x\.com)\/\w+\/status\/(\d+)/);
+  if (tweetMatch) {
+    return { id: tweetMatch[1], type: 'tweet_id', confidence: 'high' };
+  }
+  
+  // YouTube video ID
+  const youtubeMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  if (youtubeMatch) {
+    return { id: youtubeMatch[1], type: 'youtube_id', confidence: 'high' };
+  }
+  
+  // GitHub resource (repo@commit)
+  const githubMatch = url.match(/github\.com\/([^\/]+\/[^\/]+)(?:\/.*)?$/);
+  if (githubMatch) {
+    return { id: githubMatch[1], type: 'github_resource', confidence: 'medium' };
+  }
+  
+  // Fallback: normalized URL
+  return { 
+    id: normalizeURL(url), 
+    type: 'normalized_url', 
+    confidence: 'low' 
+  };
+}
+```
+
+### Phase 3: Frontend Integration
+**File**: `src/features/evermarks/hooks/useEvermarkCreation.ts`
+
+```typescript
+// Pre-mint duplicate check
+const duplicateCheck = await fetch(`/api/evermarks?check_duplicate=true&source_url=${encodeURIComponent(sourceUrl)}`);
+const duplicate = await duplicateCheck.json();
+
+if (duplicate.exists && duplicate.confidence === 'exact') {
+  // Hard redirect for immutable content (casts, DOIs, ISBNs)
+  setDuplicateInfo(duplicate);
+  setShowDuplicateModal(true);
+  return; // Stop creation process
+} else if (duplicate.exists && duplicate.confidence === 'high') {
+  // Show warning but allow override
+  setDuplicateWarning(duplicate);
+}
+```
+
+### Phase 4: UI Components
+**Component**: `DuplicateContentModal.tsx`
+
+**Different messaging by content type**:
+- **Cast**: "This cast is already preserved as Evermark #1234"
+- **DOI**: "This research paper is already preserved as Evermark #1234"  
+- **ISBN**: "This book is already preserved as Evermark #1234"
+- **Tweet**: "This tweet might already be preserved as Evermark #1234"
+- **URL**: "Similar content might exist as Evermark #1234"
+
+## Database Schema Enhancement
+
+Add content identifier tracking:
+```sql
+ALTER TABLE beta_evermarks 
+ADD COLUMN content_identifier TEXT,
+ADD COLUMN identifier_type TEXT;
+
+CREATE INDEX idx_content_identifier ON beta_evermarks(content_identifier, identifier_type);
+```
+
+This creates a comprehensive deduplication system that handles the spectrum from **guaranteed identical content** (casts, DOIs, ISBNs) to **potentially similar content** (normalized URLs).

@@ -161,6 +161,21 @@ async function createEvermarkWithBlockchain(
 
     const { metadata } = input;
     
+    // Fetch Farcaster cast metadata if this is a Cast evermark
+    let castData;
+    if (metadata.contentType === 'Cast' && metadata.sourceUrl) {
+      try {
+        onProgress(15, 'Fetching Farcaster cast metadata...');
+        // Import FarcasterService here to avoid circular dependencies
+        const { FarcasterService } = await import('../services/FarcasterService');
+        castData = await FarcasterService.fetchCastMetadata(metadata.sourceUrl);
+        console.log('✅ Cast metadata fetched:', castData);
+      } catch (error) {
+        console.warn('⚠️ Cast metadata fetch failed, continuing without cast data:', error);
+        // Continue creation without cast data (graceful degradation)
+      }
+    }
+    
     onProgress(20, 'Uploading image to IPFS...');
     
     // Upload image to IPFS
@@ -209,7 +224,10 @@ async function createEvermarkWithBlockchain(
         publicationDate: metadata.publicationDate,
         volume: metadata.volume,
         issue: metadata.issue,
-        pages: metadata.pages
+        pages: metadata.pages,
+        // Add cast-specific data
+        castData: castData,
+        castUrl: metadata.sourceUrl || metadata.castUrl
       }
     };
     
@@ -283,8 +301,37 @@ async function createEvermarkWithBlockchain(
             token_uri: metadataUploadResult.url,
             author: metadata.author || accountAddress,
             metadata: JSON.stringify({
-              tags: metadata.tags || [],
-              customFields: metadata.customFields || [],
+              // Include cast data in the format expected by generate-cast-image.ts
+              ...(castData && {
+                cast: {
+                  text: castData.content,
+                  author_username: castData.username,
+                  author_display_name: castData.author,
+                  author_pfp: castData.author_pfp, // Profile picture URL
+                  author_fid: castData.author_fid, // Farcaster ID
+                  likes: castData.engagement?.likes || 0,
+                  recasts: castData.engagement?.recasts || 0,
+                  replies: castData.engagement?.replies || 0,
+                  timestamp: castData.timestamp,
+                  hash: castData.castHash,
+                  channel: castData.channel, // Channel name
+                  embeds: castData.embeds || [] // Embed objects
+                }
+              }),
+              tags: [
+                ...(metadata.tags || []),
+                ...(metadata.contentType === 'Cast' ? ['farcaster', 'cast'] : [])
+              ],
+              customFields: [
+                ...(metadata.customFields || []),
+                ...(castData ? [
+                  { key: 'cast_author', value: castData.username || '' },
+                  { key: 'cast_hash', value: castData.castHash || '' },
+                  { key: 'cast_likes', value: String(castData.engagement?.likes || 0) },
+                  { key: 'cast_recasts', value: String(castData.engagement?.recasts || 0) },
+                  { key: 'cast_timestamp', value: castData.timestamp || '' }
+                ] : [])
+              ],
               doi: metadata.doi,
               isbn: metadata.isbn,
               journal: metadata.journal,
@@ -300,9 +347,23 @@ async function createEvermarkWithBlockchain(
         });
         
         if (dbSyncResponse.ok) {
-          onProgress(95, 'Triggering image caching...');
+          onProgress(95, 'Generating cast preview image...');
           
-          // Trigger image caching
+          // Generate cast preview image for Cast evermarks
+          if (castData && mintResult.tokenId) {
+            try {
+              await fetch('/.netlify/functions/generate-cast-image', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token_id: parseInt(mintResult.tokenId) })
+              });
+            } catch (error) {
+              console.warn('Cast image generation failed:', error);
+              // Don't fail creation if image generation fails
+            }
+          }
+          
+          // Trigger general image caching
           try {
             await fetch('/.netlify/functions/cache-images', {
               method: 'POST',
@@ -329,6 +390,7 @@ async function createEvermarkWithBlockchain(
       tokenId: mintResult.tokenId,
       metadataURI: metadataUploadResult.url,
       imageUrl: imageUploadResult.url,
+      castData: castData || undefined,
       message: 'Evermark created successfully on blockchain!'
     };
     

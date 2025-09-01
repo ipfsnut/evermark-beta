@@ -74,19 +74,22 @@ export class FarcasterService {
       const response = await fetch(`${FARCASTER_CONFIG.API_BASE}/farcaster-cast?hash=${castHash}`);
       
       if (response.ok) {
-        const data = await response.json();
-        return {
-          castHash,
-          author: data.author?.displayName || data.author?.username || 'Unknown',
-          username: data.author?.username || '',
-          content: data.text || '',
-          timestamp: data.timestamp || new Date().toISOString(),
-          engagement: {
-            likes: data.reactions?.likes || 0,
-            recasts: data.reactions?.recasts || 0,
-            replies: data.replies?.count || 0
-          }
-        };
+        const result = await response.json();
+        if (result.success && result.data) {
+          const data = result.data;
+          return {
+            castHash: data.castHash || castHash,
+            author: data.author || 'Unknown',
+            username: data.username || '',
+            content: data.content || '',
+            timestamp: data.timestamp || new Date().toISOString(),
+            engagement: {
+              likes: data.engagement?.likes || 0,
+              recasts: data.engagement?.recasts || 0,
+              replies: data.engagement?.replies || 0
+            }
+          };
+        }
       }
 
       // Fallback: Create basic metadata from hash

@@ -59,17 +59,27 @@
 
 **Integration Point**: Line 162-214 where NFT metadata is created
 
-### Phase 3: Enhance Cast Image Generation
+### Phase 3: Enhance Cast Image Generation with Modern Design
 **File**: `netlify/functions/generate-cast-image.ts`
 
 **Current Issues**:
-- Relies on cast data being in `metadata_json`
+- Basic text-only display with dated styling
+- Relies on cast data being in `metadata_json`  
 - Falls back to empty defaults when data is missing
 - Not automatically triggered for new casts
 
-**Improvements**:
+**Visual Improvements**:
+- **Profile Pictures**: Circular profile image from author's pfp_url
+- **Better Typography**: Improved fonts, spacing, and hierarchy
+- **Channel Context**: Show channel name/badge if cast belongs to a channel
+- **Embed Indicators**: Show icons for images, links, or other media
+- **Modern Design**: Updated color scheme, shadows, and layout
+- **Responsive Layout**: Better text wrapping and content flow
+
+**Technical Improvements**:
 - Better error handling when cast data is missing
 - Automatic image generation after cast creation
+- Profile picture downloading and caching
 - Support for different cast types (text, with embeds, etc.)
 - Retry mechanism for failed generations
 
@@ -309,6 +319,89 @@ if (castData && mintResult.tokenId) {
 
 ---
 
+## Duplicate Content Prevention & Voting Redirection
+
+### Problem
+Currently, multiple users can mint the same cast/content, creating redundant Evermarks and fragmenting engagement.
+
+### Solution: Frontend Duplicate Detection with Voting Redirection
+
+#### Phase 1: API Enhancement
+**File**: `netlify/functions/evermarks.ts`
+
+Add duplicate check endpoint:
+```typescript
+// GET /api/evermarks?check_duplicate=true&source_url=...
+// Returns: { exists: boolean, existingTokenId?: number, evermark?: EvermarkRecord }
+```
+
+**Implementation**:
+- Query `beta_evermarks` table by `source_url` 
+- Return existing token ID and metadata if found
+- Include voting/engagement stats for decision making
+
+#### Phase 2: Frontend Integration
+**File**: `src/features/evermarks/hooks/useEvermarkCreation.ts`
+
+**New Pre-Mint Flow**:
+```typescript
+1. Validate inputs
+2. [NEW] Check for duplicate content via API
+3. [NEW] If duplicate exists:
+   - Show "Content Already Exists" modal
+   - Offer options:
+     a) "Vote on Existing Evermark" → redirect to detail page
+     b) "View Existing Evermark" → open in new tab  
+     c) "Create Anyway" → continue with original flow
+4. If no duplicate OR user chooses "Create Anyway":
+   - Continue with normal creation flow
+```
+
+#### Phase 3: UI Components
+**New Component**: `DuplicateContentModal.tsx`
+
+**Features**:
+- Show existing Evermark preview
+- Display current vote counts/rankings
+- Highlight voting benefits vs. duplicate creation
+- Clear call-to-action buttons
+
+**Integration Points**:
+- `CreateEvermarkForm.tsx`: Trigger duplicate check before minting
+- `EvermarkDetailPage.tsx`: Enhanced voting UI for redirected users
+
+#### Phase 4: User Experience Flow
+
+**Duplicate Detected Flow**:
+```
+User submits cast URL → API finds existing Evermark #1234 → Modal appears:
+
+"🎯 This content is already preserved!"
+
+[Preview of existing Evermark #1234]
+• Created by @alice 3 days ago
+• 15 votes, 0.5 ETH staked
+• Ranked #47 on leaderboard
+
+Instead of creating a duplicate:
+[🗳️ Vote & Boost Ranking] [👀 View Evermark] [⚡ Create Anyway]
+```
+
+#### Benefits
+- **Prevents Content Bloat**: Reduces redundant Evermarks
+- **Drives Engagement**: Channels users to existing content
+- **Promotes Voting**: Increases $EMARK staking and delegation
+- **Better Discovery**: Users find existing high-quality content
+- **Maintains Choice**: Advanced users can still force creation
+
+#### Technical Implementation Notes
+- Use `source_url` as primary duplicate detection field
+- Consider fuzzy matching for slight URL variations (twitter.com vs x.com)
+- Cache duplicate check results to avoid repeated API calls
+- Implement client-side validation before API call when possible
+
+---
+
 ## Open Questions
 
 1. **Rate Limits**: What are Neynar API rate limits? Need caching strategy?
@@ -316,7 +409,9 @@ if (castData && mintResult.tokenId) {
 3. **Image Storage**: Continue using Supabase Storage for cast images?
 4. **Metadata Version**: Should we version metadata schema for future changes?
 5. **Bulk Migration**: Process for fixing other broken casts beyond #4-5?
+6. **Duplicate Threshold**: How similar should URLs be to trigger duplicate detection?
+7. **Voting Incentives**: Should duplicate creators get any benefit for discovering existing content?
 
 ---
 
-This plan provides a comprehensive approach to fixing the Farcaster cast evermark system while maintaining reliability and performance.
+This plan provides a comprehensive approach to fixing the Farcaster cast evermark system while adding intelligent duplicate prevention that drives engagement to existing content.
