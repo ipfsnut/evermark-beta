@@ -229,18 +229,50 @@ async function createEvermarkWithBlockchain(
 
     const { metadata } = input;
     
-    // Fetch Farcaster cast metadata if this is a Cast evermark
+    // Fetch metadata based on content type
     let castData;
+    let academicMetadata;
+    let tweetData;
+    let webMetadata;
+    
     if (metadata.contentType === 'Cast' && metadata.sourceUrl) {
       try {
         onProgress(15, 'Fetching Farcaster cast metadata...');
-        // Import FarcasterService here to avoid circular dependencies
         const { FarcasterService } = await import('../services/FarcasterService');
         castData = await FarcasterService.fetchCastMetadata(metadata.sourceUrl);
         console.log('✅ Cast metadata fetched:', castData);
       } catch (error) {
         console.warn('⚠️ Cast metadata fetch failed, continuing without cast data:', error);
-        // Continue creation without cast data (graceful degradation)
+      }
+    } else if (metadata.contentType === 'Tweet' && metadata.sourceUrl) {
+      try {
+        onProgress(15, 'Fetching tweet metadata...');
+        const { TwitterService } = await import('../services/TwitterService');
+        tweetData = await TwitterService.fetchTweetMetadata(metadata.sourceUrl);
+        console.log('✅ Tweet metadata fetched:', tweetData);
+      } catch (error) {
+        console.warn('⚠️ Tweet metadata fetch failed, continuing without tweet data:', error);
+      }
+    } else if ((metadata.contentType === 'DOI' || metadata.contentType === 'ISBN') && metadata.sourceUrl) {
+      try {
+        onProgress(15, 'Fetching academic metadata...');
+        const { MetadataService } = await import('../services/MetadataService');
+        const result = await MetadataService.fetchContentMetadata(metadata.sourceUrl);
+        if (result.metadata) {
+          academicMetadata = result.metadata;
+          console.log('✅ Academic metadata fetched:', academicMetadata);
+        }
+      } catch (error) {
+        console.warn('⚠️ Academic metadata fetch failed, continuing without metadata:', error);
+      }
+    } else if (metadata.contentType === 'URL' && metadata.sourceUrl) {
+      try {
+        onProgress(15, 'Fetching web content metadata...');
+        const { WebMetadataService } = await import('../services/WebMetadataService');
+        webMetadata = await WebMetadataService.fetchWebContentMetadata(metadata.sourceUrl);
+        console.log('✅ Web metadata fetched:', webMetadata);
+      } catch (error) {
+        console.warn('⚠️ Web metadata fetch failed, continuing without web data:', error);
       }
     }
     
@@ -267,7 +299,7 @@ async function createEvermarkWithBlockchain(
         },
         {
           trait_type: 'Creator',
-          value: metadata.author ?? accountAddress
+          value: castData?.author || tweetData?.author || academicMetadata?.primaryAuthor || webMetadata?.author || metadata.author || accountAddress
         },
         {
           trait_type: 'Creation Date',
@@ -367,7 +399,7 @@ async function createEvermarkWithBlockchain(
             content_type: metadata.contentType || 'Custom',
             source_url: metadata.sourceUrl || metadata.url || metadata.castUrl,
             token_uri: metadataUploadResult.url,
-            author: metadata.author || accountAddress,
+            author: castData?.author || castData?.username || tweetData?.author || academicMetadata?.primaryAuthor || webMetadata?.author || metadata.author || accountAddress,
             metadata: JSON.stringify({
               // Include cast data in the format expected by generate-cast-image.ts
               ...(castData && {
@@ -375,20 +407,62 @@ async function createEvermarkWithBlockchain(
                   text: castData.content,
                   author_username: castData.username,
                   author_display_name: castData.author,
-                  author_pfp: castData.author_pfp, // Profile picture URL
-                  author_fid: castData.author_fid, // Farcaster ID
+                  author_pfp: castData.author_pfp,
+                  author_fid: castData.author_fid,
                   likes: castData.engagement?.likes || 0,
                   recasts: castData.engagement?.recasts || 0,
                   replies: castData.engagement?.replies || 0,
                   timestamp: castData.timestamp,
                   hash: castData.castHash,
-                  channel: castData.channel, // Channel name
-                  embeds: castData.embeds || [] // Embed objects
+                  channel: castData.channel,
+                  embeds: castData.embeds || []
+                }
+              }),
+              // Include academic metadata for DOI/ISBN content
+              ...(academicMetadata && {
+                academic: {
+                  authors: academicMetadata.authors,
+                  primaryAuthor: academicMetadata.primaryAuthor,
+                  journal: academicMetadata.journal,
+                  publisher: academicMetadata.publisher,
+                  publishedDate: academicMetadata.publishedDate,
+                  volume: academicMetadata.volume,
+                  issue: academicMetadata.issue,
+                  pages: academicMetadata.pages,
+                  abstract: academicMetadata.abstract
+                }
+              }),
+              // Include tweet data for preservation
+              ...(tweetData && {
+                tweet: {
+                  tweetId: tweetData.tweetId,
+                  author: tweetData.author,
+                  username: tweetData.username,
+                  displayName: tweetData.displayName,
+                  content: tweetData.content,
+                  timestamp: tweetData.timestamp,
+                  preservedAt: tweetData.preservedAt,
+                  engagement: tweetData.engagement
+                }
+              }),
+              // Include web content metadata
+              ...(webMetadata && {
+                webContent: {
+                  author: webMetadata.author,
+                  authors: webMetadata.authors,
+                  publication: webMetadata.publication,
+                  publishedDate: webMetadata.publishedDate,
+                  description: webMetadata.description,
+                  siteName: webMetadata.siteName,
+                  domain: webMetadata.domain,
+                  confidence: webMetadata.confidence
                 }
               }),
               tags: [
                 ...(metadata.tags || []),
-                ...(metadata.contentType === 'Cast' ? ['farcaster', 'cast'] : [])
+                ...(metadata.contentType === 'Cast' ? ['farcaster', 'cast'] : []),
+                ...(metadata.contentType === 'Tweet' ? ['twitter', 'tweet'] : []),
+                ...(webMetadata?.domain ? [webMetadata.domain.replace('.com', '')] : [])
               ],
               customFields: [
                 ...(metadata.customFields || []),
@@ -398,6 +472,25 @@ async function createEvermarkWithBlockchain(
                   { key: 'cast_likes', value: String(castData.engagement?.likes || 0) },
                   { key: 'cast_recasts', value: String(castData.engagement?.recasts || 0) },
                   { key: 'cast_timestamp', value: castData.timestamp || '' }
+                ] : []),
+                ...(tweetData ? [
+                  { key: 'tweet_author', value: tweetData.username || '' },
+                  { key: 'tweet_id', value: tweetData.tweetId || '' },
+                  { key: 'tweet_content', value: tweetData.content || '' },
+                  { key: 'tweet_preserved_at', value: tweetData.preservedAt }
+                ] : []),
+                ...(webMetadata ? [
+                  { key: 'web_author', value: webMetadata.author },
+                  { key: 'web_publication', value: webMetadata.publication || '' },
+                  { key: 'web_domain', value: webMetadata.domain },
+                  { key: 'web_confidence', value: webMetadata.confidence }
+                ] : []),
+                ...(academicMetadata ? [
+                  { key: 'primary_author', value: academicMetadata.primaryAuthor },
+                  { key: 'total_authors', value: String(academicMetadata.authors.length) },
+                  { key: 'all_authors', value: academicMetadata.authors.map(a => a.name).join('; ') },
+                  ...(academicMetadata.journal ? [{ key: 'journal', value: academicMetadata.journal }] : []),
+                  ...(academicMetadata.publishedDate ? [{ key: 'published_date', value: academicMetadata.publishedDate }] : [])
                 ] : [])
               ],
               doi: metadata.doi,

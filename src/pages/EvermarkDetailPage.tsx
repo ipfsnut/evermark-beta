@@ -8,7 +8,6 @@ import {
   HeartIcon as _HeartIcon,
   MessageCircleIcon,
   CalendarIcon,
-  UserIcon,
   TagIcon,
   CheckCircleIcon,
   AlertCircleIcon,
@@ -25,6 +24,7 @@ import { formatDistanceToNow } from 'date-fns';
 
 // Feature imports
 import { useEvermarksState, type Evermark } from '@/features/evermarks';
+import { AuthorDisplay } from '@/features/evermarks/components/AuthorDisplay';
 import { VotingPanel } from '@/features/voting';
 import { useAppAuth } from '@/providers/AppContext';
 import { useFarcasterUser } from '@/hooks/useFarcasterDetection';
@@ -307,10 +307,12 @@ export default function EvermarkDetailPage(): React.ReactNode {
 
               {/* Author and Date */}
               <div className={`flex flex-wrap items-center gap-4 ${themeClasses.text.muted}`}>
-                <div className="flex items-center gap-2">
-                  <UserIcon className="h-4 w-4" />
-                  <span>by {evermark.author}</span>
-                </div>
+                <AuthorDisplay 
+                  author={evermark.author}
+                  metadata={evermark.extendedMetadata}
+                  className=""
+                  showExpandable={true}
+                />
                 <div className="flex items-center gap-2">
                   <CalendarIcon className="h-4 w-4" />
                   <span>{formatDistanceToNow(new Date(evermark.createdAt), { addSuffix: true })}</span>

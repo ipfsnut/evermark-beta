@@ -17,7 +17,7 @@ export interface Evermark {
   sourceUrl?: string;
   image?: string; // Changed from string | null to string | undefined
   metadataURI: string;
-  contentType: 'DOI' | 'ISBN' | 'Cast' | 'URL' | 'Custom';
+  contentType: 'DOI' | 'ISBN' | 'Cast' | 'Tweet' | 'URL' | 'Custom';
   tags: string[];
   verified: boolean;
   
@@ -42,6 +42,33 @@ export interface Evermark {
     doi?: string;
     isbn?: string;
     castData?: FarcasterCastData;
+    tweetData?: TwitterTweetData;
+    academic?: {
+      authors?: Array<{
+        given?: string;
+        family?: string;
+        name?: string;
+        orcid?: string;
+      }>;
+      primaryAuthor?: string;
+      journal?: string;
+      publisher?: string;
+      publishedDate?: string;
+      volume?: string;
+      issue?: string;
+      pages?: string;
+      abstract?: string;
+    };
+    webContent?: {
+      author: string;
+      authors: string[];
+      publication?: string;
+      publishedDate?: string;
+      description?: string;
+      siteName?: string;
+      domain: string;
+      confidence: 'high' | 'medium' | 'low';
+    };
     tags?: string[];
     customFields?: Array<{ key: string; value: string }>;
   };
@@ -72,6 +99,37 @@ export interface FarcasterCastData {
   }>;
 }
 
+export interface TwitterTweetData {
+  tweetId?: string;
+  author?: string;
+  username?: string;
+  displayName?: string;
+  content?: string;
+  timestamp?: string;
+  engagement?: {
+    likes: number;
+    retweets: number;
+    replies: number;
+  };
+  // Tweet preservation data
+  author_avatar?: string;
+  verified?: boolean;
+  media?: Array<{
+    type: 'photo' | 'video' | 'gif';
+    url: string;
+    width?: number;
+    height?: number;
+  }>;
+  quotedTweet?: {
+    author: string;
+    content: string;
+    timestamp: string;
+  };
+  // Preserved for deleted tweets
+  preservedAt: string;
+  preservedImage?: string; // Screenshot/render of the tweet
+}
+
 export interface EvermarkMetadata {
   title: string;
   description: string;
@@ -80,7 +138,7 @@ export interface EvermarkMetadata {
   imageFile?: File | null;
   customFields?: Array<{ key: string; value: string }>;
   tags?: string[];
-  contentType?: 'Cast' | 'DOI' | 'ISBN' | 'URL' | 'Custom';
+  contentType?: 'Cast' | 'DOI' | 'ISBN' | 'Tweet' | 'URL' | 'Custom';
   
   // Type-specific fields
   doi?: string;

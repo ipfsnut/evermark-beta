@@ -6,7 +6,6 @@ import {
   CompassIcon,
   PlusIcon,
   TrendingUpIcon,
-  BookOpenIcon,
   InfoIcon,
   ArrowUpDownIcon,
   LayersIcon,

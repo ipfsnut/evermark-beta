@@ -307,14 +307,15 @@ async function fetchEvermark(id: string): Promise<Evermark | null> {
     let title = '';
     let author = '';
     let description = '';
+    let parsedMetadata: any = {};
     
     try {
       if (item.metadata_json) {
-        const metadata = JSON.parse(item.metadata_json);
-        tags = metadata.tags ?? [];
-        title = metadata.title ?? '';
-        author = metadata.author ?? '';
-        description = metadata.description ?? '';
+        parsedMetadata = JSON.parse(item.metadata_json);
+        tags = parsedMetadata.tags ?? [];
+        title = parsedMetadata.title ?? '';
+        author = parsedMetadata.author ?? '';
+        description = parsedMetadata.description ?? '';
       }
     } catch {
       // Use defaults
@@ -342,7 +343,8 @@ async function fetchEvermark(id: string): Promise<Evermark | null> {
       imageStatus: 'processed' as const,
       extendedMetadata: { 
         tags,
-        castData: item.cast_data as any
+        castData: parsedMetadata.cast || item.cast_data,
+        academic: parsedMetadata.academic
       }
     } as Evermark;
   } catch (error) {
