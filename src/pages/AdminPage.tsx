@@ -11,7 +11,8 @@ import {
   Clock,
   Shield,
   DollarSign,
-  PlayCircle
+  PlayCircle,
+  Star
 } from 'lucide-react';
 import { useActiveAccount, useReadContract, useSendTransaction } from 'thirdweb/react';
 import { prepareContractCall } from 'thirdweb';
@@ -24,6 +25,7 @@ import {
 } from '@/lib/contracts';
 import { EvermarkBlockchainService } from '@/features/evermarks/services/BlockchainService';
 import { useThemeClasses } from '@/providers/ThemeProvider';
+import { useBetaPoints } from '@/features/points';
 
 interface SeasonInfo {
   seasonNumber: number;
@@ -60,6 +62,7 @@ export default function AdminPage(): React.ReactNode {
   const account = useActiveAccount();
   const { mutate: sendTransaction, isPending } = useSendTransaction();
   const themeClasses = useThemeClasses();
+  const { leaderboard, isLoading: pointsLoading } = useBetaPoints();
   
   const [seasonInfo, setSeasonInfo] = useState<SeasonInfo | null>(null);
   const [balances, setBalances] = useState<ContractBalances | null>(null);
@@ -579,6 +582,73 @@ export default function AdminPage(): React.ReactNode {
             </div>
           </div>
         )}
+
+        {/* Beta Points Leaderboard */}
+        <div className={`${themeClasses.bg.card} p-6 rounded-lg ${themeClasses.border.primary} border mb-8`}>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className={`text-xl font-bold flex items-center ${themeClasses.text.primary}`}>
+              <Star className="w-6 h-6 mr-2 text-yellow-400" />
+              Beta Points Leaderboard
+            </h2>
+            {pointsLoading && (
+              <RefreshCw className="w-5 h-5 text-blue-400 animate-spin" />
+            )}
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-700">
+                  <th className="text-left py-2 px-3 text-gray-400 text-sm">Rank</th>
+                  <th className="text-left py-2 px-3 text-gray-400 text-sm">Wallet Address</th>
+                  <th className="text-right py-2 px-3 text-gray-400 text-sm">Points</th>
+                </tr>
+              </thead>
+              <tbody>
+                {leaderboard.length === 0 && !pointsLoading ? (
+                  <tr>
+                    <td colSpan={3} className="text-center py-8 text-gray-500">
+                      No beta points awarded yet
+                    </td>
+                  </tr>
+                ) : (
+                  leaderboard.slice(0, 20).map((entry) => (
+                    <tr key={entry.wallet_address} className="border-b border-gray-800 hover:bg-gray-800/50">
+                      <td className="py-3 px-3">
+                        <div className="flex items-center">
+                          {entry.rank <= 3 && (
+                            <span className="mr-2">
+                              {entry.rank === 1 && '🥇'}
+                              {entry.rank === 2 && '🥈'}
+                              {entry.rank === 3 && '🥉'}
+                            </span>
+                          )}
+                          <span className="text-gray-300">#{entry.rank}</span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-3">
+                        <code className="bg-gray-900 px-2 py-1 rounded text-sm text-blue-400">
+                          {entry.wallet_address}
+                        </code>
+                      </td>
+                      <td className="py-3 px-3 text-right">
+                        <span className="text-yellow-400 font-bold">
+                          {entry.total_points.toLocaleString()}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          
+          {leaderboard.length > 20 && (
+            <div className="mt-4 text-center text-gray-400 text-sm">
+              Showing top 20 of {leaderboard.length} users
+            </div>
+          )}
+        </div>
 
         {/* Admin Actions */}
         <div className="bg-gray-800 p-6 rounded-lg border border-gray-700 mb-8">

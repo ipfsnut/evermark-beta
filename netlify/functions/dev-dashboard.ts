@@ -53,6 +53,23 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
       .order('completed_at', { ascending: false })
       .limit(5);
 
+    // Get beta points stats
+    const { data: pointsStats } = await supabase
+      .from('beta_points')
+      .select('*', { count: 'exact', head: true });
+
+    const { data: topPointsUsers } = await supabase
+      .from('beta_points')
+      .select('wallet_address, total_points')
+      .order('total_points', { ascending: false })
+      .limit(10);
+
+    const { data: recentPointTransactions } = await supabase
+      .from('beta_point_transactions')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(10);
+
     const dashboardHTML = `
 <!DOCTYPE html>
 <html>
@@ -163,6 +180,10 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
         <div class="stat-number">${Math.round(((verifiedCount as any)?.count || 0) / ((evermarksCount as any)?.count || 1) * 100)}%</div>
         <div class="stat-label">Verification Rate</div>
       </div>
+      <div class="stat">
+        <div class="stat-number">${(pointsStats as any)?.count || 0}</div>
+        <div class="stat-label">Beta Point Users</div>
+      </div>
     </div>
   </div>
 
@@ -195,6 +216,25 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
       synced: s.synced_count,
       errors: s.error_count || 0,
       completed: new Date(s.completed_at).toLocaleString()
+    })), null, 2)}</pre>
+  </div>
+
+  <div class="section">
+    <h2>⭐ Beta Points Leaderboard</h2>
+    <pre>${JSON.stringify(topPointsUsers?.map((u, i) => ({
+      rank: i + 1,
+      wallet: u.wallet_address,
+      points: u.total_points
+    })), null, 2)}</pre>
+  </div>
+
+  <div class="section">
+    <h2>💫 Recent Point Transactions</h2>
+    <pre>${JSON.stringify(recentPointTransactions?.map(t => ({
+      action: t.action_type,
+      points: t.points_earned,
+      wallet: t.wallet_address.substring(0, 8) + '...',
+      time: new Date(t.created_at).toLocaleString()
     })), null, 2)}</pre>
   </div>
 
