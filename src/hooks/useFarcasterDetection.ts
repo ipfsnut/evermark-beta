@@ -48,7 +48,12 @@ export function useFarcasterDetection() {
         if (context?.user) {
           setIsInFarcaster(true);
           setMiniAppContext(context);
-          console.log('🎯 Farcaster Mini App context detected with user:', context.user);
+          console.log('🎯 Farcaster Mini App context detected with user:', {
+            fid: context.user.fid,
+            username: context.user.username,
+            displayName: context.user.displayName,
+            pfpUrl: context.user.pfpUrl
+          });
         } else {
           setIsInFarcaster(false);
           console.log('🌐 Browser/PWA mode (no user context)');

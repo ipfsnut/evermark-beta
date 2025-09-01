@@ -3,6 +3,7 @@ import React from 'react';
 import { ConnectButton } from 'thirdweb/react';
 import { WalletIcon, UserIcon, LogOutIcon } from 'lucide-react';
 import { createWallet, inAppWallet } from 'thirdweb/wallets';
+import { UserAvatar } from './ui/UserAvatar';
 
 import { client } from '@/lib/thirdweb';
 import { CHAIN } from '@/lib/contracts';
@@ -66,12 +67,17 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
               src={avatar} 
               alt={displayName || shortAddress || 'User'} 
               className="w-6 h-6 rounded-full"
+              onError={(e) => {
+                console.warn('Failed to load avatar:', avatar);
+                e.currentTarget.style.display = 'none';
+                const fallback = e.currentTarget.nextElementSibling;
+                if (fallback) fallback.style.display = 'flex';
+              }}
             />
-          ) : (
-            <div className="w-6 h-6 bg-gradient-to-r from-cyber-primary to-cyber-secondary rounded-full flex items-center justify-center">
-              <UserIcon className="h-3 w-3 text-black" />
-            </div>
-          )}
+          ) : null}
+          <div className="w-6 h-6 bg-gradient-to-r from-cyber-primary to-cyber-secondary rounded-full flex items-center justify-center" style={{ display: avatar ? 'none' : 'flex' }}>
+            <UserIcon className="h-3 w-3 text-black" />
+          </div>
           <button
             onClick={disconnect}
             className={`text-sm font-medium ${themeClasses.text.primary} hover:text-cyber-primary transition-colors cursor-pointer`}
@@ -91,12 +97,17 @@ export function WalletConnect({ className = '', variant = 'default' }: WalletCon
             src={avatar} 
             alt={displayName || shortAddress || 'User'} 
             className="w-8 h-8 rounded-full"
+            onError={(e) => {
+              console.warn('Failed to load avatar:', avatar);
+              e.currentTarget.style.display = 'none';
+              const fallback = e.currentTarget.nextElementSibling;
+              if (fallback) fallback.style.display = 'flex';
+            }}
           />
-        ) : (
-          <div className="w-8 h-8 bg-gradient-to-r from-cyber-primary to-cyber-secondary rounded-full flex items-center justify-center">
-            <UserIcon className="h-4 w-4 text-black" />
-          </div>
-        )}
+        ) : null}
+        <div className="w-8 h-8 bg-gradient-to-r from-cyber-primary to-cyber-secondary rounded-full flex items-center justify-center" style={{ display: avatar ? 'none' : 'flex' }}>
+          <UserIcon className="h-4 w-4 text-black" />
+        </div>
         <div className="flex flex-col">
           <button
             onClick={disconnect}
@@ -172,12 +183,17 @@ export function SimpleConnectButton({ className = '' }: { className?: string }) 
             src={avatar} 
             alt={displayName || shortAddress} 
             className="w-8 h-8 rounded-full"
+            onError={(e) => {
+              console.warn('Failed to load avatar:', avatar);
+              e.currentTarget.style.display = 'none';
+              const fallback = e.currentTarget.nextElementSibling;
+              if (fallback) fallback.style.display = 'flex';
+            }}
           />
-        ) : (
-          <div className="w-8 h-8 bg-gradient-to-r from-cyber-primary to-cyber-secondary rounded-full flex items-center justify-center">
-            <UserIcon className="h-4 w-4 text-black" />
-          </div>
-        )}
+        ) : null}
+        <div className="w-8 h-8 bg-gradient-to-r from-cyber-primary to-cyber-secondary rounded-full flex items-center justify-center" style={{ display: avatar ? 'none' : 'flex' }}>
+          <UserIcon className="h-4 w-4 text-black" />
+        </div>
         <div className="flex flex-col">
           <span className={`text-sm font-medium ${themeClasses.text.primary}`}>
             {displayName ?? shortAddress}

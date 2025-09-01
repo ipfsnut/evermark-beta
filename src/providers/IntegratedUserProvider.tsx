@@ -83,7 +83,41 @@ function FarcasterIntegratedUserProvider({ children }: { children: React.ReactNo
       // Priority 1: Farcaster SDK context user (if available)
       if (miniAppContext?.user) {
         console.log('🎯 Loading profile from Farcaster SDK context:', miniAppContext.user);
+        
+        // Try to get enhanced profile, but also create a fallback from SDK data
         enhancedUser = await EnhancedUserService.getUserByFarcasterFID(miniAppContext.user.fid);
+        
+        // If enhanced profile lookup fails, create a basic profile from SDK context
+        if (!enhancedUser && miniAppContext.user.fid) {
+          console.log('📱 Creating basic profile from Farcaster SDK context');
+          const now = new Date().toISOString();
+          enhancedUser = {
+            id: `farcaster:${miniAppContext.user.fid}`,
+            displayName: miniAppContext.user.displayName || miniAppContext.user.username || `User ${miniAppContext.user.fid}`,
+            avatar: miniAppContext.user.pfpUrl,
+            primaryAddress: account?.address,
+            source: 'farcaster',
+            identityScore: 50, // Basic score for SDK users
+            farcaster: {
+              fid: miniAppContext.user.fid,
+              username: miniAppContext.user.username || `user${miniAppContext.user.fid}`,
+              displayName: miniAppContext.user.displayName || miniAppContext.user.username || `User ${miniAppContext.user.fid}`,
+              pfpUrl: miniAppContext.user.pfpUrl || '',
+              followerCount: 0,
+              followingCount: 0,
+              isVerified: false,
+              hasPowerBadge: false,
+              verifiedAddresses: account?.address ? [account.address] : []
+            },
+            wallet: account?.address ? {
+              address: account.address,
+              shortAddress: `${account.address.slice(0, 6)}...${account.address.slice(-4)}`
+            } : undefined,
+            createdAt: now,
+            updatedAt: now,
+            lastSeenAt: now
+          };
+        }
       }
       // Priority 2: Wallet address lookup
       else if (account?.address) {

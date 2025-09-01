@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { FileText, Clock, Eye, Vote, Plus } from 'lucide-react';
+import React, { useEffect, useState, useMemo } from 'react';
+import { FileText, Clock, Eye, Vote, Plus, Share, Copy } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { useEvermarksState } from '@/features/evermarks';
 import { EvermarkCard } from '@/features/evermarks/components/EvermarkCard';
+import { EvermarkSearch } from '@/features/evermarks/components/EvermarkSearch';
+import type { EvermarkFilters } from '@/features/evermarks/types';
 import { useVotingState } from '@/features/voting';
 import { useAppAuth } from '@/providers/AppContext';
 import { useThemeClasses } from '@/providers/ThemeProvider';
@@ -16,9 +18,62 @@ export default function MyEvermarksPage() {
   const { votingHistory, getUserVotesForEvermark } = useVotingState();
   const [activeTab, setActiveTab] = useState<'created' | 'supported'>('created');
   const [userVotes, setUserVotes] = useState<Record<string, bigint>>({});
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filters, setFilters] = useState<EvermarkFilters>({
+    search: '',
+    author: '',
+    contentType: undefined,
+    verified: undefined,
+    tags: [],
+    dateRange: undefined
+  });
+  const [shareCollectionCopied, setShareCollectionCopied] = useState(false);
 
-  // Filter evermarks by current wallet
-  const myCreatedEvermarks = evermarks.filter(evermark => 
+  // Apply search and filters to evermarks
+  const filteredEvermarks = useMemo(() => {
+    let filtered = evermarks;
+
+    // Apply search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(evermark => 
+        evermark.title.toLowerCase().includes(query) ||
+        evermark.author.toLowerCase().includes(query) ||
+        evermark.description.toLowerCase().includes(query) ||
+        evermark.tags.some(tag => tag.toLowerCase().includes(query))
+      );
+    }
+
+    // Apply filters
+    if (filters.author) {
+      filtered = filtered.filter(evermark => 
+        evermark.author.toLowerCase().includes(filters.author!.toLowerCase())
+      );
+    }
+
+    if (filters.contentType) {
+      filtered = filtered.filter(evermark => evermark.contentType === filters.contentType);
+    }
+
+    if (filters.verified !== undefined) {
+      filtered = filtered.filter(evermark => evermark.verified === filters.verified);
+    }
+
+    if (filters.tags && filters.tags.length > 0) {
+      filtered = filtered.filter(evermark => 
+        filters.tags!.some(tag => 
+          evermark.tags.some(evermarkTag => 
+            evermarkTag.toLowerCase().includes(tag.toLowerCase())
+          )
+        )
+      );
+    }
+
+    return filtered;
+  }, [evermarks, searchQuery, filters]);
+
+  // Filter by current wallet and apply search/filters
+  const myCreatedEvermarks = filteredEvermarks.filter(evermark => 
     user?.address && evermark.creator.toLowerCase() === user.address.toLowerCase()
   );
   
@@ -47,8 +102,8 @@ export default function MyEvermarksPage() {
     loadUserVotesForEvermarks();
   }, [user?.address, evermarks, getUserVotesForEvermark]);
 
-  // Supported evermarks: ones where user has delegated votes
-  const mySupportedEvermarks = evermarks.filter(evermark => {
+  // Supported evermarks: ones where user has delegated votes (also filtered)
+  const mySupportedEvermarks = filteredEvermarks.filter(evermark => {
     // User is not the creator
     if (evermark.creator.toLowerCase() === user?.address?.toLowerCase()) {
       return false;
@@ -70,6 +125,43 @@ export default function MyEvermarksPage() {
     // TODO: Add API endpoint for user-specific evermarks
     loadEvermarks();
   }, [loadEvermarks]);
+
+  // Search and filter handlers
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    setFilters(prev => ({ ...prev, search: query }));
+  };
+
+  const handleFiltersChange = (newFilters: Partial<EvermarkFilters>) => {
+    setFilters(prev => ({ ...prev, ...newFilters }));
+  };
+
+  // Share collection functionality
+  const handleShareCollection = async () => {
+    const currentList = activeTab === 'created' ? myCreatedEvermarks : mySupportedEvermarks;
+    const collectionType = activeTab === 'created' ? 'Created Evermarks' : 'Reading List';
+    
+    // Create a shareable URL with collection info
+    const collectionData = {
+      type: collectionType,
+      user: user?.displayName || user?.username || 'Anonymous',
+      count: currentList.length,
+      items: currentList.slice(0, 5).map(e => ({ id: e.id, title: e.title, author: e.author }))
+    };
+    
+    const shareText = `${collectionData.user}'s ${collectionType} (${collectionData.count} articles)\n\n` +
+      collectionData.items.map(item => `• ${item.title} by ${item.author}\n  ${window.location.origin}/evermark/${item.id}`).join('\n\n') +
+      (currentList.length > 5 ? `\n\n...and ${currentList.length - 5} more` : '') +
+      `\n\nDiscover more at ${window.location.origin}/my-evermarks`;
+
+    try {
+      await navigator.clipboard.writeText(shareText);
+      setShareCollectionCopied(true);
+      setTimeout(() => setShareCollectionCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy collection:', error);
+    }
+  };
 
   // Not connected state
   if (!isAuthenticated) {
@@ -143,13 +235,40 @@ export default function MyEvermarksPage() {
             </p>
           </div>
           
-          <Link
-            to="/create"
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-500 hover:to-green-600 transition-colors font-medium"
-          >
-            <Plus className="h-4 w-4" />
-            Create Evermark
-          </Link>
+          <div className="flex items-center gap-3">
+            {/* Share Collection Button - only show when there are items */}
+            {currentEvermarks.length > 0 && (
+              <button
+                onClick={handleShareCollection}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-lg transition-colors font-medium",
+                  shareCollectionCopied
+                    ? "bg-green-600 text-white"
+                    : `${themeClasses.button.secondary} hover:bg-gray-600`
+                )}
+              >
+                {shareCollectionCopied ? (
+                  <>
+                    <Copy className="h-4 w-4" />
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <Share className="h-4 w-4" />
+                    Share {activeTab === 'created' ? 'Portfolio' : 'Reading List'}
+                  </>
+                )}
+              </button>
+            )}
+            
+            <Link
+              to="/create"
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-500 hover:to-green-600 transition-colors font-medium"
+            >
+              <Plus className="h-4 w-4" />
+              Create Evermark
+            </Link>
+          </div>
         </div>
 
         {/* Tabs */}
@@ -178,6 +297,20 @@ export default function MyEvermarksPage() {
             <Vote className="h-4 w-4 mr-2 inline" />
             Supported ({mySupportedEvermarks.length})
           </button>
+        </div>
+
+        {/* Search and Filters */}
+        <div className="mb-8">
+          <EvermarkSearch
+            onSearch={handleSearch}
+            onFiltersChange={handleFiltersChange}
+            currentFilters={filters}
+            placeholder={activeTab === 'created' 
+              ? "Search your created evermarks..." 
+              : "Search your saved articles..."
+            }
+            showFilters={true}
+          />
         </div>
 
         {/* Stats Cards */}
