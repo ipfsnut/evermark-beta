@@ -1,5 +1,6 @@
 import { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
+import { extractContentIdentifier, generateSearchPatterns, getDuplicateMessage, getConfidenceDescription, type DuplicateCheckResponse } from '../../src/utils/contentIdentifiers';
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -78,6 +79,134 @@ function getWalletAddress(event: HandlerEvent): string | null {
   return null;
 }
 
+/**
+ * Check for duplicate content based on URL or content identifier
+ */
+async function checkForDuplicate(sourceUrl: string): Promise<DuplicateCheckResponse> {
+  const identifier = extractContentIdentifier(sourceUrl);
+  const searchPatterns = generateSearchPatterns(identifier);
+  
+  console.log(`🔍 Checking for duplicates:`, {
+    type: identifier.type,
+    confidence: identifier.confidence,
+    patterns: searchPatterns.length
+  });
+  
+  let duplicateData = null;
+  
+  try {
+    // Search strategy based on identifier type
+    switch (identifier.type) {
+      case 'cast_hash':
+        // Search in metadata JSON for cast hash or in source URLs
+        // Cast hashes can be truncated in URLs, so we check both source URLs and metadata
+        console.log('🔍 Searching for cast hash:', identifier.id);
+        const { data: castData, error: castError } = await supabase
+          .from(EVERMARKS_TABLE)
+          .select('*')
+          .or(`source_url.ilike.%${identifier.id}%,metadata_json.ilike.%${identifier.id}%`);
+        
+        if (castError) {
+          console.error('❌ Cast query error:', castError);
+        }
+        
+        duplicateData = castData;
+        break;
+        
+      case 'doi':
+        // Search for DOI in source URL or metadata
+        const { data: doiData } = await supabase
+          .from(EVERMARKS_TABLE)
+          .select('*')
+          .or(searchPatterns.map(pattern => `source_url.ilike.${pattern}`).join(','));
+        duplicateData = doiData;
+        break;
+        
+      case 'isbn':
+        // Search for ISBN in source URL
+        const { data: isbnData } = await supabase
+          .from(EVERMARKS_TABLE)
+          .select('*')
+          .or(searchPatterns.map(pattern => `source_url.ilike.${pattern}`).join(','));
+        duplicateData = isbnData;
+        break;
+        
+      case 'tweet_id':
+        // Search for tweet ID in source URLs
+        const { data: tweetData } = await supabase
+          .from(EVERMARKS_TABLE)
+          .select('*')
+          .or(searchPatterns.map(pattern => `source_url.ilike.${pattern}`).join(','));
+        duplicateData = tweetData;
+        break;
+        
+      case 'youtube_id':
+        // Search for YouTube video ID
+        const { data: youtubeData } = await supabase
+          .from(EVERMARKS_TABLE)
+          .select('*')
+          .or(searchPatterns.map(pattern => `source_url.ilike.${pattern}`).join(','));
+        duplicateData = youtubeData;
+        break;
+        
+      case 'github_resource':
+        // Search for GitHub repo/resource
+        const { data: githubData } = await supabase
+          .from(EVERMARKS_TABLE)
+          .select('*')
+          .or(searchPatterns.map(pattern => `source_url.ilike.${pattern}`).join(','));
+        duplicateData = githubData;
+        break;
+        
+      case 'normalized_url':
+        // Search for exact URL matches (normalized)
+        const { data: urlData } = await supabase
+          .from(EVERMARKS_TABLE)
+          .select('*')
+          .in('source_url', searchPatterns);
+        duplicateData = urlData;
+        break;
+    }
+    
+    const exists = duplicateData && duplicateData.length > 0;
+    const existingEvermark = duplicateData?.[0];
+    
+    console.log('✅ Duplicate check result:', {
+      exists,
+      foundRecords: duplicateData?.length || 0,
+      existingTokenId: existingEvermark?.token_id
+    });
+    
+    return {
+      exists,
+      confidence: identifier.confidence,
+      existingTokenId: existingEvermark?.token_id,
+      existingEvermark: existingEvermark ? {
+        token_id: existingEvermark.token_id,
+        title: existingEvermark.title,
+        author: existingEvermark.author,
+        created_at: existingEvermark.created_at,
+        // TODO: Add vote count and staking data when available
+        vote_count: 0,
+        total_staked: '0',
+        leaderboard_rank: null
+      } : undefined,
+      duplicateType: identifier.type,
+      message: getDuplicateMessage(identifier.type, existingEvermark?.token_id)
+    };
+    
+  } catch (error) {
+    console.error('Duplicate check failed:', error);
+    // Don't fail the request, just return no duplicate found
+    return {
+      exists: false,
+      confidence: 'low',
+      duplicateType: identifier.type,
+      message: 'Unable to check for duplicates at this time'
+    };
+  }
+}
+
 export const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
   // Handle CORS preflight
   if (event.httpMethod === 'OPTIONS') {
@@ -94,6 +223,21 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
   try {
     switch (httpMethod) {
       case 'GET':
+        // Check for duplicate content endpoint
+        const checkDuplicate = queryStringParameters?.check_duplicate;
+        const sourceUrl = queryStringParameters?.source_url;
+        
+        if (checkDuplicate === 'true' && sourceUrl) {
+          console.log('🔍 Duplicate check requested for:', sourceUrl);
+          const duplicateResult = await checkForDuplicate(sourceUrl);
+          
+          return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify(duplicateResult),
+          };
+        }
+        
         // Check for referral stats endpoint
         const referrals = queryStringParameters?.referrals;
         const referrerAddress = queryStringParameters?.referrer;

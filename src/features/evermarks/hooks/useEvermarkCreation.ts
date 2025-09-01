@@ -13,6 +13,7 @@ import {
 
 import { ContextualBlockchainService } from '../services/ContextualBlockchainService';
 import { pinataService } from '@/services/PinataService';
+import { type DuplicateCheckResponse } from '@/utils/contentIdentifiers';
 
 /**
  * Hook for handling evermark creation with blockchain-first approach
@@ -29,6 +30,10 @@ export function useEvermarkCreation() {
   // Creation progress state
   const [createProgress, setCreateProgress] = useState(0);
   const [createStep, setCreateStep] = useState('');
+  
+  // Duplicate check state
+  const [duplicateCheck, setDuplicateCheck] = useState<DuplicateCheckResponse | null>(null);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
 
   // Create evermark mutation
   const createMutation = useMutation({
@@ -108,16 +113,79 @@ export function useEvermarkCreation() {
   const clearCreateError = useCallback(() => {
     createMutation.reset();
   }, [createMutation]);
+  
+  // Check for duplicate content
+  const checkForDuplicate = useCallback(async (sourceUrl: string): Promise<DuplicateCheckResponse> => {
+    try {
+      const response = await fetch(`/.netlify/functions/evermarks?check_duplicate=true&source_url=${encodeURIComponent(sourceUrl)}`);
+      if (!response.ok) {
+        throw new Error('Duplicate check failed');
+      }
+      const duplicateResult: DuplicateCheckResponse = await response.json();
+      return duplicateResult;
+    } catch (error) {
+      console.warn('Duplicate check failed:', error);
+      // Return "no duplicate" if check fails
+      return {
+        exists: false,
+        confidence: 'low',
+        duplicateType: 'normalized_url',
+        message: 'Unable to check for duplicates'
+      };
+    }
+  }, []);
+
+  // Check for duplicates before creation
+  const checkAndCreateEvermark = useCallback(async (input: CreateEvermarkInput, { skipDuplicateCheck = false } = {}) => {
+    const sourceUrl = input.metadata?.sourceUrl || input.metadata?.url || input.metadata?.castUrl;
+    
+    if (!skipDuplicateCheck && sourceUrl) {
+      const duplicateResult = await checkForDuplicate(sourceUrl);
+      
+      if (duplicateResult.exists) {
+        setDuplicateCheck(duplicateResult);
+        
+        // For exact matches, force user to acknowledge the duplicate
+        if (duplicateResult.confidence === 'exact') {
+          setShowDuplicateModal(true);
+          throw new Error(`${duplicateResult.message}. Please vote on the existing evermark instead.`);
+        } 
+        // For high confidence, show modal but allow override
+        else if (duplicateResult.confidence === 'high') {
+          setShowDuplicateModal(true);
+          throw new Error(`${duplicateResult.message}. You can choose to proceed or vote on the existing evermark.`);
+        }
+        // For medium/low confidence, just log and proceed
+        else {
+          console.log('📋 Potential duplicate detected:', duplicateResult.message);
+        }
+      }
+    }
+    
+    return createMutation.mutateAsync(input);
+  }, [checkForDuplicate, createMutation]);
+  
+  // Reset duplicate state
+  const clearDuplicateState = useCallback(() => {
+    setDuplicateCheck(null);
+    setShowDuplicateModal(false);
+  }, []);
 
   return {
     createEvermark,
+    checkAndCreateEvermark,
     isCreating: createMutation.isPending,
     createError: createMutation.error instanceof Error 
       ? createMutation.error.message 
       : createMutation.error ? 'Failed to create evermark' : null,
     createProgress,
     createStep,
-    clearCreateError
+    clearCreateError,
+    // Duplicate check state
+    duplicateCheck,
+    showDuplicateModal,
+    checkForDuplicate,
+    clearDuplicateState
   };
 }
 

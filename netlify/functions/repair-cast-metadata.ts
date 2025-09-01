@@ -66,10 +66,10 @@ async function repairCastEvermark(tokenId: number, sourceUrl: string) {
     // 1. Try to fetch rich cast metadata
     castData = await fetchCastMetadata(sourceUrl);
     console.log(`✅ Fetched cast metadata:`, {
-      author: castData.author,
-      username: castData.username,
-      likes: castData.engagement?.likes,
-      contentLength: castData.content?.length
+      author: castData?.author,
+      username: castData?.username,
+      likes: castData?.engagement?.likes,
+      contentLength: castData?.content?.length
     });
   } catch (error) {
     console.warn(`⚠️ Could not fetch cast metadata: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -93,6 +93,15 @@ async function repairCastEvermark(tokenId: number, sourceUrl: string) {
     
     isPlaceholder = true;
     console.log(`🔄 Created placeholder metadata for deleted cast #${tokenId}`);
+  }
+
+  if (!castData) {
+    return {
+      success: false,
+      tokenId,
+      sourceUrl,
+      error: 'Failed to fetch or create cast metadata'
+    };
   }
 
   try {
@@ -242,7 +251,7 @@ export const handler: Handler = async (event, context) => {
 
     console.log(`🚀 Starting cast metadata repair - Action: ${action}`);
 
-    let castsToRepair = [];
+    let castsToRepair: Array<{token_id: number, source_url: string, content_type: string}> = [];
 
     if (action === 'repair_specific' && token_ids && Array.isArray(token_ids)) {
       // Repair specific token IDs
