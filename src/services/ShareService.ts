@@ -121,11 +121,36 @@ export class ShareService {
     author?: string;
     url?: string;
   }, userAddress: string): Promise<void> {
+    const isInFarcaster = typeof window !== 'undefined' && 
+                         (window as any).__evermark_farcaster_detected === true;
+    
     // Use Mini App compatible URL for Farcaster shares
     const url = evermark.url || this.generateMiniAppUrl(evermark.id, 'share');
-    const text = `Check out this Evermark: "${evermark.title}" 🌟`;
+    const text = `Check out this Evermark: "${evermark.title}" 🌟\n\n${url}`;
     
-    const farcasterUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}&embeds[]=${encodeURIComponent(url)}`;
+    // If in Farcaster mini app, use SDK for native sharing
+    if (isInFarcaster) {
+      try {
+        const { sdk } = await import('@farcaster/miniapp-sdk');
+        // Use SDK's share functionality if available
+        if (sdk && 'share' in sdk) {
+          await sdk.share(text);
+          // Record the share
+          await this.shareEvermark({
+            evermarkId: evermark.id,
+            platform: 'Farcaster',
+            userAddress,
+            evermarkTitle: evermark.title,
+            evermarkOwner: evermark.author
+          });
+          return;
+        }
+      } catch (error) {
+        console.warn('Farcaster SDK share failed, falling back to web share:', error);
+      }
+    }
+    
+    const farcasterUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}`;
     
     // Open Farcaster sharing dialog
     window.open(farcasterUrl, '_blank', 'width=550,height=600');
@@ -243,6 +268,20 @@ export class ShareService {
       : `${window.location.origin}/docs/${docId}`;
     
     const text = `Check out this Evermark documentation: "${docTitle}" 📚\n\n${url}`;
+    
+    // If in Farcaster mini app, use SDK for native sharing
+    if (isInFarcaster) {
+      try {
+        const { sdk } = await import('@farcaster/miniapp-sdk');
+        // Use SDK's share functionality if available
+        if (sdk && 'share' in sdk) {
+          await sdk.share(text);
+          return;
+        }
+      } catch (error) {
+        console.warn('Farcaster SDK share failed, falling back to web share:', error);
+      }
+    }
     
     const farcasterUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}`;
     
