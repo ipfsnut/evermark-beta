@@ -229,9 +229,11 @@ export default function MyEvermarksPage() {
   }, [baseSupportedEvermarks, activeTab, searchQuery, filters]);
 
   useEffect(() => {
-    // Load all evermarks and then filter client-side for now
-    // TODO: Add API endpoint for user-specific evermarks
-    loadEvermarks();
+    // Load all evermarks with a large limit to get all data for supported calculation
+    loadEvermarks({ 
+      pageSize: 100,  // Large enough to get all evermarks
+      page: 1 
+    });
   }, [loadEvermarks]);
 
   // Search and filter handlers

@@ -372,10 +372,23 @@ export class LeaderboardService {
         }
       }
       
-      // If no evermarks provided, return empty stats
+      // Get actual total count of evermarks from database
+      let totalEvermarksCount = 0;
+      try {
+        const response = await fetch('/.netlify/functions/evermarks?get_total_only=true');
+        if (response.ok) {
+          const data = await response.json();
+          totalEvermarksCount = data.total || 0;
+        }
+      } catch (countError) {
+        console.warn('Failed to get total evermarks count, falling back to array length:', countError);
+        totalEvermarksCount = evermarks?.length || 0;
+      }
+      
+      // If no evermarks provided, return stats with actual total count
       if (!evermarks || evermarks.length === 0) {
         return {
-          totalEvermarks: 0,
+          totalEvermarks: totalEvermarksCount,
           totalVotes: BigInt(0),
           activeVoters: 0,
           averageVotesPerEvermark: BigInt(0),
@@ -390,7 +403,7 @@ export class LeaderboardService {
       
       if (leaderboardEntries.length === 0) {
         return {
-          totalEvermarks: evermarks.length,
+          totalEvermarks: totalEvermarksCount,
           totalVotes: BigInt(0),
           activeVoters: 0,
           averageVotesPerEvermark: BigInt(0),
@@ -412,7 +425,7 @@ export class LeaderboardService {
         : BigInt(0);
 
       return {
-        totalEvermarks: evermarks.length,
+        totalEvermarks: totalEvermarksCount,
         totalVotes,
         activeVoters: 0, // We don't track individual voters efficiently
         averageVotesPerEvermark: averageVotes,

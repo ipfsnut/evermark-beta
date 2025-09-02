@@ -200,7 +200,29 @@ export function useEvermarkQueries() {
  */
 async function fetchEvermarks(options: EvermarkFeedOptions): Promise<EvermarkFeedResult> {
   try {
-    const response = await fetch('/api/evermarks', {
+    // Build query string with pagination parameters
+    const queryParams = new URLSearchParams({
+      page: String(options.page ?? 1),
+      limit: String(options.pageSize ?? 12),
+      sort_by: options.sortBy ?? 'created_at',
+      sort_order: options.sortOrder ?? 'desc'
+    });
+    
+    // Add filters to query string
+    if (options.filters?.search) {
+      queryParams.append('search', options.filters.search);
+    }
+    if (options.filters?.contentType) {
+      queryParams.append('content_type', options.filters.contentType);
+    }
+    if (options.filters?.verified !== undefined) {
+      queryParams.append('verified', String(options.filters.verified));
+    }
+    if (options.filters?.author) {
+      queryParams.append('author', options.filters.author);
+    }
+    
+    const response = await fetch(`/.netlify/functions/evermarks?${queryParams.toString()}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' }
     });

@@ -271,6 +271,29 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
           };
         }
         
+        // Check for total count only request
+        const getTotalOnly = queryStringParameters?.get_total_only;
+        if (getTotalOnly === 'true') {
+          const { count, error } = await supabase
+            .from(EVERMARKS_TABLE)
+            .select('*', { count: 'exact', head: true });
+
+          if (error) {
+            console.error('Total count error:', error);
+            return {
+              statusCode: 500,
+              headers,
+              body: JSON.stringify({ error: 'Failed to get total count' }),
+            };
+          }
+
+          return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify({ total: count || 0 }),
+          };
+        }
+        
         // Check for single evermark by query parameter first
         const singleId = queryStringParameters?.id;
         if (singleId) {
