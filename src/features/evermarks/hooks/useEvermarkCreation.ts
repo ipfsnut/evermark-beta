@@ -232,7 +232,9 @@ async function createEvermarkWithBlockchain(
       throw new Error('Title is required');
     }
 
-    if (!input.image) {
+    // Image is optional for Cast content type (since we can generate cast images)
+    // but required for other content types
+    if (!input.image && input.metadata?.contentType !== 'Cast') {
       throw new Error('Image is required for evermark creation');
     }
 
@@ -290,12 +292,19 @@ async function createEvermarkWithBlockchain(
       }
     }
     
-    onProgress(20, 'Uploading image to IPFS...');
+    let imageUploadResult: { success: boolean; hash?: string; error?: string } | null = null;
     
-    // Upload image to IPFS
-    const imageUploadResult = await pinataService.uploadImage(input.image);
-    if (!imageUploadResult.success || !imageUploadResult.hash) {
-      throw new Error(`Image upload failed: ${imageUploadResult.error}`);
+    if (input.image) {
+      onProgress(20, 'Uploading image to IPFS...');
+      
+      // Upload image to IPFS
+      imageUploadResult = await pinataService.uploadImage(input.image);
+      if (!imageUploadResult.success || !imageUploadResult.hash) {
+        throw new Error(`Image upload failed: ${imageUploadResult.error}`);
+      }
+    } else if (metadata.contentType === 'Cast') {
+      onProgress(20, 'Skipping image upload for Cast content...');
+      console.log('📝 No manual image provided for Cast content, will use generated cast image if available');
     }
     
     onProgress(40, 'Creating metadata...');
@@ -304,7 +313,7 @@ async function createEvermarkWithBlockchain(
     const nftMetadata = {
       name: metadata.title,
       description: metadata.description ?? '',
-      image: `ipfs://${imageUploadResult.hash}`,
+      image: imageUploadResult?.hash ? `ipfs://${imageUploadResult.hash}` : undefined,
       external_url: metadata.sourceUrl ?? metadata.url ?? metadata.castUrl,
       attributes: [
         {
@@ -418,7 +427,7 @@ async function createEvermarkWithBlockchain(
             'X-Wallet-Address': accountAddress
           },
           body: JSON.stringify({
-            token_id: parseInt(mintResult.tokenId),
+            token_id: mintResult.tokenId, // Send as string, let backend handle conversion
             tx_hash: mintResult.txHash,
             title: metadata.title,
             description: metadata.description ?? '',
@@ -529,8 +538,8 @@ async function createEvermarkWithBlockchain(
               issue: metadata.issue,
               pages: metadata.pages
             }),
-            ipfs_image_hash: imageUploadResult.hash,
-            referrer_address: finalReferrer || undefined
+            ipfs_image_hash: imageUploadResult?.hash || null
+            // referrer_address: finalReferrer || '0x3427b4716B90C11F9971e43999a48A47Cf5B571E' // TODO: Add referrer_address column to beta_evermarks table
           })
         });
         
@@ -572,9 +581,14 @@ async function createEvermarkWithBlockchain(
             console.warn('⚠️ Image caching failed:', error);
             // Don't fail if caching fails
           }
+        } else {
+          const errorText = await dbSyncResponse.text();
+          console.error('❌ Database sync response not ok:', dbSyncResponse.status, errorText);
+          throw new Error(`Database sync failed: ${dbSyncResponse.status} - ${errorText}`);
         }
-      } catch {
-        // Don't fail if database sync fails
+      } catch (dbError) {
+        console.error('❌ Database sync failed:', dbError);
+        throw new Error(`Database sync failed: ${dbError instanceof Error ? dbError.message : 'Unknown database error'}. Evermark was minted on blockchain (Token ID: ${mintResult.tokenId}, TX: ${mintResult.txHash}) but failed to sync to database. Please contact support for manual recovery.`);
       }
     }
     
@@ -585,7 +599,7 @@ async function createEvermarkWithBlockchain(
       txHash: mintResult.txHash,
       tokenId: mintResult.tokenId,
       metadataURI: metadataUploadResult.url,
-      imageUrl: imageUploadResult.url,
+      imageUrl: (imageUploadResult?.success && 'url' in imageUploadResult) ? (imageUploadResult as any).url : null,
       castData: castData || undefined,
       message: 'Evermark created successfully on blockchain!'
     };

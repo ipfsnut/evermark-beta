@@ -210,12 +210,22 @@ async function handleAwardPoints(event: HandlerEvent) {
     };
   }
 
-  // Upsert total points
+  // Get existing points first
+  const { data: existingPoints } = await supabase
+    .from(POINTS_TABLE)
+    .select('total_points')
+    .eq('wallet_address', walletAddress)
+    .single();
+
+  const currentTotal = existingPoints?.total_points || 0;
+  const newTotal = currentTotal + points_earned;
+
+  // Upsert total points with proper increment
   const { data: updatedPoints, error: pointsError } = await supabase
     .from(POINTS_TABLE)
     .upsert([{
       wallet_address: walletAddress,
-      total_points: points_earned
+      total_points: newTotal
     }], {
       onConflict: 'wallet_address',
       ignoreDuplicates: false

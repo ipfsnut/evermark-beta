@@ -69,10 +69,6 @@ const ImagePreviewWithAspectRatio: React.FC<{
     });
     
     setImageLoaded(true);
-    console.log('📐 Preview image aspect ratio:', {
-      ratio: aspectRatio.toFixed(2),
-      type: aspectRatio < 0.75 ? 'tall/book' : aspectRatio < 0.95 ? 'portrait' : aspectRatio <= 1.05 ? 'square' : 'wide'
-    });
   };
 
   // Get dynamic padding based on aspect ratio
@@ -466,12 +462,20 @@ export function CreateEvermarkForm({
 
   // Generate cast image preview for Cast content type
   const generateCastImagePreview = useCallback(async () => {
-    if (formData.contentType !== 'Cast' || isGeneratingCastImage || !formData.sourceUrl.trim() || !formData.content.trim()) {
+    if (formData.contentType !== 'Cast' || isGeneratingCastImage || !formData.sourceUrl.trim()) {
+      return;
+    }
+
+    // Use either form content or cast data content
+    const contentText = formData.content.trim() || castData?.content || '';
+    if (!contentText) {
+      console.log('⏸️ Skipping cast preview - no content available yet');
       return;
     }
 
     try {
       setIsGeneratingCastImage(true);
+      console.log('🎨 Generating cast preview with content:', contentText.substring(0, 50) + '...');
       
       // Create mock evermark data for preview generation
       const mockEvermarkData = {
@@ -483,7 +487,7 @@ export function CreateEvermarkForm({
         author: getAuthor(),
         metadata_json: JSON.stringify({
           cast: {
-            text: formData.content || 'No cast text provided',
+            text: contentText,
             author_username: castData?.username || 'preview',
             author_display_name: castData?.author || getAuthor(),
             author_pfp: castData?.author_pfp || null,
@@ -518,13 +522,12 @@ export function CreateEvermarkForm({
     } finally {
       setIsGeneratingCastImage(false);
     }
-  }, [formData.contentType, formData.sourceUrl, formData.title, formData.description, formData.content, getAuthor, isGeneratingCastImage, castData]);
+  }, [formData.contentType, formData.sourceUrl, formData.title, formData.description, formData.content, getAuthor, castData]);
 
   // Auto-generate cast image when Cast fields change
   useEffect(() => {
-    if (formData.contentType === 'Cast' && 
-        formData.sourceUrl.trim() && 
-        formData.content.trim()) { // Only generate when we have actual cast content
+    if (formData.contentType === 'Cast' && formData.sourceUrl.trim()) {
+      // Generate preview when we have URL, even if content is still loading
       const timeoutId = setTimeout(() => {
         generateCastImagePreview();
       }, 1000); // Debounce to avoid too many API calls
@@ -533,7 +536,7 @@ export function CreateEvermarkForm({
     } else {
       setCastImagePreview(null);
     }
-  }, [generateCastImagePreview, formData.contentType, formData.sourceUrl, formData.content, castData]);
+  }, [formData.contentType, formData.sourceUrl, formData.content, castData]); // Removed generateCastImagePreview to prevent infinite loop
 
   // UPDATED: Form submission with comprehensive auth checks
   const handleSubmit = useCallback(async (e: React.FormEvent) => {

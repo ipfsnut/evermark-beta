@@ -129,6 +129,7 @@ export async function syncRecentEvermarks(count: number = 10) {
 
       // Get NFT from chain
       const nft = await getNFT({ contract, tokenId: BigInt(tokenId) });
+      console.log(`Token ${tokenId} URI: ${nft.tokenURI}`);
       if (!nft.metadata) continue;
 
       const metadata = nft.metadata;

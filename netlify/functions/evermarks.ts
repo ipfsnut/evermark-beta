@@ -40,7 +40,7 @@ interface EvermarkRecord {
   ipfs_image_hash?: string;
   ipfs_metadata_hash?: string;
   ipfs_metadata?: Record<string, unknown>;
-  referrer_address?: string;
+  // referrer_address?: string; // TODO: Add this column to beta_evermarks table
 }
 
 const headers = {
@@ -431,8 +431,11 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
         });
         
         // Auto-populate user data from wallet address - explicitly map fields to avoid schema conflicts
+        const tokenIdNumber = Number(evermarkData.token_id);
+        console.log(`📊 Token ID: ${evermarkData.token_id} -> ${tokenIdNumber}`);
+        
         const newEvermark: Partial<EvermarkRecord> = {
-          token_id: evermarkData.token_id,
+          token_id: tokenIdNumber,
           title: evermarkData.title,
           author: evermarkData.author || `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`,
           owner: walletAddress,
@@ -448,9 +451,9 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
           verified: false, // Will be verified later
           // Note: Explicitly excluding 'metadata' field as it may not exist in beta_evermarks table
           metadata_json: evermarkData.metadata ? JSON.stringify(evermarkData.metadata) : undefined,
-          referrer_address: evermarkData.referrer_address && isValidWalletAddress(evermarkData.referrer_address) 
-            ? evermarkData.referrer_address.toLowerCase() 
-            : undefined,
+          // referrer_address: evermarkData.referrer_address && isValidWalletAddress(evermarkData.referrer_address) 
+          //   ? evermarkData.referrer_address.toLowerCase() 
+          //   : '0x3427b4716B90C11F9971e43999a48A47Cf5B571E', // TODO: Add referrer_address column to beta_evermarks table
         };
 
         const { data: createdData, error: createError } = await supabase

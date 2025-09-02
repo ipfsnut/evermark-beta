@@ -364,7 +364,7 @@ export const handler: Handler = async (event, context) => {
         castTimestamp = getCustomField('cast_timestamp') || castTimestamp;
       }
       
-      // Also check if there's cast data in the metadata root
+      // Also check if there's cast data in the metadata root (both formats)
       if (metadata.cast) {
         castAuthorUsername = metadata.cast.author_username || castAuthorUsername;
         castAuthorDisplayName = metadata.cast.author_display_name || castAuthorDisplayName;
@@ -373,9 +373,18 @@ export const handler: Handler = async (event, context) => {
         castTimestamp = metadata.cast.timestamp || castTimestamp;
       }
       
+      // Check for castData format (used in recovered tokens)
+      if (metadata.castData) {
+        castAuthorUsername = metadata.castData.username || castAuthorUsername;
+        castAuthorDisplayName = metadata.castData.author || castAuthorDisplayName;
+        castLikes = metadata.castData.engagement?.likes || castLikes;
+        castRecasts = metadata.castData.engagement?.recasts || castRecasts;
+        castTimestamp = metadata.castData.timestamp || castTimestamp;
+      }
+      
       // Create cast data for image generation with enhanced fields
       castData = {
-        text: metadata.cast?.text || evermark.description || 'No content available',
+        text: metadata.cast?.text || metadata.castData?.content || evermark.description || 'No content available',
         author_username: metadata.cast?.author_username || castAuthorUsername,
         author_display_name: metadata.cast?.author_display_name || castAuthorDisplayName,
         author_pfp: metadata.cast?.author_pfp, // Profile picture URL from Neynar
@@ -383,7 +392,7 @@ export const handler: Handler = async (event, context) => {
         recasts: metadata.cast?.recasts || castRecasts,
         replies: metadata.cast?.replies || 0,
         timestamp: metadata.cast?.timestamp || castTimestamp,
-        hash: metadata.cast?.hash,
+        hash: metadata.cast?.hash || metadata.castData?.castHash,
         channel: metadata.cast?.channel, // Channel name if cast belongs to a channel
         embeds: metadata.cast?.embeds || [] // Array of embed objects
       };

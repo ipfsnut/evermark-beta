@@ -19,11 +19,13 @@ export class FarcasterService {
 
     const trimmedInput = input.trim();
 
-    // Check for Farcaster URLs
+    // Check for Farcaster URLs - be more flexible with hash length
     const urlPatterns = [
       /^https:\/\/warpcast\.com\/[^/]+\/0x[a-fA-F0-9]+/,
       /^https:\/\/farcaster\.xyz\/[^/]+\/0x[a-fA-F0-9]+/,
-      /^https:\/\/supercast\.xyz\/[^/]+\/0x[a-fA-F0-9]+/
+      /^https:\/\/supercast\.xyz\/[^/]+\/0x[a-fA-F0-9]+/,
+      // Also support mobile.farcaster.xyz format
+      /^https:\/\/mobile\.farcaster\.xyz\/[^/]+\/0x[a-fA-F0-9]+/
     ];
 
     for (const pattern of urlPatterns) {
@@ -55,9 +57,16 @@ export class FarcasterService {
       return input.trim();
     }
 
-    // Extract hash from URL
-    const hashMatch = input.match(/0x[a-fA-F0-9]+/);
-    return hashMatch ? hashMatch[0] : null;
+    // Extract full hash from URL - need to get the complete hash, not just the first match
+    // Farcaster URLs typically have format: https://warpcast.com/username/0x[full-hash]
+    const hashMatch = input.match(/0x[a-fA-F0-9]{8,64}/);
+    if (hashMatch) {
+      console.log('📝 Extracted hash from URL:', hashMatch[0], 'from URL:', input);
+      return hashMatch[0];
+    }
+
+    console.warn('❌ Could not extract valid hash from URL:', input);
+    return null;
   }
 
   /**
@@ -65,20 +74,32 @@ export class FarcasterService {
    */
   static async fetchCastMetadata(castInput: string): Promise<FarcasterCastData | null> {
     try {
-      const castHash = this.extractCastHash(castInput);
-      if (!castHash) {
+      const validation = this.validateFarcasterInput(castInput);
+      if (!validation.isValid) {
         throw new Error('Invalid cast hash or URL');
       }
 
+      let apiUrl: string;
+      
+      if (validation.type === 'url') {
+        // Pass the full URL to the API - let the backend handle URL parsing
+        console.log('🌐 Fetching cast metadata by URL:', castInput);
+        apiUrl = `${FARCASTER_CONFIG.API_BASE}/farcaster-cast?hash=${encodeURIComponent(castInput)}`;
+      } else {
+        // It's a direct hash
+        console.log('🔗 Fetching cast metadata by hash:', castInput);
+        apiUrl = `${FARCASTER_CONFIG.API_BASE}/farcaster-cast?hash=${castInput}`;
+      }
+
       // Try to fetch via our API endpoint
-      const response = await fetch(`${FARCASTER_CONFIG.API_BASE}/farcaster-cast?hash=${castHash}`);
+      const response = await fetch(apiUrl);
       
       if (response.ok) {
         const result = await response.json();
         if (result.success && result.data) {
           const data = result.data;
           return {
-            castHash: data.castHash || castHash,
+            castHash: data.castHash || this.extractCastHash(castInput) || castInput,
             author: data.author || 'Unknown',
             username: data.username || '',
             content: data.content || '',
@@ -92,10 +113,11 @@ export class FarcasterService {
         }
       }
 
-      // Fallback: Create basic metadata from hash
+      // Fallback: Create basic metadata
       console.warn('Could not fetch cast metadata, using fallback');
+      const fallbackHash = validation.type === 'hash' ? castInput : this.extractCastHash(castInput) || 'unknown';
       return {
-        castHash,
+        castHash: fallbackHash,
         author: 'Farcaster User',
         username: '',
         content: 'Cast content will be displayed when available',

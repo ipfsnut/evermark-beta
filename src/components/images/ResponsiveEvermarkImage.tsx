@@ -79,10 +79,6 @@ export function ResponsiveEvermarkImage({
       };
       
       setDimensions(dims);
-      console.log(`📐 Image dimensions for #${tokenId}:`, {
-        aspectRatio: aspectRatio.toFixed(2),
-        type: dims.isTall ? 'tall/book' : dims.isPortrait ? 'portrait' : dims.isSquare ? 'square' : 'wide'
-      });
     }
     
     setImageLoaded(true);
