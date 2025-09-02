@@ -418,7 +418,10 @@ async function syncAllEvermarkVotesForSeason(votingContract: any, season: number
     
     if (error || !evermarks) {
       console.error('Failed to fetch evermarks:', error);
-      return 0;
+      return { 
+        syncedCount: 0, 
+        debugInfo: { error: error?.message || 'Failed to fetch evermarks' }
+      };
     }
     
     console.log(`Found ${evermarks.length} evermarks to check for votes in season ${season}`);

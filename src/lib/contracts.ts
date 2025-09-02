@@ -99,7 +99,7 @@ export function getEvermarkVotingContract() {
       client,
       chain: CHAIN,
       address: CONTRACTS.EVERMARK_VOTING as `0x${string}`,
-      abi: EvermarkVotingABI as Abi,
+      abi: ((EvermarkVotingABI as any).abi || EvermarkVotingABI) as unknown as Abi,
     });
   }
   

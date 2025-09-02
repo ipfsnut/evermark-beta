@@ -63,7 +63,7 @@ export function useContracts() {
           client,
           chain: base,
           address: getContractAddress(CONTRACT_ADDRESSES.EVERMARK_VOTING, 'Evermark Voting'),
-          abi: EvermarkVotingABI as Abi
+          abi: ((EvermarkVotingABI as any).abi || EvermarkVotingABI) as unknown as Abi
         }),
         
         nftStaking: getContract({

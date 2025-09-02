@@ -1,7 +1,6 @@
 // Import ABIs from their respective feature directories
 import WemarkABI from '../../features/staking/abis/WEMARK.abi.json';
 import EvermarkVotingABI from '../../features/voting/abis/EvermarkVoting.json';
-import EvermarkLeaderboardABI from '../../features/leaderboard/abis/EvermarkLeaderboard.json';
 import FeeCollectorABI from './FeeCollector.json'; // Keep in lib since it's shared
 import NFTStakingABI from './NFTStaking.json'; // Keep in lib since it's shared
 import EMARKABI from '../../features/tokens/abis/EMARK.json';
@@ -13,7 +12,6 @@ export const WEMARK_ABI = WemarkABI;
 export const EMARK_TOKEN_ABI = EMARKABI;
 export const EVERMARK_NFT_ABI = EvermarkNFTABI;
 export const EVERMARK_VOTING_ABI = EvermarkVotingABI;
-export const EVERMARK_LEADERBOARD_ABI = EvermarkLeaderboardABI;
 export const EVERMARK_REWARDS_ABI = EvermarkRewardsABI;
 export const FEE_COLLECTOR_ABI = FeeCollectorABI;
 export const NFT_STAKING_ABI = NFTStakingABI;
@@ -24,7 +22,6 @@ export {
   EvermarkNFTABI,
   EvermarkRewardsABI,
   EvermarkVotingABI,
-  EvermarkLeaderboardABI,
   FeeCollectorABI,
   NFTStakingABI,
   EMARKABI
