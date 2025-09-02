@@ -293,47 +293,6 @@ export function CreateEvermarkForm({
     };
   }, [imagePreview]);
 
-  const handleFieldChange = useCallback((field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    clearCreateError();
-    
-    // Auto-detect cast content when Farcaster URL is pasted
-    if (field === 'sourceUrl' && value.trim()) {
-      try {
-        const url = new URL(value);
-        const domain = url.hostname.replace('www.', '');
-        if (domain.includes('farcaster') || domain.includes('warpcast')) {
-          // Auto-trigger cast detection after a short delay
-          setTimeout(() => {
-            handleAutoDetect();
-          }, 500);
-        }
-      } catch (error) {
-        // Invalid URL format, ignore auto-detection
-      }
-    }
-  }, [clearCreateError, handleAutoDetect]);
-
-  // Tag management
-  const handleAddTag = useCallback(() => {
-    const trimmedTag = tagInput.trim().toLowerCase();
-    if (trimmedTag && !tags.includes(trimmedTag) && tags.length < 10) {
-      setTags(prev => [...prev, trimmedTag]);
-      setTagInput('');
-    }
-  }, [tagInput, tags]);
-
-  const handleRemoveTag = useCallback((tagToRemove: string) => {
-    setTags(prev => prev.filter(tag => tag !== tagToRemove));
-  }, []);
-
-  const handleTagKeyPress = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleAddTag();
-    }
-  }, [handleAddTag]);
-
   // Auto-detect content from URL
   const handleAutoDetect = useCallback(async () => {
     if (!formData.sourceUrl) return;
@@ -358,7 +317,7 @@ export function CreateEvermarkForm({
             ...prev, 
             title: formData.title || `Cast by ${castData.author}`,
             description: `Cast by ${castData.author} on Farcaster`,
-            content: castData.content // Populate actual cast text
+            content: castData.content || '' // Ensure content is always a string
           }));
           console.log('✅ Cast data loaded successfully:', {
             content: castData.content?.substring(0, 50) + '...',
@@ -410,6 +369,47 @@ export function CreateEvermarkForm({
       console.warn('URL auto-detection failed:', error);
     }
   }, [formData.sourceUrl, formData.title, formData.description]);
+
+  const handleFieldChange = useCallback((field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    clearCreateError();
+    
+    // Auto-detect cast content when Farcaster URL is pasted
+    if (field === 'sourceUrl' && value.trim()) {
+      try {
+        const url = new URL(value);
+        const domain = url.hostname.replace('www.', '');
+        if (domain.includes('farcaster') || domain.includes('warpcast')) {
+          // Auto-trigger cast detection after a short delay
+          setTimeout(() => {
+            handleAutoDetect();
+          }, 500);
+        }
+      } catch (error) {
+        // Invalid URL format, ignore auto-detection
+      }
+    }
+  }, [clearCreateError, handleAutoDetect]);
+
+  // Tag management
+  const handleAddTag = useCallback(() => {
+    const trimmedTag = tagInput.trim().toLowerCase();
+    if (trimmedTag && !tags.includes(trimmedTag) && tags.length < 10) {
+      setTags(prev => [...prev, trimmedTag]);
+      setTagInput('');
+    }
+  }, [tagInput, tags]);
+
+  const handleRemoveTag = useCallback((tagToRemove: string) => {
+    setTags(prev => prev.filter(tag => tag !== tagToRemove));
+  }, []);
+
+  const handleTagKeyPress = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddTag();
+    }
+  }, [handleAddTag]);
 
   const isFormValid = useCallback(() => {
     return formData.title.trim().length > 0 && 
