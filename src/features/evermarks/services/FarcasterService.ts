@@ -58,7 +58,7 @@ export class FarcasterService {
     }
 
     // Extract full hash from URL - need to get the complete hash, not just the first match
-    // Farcaster URLs typically have format: https://warpcast.com/username/0x[full-hash]
+    // Farcaster URLs typically have format: https://farcaster.xyz/username/0x[full-hash]
     const hashMatch = input.match(/0x[a-fA-F0-9]{8,64}/);
     if (hashMatch) {
       console.log('📝 Extracted hash from URL:', hashMatch[0], 'from URL:', input);
@@ -147,7 +147,7 @@ export class FarcasterService {
       ua.includes('farcaster-') ||
       ua.includes('warpcast-app') ||
       url.includes('farcaster.xyz') ||
-      url.includes('warpcast.com') ||
+      url.includes('farcaster.xyz') ||
       window.location.search.includes('inFeed=true') ||
       window.location.search.includes('action_type=share')
     );

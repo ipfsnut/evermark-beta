@@ -115,7 +115,7 @@ const ShareModal: React.FC<{
               Twitter
             </a>
             <a
-              href={`https://warpcast.com/~/compose?text=${encodeURIComponent(`Check out this Evermark: ${evermark.title} ${shareUrl}`)}`}
+              href={`https://farcaster.xyz/~/compose?text=${encodeURIComponent(`Check out this Evermark: ${evermark.title} ${shareUrl}`)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 p-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"

@@ -129,7 +129,7 @@ export function CreatorProfile({
 
   const getProfileUrl = () => {
     if (profile.farcasterUsername) {
-      return `https://warpcast.com/${profile.farcasterUsername}`;
+      return `https://farcaster.xyz/${profile.farcasterUsername}`;
     }
     return `https://etherscan.io/address/${profile.address}`;
   };

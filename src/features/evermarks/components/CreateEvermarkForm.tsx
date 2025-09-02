@@ -879,7 +879,7 @@ export function CreateEvermarkForm({
                       type="url"
                       value={formData.sourceUrl}
                       onChange={(e) => handleFieldChange('sourceUrl', e.target.value)}
-                      placeholder={formData.contentType === 'Cast' ? 'https://warpcast.com/username/0x...' : 'https://example.com/content'}
+                      placeholder={formData.contentType === 'Cast' ? 'https://farcaster.xyz/username/0x...' : 'https://example.com/content'}
                       disabled={isFormDisabled}
                       className={cn(
                         "flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-opacity-20 transition-colors",

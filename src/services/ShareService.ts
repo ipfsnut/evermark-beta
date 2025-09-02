@@ -150,7 +150,7 @@ export class ShareService {
       }
     }
     
-    const farcasterUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}`;
+    const farcasterUrl = `https://farcaster.xyz/~/compose?text=${encodeURIComponent(text)}`;
     
     // Open Farcaster sharing dialog
     window.open(farcasterUrl, '_blank', 'width=550,height=600');
@@ -283,7 +283,7 @@ export class ShareService {
       }
     }
     
-    const farcasterUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}`;
+    const farcasterUrl = `https://farcaster.xyz/~/compose?text=${encodeURIComponent(text)}`;
     
     // Open Farcaster sharing dialog
     window.open(farcasterUrl, '_blank', 'width=550,height=600');
