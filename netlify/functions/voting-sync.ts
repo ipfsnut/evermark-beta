@@ -9,10 +9,10 @@ const client = createThirdwebClient({
   clientId: process.env.THIRDWEB_CLIENT_ID || process.env.VITE_THIRDWEB_CLIENT_ID!
 });
 
-// Use service key for backend operations to bypass RLS
+// Use same Supabase config as evermarks (which works)
 const supabase = createClient(
-  process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_ANON_KEY!
 );
 
 // Contract addresses from environment
@@ -259,6 +259,60 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
               headers,
               body: JSON.stringify({
                 error: 'Failed to read votes',
+                details: error instanceof Error ? error.message : 'Unknown error'
+              }),
+            };
+          }
+        }
+        
+        else if (action === 'get-user-votes') {
+          // Get user's voting history from cache
+          const userAddress = queryStringParameters?.user_address;
+          
+          if (!userAddress) {
+            return {
+              statusCode: 400,
+              headers,
+              body: JSON.stringify({ error: 'user_address required' }),
+            };
+          }
+          
+          try {
+            const { data: votes, error } = await supabase
+              .from('user_votes_cache')
+              .select('*')
+              .eq('user_address', userAddress.toLowerCase())
+              .order('updated_at', { ascending: false });
+              
+            if (error) {
+              console.error('Failed to fetch user votes from cache:', error);
+              return {
+                statusCode: 500,
+                headers,
+                body: JSON.stringify({
+                  success: false,
+                  error: 'Failed to fetch user votes from cache',
+                  details: error.message
+                }),
+              };
+            }
+            
+            return {
+              statusCode: 200,
+              headers,
+              body: JSON.stringify({
+                success: true,
+                votes: votes || [],
+                count: votes?.length || 0
+              }),
+            };
+          } catch (error) {
+            return {
+              statusCode: 500,
+              headers,
+              body: JSON.stringify({
+                success: false,
+                error: 'Failed to fetch user votes',
                 details: error instanceof Error ? error.message : 'Unknown error'
               }),
             };

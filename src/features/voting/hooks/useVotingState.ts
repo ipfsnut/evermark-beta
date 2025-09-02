@@ -1,6 +1,6 @@
 // src/features/voting/hooks/useVotingState.ts - Integrated with contract cycle system
 import React, { useState, useCallback, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useWalletAccount } from '@/hooks/core/useWalletAccount';
 import { useStakingData } from '@/features/staking/hooks/useStakingData';
 import { useContextualTransactions } from '@/hooks/core/useContextualTransactions';
@@ -28,6 +28,7 @@ export function useVotingState(): UseVotingStateReturn {
   const [isDelegating, setIsDelegating] = useState(false);
   const [isUndelegating, setIsUndelegating] = useState(false);
   
+  const queryClient = useQueryClient();
   const account = useWalletAccount();
   const userAddress = account?.address;
   const isConnected = !!account && !!userAddress;
@@ -185,31 +186,38 @@ export function useVotingState(): UseVotingStateReturn {
       console.log('Delegation successful:', result.transactionHash);
       setSuccess(`Successfully delegated ${VotingService.formatVoteAmount(amount)} wEMARK!`);
 
-      // Update cache with new vote data
+      // Update both votes and leaderboard tables after successful vote
       if (currentCycle) {
-        // Cache individual user vote
-        await VotingCacheService.cacheUserVote(
-          userAddress,
-          evermarkId,
-          currentCycle.cycleNumber,
-          amount,
-          result.transactionHash
-        );
-        
-        // Update aggregate vote totals for this evermark
-        // Get current total votes from blockchain to ensure accuracy
-        const currentTotalVotes = await VotingService.getEvermarkVotes(evermarkId, currentCycle.cycleNumber);
-        
-        // Update the voting cache with new totals (voter count set to 0 since we don't track it)
-        await VotingCacheService.updateVotingCache(
-          evermarkId,
-          currentCycle.cycleNumber,
-          currentTotalVotes,
-          0 // Voter count disabled - we established this isn't efficiently available
-        );
-        
-        console.log(`🔄 Updated vote cache for evermark ${evermarkId}: ${VotingService.formatVoteAmount(currentTotalVotes)} total votes`);
+        try {
+          const updateResponse = await fetch('/.netlify/functions/update-voting-data', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              user_id: userAddress,
+              evermark_id: evermarkId,
+              vote_amount: amount.toString(),
+              transaction_hash: result.transactionHash,
+              cycle: currentCycle.cycleNumber
+            })
+          });
+          
+          if (updateResponse.ok) {
+            const updateResult = await updateResponse.json();
+            console.log(`✅ Updated voting data for evermark ${evermarkId}:`, updateResult.data);
+          } else {
+            console.warn(`⚠️ Failed to update voting data for evermark ${evermarkId}`);
+          }
+        } catch (updateError) {
+          console.warn('Voting data update failed:', updateError);
+        }
       }
+
+      // Invalidate relevant React Query caches to trigger refetch
+      queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
+      queryClient.invalidateQueries({ queryKey: ['voting', 'history', userAddress] });
+      queryClient.invalidateQueries({ queryKey: ['evermarks'] });
+      
+      console.log('🔄 Invalidated caches to trigger data refresh');
 
       // Award points for voting
       try {

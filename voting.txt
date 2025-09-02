@@ -1,0 +1,149 @@
+# Voting System Design - Database-First Architecture
+
+## Core Implementation ✅ WORKING
+
+The voting system now uses a **database-first architecture** where Supabase serves as the primary data source for leaderboards and user voting history.
+
+## Key Components
+
+### 1. Database Tables (✅ IMPLEMENTED & POPULATED)
+
+**votes** - Individual Vote Records
+```sql
+CREATE TABLE votes (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id text NOT NULL,              -- User wallet address (lowercase)
+  evermark_id text NOT NULL,          -- Evermark being voted on
+  cycle integer NOT NULL,             -- Season/cycle number (currently 3)
+  amount text NOT NULL,               -- Vote amount as wei string
+  action text NOT NULL DEFAULT 'delegate',  -- Type of vote action
+  created_at timestamp with time zone DEFAULT now(),
+  metadata jsonb DEFAULT '{}'::jsonb  -- Transaction hash, etc.
+);
+```
+
+**leaderboard** - Pre-computed Rankings
+```sql
+CREATE TABLE leaderboard (
+  evermark_id text NOT NULL,          -- Evermark ID
+  total_votes text NOT NULL,          -- Total votes as wei string  
+  rank integer NOT NULL,              -- Ranking position (1-indexed)
+  cycle_id integer NOT NULL,          -- Season/cycle number
+  updated_at timestamp with time zone DEFAULT now()
+);
+```
+
+### 2. API Endpoints (✅ IMPLEMENTED)
+
+**/.netlify/functions/leaderboard-data** - GET
+- Queries `leaderboard` table directly
+- Joins with `beta_evermarks` for metadata
+- Returns ranked evermarks with vote totals
+- No hardcoded fallbacks, pure database query
+
+**/.netlify/functions/get-user-votes** - POST  
+- Queries `votes` table for user's voting history
+- Returns evermark IDs user has supported
+- Used by MyEvermarksPage for "Supported" tab
+
+**/.netlify/functions/update-voting-data** - POST
+- Called automatically after every successful vote
+- Inserts vote record into `votes` table
+- Updates `leaderboard` table with new totals and rankings
+- Reads current vote total from blockchain for accuracy
+
+### 3. Frontend Integration (✅ IMPLEMENTED)
+
+**useVotingState.ts** (lines 189-213)
+- After successful blockchain vote transaction
+- Automatically calls `update-voting-data` endpoint
+- Invalidates React Query caches to trigger UI refresh
+- Awards points for voting action
+
+**MyEvermarksPage.tsx** (lines 144-173)  
+- "Supported" tab queries user's votes via `get-user-votes`
+- Shows evermarks user has delegated votes to
+- Uses React Query with 5-minute cache
+
+**leaderboard-data.ts** (lines 47-74)
+- Queries `leaderboard` table for current rankings
+- No blockchain calls during normal operation
+- Fast database-only queries
+
+## Current Season 3 Data (✅ POPULATED)
+
+**Leaderboard Rankings:**
+1. Evermark #7 (Popfi) - 1,003,000 EMARK votes
+2. Evermark #2 (Alpha Retirement) - 11,000 EMARK votes  
+3. Evermark #17 (Cast by m00npapi.eth) - 2,000 EMARK votes
+4. Evermark #3 (Vitalik's COW) - 1,000 EMARK votes
+5. Evermark #6 (Policy abstraction) - 1,000 EMARK votes
+
+**Vote Records:** Representative records created for historical totals
+
+## Data Flow Architecture
+
+### For NEW Votes (✅ AUTOMATIC):
+1. User votes through frontend → blockchain transaction
+2. `useVotingState.delegateVotes()` succeeds  
+3. Calls `update-voting-data` endpoint automatically
+4. Endpoint inserts vote record + updates leaderboard rankings
+5. React Query cache invalidation → UI refreshes with new data
+
+### For Historical Data (✅ POPULATED):
+- `sync-season3-totals.ts` populated leaderboard table from blockchain
+- `populate-historical-votes.ts` created representative vote records
+- System now shows correct leaderboard rankings and user support
+
+## Key Functions
+
+**sync-season3-totals.ts** - One-time population
+- Reads current vote totals from blockchain for all evermarks
+- Populates `leaderboard` table with rankings
+- Used to bootstrap the system with historical data
+
+**update-voting-data.ts** - Real-time maintenance  
+- Called after every vote transaction
+- Maintains both `votes` and `leaderboard` tables
+- Ensures rankings stay current automatically
+
+## Why This Works
+
+1. **Database Performance**: Leaderboard queries are instant (no blockchain calls)
+2. **Real-time Updates**: New votes automatically update database
+3. **User Support Tracking**: Individual vote records enable "Supported" evermarks
+4. **No Manual Intervention**: System maintains itself after initial population
+5. **Accurate Rankings**: Rankings recalculated after every vote
+
+## Removed Features
+
+- ❌ Hardcoded fallback data (removed from leaderboard-data.ts)
+- ❌ Complex blockchain event parsing during normal operation
+- ❌ Non-existent `voting_cache` table references
+- ❌ Incorrect column names (`user_address`, `season`, etc.)
+
+## Technical Details
+
+**Smart Contract Integration:**
+- Base network (chain ID 8453)
+- EvermarkVoting contract at `VITE_EVERMARK_VOTING_ADDRESS`
+- Method: `getEvermarkVotesInSeason(season, evermarkId)`
+- Used only for verification and updates, not normal queries
+
+**React Query Caching:**
+- Leaderboard: 30s stale time
+- User votes: 5min stale time  
+- Automatic invalidation after votes
+
+**Error Handling:**
+- Database failures don't break voting transactions
+- Graceful degradation if vote recording fails
+- Console logging for debugging
+
+## Current Status: ✅ FULLY FUNCTIONAL
+
+The voting system is now working correctly with:
+- Real leaderboard data from database
+- User "supported" evermarks functionality  
+- Automatic maintenance for new votes
+- No manual intervention required

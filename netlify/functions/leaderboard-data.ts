@@ -40,29 +40,41 @@ export async function handler(event: HandlerEvent, context: HandlerContext) {
 
   try {
     const { cycle } = event.queryStringParameters || {};
-    let currentCycle: number;
+    const currentCycle = cycle ? parseInt(cycle) : 3; // Default to season 3
     
-    if (cycle) {
-      currentCycle = parseInt(cycle);
-    } else {
-      // Get current cycle from contract
-      const votingContract = getContract({
-        client,
-        chain: base,
-        address: VOTING_CONTRACT_ADDRESS
-      });
-      
-      const contractCycle = await readContract({
-        contract: votingContract,
-        method: "function getCurrentSeason() view returns (uint256)",
-        params: []
-      });
-      
-      currentCycle = Number(contractCycle);
-      console.log(`Using current cycle from contract: ${currentCycle}`);
+    console.log(`Getting leaderboard data for cycle ${currentCycle}`);
+
+    // Query the leaderboard table directly - this is the source of truth
+    const { data: leaderboardData, error: leaderboardError } = await supabase
+      .from('leaderboard')
+      .select('evermark_id, total_votes, rank')
+      .eq('cycle_id', currentCycle)
+      .order('rank', { ascending: true });
+
+    if (leaderboardError) {
+      console.error('Leaderboard query error:', leaderboardError);
+      throw leaderboardError;
     }
 
-    // First, let's get evermarks and then manually join with voting data
+    console.log(`Found ${leaderboardData?.length || 0} evermarks in leaderboard for cycle ${currentCycle}`);
+
+    if (!leaderboardData || leaderboardData.length === 0) {
+      // No leaderboard data found - return empty results
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+          evermarks: [],
+          cycle: currentCycle,
+          total: 0,
+          timestamp: new Date().toISOString(),
+          message: `No leaderboard data found for cycle ${currentCycle}. Leaderboard table may need to be populated.`
+        })
+      };
+    }
+
+    // Get evermark metadata for the ranked evermarks
+    const evermarkIds = leaderboardData.map(l => l.evermark_id);
     const { data: evermarksData, error: evermarksError } = await supabase
       .from('beta_evermarks')
       .select(`
@@ -78,90 +90,41 @@ export async function handler(event: HandlerEvent, context: HandlerContext) {
         supabase_image_url,
         ipfs_image_hash
       `)
-      .order('token_id', { ascending: false })
-      .limit(100);
+      .in('token_id', evermarkIds);
 
     if (evermarksError) {
       console.error('Evermarks query error:', evermarksError);
       throw evermarksError;
     }
 
-    // Get voting data for these evermarks from the cache
-    const tokenIds = evermarksData?.map(e => e.token_id.toString()) || [];
-    
-    // Try to get voting data from cache for current cycle
-    const { data: votingData, error: votingError } = await supabase
-      .from('voting_cache')
-      .select('evermark_id, total_votes, voter_count')
-      .eq('cycle_number', currentCycle)
-      .in('evermark_id', tokenIds);
-
-    if (votingError) {
-      console.error('Voting cache query error:', votingError);
-    }
-
-    console.log(`Found ${votingData?.length || 0} voting records in cycle ${currentCycle} for ${tokenIds.length} evermarks`);
-
-    // Create voting lookup map
-    const votingMap = new Map();
-    votingData?.forEach(vote => {
-      votingMap.set(vote.evermark_id, {
-        totalVotes: vote.total_votes || '0',  // Keep as string for bigint conversion
-        voterCount: vote.voter_count || 0
-      });
-    });
-    
-    // If cache is empty, use known vote data from season 3 (temporary until cache sync works)
-    if (!votingData || votingData.length === 0) {
-      console.log('Voting cache is empty, using known vote data from season 3...');
+    // Combine leaderboard data with evermark metadata, maintaining rank order
+    const transformedEvermarks = leaderboardData.map(leader => {
+      const evermark = evermarksData?.find(e => e.token_id.toString() === leader.evermark_id);
       
-      // Hardcoded vote data from our earlier blockchain verification
-      // Store as wei strings (tokens * 10^18) for proper bigint conversion
-      const knownVotes = {
-        '2': { totalVotes: '11000000000000000000000', voterCount: 0 },    // 11,000 tokens
-        '3': { totalVotes: '1000000000000000000000', voterCount: 0 },     // 1,000 tokens  
-        '6': { totalVotes: '1000000000000000000000', voterCount: 0 },     // 1,000 tokens
-        '7': { totalVotes: '1003000000000000000000000', voterCount: 0 },  // 1,003,000 tokens
-        '17': { totalVotes: '2000000000000000000000', voterCount: 0 }     // 2,000 tokens
+      if (!evermark) {
+        console.warn(`No evermark data found for ID ${leader.evermark_id}`);
+        return null;
+      }
+
+      return {
+        id: evermark.token_id.toString(),
+        tokenId: evermark.token_id,
+        title: evermark.title,
+        author: evermark.author,
+        owner: evermark.owner,
+        description: evermark.description,
+        contentType: evermark.content_type,
+        sourceUrl: evermark.source_url,
+        createdAt: evermark.created_at,
+        verified: evermark.verified || false,
+        supabaseImageUrl: evermark.supabase_image_url,
+        ipfsHash: evermark.ipfs_image_hash,
+        totalVotes: leader.total_votes,
+        rank: leader.rank,
+        voterCount: 0, // Not tracked in current schema
+        tags: []
       };
-      
-      // Add known votes to voting map
-      Object.entries(knownVotes).forEach(([evermarkId, voteData]) => {
-        votingMap.set(evermarkId, voteData);
-      });
-      
-      console.log(`Added ${Object.keys(knownVotes).length} evermarks with known votes from blockchain verification`);
-    }
-
-    // Combine data and sort by votes
-    const leaderboardData = evermarksData?.map(evermark => ({
-      ...evermark,
-      ...votingMap.get(evermark.token_id.toString()) || { totalVotes: '0', voterCount: 0 }
-    })).sort((a, b) => {
-      // Convert to bigint for comparison
-      const aVotes = BigInt(a.totalVotes || '0');
-      const bVotes = BigInt(b.totalVotes || '0');
-      return aVotes > bVotes ? -1 : aVotes < bVotes ? 1 : 0;
-    }) || [];
-
-    // Transform data to include vote totals and ensure proper structure
-    const transformedEvermarks = leaderboardData?.map(evermark => ({
-      id: evermark.token_id.toString(),
-      tokenId: evermark.token_id,
-      title: evermark.title,
-      author: evermark.author,
-      owner: evermark.owner,
-      description: evermark.description,
-      contentType: evermark.content_type,
-      sourceUrl: evermark.source_url,
-      createdAt: evermark.created_at,
-      verified: evermark.verified || false,
-      supabaseImageUrl: evermark.supabase_image_url,
-      ipfsHash: evermark.ipfs_image_hash,
-      totalVotes: evermark.totalVotes || '0',
-      voterCount: evermark.voterCount || 0,
-      tags: []
-    })) || [];
+    }).filter(Boolean); // Remove null entries
 
     return {
       statusCode: 200,
@@ -172,10 +135,9 @@ export async function handler(event: HandlerEvent, context: HandlerContext) {
         total: transformedEvermarks.length,
         timestamp: new Date().toISOString(),
         debug: {
-          cacheLength: votingData?.length || 0,
-          usedBlockchainFallback: (votingData?.length || 0) === 0,
-          evermarksWithVotes: transformedEvermarks.filter(e => e.totalVotes > 0).length,
-          votingMapSize: votingMap.size
+          leaderboardEntries: leaderboardData?.length || 0,
+          evermarkMatches: transformedEvermarks.length,
+          dataSource: 'leaderboard_table'
         }
       })
     };

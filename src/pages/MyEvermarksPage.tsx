@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { FileText, Clock, Eye, Vote, Plus, Share, Copy, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -140,30 +141,48 @@ export default function MyEvermarksPage() {
   console.log('Debug - Current filters:', filters);
   console.log('Debug - User address:', user?.address);
   
-  // Load user votes for each evermark to determine supported ones
+  // Query user's supported evermarks directly from Supabase votes table
+  const { data: userSupportedEvermarkIds } = useQuery({
+    queryKey: ['userSupportedEvermarks', user?.address],
+    queryFn: async () => {
+      if (!user?.address) return [];
+      
+      console.log('Fetching user supported evermarks for:', user.address);
+      
+      // Get evermark IDs user has voted on from votes table
+      const { data, error } = await fetch('/.netlify/functions/get-user-votes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: user.address.toLowerCase(),
+          cycle: 3 // current season
+        })
+      }).then(res => res.json());
+      
+      if (error) {
+        console.error('Failed to fetch user votes:', error);
+        return [];
+      }
+      
+      const supportedIds = data?.map((vote: any) => vote.evermark_id) || [];
+      console.log('User has supported evermarks:', supportedIds);
+      return supportedIds;
+    },
+    enabled: !!user?.address,
+    staleTime: 5 * 60 * 1000 // 5 minutes
+  });
+
+  // Convert to votes object for compatibility with existing logic
   useEffect(() => {
-    async function loadUserVotesForEvermarks() {
-      if (!user?.address || !evermarks.length) return;
-      
-      const votes: Record<string, bigint> = {};
-      
-      // Check votes for each evermark
-      await Promise.all(evermarks.map(async (evermark) => {
-        try {
-          const userVotesForEvermark = await getUserVotesForEvermark(evermark.id);
-          if (userVotesForEvermark > BigInt(0)) {
-            votes[evermark.id] = userVotesForEvermark;
-          }
-        } catch (error) {
-          console.error(`Failed to get votes for evermark ${evermark.id}:`, error);
-        }
-      }));
-      
-      setUserVotes(votes);
-    }
+    if (!userSupportedEvermarkIds) return;
     
-    loadUserVotesForEvermarks();
-  }, [user?.address, evermarks, getUserVotesForEvermark]);
+    const votes: Record<string, bigint> = {};
+    userSupportedEvermarkIds.forEach((evermarkId: string) => {
+      votes[evermarkId] = BigInt(1); // Mark as supported (amount doesn't matter)
+    });
+    
+    setUserVotes(votes);
+  }, [userSupportedEvermarkIds]);
 
   // Base supported evermarks: ones where user has delegated votes
   const baseSupportedEvermarks = evermarks.filter(evermark => {

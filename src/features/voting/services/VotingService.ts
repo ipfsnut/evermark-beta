@@ -280,7 +280,7 @@ export class VotingService {
   }
 
   /**
-   * Fetch voting history from contract events
+   * Fetch voting history from Supabase cache (much faster than blockchain events)
    */
   static async fetchVotingHistory(
     userAddress: string,
@@ -288,9 +288,32 @@ export class VotingService {
     toBlock?: bigint
   ): Promise<Vote[]> {
     try {
+      // Try to get from Supabase cache first (much faster)
+      const response = await fetch(`/.netlify/functions/voting-sync?action=get-user-votes&user_address=${userAddress.toLowerCase()}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.votes) {
+          console.log('Loaded voting history from cache:', data.votes.length, 'votes');
+          return data.votes.map((vote: any, index: number) => ({
+            id: `cache-${vote.evermark_id}-${vote.cycle_number}`,
+            userAddress,
+            evermarkId: vote.evermark_id,
+            amount: BigInt(vote.vote_amount),
+            season: vote.cycle_number,
+            timestamp: new Date(vote.updated_at),
+            transactionHash: vote.transaction_hash,
+            status: 'confirmed' as const,
+            type: 'vote' as const
+          }));
+        }
+      }
+      
+      console.log('Cache unavailable, falling back to blockchain events...');
+      
+      // Fallback to blockchain events if cache fails
       const votingContract = getEvermarkVotingContract();
       
-      // Prepare event definition for VoteCast (the actual event from voteForEvermark)
       const voteCastEvent = prepareEvent({
         signature: "event VoteCast(address indexed voter, uint256 indexed season, uint256 indexed evermarkId, uint256 votes)"
       });
@@ -303,12 +326,12 @@ export class VotingService {
       });
 
       return events
-        .filter(event => event.args.voter === userAddress)
+        .filter(event => event.args.voter?.toLowerCase() === userAddress.toLowerCase())
         .map((event, index) => ({
           id: `${event.transactionHash}-${index}`,
           userAddress,
           evermarkId: event.args.evermarkId?.toString() ?? '',
-          amount: event.args.votes ?? BigInt(0),
+          amount: BigInt(event.args.votes ?? 0),
           season: Number(event.args.season) || 0,
           timestamp: new Date(), // Use current time for now
           transactionHash: event.transactionHash,
