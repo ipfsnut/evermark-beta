@@ -202,13 +202,33 @@ export class VotingService {
         targetSeason = currentSeasonData.seasonNumber;
       }
 
-      const votes = await readContract({
-        contract: votingContract,
-        method: "function getUserVotesInSeason(uint256 season, address user) view returns (uint256)",
-        params: [BigInt(targetSeason), userAddress]
+      // Use VoteCast events to find user's votes for this specific evermark
+      const voteCastEvent = prepareEvent({
+        signature: "event VoteCast(address indexed voter, uint256 indexed season, uint256 indexed evermarkId, uint256 votes)"
       });
 
-      return votes as bigint;
+      const events = await getContractEvents({
+        contract: votingContract,
+        events: [voteCastEvent],
+        fromBlock: 0n,
+        toBlock: 'latest'
+      });
+
+      // Find the user's vote for this specific evermark in the target season
+      let totalVotes = BigInt(0);
+      
+      events
+        .filter(event => 
+          event.args.voter?.toLowerCase() === userAddress.toLowerCase() &&
+          Number(event.args.season) === targetSeason &&
+          event.args.evermarkId?.toString() === evermarkId
+        )
+        .forEach(event => {
+          // Sum up all votes (in case user voted multiple times)
+          totalVotes += BigInt(event.args.votes || 0);
+        });
+
+      return totalVotes;
     } catch (error) {
       console.error('Failed to get user votes for evermark:', error);
       return BigInt(0);

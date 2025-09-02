@@ -180,7 +180,15 @@ export default function MyEvermarksPage() {
       vote.evermarkId === evermark.id && vote.amount > 0
     );
     
-    return hasVotedFromContract || hasVotedFromHistory || false;
+    const hasVoted = hasVotedFromContract || hasVotedFromHistory;
+    
+    // Debug logging for the first few evermarks
+    if (parseInt(evermark.id) <= 5) {
+      console.log(`Evermark ${evermark.id}: hasVotedFromContract=${hasVotedFromContract}, hasVotedFromHistory=${hasVotedFromHistory}, userVote=${userVotes[evermark.id]?.toString()}, supported=${hasVoted}`);
+    }
+    
+    // Only include if user has actually voted
+    return hasVoted;
   });
 
   // Apply search/filters to supported evermarks if needed
