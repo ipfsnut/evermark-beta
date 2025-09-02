@@ -9,9 +9,78 @@ import { stakingLogger } from '@/utils/logger';
  */
 export class VotingPowerService {
   /**
+   * Calculate reserved voting power using database - more reliable than contract calls
+   */
+  static async calculateReservedPowerFromDatabase(userAddress: string, cycle?: number): Promise<bigint> {
+    try {
+      // Import Supabase directly to avoid API call overhead
+      const { createClient } = await import('@supabase/supabase-js');
+      
+      // Use environment variables directly (frontend context)
+      const supabaseUrl = import.meta.env?.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env?.VITE_SUPABASE_ANON_KEY;
+      
+      if (!supabaseUrl || !supabaseKey) {
+        throw new Error('Supabase configuration missing in frontend');
+      }
+      
+      const supabase = createClient(supabaseUrl, supabaseKey);
+      
+      // Direct database query
+      const { data: votes, error } = await supabase
+        .from('votes')
+        .select('amount')
+        .eq('user_id', userAddress.toLowerCase())
+        .eq('cycle', cycle || 3)
+        .eq('action', 'delegate');
+
+      if (error) {
+        throw error;
+      }
+
+      // Sum up all vote amounts for this cycle
+      const totalReservedWei = votes?.reduce((sum, vote) => {
+        return sum + BigInt(vote.amount || 0);
+      }, BigInt(0)) || BigInt(0);
+
+      stakingLogger.debug('Calculated reserved power from database', {
+        userAddress,
+        cycle: cycle || 3,
+        votesCount: votes?.length || 0,
+        totalReservedWei: totalReservedWei.toString()
+      });
+
+      return totalReservedWei;
+    } catch (error) {
+      stakingLogger.error('Failed to calculate reserved power from database', {
+        userAddress,
+        cycle,
+        error
+      });
+      return BigInt(0);
+    }
+  }
+
+  /**
    * Calculate reserved voting power - power currently locked in active votes
    */
   static async calculateReservedPower(userAddress: string): Promise<bigint> {
+    // Use database method first - it's more reliable
+    try {
+      return await this.calculateReservedPowerFromDatabase(userAddress);
+    } catch (error) {
+      stakingLogger.warn('Database method failed, trying contract method', {
+        userAddress,
+        error
+      });
+      return this.calculateReservedPowerFromContract(userAddress);
+    }
+  }
+
+  /**
+   * Calculate reserved power from contract (original implementation)
+   */
+  private static async calculateReservedPowerFromContract(userAddress: string): Promise<bigint> {
     try {
       const votingContract = getEvermarkVotingContract();
       
@@ -29,7 +98,7 @@ export class VotingPowerService {
         params: [userAddress, currentCycle]
       }).catch(() => BigInt(0)); // Fallback to 0 if method doesn't exist
 
-      stakingLogger.debug('Calculated reserved voting power', {
+      stakingLogger.debug('Calculated reserved voting power from contract', {
         userAddress,
         currentCycle: currentCycle.toString(),
         reservedPower: reservedPower.toString()
@@ -37,7 +106,7 @@ export class VotingPowerService {
 
       return reservedPower as bigint;
     } catch (error) {
-      stakingLogger.warn('Failed to calculate reserved power, using fallback method', {
+      stakingLogger.warn('Failed to calculate reserved power from contract, using fallback method', {
         userAddress,
         error
       });
