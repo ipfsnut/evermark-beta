@@ -133,8 +133,8 @@ export class ShareService {
       try {
         const { sdk } = await import('@farcaster/miniapp-sdk');
         // Use SDK's share functionality if available
-        if (sdk && 'share' in sdk) {
-          await sdk.share(text);
+        if (sdk && 'share' in sdk && typeof sdk.share === 'function') {
+          await (sdk.share as (text: string) => Promise<void>)(text);
           // Record the share
           await this.shareEvermark({
             evermarkId: evermark.id,
@@ -274,8 +274,8 @@ export class ShareService {
       try {
         const { sdk } = await import('@farcaster/miniapp-sdk');
         // Use SDK's share functionality if available
-        if (sdk && 'share' in sdk) {
-          await sdk.share(text);
+        if (sdk && 'share' in sdk && typeof sdk.share === 'function') {
+          await (sdk.share as (text: string) => Promise<void>)(text);
           return;
         }
       } catch (error) {

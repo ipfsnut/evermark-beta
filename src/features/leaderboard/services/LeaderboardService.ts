@@ -338,6 +338,7 @@ export class LeaderboardService {
         lastUpdated: new Date(),
         filters
       };
+    }
   }
 
   /**
