@@ -31,8 +31,8 @@ export async function handler(event: HandlerEvent, context: HandlerContext) {
     const { cycle } = event.queryStringParameters || {};
     const currentCycle = cycle ? parseInt(cycle) : 0; // Default to cycle 0 for current/beta
 
-    // Query evermarks with voting data for specific cycle, ordered by votes DESC
-    const { data: leaderboardData, error } = await supabase
+    // First, let's get evermarks and then manually join with voting data
+    const { data: evermarksData, error: evermarksError } = await supabase
       .from('beta_evermarks')
       .select(`
         token_id,
@@ -45,21 +45,43 @@ export async function handler(event: HandlerEvent, context: HandlerContext) {
         created_at,
         verified,
         supabase_image_url,
-        ipfs_image_hash,
-        voting_cache!left(total_votes, voter_count)
+        ipfs_image_hash
       `)
-      .eq('voting_cache.cycle_number', currentCycle)
-      .order('voting_cache.total_votes', { ascending: false, nullsFirst: false })
-      .limit(100); // Top 100 for leaderboard
+      .order('token_id', { ascending: false })
+      .limit(100);
 
-    if (error) {
-      console.error('Database error:', error);
-      return {
-        statusCode: 500,
-        headers,
-        body: JSON.stringify({ error: 'Failed to fetch leaderboard data' })
-      };
+    if (evermarksError) {
+      console.error('Evermarks query error:', evermarksError);
+      throw evermarksError;
     }
+
+    // Get voting data for these evermarks
+    const tokenIds = evermarksData?.map(e => e.token_id.toString()) || [];
+    const { data: votingData, error: votingError } = await supabase
+      .from('voting_cache')
+      .select('evermark_id, total_votes, voter_count')
+      .eq('cycle_number', currentCycle)
+      .in('evermark_id', tokenIds);
+
+    if (votingError) {
+      console.error('Voting cache query error:', votingError);
+      // Don't throw - continue with zero votes
+    }
+
+    // Create voting lookup map
+    const votingMap = new Map();
+    votingData?.forEach(vote => {
+      votingMap.set(vote.evermark_id, {
+        totalVotes: vote.total_votes || 0,
+        voterCount: vote.voter_count || 0
+      });
+    });
+
+    // Combine data and sort by votes
+    const leaderboardData = evermarksData?.map(evermark => ({
+      ...evermark,
+      ...votingMap.get(evermark.token_id.toString()) || { totalVotes: 0, voterCount: 0 }
+    })).sort((a, b) => (b.totalVotes || 0) - (a.totalVotes || 0)) || [];
 
     // Transform data to include vote totals and ensure proper structure
     const transformedEvermarks = leaderboardData?.map(evermark => ({
