@@ -11,8 +11,7 @@ import {
   type UseLeaderboardStateReturn,
 } from '../types';
 
-// Import evermarks state to calculate leaderboard from
-import { useEvermarksState } from '../../evermarks';
+// Import evermarks types for leaderboard calculation
 
 // React Query keys
 const QUERY_KEYS = {
@@ -28,8 +27,20 @@ const QUERY_KEYS = {
 export function useLeaderboardState(): UseLeaderboardStateReturn {
   const _queryClient = useQueryClient();
 
-  // Get real evermarks data to calculate leaderboard from
-  const { evermarks, isLoading: isLoadingEvermarks } = useEvermarksState();
+  // Get leaderboard data directly from Supabase with voting totals
+  const { data: allEvermarksData, isLoading: isLoadingEvermarks } = useQuery({
+    queryKey: ['leaderboard', 'evermarks-with-votes'],
+    queryFn: async () => {
+      const response = await fetch('/.netlify/functions/leaderboard-data');
+      if (!response.ok) throw new Error('Failed to fetch leaderboard data');
+      const data = await response.json();
+      return data.evermarks;
+    },
+    staleTime: 30 * 1000,
+    retry: 2
+  });
+  
+  const evermarks = allEvermarksData || [];
   
   // Create a simple hash of evermarks for cache invalidation
   const evermarksHash = useMemo(() => {
