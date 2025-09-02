@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { FileText, Clock, Eye, Vote, Plus, Share, Copy } from 'lucide-react';
+import { FileText, Clock, Eye, Vote, Plus, Share, Copy, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { useEvermarksState } from '@/features/evermarks';
@@ -11,6 +11,7 @@ import { useAppAuth } from '@/providers/AppContext';
 import { useWalletAccount } from '@/hooks/core/useWalletAccount';
 import { useThemeClasses } from '@/providers/ThemeProvider';
 import { useFarcasterDetection } from '@/hooks/useFarcasterDetection';
+import { useBetaPoints } from '@/features/points';
 import { cn } from '@/utils/responsive';
 
 export default function MyEvermarksPage() {
@@ -20,6 +21,7 @@ export default function MyEvermarksPage() {
   const { isInFarcaster } = useFarcasterDetection();
   const { evermarks, isLoading, error, loadEvermarks } = useEvermarksState();
   const { votingHistory, getUserVotesForEvermark } = useVotingState();
+  const { userPoints } = useBetaPoints();
   const [activeTab, setActiveTab] = useState<'created' | 'supported'>('created');
   const [userVotes, setUserVotes] = useState<Record<string, bigint>>({});
   const [searchQuery, setSearchQuery] = useState('');
@@ -434,7 +436,7 @@ export default function MyEvermarksPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className={`${themeClasses.bg.card} border ${themeClasses.border.primary} rounded-lg p-6`}>
             <div className="flex items-center justify-between">
               <div>
@@ -468,6 +470,18 @@ export default function MyEvermarksPage() {
                 <p className={`text-sm ${themeClasses.text.muted}`}>Total Votes</p>
               </div>
               <Vote className="h-8 w-8 text-green-400" />
+            </div>
+          </div>
+          
+          <div className={`${themeClasses.bg.card} border ${themeClasses.border.primary} rounded-lg p-6`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className={`text-2xl font-bold ${themeClasses.text.primary}`}>
+                  {userPoints?.total_points?.toLocaleString() || 0}
+                </p>
+                <p className={`text-sm ${themeClasses.text.muted}`}>Beta Points Earned</p>
+              </div>
+              <Star className="h-8 w-8 text-yellow-400" />
             </div>
           </div>
         </div>
