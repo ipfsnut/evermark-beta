@@ -27,12 +27,12 @@ const QUERY_KEYS = {
 export function useLeaderboardState(): UseLeaderboardStateReturn {
   const _queryClient = useQueryClient();
 
-  // Get leaderboard data directly from Supabase with voting totals
+  // Get evermarks data and let LeaderboardService handle voting data from blockchain
   const { data: allEvermarksData, isLoading: isLoadingEvermarks } = useQuery({
-    queryKey: ['leaderboard', 'evermarks-with-votes'],
+    queryKey: ['leaderboard', 'evermarks'],
     queryFn: async () => {
-      const response = await fetch('/.netlify/functions/leaderboard-data');
-      if (!response.ok) throw new Error('Failed to fetch leaderboard data');
+      const response = await fetch('/.netlify/functions/evermarks');
+      if (!response.ok) throw new Error('Failed to fetch evermarks');
       const data = await response.json();
       return data.evermarks;
     },

@@ -1,13 +1,18 @@
 import { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
-import { readContract, getContractEvents, prepareEvent } from 'thirdweb';
+import { readContract, getContractEvents, prepareEvent, createThirdwebClient } from 'thirdweb';
 import { base } from 'thirdweb/chains';
 import { getContract } from 'thirdweb';
-import { client } from '../../src/lib/thirdweb';
 
+// Create client for backend use
+const client = createThirdwebClient({
+  clientId: process.env.THIRDWEB_CLIENT_ID || process.env.VITE_THIRDWEB_CLIENT_ID!
+});
+
+// Use service key for backend operations to bypass RLS
 const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_ANON_KEY!
+  process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY!
 );
 
 // Contract addresses from environment
@@ -64,7 +69,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
         if (action === 'sync-evermark') {
           // Sync specific evermark voting data
           const evermarkId = queryStringParameters?.evermark_id;
-          const cycle = queryStringParameters?.cycle ? parseInt(queryStringParameters.cycle) : undefined;
+          const season = queryStringParameters?.cycle ? parseInt(queryStringParameters.cycle) : undefined;
           
           if (!evermarkId) {
             return {
@@ -74,7 +79,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
             };
           }
 
-          await syncEvermarkVotingData(votingContract, evermarkId, cycle);
+          await syncEvermarkVotingData(votingContract, evermarkId, season);
           
           return {
             statusCode: 200,
@@ -84,28 +89,37 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
         }
         
         else if (action === 'sync-cycle') {
-          // Sync current cycle data
-          let cycle: number;
+          // Sync current season data (cycle is legacy naming)
+          let season: number;
           if (queryStringParameters?.cycle) {
-            cycle = parseInt(queryStringParameters.cycle);
+            season = parseInt(queryStringParameters.cycle);
           } else {
-            const currentCycle = await getCurrentCycle(votingContract);
-            if (!currentCycle) {
+            const currentSeason = await getCurrentSeason(votingContract);
+            if (currentSeason === null) {
               return {
                 statusCode: 400,
                 headers,
-                body: JSON.stringify({ error: 'No active cycle found' }),
+                body: JSON.stringify({ error: 'No active season found' }),
               };
             }
-            cycle = currentCycle;
+            season = currentSeason;
           }
 
-          await syncVotingCycleData(votingContract, cycle);
+          // Sync season metadata
+          await syncVotingSeasonData(votingContract, season);
+          
+          // Sync all evermark votes for this season
+          const syncResult = await syncAllEvermarkVotesForSeason(votingContract, season);
           
           return {
             statusCode: 200,
             headers,
-            body: JSON.stringify({ success: true, message: `Synced cycle ${cycle} data` }),
+            body: JSON.stringify({ 
+              success: true, 
+              message: `Synced season ${season} data`,
+              evermarksSynced: syncResult.syncedCount,
+              debugInfo: syncResult.debugInfo
+            }),
           };
         }
         
@@ -133,13 +147,131 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
           };
         }
         
+        else if (action === 'get-current-cycle') {
+          // Get current season from contract (cycle is legacy naming)
+          try {
+            const currentSeason = await getCurrentSeason(votingContract);
+            
+            return {
+              statusCode: 200,
+              headers,
+              body: JSON.stringify({ 
+                currentCycle: currentSeason,  // Keep 'currentCycle' key for compatibility
+                currentSeason: currentSeason,
+                message: `Current season: ${currentSeason}`
+              }),
+            };
+          } catch (error) {
+            console.error('Failed to get current season:', error);
+            return {
+              statusCode: 500,
+              headers,
+              body: JSON.stringify({ 
+                error: 'Failed to read current season',
+                details: error instanceof Error ? error.message : 'Unknown error'
+              }),
+            };
+          }
+        }
+        
+        else if (action === 'debug-env') {
+          // Debug environment variables
+          return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify({
+              hasSupabaseUrl: !!(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL),
+              hasSupabaseAnonKey: !!(process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY),
+              hasSupabaseServiceKey: !!process.env.SUPABASE_SERVICE_KEY,
+              hasVotingContract: !!process.env.VITE_EVERMARK_VOTING_ADDRESS,
+              votingContract: process.env.VITE_EVERMARK_VOTING_ADDRESS
+            }),
+          };
+        }
+        
+        else if (action === 'test-cache') {
+          // Test if we can write to voting_cache table
+          try {
+            const { data, error } = await supabase
+              .from('voting_cache')
+              .upsert({
+                evermark_id: '999',
+                cycle_number: 3,
+                total_votes: '1000000000000000000000',
+                voter_count: 1,
+                last_updated: new Date().toISOString()
+              }, {
+                onConflict: 'evermark_id,cycle_number'
+              });
+              
+            return {
+              statusCode: 200,
+              headers,
+              body: JSON.stringify({
+                success: !error,
+                error: error ? {
+                  message: error.message,
+                  code: error.code,
+                  details: error.details,
+                  hint: error.hint
+                } : null,
+                data
+              }),
+            };
+          } catch (testError) {
+            return {
+              statusCode: 500,
+              headers,
+              body: JSON.stringify({
+                success: false,
+                error: testError instanceof Error ? testError.message : 'Unknown error'
+              }),
+            };
+          }
+        }
+        
+        else if (action === 'debug-votes') {
+          // Debug specific evermark votes
+          const evermarkId = queryStringParameters?.evermark_id || '2';
+          const season = queryStringParameters?.cycle ? parseInt(queryStringParameters.cycle) : 3;
+          
+          try {
+            const votes = await readContract({
+              contract: votingContract,
+              method: "function getEvermarkVotesInSeason(uint256 season, uint256 evermarkId) view returns (uint256)",
+              params: [BigInt(season), BigInt(evermarkId)]
+            }) as bigint;
+            
+            return {
+              statusCode: 200,
+              headers,
+              body: JSON.stringify({
+                evermarkId,
+                season,
+                votes: votes.toString(),
+                contractAddress: VOTING_CONTRACT_ADDRESS,
+                rawVotes: votes.toString()
+              }),
+            };
+          } catch (error) {
+            return {
+              statusCode: 500,
+              headers,
+              body: JSON.stringify({
+                error: 'Failed to read votes',
+                details: error instanceof Error ? error.message : 'Unknown error'
+              }),
+            };
+          }
+        }
+        
         else {
           return {
             statusCode: 400,
             headers,
             body: JSON.stringify({ 
               error: 'Invalid action',
-              available_actions: ['sync-evermark', 'sync-cycle', 'sync-recent', 'stats']
+              available_actions: ['sync-evermark', 'sync-cycle', 'sync-recent', 'stats', 'get-current-cycle']
             }),
           };
         }
@@ -149,13 +281,13 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
         const webhookData = JSON.parse(event.body || '{}');
         
         if (webhookData.type === 'vote_cast') {
-          const { evermarkId, userAddress, amount, transactionHash, blockNumber, cycle } = webhookData;
+          const { evermarkId, userAddress, amount, transactionHash, blockNumber, season } = webhookData;
           
           // Cache the user vote
-          await cacheUserVote(userAddress, evermarkId, cycle, amount, transactionHash, blockNumber);
+          await cacheUserVote(userAddress, evermarkId, season, amount, transactionHash, blockNumber);
           
           // Update the evermark voting totals
-          await syncEvermarkVotingData(votingContract, evermarkId, cycle);
+          await syncEvermarkVotingData(votingContract, evermarkId, season);
           
           return {
             statusCode: 200,
@@ -191,19 +323,19 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
 };
 
 /**
- * Get current voting cycle from contract
+ * Get current voting season from contract
  */
-async function getCurrentCycle(votingContract: any): Promise<number | null> {
+async function getCurrentSeason(votingContract: any): Promise<number | null> {
   try {
-    const currentCycle = await readContract({
+    const currentSeason = await readContract({
       contract: votingContract,
-      method: "function getCurrentCycle() view returns (uint256)",
+      method: "function getCurrentSeason() view returns (uint256)",
       params: []
     });
     
-    return Number(currentCycle);
+    return Number(currentSeason);
   } catch (error) {
-    console.error('Failed to get current cycle:', error);
+    console.error('Failed to get current season:', error);
     return null;
   }
 }
@@ -211,28 +343,28 @@ async function getCurrentCycle(votingContract: any): Promise<number | null> {
 /**
  * Sync voting data for a specific evermark
  */
-async function syncEvermarkVotingData(votingContract: any, evermarkId: string, cycle?: number): Promise<void> {
+async function syncEvermarkVotingData(votingContract: any, evermarkId: string, season?: number): Promise<void> {
   try {
-    if (!cycle) {
-      const currentCycle = await getCurrentCycle(votingContract);
-      if (!currentCycle) return;
-      cycle = currentCycle;
+    if (!season) {
+      const currentSeason = await getCurrentSeason(votingContract);
+      if (currentSeason === null) return;
+      season = currentSeason;
     }
 
     // Get vote amount from contract
     const votes = await readContract({
       contract: votingContract,
-      method: "function getEvermarkVotesInCycle(uint256 cycle, uint256 evermarkId) view returns (uint256)",
-      params: [BigInt(cycle), BigInt(evermarkId)]
+      method: "function getEvermarkVotesInSeason(uint256 season, uint256 evermarkId) view returns (uint256)",
+      params: [BigInt(season), BigInt(evermarkId)]
     }) as bigint;
 
     // Get unique voter count from events
-    const voterCount = await getEvermarkVoterCount(votingContract, evermarkId, cycle);
+    const voterCount = await getEvermarkVoterCount(votingContract, evermarkId, season);
 
-    // Update cache
-    await updateVotingCache(evermarkId, cycle, votes, voterCount);
+    // Update cache (using season as cycle_number for compatibility)
+    await updateVotingCache(evermarkId, season, votes, voterCount);
     
-    console.log(`Synced voting data for evermark ${evermarkId} cycle ${cycle}:`, {
+    console.log(`Synced voting data for evermark ${evermarkId} season ${season}:`, {
       votes: votes.toString(),
       voterCount
     });
@@ -244,15 +376,15 @@ async function syncEvermarkVotingData(votingContract: any, evermarkId: string, c
 /**
  * Get unique voter count for an evermark in a cycle
  */
-async function getEvermarkVoterCount(votingContract: any, evermarkId: string, cycle: number): Promise<number> {
+async function getEvermarkVoterCount(votingContract: any, evermarkId: string, season: number): Promise<number> {
   try {
-    const voteDelegatedEvent = prepareEvent({
-      signature: "event VoteDelegated(address indexed user, uint256 indexed evermarkId, uint256 amount, uint256 indexed cycle)"
+    const voteCastEvent = prepareEvent({
+      signature: "event VoteCast(address indexed voter, uint256 indexed season, uint256 indexed evermarkId, uint256 votes)"
     });
 
     const events = await getContractEvents({
       contract: votingContract,
-      events: [voteDelegatedEvent],
+      events: [voteCastEvent],
       fromBlock: 0n,
       toBlock: 'latest'
     });
@@ -261,9 +393,9 @@ async function getEvermarkVoterCount(votingContract: any, evermarkId: string, cy
       events
         .filter(event => 
           event.args.evermarkId?.toString() === evermarkId &&
-          Number(event.args.cycle) === cycle
+          Number(event.args.season) === season
         )
-        .map(event => event.args.user)
+        .map(event => event.args.voter)
     );
 
     return uniqueVoters.size;
@@ -274,41 +406,130 @@ async function getEvermarkVoterCount(votingContract: any, evermarkId: string, cy
 }
 
 /**
- * Sync voting cycle metadata
+ * Sync all evermark votes for a season
  */
-async function syncVotingCycleData(votingContract: any, cycle: number): Promise<void> {
+async function syncAllEvermarkVotesForSeason(votingContract: any, season: number): Promise<{syncedCount: number; debugInfo: any}> {
   try {
-    const cycleInfo = await readContract({
+    // Get all evermarks from the database
+    const { data: evermarks, error } = await supabase
+      .from('beta_evermarks')
+      .select('token_id')
+      .order('token_id', { ascending: true });
+    
+    if (error || !evermarks) {
+      console.error('Failed to fetch evermarks:', error);
+      return 0;
+    }
+    
+    console.log(`Found ${evermarks.length} evermarks to check for votes in season ${season}`);
+    console.log('First few evermarks:', evermarks.slice(0, 3).map(e => ({ token_id: e.token_id, hasTokenId: !!e.token_id })));
+    
+    let syncedCount = 0;
+    const debugLogs: string[] = [];
+    
+    // Check each evermark for votes
+    for (const evermark of evermarks) {
+      // Skip evermarks with null or undefined token_id
+      if (!evermark.token_id && evermark.token_id !== 0) {
+        console.warn(`Skipping evermark with null token_id:`, evermark);
+        continue;
+      }
+      
+      try {
+        const evermarkId = evermark.token_id.toString();
+        
+        // Get votes from contract
+        const votes = await readContract({
+          contract: votingContract,
+          method: "function getEvermarkVotesInSeason(uint256 season, uint256 evermarkId) view returns (uint256)",
+          params: [BigInt(season), BigInt(evermarkId)]
+        }) as bigint;
+        
+        // Log vote results for debugging (especially for evermarks 2 and 3)
+        if (evermarkId === '2' || evermarkId === '3' || votes > BigInt(0)) {
+          const logMsg = `🔍 Evermark ${evermarkId} votes in season ${season}: ${votes.toString()}`;
+          console.log(logMsg);
+          debugLogs.push(logMsg);
+        }
+        
+        if (votes > BigInt(0)) {
+          try {
+            // Skip voter count for now since it's expensive and might be causing timeouts
+            const voterCount = 0;
+            
+            // Update cache
+            debugLogs.push(`Attempting to update cache for evermark ${evermarkId}...`);
+            await updateVotingCache(evermarkId, season, votes, voterCount);
+            debugLogs.push(`Cache update successful for evermark ${evermarkId}`);
+            
+            const successMsg = `Synced evermark ${evermarkId}: ${votes.toString()} votes, ${voterCount} voters`;
+            console.log(successMsg);
+            debugLogs.push(successMsg);
+            syncedCount++;
+          } catch (syncError) {
+            const errorMsg = `Failed to sync evermark ${evermarkId}: ${syncError instanceof Error ? syncError.message : JSON.stringify(syncError)}`;
+            console.error(errorMsg);
+            debugLogs.push(errorMsg);
+          }
+        }
+      } catch (error) {
+        console.error(`Failed to sync evermark ${evermark.token_id}:`, error);
+      }
+    }
+    
+    console.log(`Synced ${syncedCount} evermarks with votes in season ${season}`);
+    
+    const debugInfo = {
+      season,
+      totalEvermarksChecked: evermarks.length,
+      sampleTokenIds: evermarks.slice(0, 5).map(e => e.token_id),
+      nullTokenIds: evermarks.filter(e => !e.token_id && e.token_id !== 0).length,
+      debugLogs
+    };
+    
+    return { syncedCount, debugInfo };
+    
+  } catch (error) {
+    console.error('Failed to sync all evermark votes:', error);
+    return { 
+      syncedCount: 0, 
+      debugInfo: { error: error instanceof Error ? error.message : 'Unknown error' }
+    };
+  }
+}
+
+/**
+ * Sync voting season metadata
+ */
+async function syncVotingSeasonData(votingContract: any, season: number): Promise<void> {
+  try {
+    const seasonInfo = await readContract({
       contract: votingContract,
-      method: "function getCycleInfo(uint256 cycle) view returns (uint256 startTime, uint256 endTime, uint256 totalVotes, uint256 totalDelegations, bool finalized, uint256 activeEvermarksCount)",
-      params: [BigInt(cycle)]
+      method: "function getSeasonInfo(uint256 season) view returns (uint256 startTime, uint256 endTime, bool active, uint256 totalVotes)",
+      params: [BigInt(season)]
     });
 
-    if (!cycleInfo) return;
+    if (!seasonInfo) return;
 
-    const [startTime, endTime, totalVotes, totalDelegations, finalized, activeEvermarksCount] = cycleInfo as [bigint, bigint, bigint, bigint, boolean, bigint];
-
-    const isActive = !finalized && Date.now() < Number(endTime) * 1000;
+    const [startTime, endTime, active, totalVotes] = seasonInfo as [bigint, bigint, boolean, bigint];
 
     await updateVotingCycle(
-      cycle,
+      season,
       new Date(Number(startTime) * 1000),
       new Date(Number(endTime) * 1000),
-      isActive,
-      finalized,
+      active,
+      !active,  // finalized is opposite of active
       totalVotes,
-      Number(totalDelegations),
-      Number(activeEvermarksCount)
+      0,  // totalDelegations not available in this contract
+      0   // activeEvermarksCount not available in this contract
     );
 
-    console.log(`Synced cycle ${cycle} data:`, {
-      isActive,
-      finalized,
-      totalVotes: totalVotes.toString(),
-      totalVoters: Number(totalDelegations)
+    console.log(`Synced season ${season} data:`, {
+      isActive: active,
+      totalVotes: totalVotes.toString()
     });
   } catch (error) {
-    console.error(`Failed to sync cycle ${cycle} data:`, error);
+    console.error(`Failed to sync season ${season} data:`, error);
   }
 }
 
@@ -321,27 +542,27 @@ async function syncRecentVotingEvents(votingContract: any, blockRange: number): 
     const currentBlock = await votingContract.chain.rpc('eth_blockNumber');
     const fromBlock = BigInt(parseInt(currentBlock, 16)) - BigInt(blockRange);
 
-    const voteDelegatedEvent = prepareEvent({
-      signature: "event VoteDelegated(address indexed user, uint256 indexed evermarkId, uint256 amount, uint256 indexed cycle)"
+    const voteCastEvent = prepareEvent({
+      signature: "event VoteCast(address indexed voter, uint256 indexed season, uint256 indexed evermarkId, uint256 votes)"
     });
 
     const events = await getContractEvents({
       contract: votingContract,
-      events: [voteDelegatedEvent],
+      events: [voteCastEvent],
       fromBlock,
       toBlock: 'latest'
     });
 
     // Process events and update cache
     for (const event of events) {
-      const { user, evermarkId, amount, cycle } = event.args;
+      const { voter, evermarkId, votes, season } = event.args;
       
-      if (user && evermarkId && amount && cycle) {
+      if (voter && evermarkId && votes && season) {
         await cacheUserVote(
-          user,
+          voter,
           evermarkId.toString(),
-          Number(cycle),
-          amount,
+          Number(season),
+          votes,
           event.transactionHash,
           BigInt(event.blockNumber)
         );
@@ -359,7 +580,7 @@ async function syncRecentVotingEvents(votingContract: any, blockRange: number): 
  */
 async function updateVotingCache(
   evermarkId: string, 
-  cycle: number, 
+  season: number, 
   totalVotes: bigint, 
   voterCount: number
 ): Promise<void> {
@@ -367,7 +588,7 @@ async function updateVotingCache(
     .from('voting_cache')
     .upsert({
       evermark_id: evermarkId,
-      cycle_number: cycle,
+      cycle_number: season,  // DB field is still cycle_number for compatibility
       total_votes: totalVotes.toString(),
       voter_count: voterCount,
       last_updated: new Date().toISOString()
@@ -377,7 +598,7 @@ async function updateVotingCache(
 
   if (error) {
     console.error('Failed to update voting cache:', error);
-    throw error;
+    throw new Error(`Supabase voting_cache upsert failed: ${error.message || error.code || 'Unknown Supabase error'}`);
   }
 }
 
@@ -387,7 +608,7 @@ async function updateVotingCache(
 async function cacheUserVote(
   userAddress: string,
   evermarkId: string,
-  cycle: number,
+  season: number,
   voteAmount: bigint,
   transactionHash?: string,
   blockNumber?: bigint
@@ -397,7 +618,7 @@ async function cacheUserVote(
     .upsert({
       user_address: userAddress.toLowerCase(),
       evermark_id: evermarkId,
-      cycle_number: cycle,
+      cycle_number: season,  // DB field is still cycle_number for compatibility
       vote_amount: voteAmount.toString(),
       transaction_hash: transactionHash,
       block_number: blockNumber?.toString(),

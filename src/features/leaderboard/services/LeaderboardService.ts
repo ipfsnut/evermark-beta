@@ -268,13 +268,16 @@ export class LeaderboardService {
     } = options;
     
     try {
-      // Get cycle number from filters
-      const cycle = filters.period === 'current' ? 0 : 
-                   filters.period?.startsWith('season-') ? 
-                   parseInt(filters.period.replace('season-', '')) : 0;
+      // Build URL with cycle parameter only if specific season requested
+      let url = '/.netlify/functions/leaderboard-data';
+      if (filters.period?.startsWith('season-')) {
+        const cycle = parseInt(filters.period.replace('season-', ''));
+        url += `?cycle=${cycle}`;
+      }
+      // For 'current' or no period, omit cycle parameter to let endpoint read from contract
 
       // Fetch leaderboard data from our optimized endpoint
-      const response = await fetch(`/.netlify/functions/leaderboard-data?cycle=${cycle}`);
+      const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`Failed to fetch leaderboard: ${response.status}`);
       }
@@ -284,20 +287,22 @@ export class LeaderboardService {
       
       // Convert to LeaderboardEntry format
       const allEntries: LeaderboardEntry[] = evermarksWithVotes.map((evermark: any, index: number) => ({
+        id: evermark.id,
         rank: index + 1,
         evermarkId: evermark.id,
-        title: evermark.title,
-        description: evermark.description,
-        creator: evermark.owner,
+        title: evermark.title || 'Untitled',
+        description: evermark.description || '',
+        creator: evermark.author || evermark.owner || 'Unknown',
         totalVotes: BigInt(evermark.totalVotes || 0),
-        voterCount: evermark.voterCount || 0,
+        voteCount: evermark.voterCount || 0,
         percentageOfTotal: 0, // Will calculate below
-        contentType: evermark.contentType,
-        verified: evermark.verified,
+        contentType: evermark.contentType || 'Custom',
+        verified: evermark.verified || false,
         createdAt: evermark.createdAt,
         change: { direction: 'stable', positions: 0 },
-        imageUrl: evermark.supabaseImageUrl,
-        sourceUrl: evermark.sourceUrl
+        image: evermark.supabaseImageUrl,
+        sourceUrl: evermark.sourceUrl,
+        tags: evermark.tags || []
       }));
       
       // Calculate percentage of total votes

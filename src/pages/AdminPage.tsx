@@ -265,6 +265,40 @@ export default function AdminPage(): React.ReactNode {
     }
   };
 
+  // Voting Cache Sync
+  const syncVotingCache = async (cycle?: number) => {
+    try {
+      let targetCycle: number;
+      
+      if (cycle !== undefined) {
+        targetCycle = cycle;
+      } else {
+        // Get current cycle from contract
+        const response = await fetch('/.netlify/functions/voting-sync?action=get-current-cycle');
+        if (response.ok) {
+          const data = await response.json();
+          targetCycle = data.currentCycle;
+        } else {
+          throw new Error('Failed to get current cycle from contract');
+        }
+      }
+      
+      setActionStatus(`Syncing voting cache for cycle ${targetCycle}...`);
+      
+      const response = await fetch(`/.netlify/functions/voting-sync?action=sync-cycle&cycle=${targetCycle}`);
+      if (!response.ok) {
+        throw new Error(`Sync failed: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      setActionStatus(`Cycle ${targetCycle} voting cache synced successfully!`);
+      setTimeout(() => setActionStatus(''), 3000);
+    } catch (error) {
+      setActionStatus(`Cache sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setTimeout(() => setActionStatus(''), 5000);
+    }
+  };
+
   // Batch Image Generation
   const batchGenerateImages = async () => {
     if (batchProgress?.isRunning) return;
@@ -878,10 +912,52 @@ export default function AdminPage(): React.ReactNode {
                 </p>
               </div>
               
+              {/* Cache Management */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-red-400">Emergency Controls</h3>
+                <h3 className="text-lg font-semibold text-yellow-400">Cache Management</h3>
+                
+                <div className="space-y-2">
+                  <button
+                    onClick={() => syncVotingCache()}
+                    disabled={isPending}
+                    className="w-full flex items-center justify-center px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg text-sm transition-colors"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Sync Current Cycle (from contract)
+                  </button>
+                  
+                  <div className="text-xs text-gray-400 text-center mb-2">Manual cycle sync (for testing):</div>
+                  
+                  <button
+                    onClick={() => syncVotingCache(0)}
+                    disabled={isPending}
+                    className="w-full flex items-center justify-center px-4 py-2 bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg text-sm transition-colors"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Sync Cycle 0
+                  </button>
+                  
+                  <button
+                    onClick={() => syncVotingCache(1)}
+                    disabled={isPending}
+                    className="w-full flex items-center justify-center px-4 py-2 bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg text-sm transition-colors"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Sync Cycle 1
+                  </button>
+                  
+                  <button
+                    onClick={() => syncVotingCache(2)}
+                    disabled={isPending}
+                    className="w-full flex items-center justify-center px-4 py-2 bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg text-sm transition-colors"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Sync Cycle 2
+                  </button>
+                </div>
+                
                 <p className="text-sm text-gray-400">
-                  Emergency pause/unpause functions will be available here when needed.
+                  Sync voting data from different cycles to find where votes are stored.
                 </p>
               </div>
             </div>

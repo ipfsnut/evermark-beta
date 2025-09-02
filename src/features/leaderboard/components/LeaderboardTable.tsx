@@ -158,7 +158,7 @@ export function LeaderboardTable({
   };
 
   // Memoized filtered entries for performance
-  const displayEntries = useMemo(() => entries, [entries]);
+  const displayEntries = useMemo(() => entries || [], [entries]);
 
   if (error) {
     return (
@@ -432,7 +432,7 @@ export function LeaderboardTable({
                       </div>
 
                       {/* Tags - improved mobile display */}
-                      {entry.tags.length > 0 && (
+                      {entry.tags && entry.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1">
                           {entry.tags.slice(0, 3).map((tag, index) => (
                             <span
