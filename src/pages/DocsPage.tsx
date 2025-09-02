@@ -57,6 +57,13 @@ const DOCS_ITEMS: DocItem[] = [
     description: 'Smart contract architecture and technical implementation details',
     filename: 'technical-overview.md',
     type: 'md'
+  },
+  {
+    id: 'beta-points',
+    title: 'Beta Points System',
+    description: 'How to earn and convert beta points to EMARK tokens',
+    filename: 'beta-points.md',
+    type: 'md'
   }
 ];
 

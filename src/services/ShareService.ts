@@ -242,9 +242,9 @@ export class ShareService {
       ? this.generateMiniAppUrlForPath(`/docs/${docId}`, 'share')
       : `${window.location.origin}/docs/${docId}`;
     
-    const text = `Check out this Evermark documentation: "${docTitle}" 📚`;
+    const text = `Check out this Evermark documentation: "${docTitle}" 📚\n\n${url}`;
     
-    const farcasterUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}&embeds[]=${encodeURIComponent(url)}`;
+    const farcasterUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}`;
     
     // Open Farcaster sharing dialog
     window.open(farcasterUrl, '_blank', 'width=550,height=600');
