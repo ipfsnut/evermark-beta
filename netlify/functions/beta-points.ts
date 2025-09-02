@@ -2,8 +2,8 @@ import { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_ANON_KEY!
+  process.env.VITE_SUPABASE_URL!,
+  process.env.VITE_SUPABASE_ANON_KEY!
 );
 
 const POINTS_TABLE = 'beta_points';
@@ -223,12 +223,10 @@ async function handleAwardPoints(event: HandlerEvent) {
   // Upsert total points with proper increment
   const { data: updatedPoints, error: pointsError } = await supabase
     .from(POINTS_TABLE)
-    .upsert([{
+    .upsert({
       wallet_address: walletAddress,
-      total_points: newTotal
-    }], {
-      onConflict: 'wallet_address',
-      ignoreDuplicates: false
+      total_points: newTotal,
+      updated_at: new Date().toISOString()
     })
     .select()
     .single();
