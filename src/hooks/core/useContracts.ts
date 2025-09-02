@@ -1,12 +1,20 @@
 // src/hooks/core/useContracts.ts
-// Fixed version - thirdweb v5 can work without ABIs for verified contracts
+// Single source of truth for contract instances - prevents duplicate creation
 
 import { useMemo } from 'react';
 import { getContract } from 'thirdweb';
 import { client } from '@/lib/thirdweb';
 import { base } from 'thirdweb/chains';
-import EMARKABI from '@/features/tokens/abis/EMARK.json';
 import type { Abi } from 'abitype';
+
+// Import all ABIs from their feature folders
+import EMARKABI from '@/features/tokens/abis/EMARK.json';
+import WEMARKABBI from '@/features/staking/abis/WEMARK.abi.json';
+import EvermarkNFTABI from '@/features/evermarks/abis/EvermarkNFT.abi.json';
+import EvermarkVotingABI from '@/features/voting/abis/EvermarkVoting.abi.json';
+import NFTStakingABI from '@/features/staking/abis/NFTStaking.abi.json';
+import EvermarkRewardsABI from '@/features/tokens/abis/EvermarkRewards.abi.json';
+import FeeCollectorABI from '@/lib/abis/FeeCollector.abi.json';
 
 // Contract addresses with fallbacks for different environments
 const CONTRACT_ADDRESSES = {
@@ -40,37 +48,43 @@ export function useContracts() {
         wemark: getContract({
           client,
           chain: base,
-          address: getContractAddress(CONTRACT_ADDRESSES.WEMARK, 'WEMARK Token')
+          address: getContractAddress(CONTRACT_ADDRESSES.WEMARK, 'WEMARK Token'),
+          abi: WEMARKABBI as Abi
         }),
         
         evermarkNFT: getContract({
           client,
           chain: base,
-          address: getContractAddress(CONTRACT_ADDRESSES.EVERMARK_NFT, 'Evermark NFT')
+          address: getContractAddress(CONTRACT_ADDRESSES.EVERMARK_NFT, 'Evermark NFT'),
+          abi: EvermarkNFTABI as Abi
         }),
         
         evermarkVoting: getContract({
           client,
           chain: base,
-          address: getContractAddress(CONTRACT_ADDRESSES.EVERMARK_VOTING, 'Evermark Voting')
+          address: getContractAddress(CONTRACT_ADDRESSES.EVERMARK_VOTING, 'Evermark Voting'),
+          abi: EvermarkVotingABI as Abi
         }),
         
         nftStaking: getContract({
           client,
           chain: base,
-          address: getContractAddress(CONTRACT_ADDRESSES.NFT_STAKING, 'NFT Staking')
+          address: getContractAddress(CONTRACT_ADDRESSES.NFT_STAKING, 'NFT Staking'),
+          abi: NFTStakingABI as Abi
         }),
         
         evermarkRewards: getContract({
           client,
           chain: base,
-          address: getContractAddress(CONTRACT_ADDRESSES.EVERMARK_REWARDS, 'Evermark Rewards')
+          address: getContractAddress(CONTRACT_ADDRESSES.EVERMARK_REWARDS, 'Evermark Rewards'),
+          abi: EvermarkRewardsABI as Abi
         }),
         
         feeCollector: getContract({
           client,
           chain: base,
-          address: getContractAddress(CONTRACT_ADDRESSES.FEE_COLLECTOR, 'Fee Collector')
+          address: getContractAddress(CONTRACT_ADDRESSES.FEE_COLLECTOR, 'Fee Collector'),
+          abi: FeeCollectorABI as Abi
         })
       };
     } catch (error) {

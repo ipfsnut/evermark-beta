@@ -74,10 +74,62 @@ export default function MyEvermarksPage() {
     return filtered;
   }, [evermarks, searchQuery, filters]);
 
-  // Filter by current wallet and apply search/filters
-  const myCreatedEvermarks = filteredEvermarks.filter(evermark => 
+  // Filter by current wallet (test: use unfiltered evermarks first)
+  const myCreatedEvermarks = evermarks.filter(evermark => 
     user?.address && evermark.creator.toLowerCase() === user.address.toLowerCase()
   );
+
+  // Apply search/filters only to created evermarks if needed
+  const filteredCreatedEvermarks = useMemo(() => {
+    if (activeTab !== 'created') return myCreatedEvermarks;
+    
+    let filtered = myCreatedEvermarks;
+
+    // Apply search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(evermark => 
+        evermark.title.toLowerCase().includes(query) ||
+        evermark.author.toLowerCase().includes(query) ||
+        evermark.description.toLowerCase().includes(query) ||
+        evermark.tags.some(tag => tag.toLowerCase().includes(query))
+      );
+    }
+
+    // Apply filters
+    if (filters.author) {
+      filtered = filtered.filter(evermark => 
+        evermark.author.toLowerCase().includes(filters.author!.toLowerCase())
+      );
+    }
+
+    if (filters.contentType) {
+      filtered = filtered.filter(evermark => evermark.contentType === filters.contentType);
+    }
+
+    if (filters.verified !== undefined) {
+      filtered = filtered.filter(evermark => evermark.verified === filters.verified);
+    }
+
+    if (filters.tags && filters.tags.length > 0) {
+      filtered = filtered.filter(evermark => 
+        filters.tags!.some(tag => 
+          evermark.tags.some(evermarkTag => 
+            evermarkTag.toLowerCase().includes(tag.toLowerCase())
+          )
+        )
+      );
+    }
+
+    return filtered;
+  }, [myCreatedEvermarks, activeTab, searchQuery, filters]);
+
+  // Debug: Check if evermarks are being filtered out
+  console.log('Debug - Total evermarks:', evermarks.length);
+  console.log('Debug - My created evermarks:', myCreatedEvermarks.length);
+  console.log('Debug - Filtered created evermarks:', filteredCreatedEvermarks.length);
+  console.log('Debug - Current filters:', filters);
+  console.log('Debug - User address:', user?.address);
   
   // Load user votes for each evermark to determine supported ones
   useEffect(() => {
@@ -104,8 +156,8 @@ export default function MyEvermarksPage() {
     loadUserVotesForEvermarks();
   }, [user?.address, evermarks, getUserVotesForEvermark]);
 
-  // Supported evermarks: ones where user has delegated votes (also filtered)
-  const mySupportedEvermarks = filteredEvermarks.filter(evermark => {
+  // Base supported evermarks: ones where user has delegated votes
+  const baseSupportedEvermarks = evermarks.filter(evermark => {
     // User is not the creator
     if (evermark.creator.toLowerCase() === user?.address?.toLowerCase()) {
       return false;
@@ -121,6 +173,51 @@ export default function MyEvermarksPage() {
     
     return hasVotedFromContract || hasVotedFromHistory || false;
   });
+
+  // Apply search/filters to supported evermarks if needed
+  const filteredSupportedEvermarks = useMemo(() => {
+    if (activeTab !== 'supported') return baseSupportedEvermarks;
+    
+    let filtered = baseSupportedEvermarks;
+
+    // Apply search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(evermark => 
+        evermark.title.toLowerCase().includes(query) ||
+        evermark.author.toLowerCase().includes(query) ||
+        evermark.description.toLowerCase().includes(query) ||
+        evermark.tags.some(tag => tag.toLowerCase().includes(query))
+      );
+    }
+
+    // Apply filters (same logic as created)
+    if (filters.author) {
+      filtered = filtered.filter(evermark => 
+        evermark.author.toLowerCase().includes(filters.author!.toLowerCase())
+      );
+    }
+
+    if (filters.contentType) {
+      filtered = filtered.filter(evermark => evermark.contentType === filters.contentType);
+    }
+
+    if (filters.verified !== undefined) {
+      filtered = filtered.filter(evermark => evermark.verified === filters.verified);
+    }
+
+    if (filters.tags && filters.tags.length > 0) {
+      filtered = filtered.filter(evermark => 
+        filters.tags!.some(tag => 
+          evermark.tags.some(evermarkTag => 
+            evermarkTag.toLowerCase().includes(tag.toLowerCase())
+          )
+        )
+      );
+    }
+
+    return filtered;
+  }, [baseSupportedEvermarks, activeTab, searchQuery, filters]);
 
   useEffect(() => {
     // Load all evermarks and then filter client-side for now
@@ -140,7 +237,7 @@ export default function MyEvermarksPage() {
 
   // Share collection functionality
   const handleShareCollection = async () => {
-    const currentList = activeTab === 'created' ? myCreatedEvermarks : mySupportedEvermarks;
+    const currentList = activeTab === 'created' ? myCreatedEvermarks : baseSupportedEvermarks;
     const collectionType = activeTab === 'created' ? 'Portfolio' : 'Reading List';
     const userName = user?.displayName || user?.username || 'Anonymous';
     
@@ -237,7 +334,7 @@ export default function MyEvermarksPage() {
     );
   }
 
-  const currentEvermarks = activeTab === 'created' ? myCreatedEvermarks : mySupportedEvermarks;
+  const currentEvermarks = activeTab === 'created' ? filteredCreatedEvermarks : filteredSupportedEvermarks;
 
   return (
     <div className={`min-h-screen ${themeClasses.bg.primary} ${themeClasses.text.primary}`}>
@@ -311,7 +408,7 @@ export default function MyEvermarksPage() {
             )}
           >
             <Vote className="h-4 w-4 mr-2 inline" />
-            Supported ({mySupportedEvermarks.length})
+            Supported ({baseSupportedEvermarks.length})
           </button>
         </div>
 
