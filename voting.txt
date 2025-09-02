@@ -1,149 +1,318 @@
-# Voting System Design - Database-First Architecture
+# Voting System Design - Simplified & Efficient
 
-## Core Implementation ✅ WORKING
+## Core Concept
 
-The voting system now uses a **database-first architecture** where Supabase serves as the primary data source for leaderboards and user voting history.
+**The voting_cache table IS the leaderboard.** Each season, we store only evermarks that received votes, with their cumulative vote totals. The table naturally sorts evermarks by vote count.
 
-## Key Components
+## Key Principles
 
-### 1. Database Tables (✅ IMPLEMENTED & POPULATED)
+1. **Sparse Storage**: Only store evermarks that have votes in each season
+2. **Season Isolation**: Each season is independent - no carryover data
+3. **Database Sorting**: Let Supabase ORDER BY total_votes DESC for leaderboard
+4. **Minimal Blockchain Calls**: Batch read all evermark votes once per season
+5. **Vote-Triggered Updates**: Sync individual evermarks when users vote
+
+## Architecture
+
+### Smart Contract Layer
+- **EvermarkVoting Contract** on Base (0x5089FE55368E40c8990214Ca99bd2214b34A179D)
+- Uses seasons for voting periods (current: season 3)
+- Key methods:
+  - `getCurrentSeason()` - active season number
+  - `getEvermarkVotesInSeason(season, evermarkId)` - vote totals
+  - `voteForEvermark(evermarkId, votes)` - cast votes
+- Events: `VoteCast(voter, season, evermarkId, votes)`
+
+### Database Tables (Actual Existing Tables)
 
 **votes** - Individual Vote Records
 ```sql
+-- ACTUAL SCHEMA (verified):
 CREATE TABLE votes (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
-  user_id text NOT NULL,              -- User wallet address (lowercase)
+  user_id text NOT NULL,              -- User who voted (not user_address!)
   evermark_id text NOT NULL,          -- Evermark being voted on
-  cycle integer NOT NULL,             -- Season/cycle number (currently 3)
+  cycle integer NOT NULL,             -- Season/cycle number (not season!)
   amount text NOT NULL,               -- Vote amount as wei string
   action text NOT NULL DEFAULT 'delegate',  -- Type of vote action
   created_at timestamp with time zone DEFAULT now(),
-  metadata jsonb DEFAULT '{}'::jsonb  -- Transaction hash, etc.
+  metadata jsonb DEFAULT '{}'::jsonb  -- Additional vote metadata
 );
 ```
 
-**leaderboard** - Pre-computed Rankings
+**leaderboard** - Computed Leaderboard Data  
 ```sql
+-- ACTUAL SCHEMA (verified):
 CREATE TABLE leaderboard (
   evermark_id text NOT NULL,          -- Evermark ID
-  total_votes text NOT NULL,          -- Total votes as wei string  
-  rank integer NOT NULL,              -- Ranking position (1-indexed)
+  total_votes text NOT NULL,          -- Total votes as wei string
+  rank integer NOT NULL,              -- Ranking position
   cycle_id integer NOT NULL,          -- Season/cycle number
   updated_at timestamp with time zone DEFAULT now()
 );
 ```
 
-### 2. API Endpoints (✅ IMPLEMENTED)
+### Key Insights:
+1. **Column names matter**: `user_id` not `user_address`, `cycle` not `season`, `cycle_id` not `season`
+2. **The tables exist but are empty** - that's why leaderboard shows 0 votes
+3. **Leaderboard table has rank column** - perfect for pre-computed rankings
+4. **Amount/total_votes stored as text** - good for bigint handling
 
-**/.netlify/functions/leaderboard-data** - GET
-- Queries `leaderboard` table directly
-- Joins with `beta_evermarks` for metadata
-- Returns ranked evermarks with vote totals
-- No hardcoded fallbacks, pure database query
+### Why Everything Was Failing:
+Our voting-sync code was trying to write to non-existent tables (`voting_cache`) and non-existent columns (`user_address`, `season`). The actual tables have different column names!
 
-**/.netlify/functions/get-user-votes** - POST  
-- Queries `votes` table for user's voting history
-- Returns evermark IDs user has supported
-- Used by MyEvermarksPage for "Supported" tab
+## Smart Caching Strategy
 
-**/.netlify/functions/update-voting-data** - POST
-- Called automatically after every successful vote
-- Inserts vote record into `votes` table
-- Updates `leaderboard` table with new totals and rankings
-- Reads current vote total from blockchain for accuracy
+### 1. On-Demand Cache Population
+**Trigger Points:**
+- User visits leaderboard → sync current season data if cache is empty/stale
+- User votes on evermark → sync that specific evermark's data
+- User views "My Evermarks" → sync their voting history
+- Admin triggers manual sync → full season resync
 
-### 3. Frontend Integration (✅ IMPLEMENTED)
+**Implementation:**
+```typescript
+// leaderboard-data.ts
+if (votingCache.isEmpty() || votingCache.isStale()) {
+  // Return immediate response with available data
+  // Trigger background sync for next request
+  triggerBackgroundSync(currentSeason);
+}
+```
 
-**useVotingState.ts** (lines 189-213)
-- After successful blockchain vote transaction
-- Automatically calls `update-voting-data` endpoint
-- Invalidates React Query caches to trigger UI refresh
-- Awards points for voting action
+### 2. Smart Staleness Detection
+**Cache Freshness Rules:**
+- Voting data: Fresh for 5 minutes after last update
+- User votes: Fresh for 1 hour after last vote
+- Season metadata: Fresh for 24 hours
+- If any evermark has 0 votes but should have votes → trigger sync
 
-**MyEvermarksPage.tsx** (lines 144-173)  
-- "Supported" tab queries user's votes via `get-user-votes`
-- Shows evermarks user has delegated votes to
-- Uses React Query with 5-minute cache
+### 3. Efficient Blockchain Batching
+**Batch Operations:**
+- Read all evermark votes for a season in parallel
+- Use contract multicall when available
+- Process VoteCast events in chunks of 1000 blocks
+- Cache individual user votes during batch processing
 
-**leaderboard-data.ts** (lines 47-74)
-- Queries `leaderboard` table for current rankings
-- No blockchain calls during normal operation
-- Fast database-only queries
+### 4. Graceful Fallback Chain
+**Data Priority:**
+1. Fresh cache data (< 5 min old)
+2. Stale cache data (> 5 min, < 1 hour) + background refresh
+3. Direct blockchain read (with caching attempt)
+4. Empty state with sync trigger
 
-## Current Season 3 Data (✅ POPULATED)
+### 5. User-Action Triggers
+**Automatic Sync Points:**
+- Post-vote: Sync that evermark + user's vote history
+- Leaderboard view: Check for stale/missing data
+- My evermarks view: Sync user's voting history
+- No expensive automated background processes
 
-**Leaderboard Rankings:**
-1. Evermark #7 (Popfi) - 1,003,000 EMARK votes
-2. Evermark #2 (Alpha Retirement) - 11,000 EMARK votes  
-3. Evermark #17 (Cast by m00npapi.eth) - 2,000 EMARK votes
-4. Evermark #3 (Vitalik's COW) - 1,000 EMARK votes
-5. Evermark #6 (Policy abstraction) - 1,000 EMARK votes
+## Simple Implementation Plan
 
-**Vote Records:** Representative records created for historical totals
+### 1. Leaderboard Data Flow (Using Correct Column Names)
+```typescript
+// leaderboard-data.ts - Using actual table schemas
+async function handler(event) {
+  const currentSeason = 3; // Current season from contract
+  
+  // Option A: Use existing leaderboard table (pre-computed, fast!)
+  const { data: leaderboardData } = await supabase
+    .from('leaderboard')
+    .select('evermark_id, total_votes, rank')
+    .eq('cycle_id', currentSeason)
+    .order('rank', { ascending: true }); // Already ranked!
+    
+  if (leaderboardData?.length > 0) {
+    // Join with evermark metadata
+    const evermarkIds = leaderboardData.map(l => l.evermark_id);
+    const { data: evermarks } = await supabase
+      .from('beta_evermarks')
+      .select('*')
+      .in('token_id', evermarkIds);
+      
+    return leaderboardData.map(leader => ({
+      ...evermarks.find(e => e.token_id.toString() === leader.evermark_id),
+      totalVotes: leader.total_votes,
+      rank: leader.rank
+    }));
+  }
+  
+  // Option B: Aggregate from votes table if leaderboard empty
+  const { data: votesData } = await supabase
+    .from('votes')
+    .select('evermark_id, amount')
+    .eq('cycle', currentSeason)
+    .eq('action', 'delegate');
+    
+  // Aggregate votes by evermark_id
+  const aggregated = votesData?.reduce((acc, vote) => {
+    const current = acc[vote.evermark_id] || BigInt(0);
+    acc[vote.evermark_id] = current + BigInt(vote.amount);
+    return acc;
+  }, {});
+  
+  // Convert to sorted array and return
+  return Object.entries(aggregated)
+    .sort(([,a], [,b]) => b > a ? 1 : -1)
+    .map(([evermarkId, totalVotes], index) => ({
+      evermarkId,
+      totalVotes: totalVotes.toString(),
+      rank: index + 1
+    }));
+}
+```
 
-## Data Flow Architecture
+### 2. User "Supported" Evermarks (Using Correct Columns)
+```typescript
+// MyEvermarksPage.tsx - Using actual votes table schema
+const { data: userVotes } = useQuery({
+  queryKey: ['userVotes', user?.address],
+  queryFn: async () => {
+    if (!user?.address) return [];
+    
+    // Get evermark IDs user has voted on from votes table
+    const { data } = await supabase
+      .from('votes')
+      .select('evermark_id')
+      .eq('user_id', user.address.toLowerCase()) // correct column name!
+      .eq('cycle', 3) // current season
+      .eq('action', 'delegate');
+      
+    return data?.map(vote => vote.evermark_id) || [];
+  },
+  enabled: !!user?.address
+});
 
-### For NEW Votes (✅ AUTOMATIC):
-1. User votes through frontend → blockchain transaction
-2. `useVotingState.delegateVotes()` succeeds  
-3. Calls `update-voting-data` endpoint automatically
-4. Endpoint inserts vote record + updates leaderboard rankings
-5. React Query cache invalidation → UI refreshes with new data
+const supportedEvermarks = useMemo(() => {
+  if (!userVotes?.length) return [];
+  
+  // Filter evermarks to only show ones user voted on
+  return evermarks.filter(evermark => 
+    userVotes.includes(evermark.id)
+  );
+}, [evermarks, userVotes]);
+```
 
-### For Historical Data (✅ POPULATED):
-- `sync-season3-totals.ts` populated leaderboard table from blockchain
-- `populate-historical-votes.ts` created representative vote records
-- System now shows correct leaderboard rankings and user support
+### 3. Data Population Strategy (Using Correct Column Names)
+```typescript
+// When user votes - update actual tables using correct schema:
+async function afterVoteTransaction(evermarkId, userAddress, voteAmount, txHash, season) {
+  // 1. Insert into votes table (correct columns!)
+  await supabase.from('votes').insert({
+    user_id: userAddress.toLowerCase(),    // user_id not user_address
+    evermark_id: evermarkId,
+    cycle: season,                         // cycle not season
+    amount: voteAmount.toString(),         // amount not vote_amount
+    action: 'delegate',                    // specify action
+    metadata: { transaction_hash: txHash } // tx_hash goes in metadata
+  });
+  
+  // 2. Update leaderboard table with ranking
+  const currentTotal = await contract.getEvermarkVotesInSeason(season, evermarkId);
+  
+  // Get current leaderboard to calculate new rank
+  const { data: currentLeaderboard } = await supabase
+    .from('leaderboard')
+    .select('evermark_id, total_votes')
+    .eq('cycle_id', season)
+    .order('total_votes::numeric', { ascending: false });
+    
+  // Calculate new rankings
+  const updated = [...(currentLeaderboard || [])];
+  const existingIndex = updated.findIndex(l => l.evermark_id === evermarkId);
+  
+  if (existingIndex >= 0) {
+    updated[existingIndex].total_votes = currentTotal.toString();
+  } else {
+    updated.push({ evermark_id: evermarkId, total_votes: currentTotal.toString() });
+  }
+  
+  // Re-sort and assign ranks
+  updated.sort((a, b) => BigInt(b.total_votes) > BigInt(a.total_votes) ? 1 : -1);
+  
+  // Update leaderboard table
+  await supabase.from('leaderboard').upsert({
+    evermark_id: evermarkId,
+    cycle_id: season,                      // cycle_id not season
+    total_votes: currentTotal.toString(),
+    rank: updated.findIndex(l => l.evermark_id === evermarkId) + 1
+  });
+}
+```
 
-## Key Functions
+### 4. Initial Population (Using Correct Schema)
+```typescript
+// Populate leaderboard table with season 3 blockchain data
+async function populateLeaderboardData(season = 3) {
+  // Get known voted evermarks from blockchain (verified data)
+  const votedEvermarks = [
+    { id: '7', votes: '1003000000000000000000000' }, // 1,003,000 tokens - Rank 1
+    { id: '2', votes: '11000000000000000000000' },   // 11,000 tokens - Rank 2
+    { id: '17', votes: '2000000000000000000000' },   // 2,000 tokens - Rank 3
+    { id: '3', votes: '1000000000000000000000' },    // 1,000 tokens - Rank 4
+    { id: '6', votes: '1000000000000000000000' }     // 1,000 tokens - Rank 5
+  ];
+  
+  // Populate leaderboard table with correct column names
+  for (let i = 0; i < votedEvermarks.length; i++) {
+    const evermark = votedEvermarks[i];
+    await supabase.from('leaderboard').upsert({
+      evermark_id: evermark.id,
+      cycle_id: season,        // cycle_id not season
+      total_votes: evermark.votes,
+      rank: i + 1              // 1-indexed ranking
+    });
+  }
+  
+  console.log(`✅ Populated leaderboard table with ${votedEvermarks.length} evermarks for season ${season}`);
+}
+```
 
-**sync-season3-totals.ts** - One-time population
-- Reads current vote totals from blockchain for all evermarks
-- Populates `leaderboard` table with rankings
-- Used to bootstrap the system with historical data
+## The Elegant Solution
 
-**update-voting-data.ts** - Real-time maintenance  
-- Called after every vote transaction
-- Maintains both `votes` and `leaderboard` tables
-- Ensures rankings stay current automatically
+### Current Season 3 Data (Verified on Blockchain):
+- Evermark 2: 11,000 tokens
+- Evermark 3: 1,000 tokens  
+- Evermark 6: 1,000 tokens
+- Evermark 7: 1,003,000 tokens
+- Evermark 17: 2,000 tokens
 
-## Why This Works
+### What Should Happen:
 
-1. **Database Performance**: Leaderboard queries are instant (no blockchain calls)
-2. **Real-time Updates**: New votes automatically update database
-3. **User Support Tracking**: Individual vote records enable "Supported" evermarks
-4. **No Manual Intervention**: System maintains itself after initial population
-5. **Accurate Rankings**: Rankings recalculated after every vote
+1. **voting_cache table for season 3:**
+```
+evermark_id | cycle_number | total_votes
+7          | 3            | 1003000000000000000000000
+2          | 3            | 11000000000000000000000  
+17         | 3            | 2000000000000000000000
+3          | 3            | 1000000000000000000000
+6          | 3            | 1000000000000000000000
+```
 
-## Removed Features
+2. **leaderboard-data.ts simply queries:**
+```sql
+SELECT e.*, v.total_votes 
+FROM beta_evermarks e
+JOIN voting_cache v ON e.token_id::text = v.evermark_id
+WHERE v.cycle_number = 3
+ORDER BY v.total_votes::numeric DESC
+```
 
-- ❌ Hardcoded fallback data (removed from leaderboard-data.ts)
-- ❌ Complex blockchain event parsing during normal operation
-- ❌ Non-existent `voting_cache` table references
-- ❌ Incorrect column names (`user_address`, `season`, etc.)
+3. **No hardcoded data, no complex fallbacks, no blockchain calls during normal operation.**
 
-## Technical Details
+### The Problem:
+- Supabase permissions prevent writing to voting_cache
+- So table stays empty
+- So leaderboard shows nothing
+- So we added hardcoded fallbacks
 
-**Smart Contract Integration:**
-- Base network (chain ID 8453)
-- EvermarkVoting contract at `VITE_EVERMARK_VOTING_ADDRESS`
-- Method: `getEvermarkVotesInSeason(season, evermarkId)`
-- Used only for verification and updates, not normal queries
+### The Fix:
+1. Fix Supabase write permissions
+2. Run sync-season once to populate voting_cache
+3. Remove all hardcoded fallbacks
+4. System works automatically from database
+- Evermarks API works (18 evermarks loading correctly)
+- Frontend voting UI sends transactions successfully
+- Basic evermark display and filtering works
 
-**React Query Caching:**
-- Leaderboard: 30s stale time
-- User votes: 5min stale time  
-- Automatic invalidation after votes
-
-**Error Handling:**
-- Database failures don't break voting transactions
-- Graceful degradation if vote recording fails
-- Console logging for debugging
-
-## Current Status: ✅ FULLY FUNCTIONAL
-
-The voting system is now working correctly with:
-- Real leaderboard data from database
-- User "supported" evermarks functionality  
-- Automatic maintenance for new votes
-- No manual intervention required

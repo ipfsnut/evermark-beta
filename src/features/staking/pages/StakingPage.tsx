@@ -3,7 +3,9 @@ import React from 'react';
 import { StakingWidget, NFTStakingPanel, useStakingState } from '@/features/staking';
 import { TokenBalance } from '@/features/tokens';
 import { RewardsClaiming } from '@/features/tokens/components/RewardsClaiming';
+import { VotingPowerBreakdown } from '../components/VotingPowerBreakdown';
 import { useContractsStatus } from '@/hooks/core/useContracts';
+import { useWalletAccount } from '@/hooks/core/useWalletAccount';
 import { TrendingUpIcon, CoinsIcon, AlertCircleIcon, CheckCircleIcon } from 'lucide-react';
 import { cn, useIsMobile } from '@/utils/responsive';
 import { themeClasses } from '@/utils/theme';
@@ -11,6 +13,7 @@ import { themeClasses } from '@/utils/theme';
 export default function StakePage(): React.ReactNode {
   const stakingState = useStakingState();
   const contractsStatus = useContractsStatus();
+  const account = useWalletAccount();
   const isMobile = useIsMobile();
   
   const requiredContracts = ['emarkToken', 'wemark'];
@@ -147,6 +150,13 @@ export default function StakePage(): React.ReactNode {
             {/* Main Staking Widget */}
             <StakingWidget
               stakingState={stakingState}
+              className="w-full"
+            />
+
+            {/* Voting Power Breakdown */}
+            <VotingPowerBreakdown 
+              userAddress={account?.address}
+              wEmarkBalance={stakingState.stakingInfo?.wEmarkBalance || BigInt(0)}
               className="w-full"
             />
 
