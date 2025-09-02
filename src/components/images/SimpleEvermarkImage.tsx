@@ -10,6 +10,8 @@ interface SimpleEvermarkImageProps {
   alt?: string;
   className?: string;
   variant?: 'hero' | 'standard' | 'compact' | 'list';
+  contentType?: string;
+  autoGenerate?: boolean;
   onLoad?: () => void;
   onError?: (error: string) => void;
 }
@@ -21,6 +23,8 @@ export function SimpleEvermarkImage({
   alt,
   className = '',
   variant = 'standard',
+  contentType,
+  autoGenerate = true,
   onLoad,
   onError
 }: SimpleEvermarkImageProps) {
@@ -30,7 +34,9 @@ export function SimpleEvermarkImage({
     originalUrl,
     {
       preferThumbnail: variant === 'compact' || variant === 'list',
-      autoLoad: true
+      autoLoad: true,
+      contentType,
+      autoGenerate
     }
   );
 

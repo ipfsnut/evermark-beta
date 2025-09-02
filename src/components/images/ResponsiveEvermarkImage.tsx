@@ -11,6 +11,8 @@ interface ResponsiveEvermarkImageProps {
   alt?: string;
   className?: string;
   variant?: 'hero' | 'standard' | 'compact' | 'list';
+  contentType?: string;
+  autoGenerate?: boolean;
   onLoad?: () => void;
   onError?: (error: string) => void;
   // New props for aspect ratio handling
@@ -35,6 +37,8 @@ export function ResponsiveEvermarkImage({
   alt,
   className = '',
   variant = 'standard',
+  contentType,
+  autoGenerate = true,
   onLoad,
   onError,
   maintainContainer = true,
@@ -50,7 +54,9 @@ export function ResponsiveEvermarkImage({
     originalUrl,
     {
       preferThumbnail: variant === 'compact' || variant === 'list',
-      autoLoad: true
+      autoLoad: true,
+      contentType,
+      autoGenerate
     }
   );
 

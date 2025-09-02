@@ -26,6 +26,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { useEvermarksState, type Evermark } from '@/features/evermarks';
 import { AuthorDisplay } from '@/features/evermarks/components/AuthorDisplay';
 import { CreatorProfile } from '@/features/evermarks/components/CreatorProfile';
+import { EvermarkImage } from '@/components/images/EvermarkImage';
 import { VotingPanel } from '@/features/voting';
 import { useAppAuth } from '@/providers/AppContext';
 import { useFarcasterUser } from '@/hooks/useFarcasterDetection';
@@ -341,36 +342,24 @@ export default function EvermarkDetailPage(): React.ReactNode {
               </div>
             </div>
 
-            {/* Featured Image */}
-            {evermark.image && (
-              <div className="relative">
-                <img
-                  src={evermark.image}
-                  alt={evermark.title}
-                  className={`w-full h-64 md:h-96 object-cover rounded-lg border ${themeClasses.border.primary}`}
-                />
-                {evermark.imageStatus !== 'processed' && (
-                  <div className="absolute bottom-4 left-4 bg-black/80 text-white px-3 py-1 rounded-full text-sm backdrop-blur-sm">
-                    {evermark.imageStatus === 'processing' ? (
-                      <>
-                        <div className="inline-block animate-spin rounded-full h-3 w-3 border border-yellow-400 border-t-transparent mr-2"></div>
-                        Processing...
-                      </>
-                    ) : evermark.imageStatus === 'failed' ? (
-                      <>
-                        <AlertCircleIcon className="inline h-3 w-3 mr-1 text-red-400" />
-                        Failed to process
-                      </>
-                    ) : (
-                      <>
-                        <ImageIcon className="inline h-3 w-3 mr-1 text-gray-400" />
-                        No image
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
+            {/* Featured Image with intelligent resolution and auto-generation */}
+            <div className="relative">
+              <EvermarkImage
+                tokenId={evermark.tokenId}
+                ipfsHash={evermark.image?.replace('ipfs://', '')}
+                originalUrl={evermark.sourceUrl}
+                alt={evermark.title}
+                variant="responsive"
+                contentType={evermark.contentType}
+                autoGenerate={true}
+                maintainContainer={true}
+                detectAspectRatio={true}
+                className={`w-full rounded-lg border ${themeClasses.border.primary}`}
+                onError={(error) => {
+                  console.warn(`Image load failed for evermark ${evermark.tokenId}:`, error);
+                }}
+              />
+            </div>
 
             {/* Description */}
             {evermark.description && (

@@ -27,6 +27,9 @@ import { EvermarkBlockchainService } from '@/features/evermarks/services/Blockch
 import { useThemeClasses } from '@/providers/ThemeProvider';
 import { useBetaPoints } from '@/features/points';
 
+// Development wallet address for referrals
+const DEVELOPMENT_REFERRER_ADDRESS = "0x3427b4716B90C11F9971e43999a48A47Cf5B571E";
+
 interface SeasonInfo {
   seasonNumber: number;
   startTime: Date;
@@ -70,6 +73,16 @@ export default function AdminPage(): React.ReactNode {
   const [rewardsPeriod, setRewardsPeriod] = useState<RewardsPeriodInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [actionStatus, setActionStatus] = useState<string>('');
+  
+  // Batch image generation state
+  const [batchProgress, setBatchProgress] = useState<{
+    isRunning: boolean;
+    processed: number;
+    total: number;
+    generated: number;
+    errors: number;
+    currentBatch: number;
+  } | null>(null);
 
   // Contract instances
   const votingContract = getEvermarkVotingContract();
@@ -106,7 +119,7 @@ export default function AdminPage(): React.ReactNode {
   const { data: pendingReferralData } = useReadContract({
     contract: nftContract,
     method: "function pendingReferralPayments(address) view returns (uint256)",
-    params: ["0x2B27EA7DaA8Bf1dE98407447b269Dfe280753fe3"]
+    params: [DEVELOPMENT_REFERRER_ADDRESS]
   });
 
   // Read WEMARK total staked
@@ -249,6 +262,62 @@ export default function AdminPage(): React.ReactNode {
     } catch (error) {
       setActionStatus(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setTimeout(() => setActionStatus(''), 5000);
+    }
+  };
+
+  // Batch Image Generation
+  const batchGenerateImages = async () => {
+    if (batchProgress?.isRunning) return;
+
+    try {
+      setBatchProgress({ isRunning: true, processed: 0, total: 0, generated: 0, errors: 0, currentBatch: 0 });
+      setActionStatus('Starting batch cast image generation...');
+
+      let currentBatch = 0;
+      let isComplete = false;
+
+      while (!isComplete) {
+        const response = await fetch('/.netlify/functions/batch-generate-cast-images', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.ADMIN_API_KEY || 'dev-key'}`
+          },
+          body: JSON.stringify({ startIndex: currentBatch })
+        });
+
+        if (!response.ok) {
+          throw new Error(`Batch failed: ${response.status}`);
+        }
+
+        const result = await response.json();
+        
+        setBatchProgress(prev => ({
+          ...prev!,
+          processed: result.progress.processed,
+          total: result.progress.total,
+          generated: result.progress.generated,
+          errors: result.progress.errors,
+          currentBatch: result.nextBatch || 0
+        }));
+
+        setActionStatus(result.message);
+        
+        isComplete = result.isComplete;
+        if (!isComplete) {
+          currentBatch = result.nextBatch;
+          // Wait a bit between batches to avoid overwhelming the system
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
+
+      setBatchProgress(prev => ({ ...prev!, isRunning: false }));
+      setActionStatus(`✅ Batch complete! Generated ${batchProgress?.generated} cast images.`);
+      
+    } catch (error) {
+      console.error('Batch generation failed:', error);
+      setBatchProgress(prev => prev ? { ...prev, isRunning: false } : null);
+      setActionStatus(`❌ Batch failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -764,14 +833,49 @@ export default function AdminPage(): React.ReactNode {
                 </p>
               </div>
               
-              {/* Placeholder for future tools */}
+              {/* Image Management */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-orange-400">System Status</h3>
-                <div className="text-sm space-y-2">
-                  <div>NFTs: <span className="text-blue-400">{contractStatus?.nft.totalSupply || 0}</span></div>
-                  <div>Staked: <span className="text-purple-400">{contractStatus?.wemark.totalStaked ? formatEther(contractStatus.wemark.totalStaked, 0) : '0'} EMARK</span></div>
-                  <div>Season: <span className="text-green-400">#{contractStatus?.voting.currentSeason || 'N/A'}</span></div>
-                </div>
+                <h3 className="text-lg font-semibold text-orange-400">Image Management</h3>
+                
+                <button
+                  onClick={batchGenerateImages}
+                  disabled={isPending || batchProgress?.isRunning}
+                  className="w-full flex items-center justify-center px-6 py-3 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg transition-colors"
+                >
+                  <RefreshCw className={`w-5 h-5 mr-2 ${batchProgress?.isRunning ? 'animate-spin' : ''}`} />
+                  {batchProgress?.isRunning ? 'Generating...' : 'Generate Cast Images'}
+                </button>
+                
+                {batchProgress && (
+                  <div className="text-sm space-y-1">
+                    <div className="flex justify-between text-gray-300">
+                      <span>Progress:</span>
+                      <span>{batchProgress.processed}/{batchProgress.total}</span>
+                    </div>
+                    <div className="flex justify-between text-green-400">
+                      <span>Generated:</span>
+                      <span>{batchProgress.generated}</span>
+                    </div>
+                    {batchProgress.errors > 0 && (
+                      <div className="flex justify-between text-red-400">
+                        <span>Errors:</span>
+                        <span>{batchProgress.errors}</span>
+                      </div>
+                    )}
+                    {batchProgress.total > 0 && (
+                      <div className="w-full bg-gray-700 rounded-full h-2">
+                        <div 
+                          className="bg-orange-500 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${(batchProgress.processed / batchProgress.total) * 100}%` }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                <p className="text-sm text-gray-400">
+                  Generate preview images for all Cast evermarks that don't have them yet.
+                </p>
               </div>
               
               <div className="space-y-4">

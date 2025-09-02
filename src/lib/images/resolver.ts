@@ -19,7 +19,7 @@ export async function resolveImageUrl(
   try {
     // Get evermark data from database
     const { data: evermark } = await supabase!
-      .from('evermarks')
+      .from('beta_evermarks')
       .select('token_id, supabase_image_url, ipfs_image_hash')
       .eq('token_id', tokenId)
       .single();
@@ -101,7 +101,7 @@ export async function resolveImageUrl(
 export async function checkImageCacheStatus(tokenId: number): Promise<boolean> {
   try {
     const { data: evermark } = await supabase!
-      .from('evermarks')
+      .from('beta_evermarks')
       .select('supabase_image_url')
       .eq('token_id', tokenId)
       .single();

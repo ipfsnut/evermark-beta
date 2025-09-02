@@ -57,7 +57,7 @@ export async function cacheImage(tokenId: number, originalUrl: string) {
 
     // Update database
     await supabase!
-      .from('evermarks')
+      .from('beta_evermarks')
       .update({
         supabase_image_url: urlData.publicUrl,
         image_processing_status: 'completed',
@@ -70,7 +70,7 @@ export async function cacheImage(tokenId: number, originalUrl: string) {
   } catch (error) {
     // Mark as failed
     await supabase!
-      .from('evermarks')
+      .from('beta_evermarks')
       .update({
         image_processing_status: 'failed',
         updated_at: new Date().toISOString()

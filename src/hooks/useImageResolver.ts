@@ -18,6 +18,8 @@ export function useImageResolver(
   options?: {
     preferThumbnail?: boolean;
     autoLoad?: boolean;
+    contentType?: string; // New: for auto-generation logic
+    autoGenerate?: boolean; // New: enable auto-generation
   }
 ): UseImageResolverResult {
   const [state, setState] = useState<UseImageResolverResult>({
@@ -25,7 +27,12 @@ export function useImageResolver(
     isCached: false
   });
 
-  const { preferThumbnail = false, autoLoad = true } = options || {};
+  const { 
+    preferThumbnail = false, 
+    autoLoad = true, 
+    contentType, 
+    autoGenerate = true 
+  } = options || {};
 
   useEffect(() => {
     if (!autoLoad || !tokenId) return;
@@ -42,6 +49,32 @@ export function useImageResolver(
           resolution = await resolveThumbnailUrl(tokenId, ipfsHash, originalUrl);
         } else {
           resolution = await resolveImageUrl(tokenId, ipfsHash, originalUrl);
+        }
+
+        // If no image found and it's a Cast, try to auto-generate
+        if (resolution.source === 'fallback' && 
+            contentType === 'Cast' && 
+            autoGenerate && 
+            isMounted) {
+          
+          console.log(`🎨 Auto-generating image for Cast evermark ${tokenId}`);
+          
+          try {
+            const generateResponse = await fetch('/.netlify/functions/generate-cast-image', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ token_id: tokenId })
+            });
+            
+            if (generateResponse.ok) {
+              // Re-resolve after generation
+              resolution = await resolveImageUrl(tokenId, ipfsHash, originalUrl);
+              console.log(`✅ Cast image generated successfully for ${tokenId}`);
+            }
+          } catch (genError) {
+            console.warn('Cast image generation failed:', genError);
+            // Continue with fallback - don't throw error
+          }
         }
 
         if (isMounted) {
@@ -69,7 +102,7 @@ export function useImageResolver(
     return () => {
       isMounted = false;
     };
-  }, [tokenId, ipfsHash, originalUrl, preferThumbnail, autoLoad]);
+  }, [tokenId, ipfsHash, originalUrl, preferThumbnail, autoLoad, contentType, autoGenerate]);
 
   return state;
 }

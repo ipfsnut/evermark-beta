@@ -266,28 +266,19 @@ export function CreateEvermarkForm({
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   
-  // Referral state
-  const [referrer, setReferrer] = useState('');
-  const [referralFromUrl, setReferralFromUrl] = useState<string | null>(null);
-  
   // FIXED: Store both File and URL data for SDK compatibility
   // Simple image upload state for IPFS-first approach
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  
+  // Cast image generation state
+  const [castImagePreview, setCastImagePreview] = useState<string | null>(null);
+  const [isGeneratingCastImage, setIsGeneratingCastImage] = useState(false);
 
   const getAuthor = useCallback(() => {
     return user?.displayName || user?.username || 'Unknown Author';
   }, [user]);
 
-  // Check for referral in URL on mount
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const refParam = urlParams.get('ref') || urlParams.get('referrer');
-    if (refParam) {
-      setReferrer(refParam);
-      setReferralFromUrl(refParam);
-    }
-  }, []);
 
   // Cleanup preview URL on unmount
   useEffect(() => {
@@ -410,6 +401,77 @@ export function CreateEvermarkForm({
     }
   }, [imagePreview]);
 
+  // Generate cast image preview for Cast content type
+  const generateCastImagePreview = useCallback(async () => {
+    if (formData.contentType !== 'Cast' || isGeneratingCastImage || !formData.sourceUrl.trim()) {
+      return;
+    }
+
+    try {
+      setIsGeneratingCastImage(true);
+      
+      // Create mock evermark data for preview generation
+      const mockEvermarkData = {
+        token_id: 9999, // Mock token ID for preview
+        title: formData.title || 'Untitled Cast',
+        description: formData.description,
+        source_url: formData.sourceUrl,
+        content_type: 'Cast',
+        author: getAuthor(),
+        metadata_json: JSON.stringify({
+          cast: {
+            text: formData.content || formData.description,
+            author_username: 'preview',
+            author_display_name: getAuthor(),
+            author_pfp: null,
+            likes: 0,
+            recasts: 0,
+            replies: 0,
+            timestamp: new Date().toISOString(),
+            hash: 'preview-hash',
+            channel: null,
+            embeds: []
+          }
+        })
+      };
+
+      // Call the cast image generation endpoint
+      const response = await fetch('/.netlify/functions/generate-cast-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(mockEvermarkData)
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.imageUrl) {
+          setCastImagePreview(result.imageUrl);
+        }
+      } else {
+        console.warn('Cast image generation failed:', response.status);
+      }
+    } catch (error) {
+      console.error('Cast image preview generation failed:', error);
+    } finally {
+      setIsGeneratingCastImage(false);
+    }
+  }, [formData.contentType, formData.sourceUrl, formData.title, formData.description, formData.content, getAuthor, isGeneratingCastImage]);
+
+  // Auto-generate cast image when Cast fields change
+  useEffect(() => {
+    if (formData.contentType === 'Cast' && 
+        formData.sourceUrl.trim() && 
+        (formData.title.trim() || formData.description.trim() || formData.content.trim())) {
+      const timeoutId = setTimeout(() => {
+        generateCastImagePreview();
+      }, 1000); // Debounce to avoid too many API calls
+      
+      return () => clearTimeout(timeoutId);
+    } else {
+      setCastImagePreview(null);
+    }
+  }, [generateCastImagePreview, formData.contentType, formData.sourceUrl, formData.title, formData.description, formData.content]);
+
   // UPDATED: Form submission with comprehensive auth checks
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -437,8 +499,7 @@ export function CreateEvermarkForm({
 
       const createInput: CreateEvermarkInput = {
         metadata: evermarkMetadata,
-        image: selectedImage || undefined,
-        referrer: referrer.trim() || undefined
+        image: selectedImage || undefined
       };
       
       const result = await createEvermark(createInput);
@@ -461,8 +522,7 @@ export function CreateEvermarkForm({
     createEvermark, 
     onSuccess, 
     navigate,
-    hasWallet,
-    referrer
+    hasWallet
   ]);
 
   // Add this import at the top if not already imported
@@ -780,45 +840,6 @@ export function CreateEvermarkForm({
                   </div>
                 </div>
 
-                {/* Referral Address */}
-                <div className="space-y-2">
-                  <label className={cn(
-                    "block text-sm font-medium",
-                    isDark ? "text-cyan-400" : "text-purple-600"
-                  )}>
-                    Referrer Address (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={referrer}
-                    onChange={(e) => setReferrer(e.target.value)}
-                    placeholder="0x... (Get 10% of minting fee)"
-                    disabled={isFormDisabled}
-                    className={cn(
-                      "w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-opacity-20 transition-colors",
-                      isFormDisabled && "opacity-50 cursor-not-allowed",
-                      isDark 
-                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-cyan-400" 
-                        : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-purple-400 focus:ring-purple-400"
-                    )}
-                  />
-                  {referralFromUrl && (
-                    <div className={cn(
-                      "text-xs p-2 rounded border",
-                      isDark 
-                        ? "bg-green-900/30 text-green-300 border-green-500/30" 
-                        : "bg-green-100 text-green-700 border-green-300"
-                    )}>
-                      ✅ Referral detected from URL
-                    </div>
-                  )}
-                  <p className={cn(
-                    "text-xs",
-                    isDark ? "text-gray-500" : "text-gray-600"
-                  )}>
-                    The referrer will receive 10% of the minting fee (0.000007 ETH)
-                  </p>
-                </div>
 
                 {/* Tags */}
                 <div className="space-y-3">
@@ -962,6 +983,35 @@ export function CreateEvermarkForm({
                         <div className="mb-3 text-xs text-gray-500">No preview available</div>
                       )}
                       
+                      {/* Cast Image Preview */}
+                      {formData.contentType === 'Cast' && (
+                        <div className="mb-3">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-sm font-medium text-purple-300">Cast Preview</span>
+                            {isGeneratingCastImage && (
+                              <LoaderIcon className="h-4 w-4 animate-spin text-purple-400" />
+                            )}
+                          </div>
+                          {castImagePreview ? (
+                            <div className="relative w-full rounded-lg overflow-hidden border-2 border-purple-500/50">
+                              <img
+                                src={castImagePreview}
+                                alt="Cast preview"
+                                className="w-full h-auto object-contain bg-white"
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-full h-32 border-2 border-dashed border-purple-500/30 rounded-lg flex items-center justify-center">
+                              <span className="text-xs text-purple-400">
+                                {isGeneratingCastImage ? 'Generating cast preview...' : 
+                                 formData.sourceUrl.trim() ? 'Fill in cast details to see preview' : 
+                                 'Enter cast URL to generate preview'}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      
                       <div className="text-xs text-blue-400 space-y-1">
                         <div>File: {selectedImage.name}</div>
                         <div>Size: {Math.round(selectedImage.size / 1024)} KB</div>
@@ -1095,6 +1145,22 @@ export function CreateEvermarkForm({
                             alt="Selected image preview"
                             containerClassName="relative w-full h-48 rounded overflow-hidden border-2 border-blue-500/50"
                           />
+                        </div>
+                      )}
+                      
+                      {/* Cast Preview in Sidebar */}
+                      {formData.contentType === 'Cast' && castImagePreview && (
+                        <div className="mb-2">
+                          <div className="flex items-center gap-1 mb-1">
+                            <span className="text-xs font-medium text-purple-300">Cast Preview</span>
+                          </div>
+                          <div className="relative w-full rounded overflow-hidden border-2 border-purple-500/50">
+                            <img
+                              src={castImagePreview}
+                              alt="Cast preview"
+                              className="w-full h-auto object-contain bg-white"
+                            />
+                          </div>
                         </div>
                       )}
                       

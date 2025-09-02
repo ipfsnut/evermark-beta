@@ -8,6 +8,9 @@ import type { Account } from 'thirdweb/wallets';
 import { client } from '@/lib/thirdweb';
 import { CONTRACTS, getEvermarkNFTContract } from '@/lib/contracts';
 
+// Development wallet address for referrals (receives 10% of minting fee)
+const DEVELOPMENT_REFERRER_ADDRESS = "0x3427b4716B90C11F9971e43999a48A47Cf5B571E";
+
 // Simple error class for blockchain operations
 class StorageError extends Error {
   constructor(message: string, public code: string) {
@@ -382,7 +385,7 @@ export class EvermarkBlockchainService {
       const transaction = prepareContractCall({
         contract,
         method: "function mintEvermarkWithReferral(string metadataURI, string title, string creator, address referrer) payable returns (uint256)",
-        params: [cleanMetadataURI, cleanTitle, cleanCreator, "0x2B27EA7DaA8Bf1dE98407447b269Dfe280753fe3"],
+        params: [cleanMetadataURI, cleanTitle, cleanCreator, DEVELOPMENT_REFERRER_ADDRESS],
         value: mintingFee,
       });
 
@@ -396,7 +399,7 @@ export class EvermarkBlockchainService {
         value: mintingFee.toString(),
         address: account.address,
         contractAddress: contract.address,
-        referrer: "0x2B27EA7DaA8Bf1dE98407447b269Dfe280753fe3"
+        referrer: DEVELOPMENT_REFERRER_ADDRESS
       });
       
       // Send transaction using Thirdweb
