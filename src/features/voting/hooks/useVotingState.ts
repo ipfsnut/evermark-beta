@@ -205,10 +205,13 @@ export function useVotingState(): UseVotingStateReturn {
             const updateResult = await updateResponse.json();
             console.log(`✅ Updated voting data for evermark ${evermarkId}:`, updateResult.data);
           } else {
-            console.warn(`⚠️ Failed to update voting data for evermark ${evermarkId}`);
+            const errorText = await updateResponse.text();
+            console.error(`❌ Failed to update voting data for evermark ${evermarkId}:`, errorText);
+            NotificationService.error(`Vote recorded on blockchain but database update failed. Contact support.`);
           }
         } catch (updateError) {
-          console.warn('Voting data update failed:', updateError);
+          console.error('Voting data update failed:', updateError);
+          NotificationService.error(`Vote recorded on blockchain but database sync failed. Your vote will be counted but may not appear immediately.`);
         }
       }
 

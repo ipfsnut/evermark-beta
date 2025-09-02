@@ -57,16 +57,18 @@ export async function handler(event: HandlerEvent, context: HandlerContext) {
 
     console.log(`Updating voting data for user ${user_id}, evermark ${evermark_id}, amount ${vote_amount}`);
 
-    // 1. Insert/update votes table
+    // 1. Insert/update votes table - use upsert to handle multiple votes
     const { error: voteError } = await supabase
       .from('votes')
-      .insert({
+      .upsert({
         user_id: user_id.toLowerCase(),
         evermark_id: evermark_id,
         cycle: cycle,
         amount: vote_amount.toString(),
         action: 'delegate',
         metadata: transaction_hash ? { transaction_hash } : {}
+      }, {
+        onConflict: 'user_id,evermark_id,cycle'
       });
 
     if (voteError) {
