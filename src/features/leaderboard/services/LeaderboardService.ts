@@ -256,7 +256,7 @@ export class LeaderboardService {
 
   
   /**
-   * Get current cycle leaderboard with real data
+   * Get current cycle leaderboard with real data from Supabase
    */
   static async getCurrentLeaderboard(
     options: LeaderboardFeedOptions & { evermarks?: Evermark[] } = {}
@@ -264,12 +264,69 @@ export class LeaderboardService {
     const {
       pageSize = 50,
       page = 1,
-      filters = {},
-      evermarks = []
+      filters = {}
     } = options;
     
-    // If no evermarks provided, return empty leaderboard
-    if (evermarks.length === 0) {
+    try {
+      // Get cycle number from filters
+      const cycle = filters.period === 'current' ? 0 : 
+                   filters.period?.startsWith('season-') ? 
+                   parseInt(filters.period.replace('season-', '')) : 0;
+
+      // Fetch leaderboard data from our optimized endpoint
+      const response = await fetch(`/.netlify/functions/leaderboard-data?cycle=${cycle}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch leaderboard: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      const evermarksWithVotes = data.evermarks || [];
+      
+      // Convert to LeaderboardEntry format
+      const allEntries: LeaderboardEntry[] = evermarksWithVotes.map((evermark: any, index: number) => ({
+        rank: index + 1,
+        evermarkId: evermark.id,
+        title: evermark.title,
+        description: evermark.description,
+        creator: evermark.owner,
+        totalVotes: BigInt(evermark.totalVotes || 0),
+        voterCount: evermark.voterCount || 0,
+        percentageOfTotal: 0, // Will calculate below
+        contentType: evermark.contentType,
+        verified: evermark.verified,
+        createdAt: evermark.createdAt,
+        change: { direction: 'stable', positions: 0 },
+        imageUrl: evermark.supabaseImageUrl,
+        sourceUrl: evermark.sourceUrl
+      }));
+      
+      // Calculate percentage of total votes
+      const totalVotes = allEntries.reduce((sum, entry) => sum + Number(entry.totalVotes), 0);
+      allEntries.forEach(entry => {
+        entry.percentageOfTotal = totalVotes > 0 ? (Number(entry.totalVotes) / totalVotes) * 100 : 0;
+      });
+      
+      // Apply pagination
+      const totalCount = allEntries.length;
+      const totalPages = Math.ceil(totalCount / pageSize);
+      const startIndex = (page - 1) * pageSize;
+      const endIndex = startIndex + pageSize;
+      const paginatedEntries = allEntries.slice(startIndex, endIndex);
+      
+      return {
+        entries: paginatedEntries,
+        totalCount,
+        totalPages,
+        currentPage: page,
+        pageSize,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+        lastUpdated: new Date(),
+        filters
+      };
+      
+    } catch (error) {
+      console.error('Failed to fetch leaderboard data:', error);
       return {
         entries: [],
         totalCount: 0,
@@ -281,64 +338,6 @@ export class LeaderboardService {
         lastUpdated: new Date(),
         filters
       };
-    }
-    
-    // Calculate leaderboard from evermarks with real voting data
-    const period = filters.period ?? 'current';
-    const allEntries = await this.calculateLeaderboard(evermarks, period);
-    
-    // Apply search filter if provided
-    let filteredEntries = allEntries;
-    if (filters.searchQuery) {
-      const searchLower = filters.searchQuery.toLowerCase();
-      filteredEntries = allEntries.filter(entry => {
-        const title = entry.title ?? '';
-        const description = entry.description ?? '';
-        const creator = entry.creator ?? '';
-        const contentType = entry.contentType ?? '';
-        
-        return (
-          title.toLowerCase().includes(searchLower) ||
-          description.toLowerCase().includes(searchLower) ||
-          creator.toLowerCase().includes(searchLower) ||
-          contentType.toLowerCase().includes(searchLower)
-        );
-      });
-    }
-    
-    // Apply content type filter if provided
-    if (filters.contentType) {
-      filteredEntries = filteredEntries.filter(entry => 
-        entry.contentType === filters.contentType
-      );
-    }
-    
-    // Apply minimum votes filter if provided
-    if (filters.minVotes !== undefined) {
-      const minVotes = parseInt(filters.minVotes);
-      filteredEntries = filteredEntries.filter(entry => 
-        Number(entry.totalVotes) >= minVotes
-      );
-    }
-    
-    // Apply pagination
-    const totalCount = filteredEntries.length;
-    const totalPages = Math.ceil(totalCount / pageSize);
-    const startIndex = (page - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    const paginatedEntries = filteredEntries.slice(startIndex, endIndex);
-    
-    return {
-      entries: paginatedEntries,
-      totalCount,
-      totalPages,
-      currentPage: page,
-      pageSize,
-      hasNextPage: page < totalPages,
-      hasPreviousPage: page > 1,
-      lastUpdated: new Date(),
-      filters
-    };
   }
 
   /**
