@@ -16,16 +16,9 @@ export class ShareService {
    * Generate a Mini App compatible URL for sharing within Farcaster
    */
   static generateMiniAppUrl(evermarkId: string, source: 'share' | 'direct' = 'direct'): string {
-    const baseUrl = `${window.location.origin}/evermark/${evermarkId}`;
-    
-    // Add Farcaster Mini App context parameters
-    const params = new URLSearchParams();
-    if (source === 'share') {
-      params.set('fc_miniapp', '1');
-      params.set('fc_source', 'share');
-    }
-    
-    return params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;
+    // Use Frame endpoint that has proper fc:miniapp meta tags
+    // This ensures Farcaster opens the link in the mini-app
+    return `${window.location.origin}/.netlify/functions/frame?token_id=${evermarkId}`;
   }
 
   /**

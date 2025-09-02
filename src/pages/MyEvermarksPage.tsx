@@ -8,12 +8,14 @@ import { EvermarkSearch } from '@/features/evermarks/components/EvermarkSearch';
 import type { EvermarkFilters } from '@/features/evermarks/types';
 import { useVotingState } from '@/features/voting';
 import { useAppAuth } from '@/providers/AppContext';
+import { useWalletAccount } from '@/hooks/core/useWalletAccount';
 import { useThemeClasses } from '@/providers/ThemeProvider';
 import { useFarcasterDetection } from '@/hooks/useFarcasterDetection';
 import { cn } from '@/utils/responsive';
 
 export default function MyEvermarksPage() {
   const { isAuthenticated, user } = useAppAuth();
+  const account = useWalletAccount();
   const themeClasses = useThemeClasses();
   const { isInFarcaster } = useFarcasterDetection();
   const { evermarks, isLoading, error, loadEvermarks } = useEvermarksState();
@@ -74,10 +76,15 @@ export default function MyEvermarksPage() {
     return filtered;
   }, [evermarks, searchQuery, filters]);
 
-  // Filter by current wallet (test: use unfiltered evermarks first)
-  const myCreatedEvermarks = evermarks.filter(evermark => 
-    user?.address && evermark.creator.toLowerCase() === user.address.toLowerCase()
-  );
+  // Filter by current wallet - check both user address and account address for cross-context compatibility
+  const myCreatedEvermarks = evermarks.filter(evermark => {
+    const creatorLower = evermark.creator.toLowerCase();
+    const userAddress = user?.address?.toLowerCase();
+    const accountAddress = account?.address?.toLowerCase();
+    
+    return (userAddress && creatorLower === userAddress) || 
+           (accountAddress && creatorLower === accountAddress);
+  });
 
   // Apply search/filters only to created evermarks if needed
   const filteredCreatedEvermarks = useMemo(() => {
