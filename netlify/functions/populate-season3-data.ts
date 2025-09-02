@@ -1,9 +1,10 @@
 // Netlify function to populate votes and leaderboard tables with season 3 blockchain data
 import type { HandlerEvent, HandlerContext } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
-import { readContract, createThirdwebClient, getContractEvents } from 'thirdweb';
+import { readContract, createThirdwebClient, getContractEvents, prepareEvent } from 'thirdweb';
 import { base } from 'thirdweb/chains';
 import { getContract } from 'thirdweb';
+import type { VoteRecord } from '../../shared/services/DatabaseTypes';
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL!,
@@ -53,10 +54,14 @@ export async function handler(event: HandlerEvent, context: HandlerContext) {
     // Get vote events - we'll need to determine the correct event signature
     const voteEvents = await getContractEvents({
       contract: votingContract,
-      eventName: "VoteCast", // Adjust based on actual contract events
+      events: [
+        prepareEvent({
+          signature: "event VoteCast(address indexed voter, uint256 indexed evermarkId, uint256 amount)"
+        })
+      ],
       fromBlock: 0n, // Start from beginning or specific block for season 3
       toBlock: "latest"
-    });
+    }) as any[];
 
     console.log(`Found ${voteEvents.length} vote events`);
 
@@ -85,7 +90,7 @@ export async function handler(event: HandlerEvent, context: HandlerContext) {
     await supabase.from('leaderboard').delete().eq('cycle_id', cycle);
 
     // Process vote events and insert into votes table
-    const voteInserts = [];
+    const voteInserts: VoteRecord[] = [];
     const evermarkVoteTotals: Record<string, bigint> = {};
 
     for (const event of voteEvents) {
@@ -104,7 +109,7 @@ export async function handler(event: HandlerEvent, context: HandlerContext) {
         }
       };
 
-      voteInserts.push(voteRecord);
+      voteInserts.push(voteRecord as VoteRecord);
 
       // Track totals for leaderboard
       const evermarkIdStr = evermarkId.toString();

@@ -1,6 +1,7 @@
 // Simple function to create representative vote records from current leaderboard totals
 import type { HandlerEvent, HandlerContext } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
+import type { VoteRecord } from '../../shared/services/DatabaseTypes';
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL!,
@@ -41,7 +42,7 @@ export async function handler(event: HandlerEvent, context: HandlerContext) {
     // Clear existing vote records for this cycle
     await supabase.from('votes').delete().eq('cycle', cycle);
 
-    const voteRecords = [];
+    const voteRecords: any[] = [];
     
     for (const entry of leaderboard) {
       // Get the evermark owner to create a representative vote record
@@ -72,7 +73,7 @@ export async function handler(event: HandlerEvent, context: HandlerContext) {
     if (voteRecords.length > 0) {
       const { error: insertError } = await supabase
         .from('votes')
-        .insert(voteRecords);
+        .insert(voteRecords as any);
 
       if (insertError) {
         console.error('Failed to insert vote records:', insertError);

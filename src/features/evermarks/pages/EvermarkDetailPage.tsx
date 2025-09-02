@@ -24,6 +24,7 @@ import { Formatters } from '../../../utils/formatters';
 import { useEvermarksState, type Evermark } from '@/features/evermarks';
 import { ResponsiveEvermarkImage } from '@/components/images/ResponsiveEvermarkImage';
 import { VotingPanel } from '@/features/voting';
+import { SupportersList } from '../components/SupportersList';
 import { useAppAuth } from '@/providers/AppContext';
 import { useFarcasterDetection } from '@/hooks/useFarcasterDetection';
 import { EvermarkMeta } from '@/components/FarcasterMeta';
@@ -513,6 +514,9 @@ export default function EvermarkDetailPage(): React.ReactNode {
                 </button>
               </div>
             )}
+
+            {/* Top Supporters */}
+            <SupportersList evermarkId={evermark.id} />
 
             {/* Stats */}
             <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6">

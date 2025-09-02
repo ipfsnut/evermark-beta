@@ -1,9 +1,11 @@
 // Netlify function to populate individual vote records from blockchain events
 import type { HandlerEvent, HandlerContext } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
-import { readContract, createThirdwebClient, getContractEvents } from 'thirdweb';
+import { readContract, createThirdwebClient, getContractEvents, prepareEvent } from 'thirdweb';
 import { base } from 'thirdweb/chains';
 import { getContract } from 'thirdweb';
+import { EventService } from '../../shared/services/EventService';
+import type { VoteRecord } from '../../shared/services/DatabaseTypes';
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL!,
@@ -55,20 +57,14 @@ export async function handler(event: HandlerEvent, context: HandlerContext) {
     // We need to check what events the contract actually emits
     console.log('Fetching vote events from blockchain...');
     
-    let voteEvents = [];
+    let voteEvents: any[] = [];
     try {
-      // Try common event names - adjust based on your contract
-      const events = await getContractEvents({
-        contract: votingContract,
-        events: [
-          "event VoteForEvermark(address indexed voter, uint256 indexed evermarkId, uint256 amount)",
-          "event VoteCast(address indexed voter, uint256 indexed evermarkId, uint256 amount)",
-          "event Delegated(address indexed delegator, uint256 indexed evermarkId, uint256 amount)"
-        ],
-        fromBlock: BigInt(from_block),
-        toBlock: "latest"
-      });
-      voteEvents = events;
+      // Use shared EventService with proper Thirdweb v5 syntax
+      voteEvents = await EventService.getVotingEvents(
+        votingContract,
+        BigInt(from_block),
+        "latest"
+      );
     } catch (eventError) {
       console.warn('Could not fetch events with standard names, trying alternative approach...');
       // Fallback: use current vote totals to create representative records
@@ -82,7 +78,7 @@ export async function handler(event: HandlerEvent, context: HandlerContext) {
       if (leaderboardData && leaderboardData.length > 0) {
         console.log(`Creating representative vote records from ${leaderboardData.length} leaderboard entries`);
         
-        const representativeVotes = [];
+        const representativeVotes: any[] = [];
         for (const entry of leaderboardData) {
           // Create a representative vote record for the evermark owner
           const { data: evermarkData } = await supabase
@@ -109,7 +105,7 @@ export async function handler(event: HandlerEvent, context: HandlerContext) {
         if (representativeVotes.length > 0) {
           const { error: insertError } = await supabase
             .from('votes')
-            .insert(representativeVotes);
+            .insert(representativeVotes as any);
           
           if (insertError) {
             console.error('Failed to insert representative votes:', insertError);
@@ -149,23 +145,21 @@ export async function handler(event: HandlerEvent, context: HandlerContext) {
       };
     }
 
-    // Process blockchain events into vote records
-    const voteRecords = [];
+    // Process blockchain events into vote records using shared service
+    const voteRecords: VoteRecord[] = [];
     for (const event of voteEvents) {
-      const { voter, evermarkId, amount } = event.args as any;
-      
-      voteRecords.push({
-        user_id: voter.toLowerCase(),
-        evermark_id: evermarkId.toString(),
-        cycle: cycle,
-        amount: amount.toString(),
-        action: 'delegate',
-        metadata: {
-          transaction_hash: event.transactionHash,
-          block_number: event.blockNumber.toString(),
-          log_index: event.logIndex
+      try {
+        if (!EventService.validateEvent(event)) {
+          console.warn('Invalid event data, skipping:', event);
+          continue;
         }
-      });
+        
+        const voteRecord = EventService.eventToVoteRecord(event, cycle);
+        voteRecords.push(voteRecord);
+      } catch (error) {
+        console.error('Failed to process event:', error, event);
+        continue;
+      }
     }
 
     // Insert vote records in batches

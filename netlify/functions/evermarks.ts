@@ -1,6 +1,7 @@
 import { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
 import { extractContentIdentifier, generateSearchPatterns, getDuplicateMessage, getConfidenceDescription, type DuplicateCheckResponse } from '../../src/utils/contentIdentifiers';
+import { VotingDataService } from '../../shared/services/VotingDataService';
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -77,6 +78,59 @@ function getWalletAddress(event: HandlerEvent): string | null {
   }
 
   return null;
+}
+
+/**
+ * Enhance evermark data with voting information
+ * THE PIPE CONNECTION - replaces hardcoded vote_count: 0
+ */
+async function enhanceWithVotingData(evermarks: any[]): Promise<any[]> {
+  if (!evermarks || evermarks.length === 0) {
+    return evermarks;
+  }
+
+  try {
+    // Get voting data for all evermarks in batch
+    const evermarkIds = evermarks.map(e => e.token_id.toString());
+    const votingDataMap = await VotingDataService.getBulkVotingData(evermarkIds);
+
+    // Enhance each evermark with voting data
+    return evermarks.map(evermark => ({
+      ...evermark,
+      votes: Math.round(votingDataMap.get(evermark.token_id.toString())?.votes ? 
+        Number(votingDataMap.get(evermark.token_id.toString())!.votes) / (10 ** 18) : 0),
+      voter_count: votingDataMap.get(evermark.token_id.toString())?.voterCount || 0
+    }));
+  } catch (error) {
+    console.error('Failed to enhance with voting data:', error);
+    // Return original data if voting enhancement fails
+    return evermarks.map(evermark => ({
+      ...evermark,
+      votes: 0,
+      voter_count: 0
+    }));
+  }
+}
+
+/**
+ * Enhance single evermark with voting data
+ */
+async function enhanceSingleWithVotingData(evermark: any): Promise<any> {
+  try {
+    const votingData = await VotingDataService.getEvermarkVotingData(evermark.token_id.toString());
+    return {
+      ...evermark,
+      votes: Math.round(votingData.total_votes),
+      voter_count: votingData.voter_count
+    };
+  } catch (error) {
+    console.error('Failed to enhance single evermark with voting data:', error);
+    return {
+      ...evermark,
+      votes: 0,
+      voter_count: 0
+    };
+  }
 }
 
 /**
@@ -181,16 +235,20 @@ async function checkForDuplicate(sourceUrl: string): Promise<DuplicateCheckRespo
       exists: !!exists,
       confidence: identifier.confidence,
       existingTokenId: existingEvermark?.token_id,
-      existingEvermark: existingEvermark ? {
-        token_id: existingEvermark.token_id,
-        title: existingEvermark.title,
-        author: existingEvermark.author,
-        created_at: existingEvermark.created_at,
-        // TODO: Add vote count and staking data when available
-        vote_count: 0,
-        total_staked: '0',
-        leaderboard_rank: undefined
-      } : undefined,
+      existingEvermark: existingEvermark ? await (async () => {
+        const votingData = await VotingDataService.getEvermarkVotingData(existingEvermark.token_id.toString());
+        return {
+          token_id: existingEvermark.token_id,
+          title: existingEvermark.title,
+          author: existingEvermark.author,
+          created_at: existingEvermark.created_at,
+          // 🔧 THE FIX: Real vote data instead of hardcoded 0
+          vote_count: Math.round(votingData.total_votes),
+          voter_count: votingData.voter_count,
+          total_staked: '0', // TODO: Add staking data when available
+          leaderboard_rank: undefined
+        };
+      })() : undefined,
       duplicateType: identifier.type,
       message: getDuplicateMessage(identifier.type, existingEvermark?.token_id)
     };
@@ -312,10 +370,13 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
             };
           }
 
+          // 🔧 THE FIX: Enhance single evermark with voting data
+          const enhancedEvermark = await enhanceSingleWithVotingData(data);
+
           return {
             statusCode: 200,
             headers,
-            body: JSON.stringify({ evermark: data }),
+            body: JSON.stringify({ evermark: enhancedEvermark }),
           };
         } else if (tokenId && tokenId !== 'evermarks') {
           // Get single evermark by token_id via URL path
@@ -333,10 +394,13 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
             };
           }
 
+          // 🔧 THE FIX: Enhance single evermark with voting data  
+          const enhancedEvermark = await enhanceSingleWithVotingData(data);
+
           return {
             statusCode: 200,
             headers,
-            body: JSON.stringify({ evermark: data }),
+            body: JSON.stringify({ evermark: enhancedEvermark }),
           };
         } else {
           // Get all evermarks with pagination and filtering
@@ -390,11 +454,14 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
             };
           }
 
+          // 🔧 THE FIX: Enhance evermarks with real voting data
+          const enhancedEvermarks = await enhanceWithVotingData(data || []);
+
           return {
             statusCode: 200,
             headers,
             body: JSON.stringify({
-              evermarks: data || [],
+              evermarks: enhancedEvermarks,
               pagination: {
                 page,
                 limit,

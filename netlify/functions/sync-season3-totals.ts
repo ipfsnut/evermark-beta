@@ -5,6 +5,15 @@ import { readContract, createThirdwebClient } from 'thirdweb';
 import { base } from 'thirdweb/chains';
 import { getContract } from 'thirdweb';
 
+// Add proper typing for leaderboard data
+interface LeaderboardEntry {
+  evermark_id: string;
+  cycle_id: number;
+  total_votes: string;
+  rank: number;
+  updated_at: string;
+}
+
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL!,
   process.env.VITE_SUPABASE_ANON_KEY!
@@ -64,7 +73,7 @@ export async function handler(event: HandlerEvent, context: HandlerContext) {
     // Clear existing leaderboard data for this cycle
     await supabase.from('leaderboard').delete().eq('cycle_id', cycle);
 
-    const leaderboardData = [];
+    const leaderboardData: LeaderboardEntry[] = [];
     let processedCount = 0;
 
     for (const evermark of evermarks || []) {
@@ -118,7 +127,7 @@ export async function handler(event: HandlerEvent, context: HandlerContext) {
         const batch = leaderboardData.slice(i, i + batchSize);
         const { error: insertError } = await supabase
           .from('leaderboard')
-          .insert(batch);
+          .insert(batch as any);
 
         if (insertError) {
           console.error(`Failed to insert leaderboard batch ${i}-${i + batchSize}:`, insertError);
