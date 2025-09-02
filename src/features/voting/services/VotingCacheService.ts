@@ -236,7 +236,7 @@ export class VotingCacheService {
           total_voters: totalVoters || 0,
           active_evermarks_count: activeEvermarksCount || 0,
           is_active: isActive,
-          finalized: finalized,
+          finalized,
           updated_at: new Date().toISOString()
         }, {
           onConflict: 'cycle_number'

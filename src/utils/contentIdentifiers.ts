@@ -158,7 +158,7 @@ export function normalizeURL(url: string): string {
   
   // Add protocol if missing
   if (!normalized.startsWith('http')) {
-    normalized = 'https://' + normalized;
+    normalized = `https://${  normalized}`;
   }
   
   // Convert http to https

@@ -27,7 +27,7 @@ export const CONTRACTS = {
 } as const;
 
 // Singleton contract instances - created once and reused
-let contractInstances: {
+const contractInstances: {
   emarkToken?: ReturnType<typeof getContract>;
   wemark?: ReturnType<typeof getContract>;
   evermarkNFT?: ReturnType<typeof getContract>;

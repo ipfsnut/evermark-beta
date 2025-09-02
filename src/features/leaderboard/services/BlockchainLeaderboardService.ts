@@ -227,7 +227,7 @@ export class BlockchainLeaderboardService {
         totalCount: 0,
         totalPages: 0,
         currentPage: 1,
-        pageSize: pageSize,
+        pageSize,
         hasNextPage: false,
         hasPreviousPage: false,
         lastUpdated: new Date(),

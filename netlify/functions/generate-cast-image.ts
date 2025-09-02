@@ -263,9 +263,11 @@ function getEmbedIndicators(embeds: any[]): string {
 
 export const handler: Handler = async (event, context) => {
   try {
-    // Get token_id from query parameters or request body
-    const tokenId = event.queryStringParameters?.token_id || 
-                   (event.body ? JSON.parse(event.body).token_id : null);
+    const requestBody = event.body ? JSON.parse(event.body) : {};
+    
+    // Check if this is a preview request (mock token_id 9999)
+    const isPreview = requestBody.token_id === 9999;
+    const tokenId = requestBody.token_id || event.queryStringParameters?.token_id;
     
     if (!tokenId) {
       return {
@@ -276,6 +278,48 @@ export const handler: Handler = async (event, context) => {
           error: 'token_id parameter is required'
         })
       };
+    }
+
+    // Handle preview mode with mock data
+    if (isPreview) {
+      console.log('🎨 Generating preview cast image');
+      
+      try {
+        const metadata = JSON.parse(requestBody.metadata_json || '{}');
+        const castData = metadata.cast;
+        
+        if (!castData) {
+          throw new Error('No cast data found in preview metadata');
+        }
+
+        // Generate image using mock data
+        const imageBuffer = await generateCastImage(castData);
+        
+        // For preview, return the image as base64 data URL directly
+        const base64Image = imageBuffer.toString('base64');
+        const dataUrl = `data:image/png;base64,${base64Image}`;
+        
+        return {
+          statusCode: 200,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            success: true,
+            imageUrl: dataUrl,
+            message: 'Preview image generated successfully'
+          })
+        };
+        
+      } catch (error) {
+        console.error('Preview generation failed:', error);
+        return {
+          statusCode: 500,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            success: false,
+            error: `Preview generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+          })
+        };
+      }
     }
 
     console.log(`🎨 Generating cast preview image for Evermark #${tokenId}`);

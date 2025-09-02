@@ -340,7 +340,7 @@ async function createEvermarkWithBlockchain(
         issue: metadata.issue,
         pages: metadata.pages,
         // Add cast-specific data
-        castData: castData,
+        castData,
         castUrl: metadata.sourceUrl || metadata.castUrl
       }
     };

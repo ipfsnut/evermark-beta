@@ -1,8 +1,6 @@
 /// <reference types="vite/client" />
 /// <reference types="react-dom" />
 
-import type * as React from 'react';
-
 interface ImportMetaEnv {
   // Blockchain
   readonly VITE_THIRDWEB_CLIENT_ID: string;

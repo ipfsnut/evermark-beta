@@ -90,7 +90,7 @@ export class LeaderboardService {
     }
     
     // For season-based periods, we'll use all evermarks but filter votes by season
-    let filteredEvermarks = evermarks;
+    const filteredEvermarks = evermarks;
     let targetSeason: number | undefined;
     
     // Extract season number from period ID

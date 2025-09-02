@@ -269,12 +269,12 @@ export default function MyEvermarksPage() {
       }
     };
     
-    const shareText = `📚 ${userName}'s ${collectionType} (${currentList.length} articles)\n\n` +
+    const shareText = `📚 ${userName}'s ${collectionType} (${currentList.length} articles)\n\n${ 
       currentList.slice(0, 8).map(item => 
         `• ${item.title} by ${item.author}\n  ${getEvermarkUrl(item.id)}`
-      ).join('\n\n') +
-      (currentList.length > 8 ? `\n\n...and ${currentList.length - 8} more evermarks` : '') +
-      `\n\n🔗 Preserve your own articles at ${getMainUrl()}`;
+      ).join('\n\n') 
+      }${currentList.length > 8 ? `\n\n...and ${currentList.length - 8} more evermarks` : '' 
+      }\n\n🔗 Preserve your own articles at ${getMainUrl()}`;
 
     try {
       await navigator.clipboard.writeText(shareText);

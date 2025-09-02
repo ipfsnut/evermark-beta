@@ -10,7 +10,7 @@ import { createClient } from '@supabase/supabase-js';
 // Environment variables for server-side execution
 const getClientId = () => {
   // Try Netlify Functions environment first
-  if (typeof process !== 'undefined' && process.env?.VITE_THIRDWEB_CLIENT_ID) {
+  if (process?.env?.VITE_THIRDWEB_CLIENT_ID) {
     return process.env.VITE_THIRDWEB_CLIENT_ID;
   }
   
@@ -32,7 +32,7 @@ const getClientId = () => {
 
 const getNFTAddress = () => {
   // Try Netlify Functions environment first
-  if (typeof process !== 'undefined' && process.env?.VITE_EVERMARK_NFT_ADDRESS) {
+  if (process?.env?.VITE_EVERMARK_NFT_ADDRESS) {
     return process.env.VITE_EVERMARK_NFT_ADDRESS;
   }
   
@@ -57,7 +57,7 @@ const getSupabaseClient = () => {
   let supabaseKey: string = '';
   
   // Try Netlify Functions environment first
-  if (typeof process !== 'undefined' && process.env) {
+  if (process?.env) {
     supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
     supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
   }
