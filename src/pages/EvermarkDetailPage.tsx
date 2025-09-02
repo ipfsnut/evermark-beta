@@ -25,6 +25,7 @@ import { formatDistanceToNow } from 'date-fns';
 // Feature imports
 import { useEvermarksState, type Evermark } from '@/features/evermarks';
 import { AuthorDisplay } from '@/features/evermarks/components/AuthorDisplay';
+import { CreatorProfile } from '@/features/evermarks/components/CreatorProfile';
 import { VotingPanel } from '@/features/voting';
 import { useAppAuth } from '@/providers/AppContext';
 import { useFarcasterUser } from '@/hooks/useFarcasterDetection';
@@ -310,7 +311,16 @@ export default function EvermarkDetailPage(): React.ReactNode {
                 {evermark.title}
               </h1>
 
-              {/* Author and Date */}
+              {/* Creator Profile - THE STAR OF THE SHOW */}
+              <div className={`${themeClasses.bg.card} border ${themeClasses.border.primary} rounded-lg p-6`}>
+                <CreatorProfile 
+                  creatorAddress={evermark.creator}
+                  size="lg"
+                  showBio={true}
+                />
+              </div>
+
+              {/* Content Author and Metadata */}
               <div className={`flex flex-wrap items-center gap-4 ${themeClasses.text.muted}`}>
                 <AuthorDisplay 
                   author={evermark.author}
@@ -507,8 +517,8 @@ export default function EvermarkDetailPage(): React.ReactNode {
                   </div>
                 )}
                 <div className="flex justify-between">
-                  <span className={themeClasses.text.muted}>Creator:</span>
-                  <span className={`${themeClasses.text.primary} truncate ml-2`}>{evermark.creator}</span>
+                  <span className={themeClasses.text.muted}>Content Author:</span>
+                  <span className={`${themeClasses.text.primary} truncate ml-2`}>{evermark.author}</span>
                 </div>
               </div>
             </div>
