@@ -7,8 +7,8 @@ import {
   CheckCircle,
   AlertCircle
 } from 'lucide-react';
-import { prepareContractCall, getContract } from 'thirdweb';
-import { useSendTransaction } from 'thirdweb/react';
+import { getContract } from 'thirdweb';
+import { useContextualTransactions } from '@/hooks/core/useContextualTransactions';
 import { client } from '@/lib/thirdweb';
 import { base } from 'thirdweb/chains';
 
@@ -36,7 +36,7 @@ export function TokenTransfer({ tokenState, className = '' }: TokenTransferProps
   const [localError, setLocalError] = useState<string | null>(null);
   const [localSuccess, setLocalSuccess] = useState<string | null>(null);
 
-  const { mutateAsync: sendTransaction } = useSendTransaction();
+  const { sendTransaction } = useContextualTransactions();
   const { tokenBalance, formatTokenAmount, parseTokenAmount, validateAmount, isConnected, userAddress } = tokenState;
 
   // Contract instance for transfers with proper error handling
@@ -94,13 +94,12 @@ export function TokenTransfer({ tokenState, className = '' }: TokenTransferProps
     try {
       const amountWei = parseTokenAmount(amount);
       
-      const transaction = prepareContractCall({
+      // Send transfer transaction using contextual transaction hook
+      await sendTransaction({
         contract: emarkToken,
         method: "function transfer(address to, uint256 amount) returns (bool)",
         params: [recipient, amountWei]
       });
-
-      await sendTransaction(transaction);
       
       setLocalSuccess(`Successfully sent ${amount} EMARK to ${recipient.slice(0, 6)}...${recipient.slice(-4)}`);
       setAmount('');

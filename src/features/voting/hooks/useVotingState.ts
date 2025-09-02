@@ -3,11 +3,8 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useWalletAccount } from '@/hooks/core/useWalletAccount';
 import { useStakingData } from '@/features/staking/hooks/useStakingData';
-import { useSendTransaction } from 'thirdweb/react';
-import { prepareContractCall, waitForReceipt } from 'thirdweb';
+import { useContextualTransactions } from '@/hooks/core/useContextualTransactions';
 import { getEvermarkVotingContract } from '@/lib/contracts';
-import { client } from '@/lib/thirdweb';
-import { base } from 'thirdweb/chains';
 import { VotingService } from '../services/VotingService';
 import { VotingCacheService } from '../services/VotingCacheService';
 import { LeaderboardService } from '../../leaderboard/services/LeaderboardService';
@@ -35,8 +32,8 @@ export function useVotingState(): UseVotingStateReturn {
   const userAddress = account?.address;
   const isConnected = !!account && !!userAddress;
 
-  // Transaction hook for sending blockchain transactions
-  const { mutateAsync: sendTransaction } = useSendTransaction();
+  // Context-aware transaction hook for both browser and Farcaster
+  const { sendTransaction } = useContextualTransactions();
 
   // Get real staking data for voting power
   const stakingData = useStakingData(userAddress);
@@ -178,21 +175,11 @@ export function useVotingState(): UseVotingStateReturn {
       // Get the voting contract
       const votingContract = getEvermarkVotingContract();
       
-      // Prepare the contract call for delegation
-      const transaction = prepareContractCall({
+      // Send transaction using contextual transaction hook
+      const result = await sendTransaction({
         contract: votingContract,
         method: "function voteForEvermark(uint256 evermarkId, uint256 votes) payable",
         params: [BigInt(evermarkId), amount]
-      });
-
-      // Send the transaction
-      const result = await sendTransaction(transaction);
-      
-      // Wait for confirmation
-      await waitForReceipt({
-        client,
-        chain: base,
-        transactionHash: result.transactionHash
       });
 
       console.log('Delegation successful:', result.transactionHash);
@@ -270,21 +257,11 @@ export function useVotingState(): UseVotingStateReturn {
       // Get the voting contract
       const votingContract = getEvermarkVotingContract();
       
-      // Prepare the contract call for undelegation (withdraw votes)
-      const transaction = prepareContractCall({
+      // Send undelegation transaction using contextual transaction hook
+      const result = await sendTransaction({
         contract: votingContract,
         method: "function withdrawVotes(uint256 evermarkId, uint256 votes) payable",
         params: [BigInt(evermarkId), amount]
-      });
-
-      // Send the transaction
-      const result = await sendTransaction(transaction);
-      
-      // Wait for confirmation
-      await waitForReceipt({
-        client,
-        chain: base,
-        transactionHash: result.transactionHash
       });
 
       console.log('Undelegation successful:', result.transactionHash);

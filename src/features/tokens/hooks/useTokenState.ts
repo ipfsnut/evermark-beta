@@ -2,9 +2,9 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useSendTransaction } from 'thirdweb/react';
 import { useWalletAccount } from '@/hooks/core/useWalletAccount';
-import { prepareContractCall, getContract, readContract } from 'thirdweb';
+import { useContextualTransactions } from '@/hooks/core/useContextualTransactions';
+import { getContract, readContract } from 'thirdweb';
 import type { Abi } from 'abitype';
 import { client } from '@/lib/thirdweb';
 import { base } from 'thirdweb/chains';
@@ -50,7 +50,7 @@ export function useTokenState(): UseTokenStateReturn {
   // Wallet and contracts
   const account = useWalletAccount();
   const queryClient = useQueryClient();
-  const { mutateAsync: sendTransaction } = useSendTransaction();
+  const { sendTransaction } = useContextualTransactions();
   
   // Contract instances with proper error handling
   const emarkToken = useMemo(() => {
@@ -170,15 +170,12 @@ export function useTokenState(): UseTokenStateReturn {
       setIsApproving(true);
 
       try {
-        // Prepare approval transaction with proper method signature
-        const transaction = prepareContractCall({
+        // Send approval transaction using contextual transaction hook
+        const result = await sendTransaction({
           contract: emarkToken,
           method: "function approve(address spender, uint256 amount) returns (bool)",
           params: [spender, amount]
         });
-
-        // Send transaction
-        const result = await sendTransaction(transaction);
 
         return {
           success: true,

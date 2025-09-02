@@ -1,0 +1,448 @@
+# Evermark Notifications System Implementation Guide
+
+## Current Architecture Review
+
+### System Components
+- `NotificationSystem.tsx` - React Context provider with toast-style notifications
+- `NotificationDropdown.tsx` - Persistent notification center in header  
+- `NotificationService.ts` - Event-driven service for triggering notifications
+- `useNotifications.ts` - Convenience hooks for common patterns
+
+### Current Features
+**Toast System:**
+- 4 notification types (success, error, warning, info)
+- Auto-dismiss with progress bars (5s default, 8s errors)
+- Action buttons support
+- Clean animations and theming
+
+**Notification Center:**
+- Bell icon with unread count
+- Persistent storage for share/vote events
+- Read/unread state management
+- Links to relevant evermarks
+
+**Event Service:**
+- Share notifications when content is shared
+- Vote notifications when votes are cast
+- Only notifies content owners (no self-notifications)
+
+## Full Notifications Implementation Plan
+
+### Phase 1: Enhanced Real-time Notifications
+
+#### 1.1 Blockchain Event Monitoring
+**Current Gap:** Placeholder blockchain event listeners
+**Solution:** Implement real-time blockchain monitoring
+
+```typescript
+// New file: src/services/BlockchainEventService.ts
+export class BlockchainEventService {
+  private static contract: any;
+  private static listeners: Map<string, Function> = new Map();
+
+  // Listen for VotesCast events
+  static async startVotingEventListener() {
+    const contract = getEvermarkVotingContract();
+    
+    // Listen for VotesCast events
+    contract.events.VotesCast({
+      filter: {}, 
+      fromBlock: 'latest'
+    }, (error: any, event: any) => {
+      if (error) {
+        console.error('Vote event error:', error);
+        return;
+      }
+      
+      NotificationService.onVoteCast({
+        evermarkId: event.returnValues.evermarkId,
+        voterAddress: event.returnValues.voter,
+        voteAmount: BigInt(event.returnValues.amount)
+      });
+    });
+  }
+
+  // Listen for Share events (if implemented on-chain)
+  static async startShareEventListener() {
+    // Implementation for share events
+  }
+}
+```
+
+#### 1.2 WebSocket Integration for Real-time Updates
+**Purpose:** Real-time notification delivery without polling
+**Implementation:** 
+
+```typescript
+// New file: src/services/WebSocketService.ts
+export class WebSocketService {
+  private static ws: WebSocket | null = null;
+  private static reconnectAttempts = 0;
+  private static maxReconnectAttempts = 5;
+
+  static connect(userAddress: string) {
+    const wsUrl = `wss://api.evermark.xyz/notifications/${userAddress}`;
+    this.ws = new WebSocket(wsUrl);
+    
+    this.ws.onmessage = (event) => {
+      const notification = JSON.parse(event.data);
+      NotificationService.handleWebSocketNotification(notification);
+    };
+    
+    this.ws.onclose = () => this.handleReconnect();
+  }
+
+  private static handleReconnect() {
+    if (this.reconnectAttempts < this.maxReconnectAttempts) {
+      setTimeout(() => {
+        this.reconnectAttempts++;
+        this.connect(/* userAddress */);
+      }, Math.pow(2, this.reconnectAttempts) * 1000);
+    }
+  }
+}
+```
+
+### Phase 2: Neynar Integration
+
+#### 2.1 Neynar Notifications API
+**What Neynar Can Do:**
+- Cast notifications (mentions, replies, likes, recasts)
+- Follow notifications
+- Direct cast notifications
+- Channel activity notifications
+- Custom webhook notifications
+
+**What Neynar Cannot Do:**
+- Off-chain blockchain events (votes, stakes)
+- Custom app-specific events (evermark creation)
+- Cross-chain notifications
+- Email/SMS notifications
+
+#### 2.2 Neynar Implementation Strategy
+
+```typescript
+// New file: src/services/NeynarNotificationService.ts
+export class NeynarNotificationService {
+  private static readonly NEYNAR_API_KEY = import.meta.env.VITE_NEYNAR_API_KEY;
+  private static readonly BASE_URL = 'https://api.neynar.com/v2';
+
+  // Subscribe to notifications for a user
+  static async subscribeToNotifications(fid: number, webhookUrl: string) {
+    const response = await fetch(`${this.BASE_URL}/webhook`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.NEYNAR_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        name: `evermark-notifications-${fid}`,
+        url: webhookUrl,
+        subscription: {
+          'cast.created': { author_fids: [fid] },
+          'cast.like': { cast_author_fids: [fid] },
+          'reaction.created': { target_cast_author_fids: [fid] }
+        }
+      })
+    });
+    
+    return response.json();
+  }
+
+  // Get user's notification feed
+  static async getNotificationFeed(fid: number, cursor?: string) {
+    const url = new URL(`${this.BASE_URL}/notifications`);
+    url.searchParams.set('fid', fid.toString());
+    if (cursor) url.searchParams.set('cursor', cursor);
+
+    const response = await fetch(url.toString(), {
+      headers: {
+        'Authorization': `Bearer ${this.NEYNAR_API_KEY}`
+      }
+    });
+    
+    return response.json();
+  }
+
+  // Mark notifications as seen
+  static async markNotificationsAsSeen(fid: number, type: string, cursor: string) {
+    const response = await fetch(`${this.BASE_URL}/notifications/seen`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.NEYNAR_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        fid,
+        type,
+        cursor
+      })
+    });
+    
+    return response.json();
+  }
+}
+```
+
+#### 2.3 Neynar Webhook Handler
+
+```typescript
+// New file: netlify/functions/neynar-notifications.ts
+import { Handler } from '@netlify/functions';
+
+export const handler: Handler = async (event, context) => {
+  if (event.httpMethod !== 'POST') {
+    return { statusCode: 405, body: 'Method Not Allowed' };
+  }
+
+  const webhookData = JSON.parse(event.body || '{}');
+  
+  // Verify webhook signature
+  const signature = event.headers['x-neynar-signature'];
+  if (!verifyNeynarWebhook(webhookData, signature)) {
+    return { statusCode: 401, body: 'Invalid signature' };
+  }
+
+  // Process different notification types
+  switch (webhookData.type) {
+    case 'cast.created':
+      await handleCastCreated(webhookData.data);
+      break;
+    case 'cast.like':
+      await handleCastLiked(webhookData.data);
+      break;
+    case 'reaction.created':
+      await handleReactionCreated(webhookData.data);
+      break;
+  }
+
+  return { statusCode: 200, body: 'OK' };
+};
+
+async function handleCastCreated(data: any) {
+  // Trigger notification for cast creation
+  // Store in database for persistent notifications
+}
+```
+
+### Phase 3: Multi-Channel Notification System
+
+#### 3.1 Notification Channels
+**In-App Notifications:** ✅ Already implemented
+**Browser Push:** 🔄 To implement
+**Email:** 🔄 To implement  
+**SMS:** 🔄 Optional
+**Farcaster:** 🔄 Via Neynar
+
+#### 3.2 Browser Push Notifications
+
+```typescript
+// New file: src/services/PushNotificationService.ts
+export class PushNotificationService {
+  private static vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+
+  static async requestPermission(): Promise<boolean> {
+    if (!('Notification' in window)) {
+      console.warn('Browser does not support notifications');
+      return false;
+    }
+
+    const permission = await Notification.requestPermission();
+    return permission === 'granted';
+  }
+
+  static async subscribeUser(): Promise<PushSubscription | null> {
+    if (!('serviceWorker' in navigator)) return null;
+
+    const registration = await navigator.serviceWorker.ready;
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: this.urlBase64ToUint8Array(this.vapidPublicKey)
+    });
+
+    // Send subscription to server
+    await this.sendSubscriptionToServer(subscription);
+    return subscription;
+  }
+
+  private static async sendSubscriptionToServer(subscription: PushSubscription) {
+    await fetch('/.netlify/functions/push-subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(subscription)
+    });
+  }
+}
+```
+
+#### 3.3 Email Notifications
+
+```typescript
+// New file: src/services/EmailNotificationService.ts
+export class EmailNotificationService {
+  static async sendNotificationEmail(data: {
+    to: string;
+    type: 'share' | 'vote' | 'mention';
+    evermarkTitle: string;
+    actionUser: string;
+  }) {
+    await fetch('/.netlify/functions/send-notification-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+  }
+}
+```
+
+### Phase 4: Advanced Features
+
+#### 4.1 Notification Preferences
+
+```typescript
+// New file: src/features/notifications/types/index.ts
+export interface NotificationPreferences {
+  channels: {
+    inApp: boolean;
+    push: boolean;
+    email: boolean;
+    farcaster: boolean;
+  };
+  types: {
+    votes: boolean;
+    shares: boolean;
+    mentions: boolean;
+    follows: boolean;
+    evermarkUpdates: boolean;
+  };
+  frequency: 'immediate' | 'hourly' | 'daily' | 'weekly';
+  quietHours: {
+    enabled: boolean;
+    start: string; // HH:mm format
+    end: string;   // HH:mm format
+  };
+}
+```
+
+#### 4.2 Notification Batching & Grouping
+
+```typescript
+// Enhancement to NotificationService.ts
+export class NotificationBatcher {
+  private static batch: Map<string, any[]> = new Map();
+  private static batchTimer: NodeJS.Timeout | null = null;
+
+  static addToBatch(type: string, notification: any) {
+    if (!this.batch.has(type)) {
+      this.batch.set(type, []);
+    }
+    this.batch.get(type)!.push(notification);
+
+    // Reset timer
+    if (this.batchTimer) clearTimeout(this.batchTimer);
+    this.batchTimer = setTimeout(() => this.flushBatch(), 30000); // 30 seconds
+  }
+
+  private static flushBatch() {
+    this.batch.forEach((notifications, type) => {
+      if (notifications.length > 1) {
+        this.sendBatchedNotification(type, notifications);
+      } else {
+        notifications.forEach(n => NotificationService.sendIndividualNotification(n));
+      }
+    });
+    
+    this.batch.clear();
+  }
+}
+```
+
+### Phase 5: Analytics & Insights
+
+#### 5.1 Notification Analytics
+
+```typescript
+// New file: src/services/NotificationAnalytics.ts
+export class NotificationAnalytics {
+  static trackNotificationSent(type: string, channel: string, userId: string) {
+    // Track with your analytics service
+  }
+
+  static trackNotificationRead(notificationId: string, userId: string) {
+    // Track read rates
+  }
+
+  static trackNotificationClick(notificationId: string, userId: string) {
+    // Track click-through rates
+  }
+}
+```
+
+## Implementation Priority
+
+### High Priority (Phase 1)
+1. Real blockchain event monitoring
+2. WebSocket real-time updates
+3. Enhanced notification persistence
+
+### Medium Priority (Phase 2) 
+1. Neynar integration for Farcaster notifications
+2. Browser push notifications
+3. Notification preferences UI
+
+### Low Priority (Phase 3-5)
+1. Email notifications
+2. Advanced batching/grouping
+3. Analytics dashboard
+4. SMS notifications
+
+## Technical Requirements
+
+### Environment Variables
+```bash
+# Neynar
+VITE_NEYNAR_API_KEY=your_neynar_api_key
+NEYNAR_WEBHOOK_SECRET=your_webhook_secret
+
+# Push Notifications
+VITE_VAPID_PUBLIC_KEY=your_vapid_public_key
+VAPID_PRIVATE_KEY=your_vapid_private_key
+
+# Email (optional)
+SENDGRID_API_KEY=your_sendgrid_key
+SMTP_HOST=your_smtp_host
+SMTP_USER=your_smtp_user
+SMTP_PASS=your_smtp_password
+```
+
+### Database Schema Additions
+```sql
+-- Notification preferences
+CREATE TABLE notification_preferences (
+  user_address VARCHAR(42) PRIMARY KEY,
+  preferences JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Push subscriptions
+CREATE TABLE push_subscriptions (
+  id SERIAL PRIMARY KEY,
+  user_address VARCHAR(42) NOT NULL,
+  subscription_data JSONB NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Notification history (for analytics)
+CREATE TABLE notification_events (
+  id SERIAL PRIMARY KEY,
+  user_address VARCHAR(42) NOT NULL,
+  notification_type VARCHAR(50) NOT NULL,
+  channel VARCHAR(20) NOT NULL,
+  status VARCHAR(20) NOT NULL, -- sent, delivered, read, clicked
+  metadata JSONB,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+This guide provides a comprehensive roadmap for implementing a full-featured notification system that leverages both Neynar's capabilities and custom infrastructure for complete coverage.
