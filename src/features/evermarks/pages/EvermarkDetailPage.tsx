@@ -28,6 +28,7 @@ import { SupportersList } from '../components/SupportersList';
 import { useAppAuth } from '@/providers/AppContext';
 import { useFarcasterDetection } from '@/hooks/useFarcasterDetection';
 import { EvermarkMeta } from '@/components/FarcasterMeta';
+import { VotingStats } from '@/components/VotingStats';
 
 // Utility function for responsive classes
 function cn(...classes: (string | undefined | null | false)[]): string {
@@ -530,18 +531,15 @@ export default function EvermarkDetailPage(): React.ReactNode {
                   <span className="text-gray-400">Token ID:</span>
                   <span className="text-white font-mono">#{evermark.tokenId}</span>
                 </div>
-                {evermark.votes !== undefined && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Votes:</span>
-                    <span className="text-green-400 font-medium">{evermark.votes}</span>
-                  </div>
-                )}
                 <div className="flex justify-between">
                   <span className="text-gray-400">Creator:</span>
                   <span className="text-white truncate ml-2">{evermark.creator}</span>
                 </div>
               </div>
             </div>
+
+            {/* Voting Statistics */}
+            <VotingStats evermarkId={evermark.id} />
 
             {/* Technical Details */}
             <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6">

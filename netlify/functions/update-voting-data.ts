@@ -61,14 +61,14 @@ export async function handler(event: HandlerEvent, context: HandlerContext) {
     const { error: voteError } = await supabase
       .from('votes')
       .upsert({
-        user_id: user_id.toLowerCase(),
+        user_address: user_id.toLowerCase(),
         evermark_id: evermark_id,
-        cycle: cycle,
+        cycle_number: cycle,
         amount: vote_amount.toString(),
         action: 'delegate',
         metadata: transaction_hash ? { transaction_hash } : {}
       }, {
-        onConflict: 'user_id,evermark_id,cycle'
+        onConflict: 'user_address,evermark_id,cycle_number'
       });
 
     if (voteError) {
