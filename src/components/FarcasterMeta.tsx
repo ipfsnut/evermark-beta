@@ -9,6 +9,7 @@ interface FarcasterMetaProps {
   url?: string;
   buttonText?: string;
   buttonAction?: 'link' | 'post' | 'tx';
+  useDynamicSharing?: boolean; // NEW: Enable dynamic top evermark sharing
 }
 
 export function FarcasterMeta({
@@ -17,8 +18,11 @@ export function FarcasterMeta({
   imageUrl = 'https://evermarks.net/og-image.png',
   url = 'https://evermarks.net',
   buttonText = '📖 Open Evermark',
-  buttonAction = 'link'
+  buttonAction = 'link',
+  useDynamicSharing = false
 }: FarcasterMetaProps) {
+  // Use dynamic sharing when enabled
+  const shareUrl = useDynamicSharing ? '/.netlify/functions/dynamic-og-image' : url;
   return (
     <Helmet>
       {/* Farcaster Mini App Embed Meta Tags */}
@@ -26,13 +30,13 @@ export function FarcasterMeta({
       <meta name="fc:miniapp:image" content={imageUrl} />
       <meta name="fc:miniapp:button:1" content={buttonText} />
       <meta name="fc:miniapp:button:1:action" content={buttonAction} />
-      <meta name="fc:miniapp:button:1:target" content={url} />
+      <meta name="fc:miniapp:button:1:target" content={shareUrl} />
       
       {/* Open Graph Meta Tags */}
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
       <meta property="og:image" content={imageUrl} />
-      <meta property="og:url" content={url} />
+      <meta property="og:url" content={shareUrl} />
       <meta property="og:type" content="website" />
       <meta property="og:site_name" content="Evermark Beta" />
       

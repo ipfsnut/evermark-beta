@@ -23,7 +23,7 @@ import { cn, useIsMobile } from '../utils/responsive';
 
 // Evermarks feature
 import { useEvermarksState, EvermarkFeed } from '../features/evermarks';
-import { FarcasterMeta } from '../components/FarcasterMeta';
+import { DynamicFarcasterMeta } from '../components/DynamicFarcasterMeta';
 
 
 // Real Protocol Stats using the evermarks hook
@@ -290,14 +290,11 @@ const HomePage: React.FC = () => {
 
   return (
     <div className={themeClasses.page}>
-      {/* Default Farcaster Mini App Meta Tags for Homepage */}
-      <FarcasterMeta
-        title="Evermark Protocol"
-        description="Discover amazing content online and earn rewards by sharing Evermarks through community curation"
-        imageUrl="https://evermarks.net/og-image.png"
-        url="https://evermarks.net"
-        buttonText="🚀 Open Evermark"
-        buttonAction="link"
+      {/* Dynamic Farcaster Mini App Meta Tags - Shows Top Evermark */}
+      <DynamicFarcasterMeta
+        fallbackTitle="Evermark Protocol"
+        fallbackDescription="Discover amazing content online and earn rewards by sharing Evermarks through community curation"
+        fallbackImageUrl="https://evermarks.net/og-image.png"
       />
       
       {/* Hero Section */}

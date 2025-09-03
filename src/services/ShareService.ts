@@ -304,6 +304,77 @@ export class ShareService {
   }
 
   /**
+   * Share main Evermark app with dynamic top evermark content
+   */
+  static async shareMainApp(platform: 'twitter' | 'farcaster' | 'native' | 'copy', userAddress: string): Promise<void> {
+    const shareUrl = '/.netlify/functions/dynamic-og-image';
+    const baseText = 'Check out Evermark - where the community curates the best content on-chain! 🌟';
+    
+    switch (platform) {
+      case 'twitter': {
+        const text = `${baseText}\n\n${shareUrl}\n\n#Evermark #Web3 #Curation`;
+        const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+        window.open(twitterUrl, '_blank', 'width=550,height=350');
+        break;
+      }
+      
+      case 'farcaster': {
+        const isInFarcaster = typeof window !== 'undefined' && 
+                             (window as any).__evermark_farcaster_detected === true;
+        
+        const text = `${baseText}\n\n${shareUrl}`;
+        
+        if (isInFarcaster) {
+          try {
+            const { sdk } = await import('@farcaster/miniapp-sdk');
+            if (sdk && 'share' in sdk && typeof sdk.share === 'function') {
+              await (sdk.share as (text: string) => Promise<void>)(text);
+              break;
+            }
+          } catch (error) {
+            console.warn('Farcaster SDK share failed, falling back to web share:', error);
+          }
+        }
+        
+        const farcasterUrl = `https://farcaster.xyz/~/compose?text=${encodeURIComponent(text)}`;
+        window.open(farcasterUrl, '_blank', 'width=550,height=600');
+        break;
+      }
+      
+      case 'copy': {
+        await navigator.clipboard.writeText(shareUrl);
+        break;
+      }
+      
+      case 'native': {
+        if (!navigator.share) {
+          throw new Error('Web Share API not supported');
+        }
+        
+        await navigator.share({
+          title: 'Evermark Protocol - Community Curated Content',
+          text: baseText,
+          url: shareUrl
+        });
+        break;
+      }
+    }
+    
+    // Record the share (using 'app' as a special evermark ID)
+    try {
+      await this.shareEvermark({
+        evermarkId: 'app',
+        platform: platform.charAt(0).toUpperCase() + platform.slice(1),
+        userAddress,
+        evermarkTitle: 'Evermark Protocol',
+        evermarkOwner: 'protocol'
+      });
+    } catch (error) {
+      console.warn('Failed to record app share:', error);
+    }
+  }
+
+  /**
    * Share documentation via Web Share API if supported
    */
   static async shareDocNative(docTitle: string, docId: string): Promise<void> {

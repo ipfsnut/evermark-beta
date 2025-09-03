@@ -117,12 +117,6 @@ export function SimpleEvermarkImage({
         loading="lazy"
       />
       
-      {/* Cache indicator for development */}
-      {import.meta.env.DEV && (
-        <div className="absolute top-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded">
-          {isCached ? '💾' : source === 'pinata' ? '🔗' : '🌐'}
-        </div>
-      )}
     </div>
   );
 }

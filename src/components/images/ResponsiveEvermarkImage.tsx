@@ -252,19 +252,6 @@ export function ResponsiveEvermarkImage({
         </div>
       )}
       
-      {/* Development indicators */}
-      {import.meta.env.DEV && imageLoaded && dimensions && (
-        <div className="absolute top-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded space-y-1">
-          <div>{isCached ? '💾 Cached' : source === 'pinata' ? '🔗 IPFS' : '🌐 Web'}</div>
-          <div>
-            {dimensions.isTall ? '📚 Book' : 
-             dimensions.isPortrait ? '📱 Portrait' : 
-             dimensions.isSquare ? '⬜ Square' : 
-             '🖼️ Wide'}
-          </div>
-          <div>AR: {dimensions.aspectRatio.toFixed(2)}</div>
-        </div>
-      )}
       
       {/* Visual indicator for book covers */}
       {dimensions?.isTall && variant !== 'list' && variant !== 'compact' && (
