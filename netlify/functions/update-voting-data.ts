@@ -72,7 +72,7 @@ export async function handler(event: HandlerEvent, context: HandlerContext) {
       });
 
     if (voteError) {
-      console.error('Failed to insert vote:', voteError);
+      console.error('Failed to insert vote:', JSON.stringify(voteError, null, 2));
       return {
         statusCode: 500,
         headers,
@@ -80,7 +80,8 @@ export async function handler(event: HandlerEvent, context: HandlerContext) {
           error: 'Failed to record vote',
           details: voteError.message,
           code: voteError.code,
-          hint: voteError.hint
+          hint: voteError.hint,
+          full_error: voteError
         })
       };
     }
@@ -98,25 +99,7 @@ export async function handler(event: HandlerEvent, context: HandlerContext) {
       params: [BigInt(cycle), BigInt(evermark_id)]
     }) as bigint;
 
-    // 2.5. Update voting_cache table with new totals
-    const { error: cacheError } = await supabase
-      .from('voting_cache')
-      .upsert({
-        evermark_id: evermark_id.toString(),
-        cycle_number: cycle,
-        total_votes: totalVotes.toString(),
-        voter_count: 1, // We'd need to query to get actual count
-        last_updated: new Date().toISOString()
-      }, {
-        onConflict: 'evermark_id,cycle_number'
-      });
-
-    if (cacheError) {
-      console.error('Failed to update voting cache:', cacheError);
-      // Don't fail the request if cache update fails
-    }
-
-    // 3. Update leaderboard table
+    // 2.5. Update leaderboard table (the actual cache system)
     // First, get current leaderboard to calculate new ranking
     const { data: currentLeaderboard } = await supabase
       .from('leaderboard')
