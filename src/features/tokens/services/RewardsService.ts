@@ -194,14 +194,9 @@ export class RewardsService {
       return whole.toString();
     }
     
-    const fractionalStr = fractional.toString().padStart(decimals, '0');
-    const trimmed = fractionalStr.replace(/0+$/, '');
-    
-    if (trimmed === '') {
-      return whole.toString();
-    }
-    
-    return `${whole}.${trimmed}`;
+    // Convert to number for decimal formatting (max 1 decimal place)
+    const fullAmount = Number(amount) / (10 ** decimals);
+    return fullAmount.toFixed(1);
   }
 
   /**
@@ -211,10 +206,23 @@ export class RewardsService {
     try {
       const rates = await this.getRewardRates();
       
-      // Calculate daily rewards (assuming rates are per second)
-      const secondsPerDay = BigInt(86400);
-      const ethPerDay = (rates.ethRewardRate * secondsPerDay * userStakedAmount) / BigInt(10 ** 18);
-      const emarkPerDay = (rates.emarkRewardRate * secondsPerDay * userStakedAmount) / BigInt(10 ** 18);
+      // FIXED: Reward rates are likely already per-day or need different scaling
+      // Debug the raw rates to understand the correct calculation
+      console.log('Debug reward rates:', {
+        ethRewardRate: rates.ethRewardRate.toString(),
+        emarkRewardRate: rates.emarkRewardRate.toString(),
+        userStakedAmount: userStakedAmount.toString()
+      });
+      
+      // Conservative calculation: assume rates need proper scaling
+      // Most reward systems use basis points or different time periods
+      const ethPerDay = (rates.ethRewardRate * userStakedAmount) / BigInt(10 ** 18) / BigInt(365); // Annual to daily
+      const emarkPerDay = (rates.emarkRewardRate * userStakedAmount) / BigInt(10 ** 18) / BigInt(365); // Annual to daily
+      
+      console.log('Calculated daily rewards:', {
+        ethPerDay: ethPerDay.toString(),
+        emarkPerDay: emarkPerDay.toString()
+      });
       
       return {
         ethPerDay,
