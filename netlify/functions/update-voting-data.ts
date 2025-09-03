@@ -57,19 +57,18 @@ export async function handler(event: HandlerEvent, context: HandlerContext) {
 
     console.log(`Updating voting data for user ${user_id}, evermark ${evermark_id}, amount ${vote_amount}`);
 
-    // 1. Insert/update user_votes_cache table - use upsert to handle multiple votes
+    // 1. Insert/update votes table - using ACTUAL column names from voting.txt
     const { error: voteError } = await supabase
-      .from('user_votes_cache')
+      .from('votes')
       .upsert({
-        user_address: user_id.toLowerCase(),
+        user_id: user_id.toLowerCase(),
         evermark_id: evermark_id.toString(),
-        cycle_number: cycle,
-        vote_amount: vote_amount.toString(),
-        transaction_hash: transaction_hash || null,
-        block_number: null,
-        updated_at: new Date().toISOString()
+        cycle: cycle,
+        amount: vote_amount.toString(),
+        action: 'delegate',
+        metadata: transaction_hash ? { transaction_hash } : {}
       }, {
-        onConflict: 'user_address,evermark_id,cycle_number'
+        onConflict: 'user_id,evermark_id,cycle'
       });
 
     if (voteError) {
