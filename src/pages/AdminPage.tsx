@@ -12,7 +12,8 @@ import {
   Shield,
   DollarSign,
   PlayCircle,
-  Star
+  Star,
+  Zap
 } from 'lucide-react';
 import { useActiveAccount, useReadContract, useSendTransaction } from 'thirdweb/react';
 import { prepareContractCall } from 'thirdweb';
@@ -26,6 +27,7 @@ import {
 import { EvermarkBlockchainService } from '@/features/evermarks/services/BlockchainService';
 import { useThemeClasses } from '@/providers/ThemeProvider';
 import { useBetaPoints } from '@/features/points';
+import { SeasonFinalizationWizard } from '../features/admin/pages/SeasonFinalizationWizard';
 
 // Development wallet address for referrals
 const DEVELOPMENT_REFERRER_ADDRESS = "0x3427b4716B90C11F9971e43999a48A47Cf5B571E";
@@ -43,7 +45,6 @@ interface ContractBalances {
   feeCollectorEmark: bigint;
   rewardsWeth: bigint;
   rewardsEmark: bigint;
-  pendingReferralPayment: bigint;
 }
 
 interface RewardsPeriodInfo {
@@ -69,10 +70,13 @@ export default function AdminPage(): React.ReactNode {
   
   const [seasonInfo, setSeasonInfo] = useState<SeasonInfo | null>(null);
   const [balances, setBalances] = useState<ContractBalances | null>(null);
+  const [mintFee, setMintFee] = useState<bigint | null>(null);
   const [contractStatus, setContractStatus] = useState<ContractStatus | null>(null);
   const [rewardsPeriod, setRewardsPeriod] = useState<RewardsPeriodInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [actionStatus, setActionStatus] = useState<string>('');
+  const [showWizard, setShowWizard] = useState(false);
+  const [wizardSeason, setWizardSeason] = useState<number | null>(null);
   
   // Batch image generation state
   const [batchProgress, setBatchProgress] = useState<{
@@ -115,11 +119,11 @@ export default function AdminPage(): React.ReactNode {
     params: []
   });
 
-  // Read pending referral payment for dev wallet
-  const { data: pendingReferralData } = useReadContract({
+  // Read current mint fee from NFT contract
+  const { data: currentMintFee } = useReadContract({
     contract: nftContract,
-    method: "function pendingReferralPayments(address) view returns (uint256)",
-    params: [DEVELOPMENT_REFERRER_ADDRESS]
+    method: "function mintPrice() view returns (uint256)",
+    params: []
   });
 
   // Read WEMARK total staked
@@ -178,9 +182,13 @@ export default function AdminPage(): React.ReactNode {
             feeCollectorWeth: wethBalance,
             feeCollectorEmark: emarkBalance,
             rewardsWeth,
-            rewardsEmark,
-            pendingReferralPayment: pendingReferralData ? BigInt(pendingReferralData.toString()) : BigInt(0)
+            rewardsEmark
           });
+        }
+
+        // Set mint fee
+        if (currentMintFee) {
+          setMintFee(BigInt(currentMintFee.toString()));
         }
 
         // Set rewards period info
@@ -237,7 +245,7 @@ export default function AdminPage(): React.ReactNode {
     };
 
     loadData();
-  }, [currentSeason, seasonDetails, nftTotalSupply, wemarkTotalStaked, feeCollectorBalances, rewardsPeriodStatus, rewardsBalances, pendingReferralData]);
+  }, [currentSeason, seasonDetails, nftTotalSupply, wemarkTotalStaked, feeCollectorBalances, rewardsPeriodStatus, rewardsBalances, currentMintFee]);
 
   // Consolidated transaction handler
   const executeTransaction = async (contract: any, method: string, params: any[], successMessage: string, loadingMessage: string) => {
@@ -380,28 +388,6 @@ export default function AdminPage(): React.ReactNode {
     'Forwarding EMARK to rewards...'
   );
 
-  const claimReferralPayment = async () => {
-    if (!account) return;
-    
-    try {
-      setActionStatus('Claiming referral payment...');
-      
-      const result = await EvermarkBlockchainService.claimReferralPayment(account);
-      
-      if (result.success) {
-        setActionStatus('Referral payment claimed successfully!');
-        setTimeout(() => setActionStatus(''), 3000);
-        // Trigger data refresh
-        window.location.reload();
-      } else {
-        setActionStatus(`Failed to claim referral payment: ${result.error}`);
-        setTimeout(() => setActionStatus(''), 5000);
-      }
-    } catch (error) {
-      setActionStatus(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      setTimeout(() => setActionStatus(''), 5000);
-    }
-  };
 
   const startNewRewardsCycle = () => executeTransaction(
     rewardsContract,
@@ -447,6 +433,24 @@ export default function AdminPage(): React.ReactNode {
     'Distributing rewards...'
   );
 
+  const launchSeasonWizard = async (season?: number) => {
+    try {
+      const targetSeason = season || (seasonInfo ? seasonInfo.seasonNumber - 1 : 0);
+      setWizardSeason(targetSeason);
+      setShowWizard(true);
+    } catch (error) {
+      setActionStatus(`Failed to launch wizard: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setTimeout(() => setActionStatus(''), 5000);
+    }
+  };
+
+  const closeWizard = () => {
+    setShowWizard(false);
+    setWizardSeason(null);
+    // Refresh admin data after wizard completion
+    window.location.reload();
+  };
+
   const formatEther = (value: bigint, decimals: number = 4): string => {
     const ether = Number(value) / 1e18;
     return ether.toFixed(decimals);
@@ -467,6 +471,20 @@ export default function AdminPage(): React.ReactNode {
     if (hours > 0) return `${hours}h ${minutes}m`;
     return `${minutes}m`;
   };
+
+  // Show wizard if active
+  if (showWizard && wizardSeason !== null) {
+    return (
+      <div className={`min-h-screen ${themeClasses.bg.primary} ${themeClasses.text.primary}`}>
+        <div className="container mx-auto px-6 py-8">
+          <SeasonFinalizationWizard
+            seasonNumber={wizardSeason}
+            onExit={closeWizard}
+          />
+        </div>
+      </div>
+    );
+  }
 
   if (!account) {
     return (
@@ -654,17 +672,13 @@ export default function AdminPage(): React.ReactNode {
                     <p className="text-gray-400 text-sm mb-2">EMARK Balance</p>
                     <p className="text-xl font-bold text-purple-400">{formatEther(balances.feeCollectorEmark)} EMARK</p>
                   </div>
-                  <div>
-                    <p className="text-gray-400 text-sm mb-2">Pending Referral Payment</p>
-                    <p className="text-xl font-bold text-yellow-400">{formatEther(balances.pendingReferralPayment)} ETH</p>
-                    <button
-                      onClick={claimReferralPayment}
-                      disabled={isPending || balances.pendingReferralPayment === BigInt(0)}
-                      className="mt-2 px-3 py-1 bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded text-sm transition-colors"
-                    >
-                      Claim Referral Earnings
-                    </button>
-                  </div>
+                  {mintFee !== null && mintFee > BigInt(0) && (
+                    <div>
+                      <p className="text-gray-400 text-sm mb-2">Current Mint Fee</p>
+                      <p className="text-xl font-bold text-yellow-400">{formatEther(mintFee)} ETH</p>
+                      <p className="text-xs text-gray-500 mt-1">Per Evermark NFT mint</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -769,6 +783,15 @@ export default function AdminPage(): React.ReactNode {
               >
                 <PlayCircle className="w-5 h-5 mr-2" />
                 Start New Voting Season
+              </button>
+              
+              <button
+                onClick={() => launchSeasonWizard()}
+                disabled={isPending}
+                className="w-full flex items-center justify-center px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg transition-colors mt-3"
+              >
+                <Zap className="w-5 h-5 mr-2" />
+                Launch Season Finalization Wizard
               </button>
               
               <button
@@ -914,50 +937,19 @@ export default function AdminPage(): React.ReactNode {
               
               {/* Cache Management */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-yellow-400">Cache Management</h3>
+                <h3 className="text-lg font-semibold text-yellow-400">Voting Cache Management</h3>
                 
-                <div className="space-y-2">
-                  <button
-                    onClick={() => syncVotingCache()}
-                    disabled={isPending}
-                    className="w-full flex items-center justify-center px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg text-sm transition-colors"
-                  >
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Sync Current Cycle (from contract)
-                  </button>
-                  
-                  <div className="text-xs text-gray-400 text-center mb-2">Manual cycle sync (for testing):</div>
-                  
-                  <button
-                    onClick={() => syncVotingCache(0)}
-                    disabled={isPending}
-                    className="w-full flex items-center justify-center px-4 py-2 bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg text-sm transition-colors"
-                  >
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Sync Cycle 0
-                  </button>
-                  
-                  <button
-                    onClick={() => syncVotingCache(1)}
-                    disabled={isPending}
-                    className="w-full flex items-center justify-center px-4 py-2 bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg text-sm transition-colors"
-                  >
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Sync Cycle 1
-                  </button>
-                  
-                  <button
-                    onClick={() => syncVotingCache(2)}
-                    disabled={isPending}
-                    className="w-full flex items-center justify-center px-4 py-2 bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg text-sm transition-colors"
-                  >
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Sync Cycle 2
-                  </button>
-                </div>
+                <button
+                  onClick={() => syncVotingCache()}
+                  disabled={isPending}
+                  className="w-full flex items-center justify-center px-6 py-3 bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg transition-colors"
+                >
+                  <RefreshCw className="w-5 h-5 mr-2" />
+                  Sync Voting Data
+                </button>
                 
                 <p className="text-sm text-gray-400">
-                  Sync voting data from different cycles to find where votes are stored.
+                  Synchronize voting data from the blockchain to ensure accurate vote counts.
                 </p>
               </div>
             </div>
