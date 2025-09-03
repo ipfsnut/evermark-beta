@@ -130,23 +130,24 @@ export async function handler(event: HandlerEvent, context: HandlerContext) {
       entry.rank = index + 1;
     });
 
-    // Update this evermark's leaderboard entry
-    const newEntry = updatedLeaderboard.find(l => l.evermark_id === evermark_id);
-    if (newEntry) {
-      const { error: leaderboardError } = await supabase
-        .from('leaderboard')
-        .upsert({
-          evermark_id: evermark_id,
-          cycle_id: cycle,
-          total_votes: totalVotes.toString(),
-          rank: newEntry.rank,
-          updated_at: new Date().toISOString()
-        });
+    // Update ALL leaderboard entries with correct ranks (not just the current one)
+    const leaderboardUpdates = updatedLeaderboard.map(entry => ({
+      evermark_id: entry.evermark_id,
+      cycle_id: cycle,
+      total_votes: entry.total_votes,
+      rank: entry.rank,
+      updated_at: new Date().toISOString()
+    }));
 
-      if (leaderboardError) {
-        console.error('Failed to update leaderboard:', leaderboardError);
-        // Don't fail the entire request if leaderboard update fails
-      }
+    const { error: leaderboardError } = await supabase
+      .from('leaderboard')
+      .upsert(leaderboardUpdates, {
+        onConflict: 'evermark_id,cycle_id'
+      });
+
+    if (leaderboardError) {
+      console.error('Failed to update leaderboard:', leaderboardError);
+      // Don't fail the entire request if leaderboard update fails
     }
 
     return {
@@ -160,7 +161,7 @@ export async function handler(event: HandlerEvent, context: HandlerContext) {
           evermark_id,
           cycle,
           total_votes: totalVotes.toString(),
-          rank: newEntry?.rank || 0
+          rank: updatedLeaderboard.find(l => l.evermark_id === evermark_id)?.rank || 0
         }
       })
     };
