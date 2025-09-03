@@ -57,16 +57,17 @@ export async function handler(event: HandlerEvent, context: HandlerContext) {
 
     console.log(`Updating voting data for user ${user_id}, evermark ${evermark_id}, amount ${vote_amount}`);
 
-    // 1. Insert/update votes table - use upsert to handle multiple votes
+    // 1. Insert/update user_votes_cache table - use upsert to handle multiple votes
     const { error: voteError } = await supabase
-      .from('votes')
+      .from('user_votes_cache')
       .upsert({
         user_address: user_id.toLowerCase(),
-        evermark_id: evermark_id,
+        evermark_id: evermark_id.toString(),
         cycle_number: cycle,
-        amount: vote_amount.toString(),
-        action: 'delegate',
-        metadata: transaction_hash ? { transaction_hash } : {}
+        vote_amount: vote_amount.toString(),
+        transaction_hash: transaction_hash || null,
+        block_number: null,
+        updated_at: new Date().toISOString()
       }, {
         onConflict: 'user_address,evermark_id,cycle_number'
       });
@@ -78,7 +79,9 @@ export async function handler(event: HandlerEvent, context: HandlerContext) {
         headers,
         body: JSON.stringify({ 
           error: 'Failed to record vote',
-          details: voteError.message 
+          details: voteError.message,
+          code: voteError.code,
+          hint: voteError.hint
         })
       };
     }
@@ -95,6 +98,24 @@ export async function handler(event: HandlerEvent, context: HandlerContext) {
       method: "function getEvermarkVotesInSeason(uint256 season, uint256 evermarkId) view returns (uint256)",
       params: [BigInt(cycle), BigInt(evermark_id)]
     }) as bigint;
+
+    // 2.5. Update voting_cache table with new totals
+    const { error: cacheError } = await supabase
+      .from('voting_cache')
+      .upsert({
+        evermark_id: evermark_id.toString(),
+        cycle_number: cycle,
+        total_votes: totalVotes.toString(),
+        voter_count: 1, // We'd need to query to get actual count
+        last_updated: new Date().toISOString()
+      }, {
+        onConflict: 'evermark_id,cycle_number'
+      });
+
+    if (cacheError) {
+      console.error('Failed to update voting cache:', cacheError);
+      // Don't fail the request if cache update fails
+    }
 
     // 3. Update leaderboard table
     // First, get current leaderboard to calculate new ranking
