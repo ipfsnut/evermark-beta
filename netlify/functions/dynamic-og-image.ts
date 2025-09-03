@@ -34,48 +34,41 @@ interface TopEvermark {
  */
 async function getTopEvermark(): Promise<TopEvermark | null> {
   try {
-    // Get recent evermarks to check their vote counts
-    const { data: evermarks, error } = await supabase
-      .from(EVERMARKS_TABLE)
-      .select('token_id, title, author, description, supabase_image_url, verified')
-      .eq('verified', true) // Only show verified content in shares
-      .order('created_at', { ascending: false })
-      .limit(50); // Check recent 50 evermarks
-
-    if (error || !evermarks || evermarks.length === 0) {
-      console.warn('No evermarks found for dynamic OG image');
+    // Use the leaderboard API to get the top evermark (already handles filtering and ranking)
+    const baseUrl = process.env.URL || 'https://evermarks.net';
+    const response = await fetch(`${baseUrl}/.netlify/functions/leaderboard-data?limit=1`);
+    
+    if (!response.ok) {
+      console.warn('Leaderboard API failed:', response.status);
       return null;
     }
-
-    // Get voting data for all these evermarks
-    const evermarkIds = evermarks.map(e => e.token_id.toString());
-    const votingDataMap = await VotingDataService.getBulkVotingData(evermarkIds);
-
-    // Find the one with highest votes
-    let topEvermark: TopEvermark | null = null;
-    let maxVotes = 0;
-
-    for (const evermark of evermarks) {
-      const votingData = votingDataMap.get(evermark.token_id.toString());
-      const votesRaw = votingData?.votes || 0;
-      const votes = typeof votesRaw === 'bigint' ? Number(votesRaw) : Math.round(votesRaw);
-      
-      if (votes > maxVotes) {
-        maxVotes = votes;
-        topEvermark = {
-          ...evermark,
-          votes
-        };
-      }
+    
+    const data = await response.json();
+    
+    if (!data.evermarks || data.evermarks.length === 0) {
+      console.warn('No evermarks found in leaderboard');
+      return null;
     }
+    
+    const topEvermark = data.evermarks[0];
+    const result: TopEvermark = {
+      token_id: topEvermark.tokenId || topEvermark.token_id,
+      title: topEvermark.title,
+      author: topEvermark.author,
+      description: topEvermark.description,
+      supabase_image_url: topEvermark.supabaseImageUrl || topEvermark.supabase_image_url,
+      verified: topEvermark.verified || false,
+      votes: parseInt(topEvermark.totalVotes) || topEvermark.votes || 0
+    };
 
     console.log('🏆 Top evermark for sharing:', {
-      token_id: topEvermark?.token_id,
-      title: topEvermark?.title,
-      votes: topEvermark?.votes
+      token_id: result.token_id,
+      title: result.title,
+      votes: result.votes,
+      hasImage: !!result.supabase_image_url
     });
 
-    return topEvermark;
+    return result;
   } catch (error) {
     console.error('Error getting top evermark:', error);
     return null;
