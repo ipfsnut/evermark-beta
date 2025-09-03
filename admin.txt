@@ -356,6 +356,125 @@ function calculateSupporterReward(
 
 This creates a comprehensive admin system that's both powerful for platform management and user-friendly for the complex season finalization process. The wizard ensures nothing is missed while providing transparency and auditability for all reward distributions.
 
+## Admin Integration Analysis
+
+### Existing Components (Keep & Integrate)
+
+#### Frontend Components (AdminPage.tsx)
+**Components to Keep:**
+- **Season Status Display** (`src/pages/AdminPage.tsx:510-542`) - Real-time season info with start/end times, vote counts, and status indicators
+- **Contract Status Monitoring** (`src/pages/AdminPage.tsx:544-585`) - Health indicators for Voting, NFT, WEMARK, and Rewards contracts  
+- **Rewards Period Display** (`src/pages/AdminPage.tsx:587-635`) - Current period info with time remaining and distribution rates
+- **Treasury Balance Display** (`src/pages/AdminPage.tsx:637-687`) - Live balances for Fee Collector and Rewards contracts
+- **Beta Points Leaderboard** (`src/pages/AdminPage.tsx:689-754`) - Top 20 users with rankings and point totals
+- **Transaction Handler** (`src/pages/AdminPage.tsx:242-266`) - Consolidated contract interaction with status feedback
+- **Voting Cache Sync** (`src/pages/AdminPage.tsx:268-300`) - Manual sync capabilities for different cycles
+
+#### Backend Functions (Existing APIs)
+**Functions to Keep:**
+- **Season Finalization Core** (`netlify/functions/season-finalization.ts`) - Automated detection and finalization of completed seasons
+- **Voting Synchronization** (`netlify/functions/voting-sync.ts`) - Full sync system with evermark-specific, cycle-specific, and recent event syncing
+- **Manual Sync** (`netlify/functions/sync-now.ts`) - Configurable blockchain sync for Evermarks  
+- **Batch Image Generation** (`netlify/functions/batch-generate-cast-images.ts`) - Cast image generation with progress tracking
+- **Development Dashboard** (`netlify/functions/dev-dashboard.ts`) - System statistics and monitoring (dev/staging only)
+
+#### Smart Contract Integration
+**Contract Functions to Keep:**
+- **Voting Contract Methods**: `getCurrentSeason()`, `getSeasonInfo()`, `getCycleInfo()`, `startNewSeason()`
+- **Fee Collector Methods**: `forwardAllWethToRewards()`, `forwardAllEmarkToRewards()`, `getTokenBalances()`  
+- **Rewards Contract Methods**: `manualRebalance()`, `startNewPeriod()`, `distributeRewards()`, `getPeriodStatus()`
+- **WEMARK Contract Methods**: `getTotalStaked()`
+- **NFT Contract Methods**: `totalSupply()`, `pendingReferralPayments()`, claim referral system
+
+### Components to Build/Modify
+
+#### New Wizard Integration
+**Modify AdminPage.tsx:**
+- **Add Wizard Router** - Conditional rendering between dashboard view and wizard mode
+- **Season Finalization Trigger** - Button to launch wizard when season is finalized but not processed
+- **Wizard State Management** - Track which step user is on and wizard progress
+- **Dashboard Integration** - Embed existing status widgets into wizard steps
+
+#### Enhanced Backend APIs  
+**New Functions to Build:**
+- **`admin/season-finalize.ts`** - New wizard backend with 5-step validation and execution
+- **`admin/compute-rewards.ts`** - Top 3 winner selection and supporter reward calculation
+- **`admin/execute-distribution.ts`** - Batch distribution via new SeasonRewardDistributor contract
+- **`admin/system-health.ts`** - Comprehensive monitoring data aggregation
+
+#### New Smart Contract
+**SeasonRewardDistributor Contract:**
+- **Core Functions**: `depositRewards()`, `distributeSeasonRewards()`, `getContractBalance()`
+- **Emergency Controls**: `emergencyWithdraw()`, `pauseDistributions()`
+- **Audit Trail**: Distribution history and transaction logging
+
+#### New UI Components
+**Wizard Components:**
+- **StepIndicator.tsx** - 5-step progress visualization  
+- **SeasonOverview.tsx** - Winner showcase with evermark previews
+- **DataSync.tsx** - Real-time sync progress with validation checks
+- **WinnerSelection.tsx** - Top 3 winner display with creator info
+- **DistributionReview.tsx** - Preview/approval interface with recipient list
+- **ExecutionMonitor.tsx** - Transaction progress with retry capabilities
+
+### Components to Remove
+
+#### Redundant Manual Controls
+**Remove from AdminPage.tsx:**
+- **Manual Cycle Sync Buttons** (`src/pages/AdminPage.tsx:930-957`) - Hard-coded cycle 0, 1, 2 buttons → Replace with smart cycle detection
+- **Direct Treasury Forward Buttons** (`src/pages/AdminPage.tsx:793-808`) - → Integrate into wizard treasury validation step
+
+#### Legacy Development Tools  
+**Phase Out Functions:**
+- **Manual Rewards Distribution** - Current `distributeRewards()` button → Replace with wizard's custom distribution contract
+- **Development Dashboard** (keep for dev environments but not in production wizard)
+
+#### Deprecated Manual Overrides
+**Remove Manual Triggers:**
+- **Force Start Rewards Period** - Replace with wizard validation checks
+- **Direct Contract Interactions** - Move into wizard's controlled execution flow
+
+### Integration Mapping: Existing → Wizard Steps
+
+#### Wizard Step 1: Season Status & Validation
+**Integrates These Existing Components:**
+- Season status display → Enhanced validation checks
+- Contract status monitoring → Health verification  
+- Current season detection → Automated eligibility checking
+
+#### Wizard Step 2: Data Sync & Final Ranking  
+**Integrates These Existing Functions:**
+- `syncVotingCache()` → Automated final sync before finalization
+- `season-finalization.ts` → Leaderboard computation and validation
+- `voting-sync.ts` → Comprehensive vote data synchronization
+
+#### Wizard Step 3: Winner Selection & Reward Calculation
+**Integrates These Existing Data Sources:**
+- Beta points leaderboard → Enhanced with evermark winner showcase  
+- Treasury balances → Reward pool allocation calculation
+- Contract status → Winner verification and reward sizing
+
+#### Wizard Step 4: Review & Approval
+**Integrates These Existing Controls:**
+- Treasury balance verification → Distribution approval checks
+- Transaction handler → Enhanced with batch preview capabilities
+- Multi-signature integration → Enhanced approval workflow
+
+#### Wizard Step 5: Execution & Monitoring  
+**Integrates These Existing Functions:**
+- Contract transaction execution → New distribution contract
+- Progress tracking → Enhanced with batch processing
+- Action status display → Real-time execution monitoring
+
+### Technical Implementation Strategy
+
+1. **Keep AdminPage.tsx as Main Hub** - Add wizard router that conditionally shows dashboard or wizard
+2. **Preserve Existing Functions** - All current backend functions remain for non-wizard operations  
+3. **Parallel Development** - Build wizard alongside existing admin without breaking current functionality
+4. **Gradual Migration** - Phase in wizard features while keeping manual controls as fallback
+5. **Enhanced Error Handling** - Upgrade existing error handling to match wizard requirements
+6. **Unified State Management** - Extend current React Query patterns for wizard state
+
 ## Current Admin Page Functionality Review
 
 ### Existing Admin Dashboard (`/admin`)

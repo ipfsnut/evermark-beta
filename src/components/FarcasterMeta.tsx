@@ -21,33 +21,41 @@ export function FarcasterMeta({
   buttonAction = 'link',
   useDynamicSharing = false
 }: FarcasterMetaProps) {
-  // Use dynamic sharing when enabled
+  // When dynamic sharing is enabled, point to the dynamic endpoint for all sharing
   const shareUrl = useDynamicSharing ? '/.netlify/functions/dynamic-og-image' : url;
+  
+  // For dynamic sharing, the meta tags act as fallbacks - social platforms will
+  // fetch from the shareUrl which contains the actual dynamic content
+  const metaTitle = useDynamicSharing ? 'Evermark Protocol - Community Curated Content' : title;
+  const metaDescription = useDynamicSharing ? 
+    'See what\'s trending! The top community-voted content on Evermark Protocol.' : 
+    description;
+  
   return (
     <Helmet>
       {/* Farcaster Mini App Embed Meta Tags */}
       <meta name="fc:miniapp" content="1" />
-      <meta name="fc:miniapp:image" content={imageUrl} />
+      <meta name="fc:miniapp:image" content={shareUrl} />
       <meta name="fc:miniapp:button:1" content={buttonText} />
       <meta name="fc:miniapp:button:1:action" content={buttonAction} />
       <meta name="fc:miniapp:button:1:target" content={shareUrl} />
       
       {/* Open Graph Meta Tags */}
-      <meta property="og:title" content={title} />
-      <meta property="og:description" content={description} />
-      <meta property="og:image" content={imageUrl} />
+      <meta property="og:title" content={metaTitle} />
+      <meta property="og:description" content={metaDescription} />
+      <meta property="og:image" content={shareUrl} />
       <meta property="og:url" content={shareUrl} />
       <meta property="og:type" content="website" />
       <meta property="og:site_name" content="Evermark Beta" />
       
       {/* Twitter Card Meta Tags */}
       <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:title" content={title} />
-      <meta name="twitter:description" content={description} />
-      <meta name="twitter:image" content={imageUrl} />
+      <meta name="twitter:title" content={metaTitle} />
+      <meta name="twitter:description" content={metaDescription} />
+      <meta name="twitter:image" content={shareUrl} />
       
       {/* Dynamic page title */}
-      <title>{title} - Evermark Beta</title>
+      <title>{metaTitle} - Evermark Beta</title>
     </Helmet>
   );
 }
