@@ -92,9 +92,17 @@ export const handler: Handler = async (event, context) => {
 
           // Check if this is a Cast evermark that needs image generation
           const parsedMetadata = JSON.parse(metadata);
-          if (parsedMetadata.cast || parsedMetadata.castData || 
-              (parsedMetadata.customFields && 
-               parsedMetadata.customFields.some((f: any) => f.key === 'cast_author'))) {
+          // Also check the content_type in the database to make sure it's actually a Cast
+          const { data: evermarkData } = await supabase
+            .from('beta_evermarks')
+            .select('content_type')
+            .eq('token_id', evermark.token_id)
+            .single();
+          
+          if (evermarkData?.content_type === 'Cast' && 
+              (parsedMetadata.cast || parsedMetadata.castData || 
+               (parsedMetadata.customFields && 
+                parsedMetadata.customFields.some((f: any) => f.key === 'cast_author')))) {
             
             console.log(`🎨 Triggering cast image generation for token ${evermark.token_id}`);
             

@@ -335,6 +335,18 @@ export const handler: Handler = async (event, context) => {
       throw new Error(`Failed to fetch evermark: ${fetchError?.message}`);
     }
 
+    // Only generate cast images for Cast content type
+    if (evermark.content_type !== 'Cast') {
+      return {
+        statusCode: 400,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          success: false,
+          error: `Cannot generate cast image for content type '${evermark.content_type}'. This function only works for Cast evermarks.`
+        })
+      };
+    }
+
     // Parse the metadata to get cast data
     let castData;
     try {
