@@ -62,7 +62,7 @@
 
 [[redirects]]
   from = "/share/evermark/:id"
-  to = "/.netlify/functions/evermark-share"
+  to = "/.netlify/functions/shares"
   status = 200
 
 [[redirects]]
@@ -78,7 +78,7 @@
 # Webhook endpoints
 [[redirects]]
   from = "/webhook/thirdweb"
-  to = "/.netlify/functions/thirdweb-webhook"
+  to = "/.netlify/functions/webhook-mint"
   status = 200
 
 [[redirects]]
