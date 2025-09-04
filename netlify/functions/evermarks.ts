@@ -540,7 +540,8 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
           metadata_fetched: true, // We have the metadata from IPFS
           verified: false, // Will be verified later
           // Note: Explicitly excluding 'metadata' field as it may not exist in beta_evermarks table
-          metadata_json: evermarkData.metadata ? JSON.stringify(evermarkData.metadata) : undefined,
+          metadata_json: evermarkData.metadata || undefined,
+          ipfs_image_hash: evermarkData.ipfs_image_hash || undefined,
           // referrer_address: evermarkData.referrer_address && isValidWalletAddress(evermarkData.referrer_address) 
           //   ? evermarkData.referrer_address.toLowerCase() 
           //   : '0x3427b4716B90C11F9971e43999a48A47Cf5B571E', // TODO: Add referrer_address column to beta_evermarks table
