@@ -153,13 +153,13 @@ export default function MyEvermarksPage() {
     const hasVoted = votingHistory?.some(vote => 
       vote.evermarkId === evermark.id && 
       vote.amount > 0 &&
-      (!currentCycle || vote.cycle === currentCycle.cycleNumber) // Use current cycle if available
+      (!currentCycle || vote.season === currentCycle.cycleNumber) // Use current cycle if available
     );
     
     // Debug logging for the first few evermarks
     if (parseInt(evermark.id) <= 5) {
       const userVote = votingHistory?.find(vote => vote.evermarkId === evermark.id);
-      console.log(`Evermark ${evermark.id}: hasVoted=${hasVoted}, userVote=${userVote?.amount?.toString() || 'none'}, cycle=${userVote?.cycle || 'none'}, currentCycle=${currentCycle?.cycleNumber || 'none'}`);
+      console.log(`Evermark ${evermark.id}: hasVoted=${hasVoted}, userVote=${userVote?.amount?.toString() || 'none'}, season=${userVote?.season || 'none'}, currentCycle=${currentCycle?.cycleNumber || 'none'}`);
     }
     
     // Only include if user has actually voted
