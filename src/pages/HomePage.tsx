@@ -392,6 +392,8 @@ const HomePage: React.FC = () => {
         </div>
       </div>
 
+      {/* Top 3 Evermarks Showcase */}
+      <TopThreeEvermarks />
 
       {/* Protocol Stats */}
       <div className={cn(
@@ -421,9 +423,6 @@ const HomePage: React.FC = () => {
         </div>
         <QuickActions />
       </div>
-
-      {/* Top 3 Evermarks Showcase */}
-      <TopThreeEvermarks />
 
       {/* Main Content Layout */}
       <div className={cn(
