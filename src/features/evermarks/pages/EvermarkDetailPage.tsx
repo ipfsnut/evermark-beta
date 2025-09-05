@@ -59,11 +59,15 @@ const ShareModal: React.FC<{
   evermark: Evermark;
 }> = ({ isOpen, onClose, evermark }) => {
   const [copied, setCopied] = useState(false);
-  const shareUrl = `${window.location.origin}/evermark/${evermark.id}`;
+  
+  // Use the beautiful sharing page for social media shares
+  const shareUrl = `${window.location.origin}/.netlify/functions/evermark-share?id=${evermark.id}`;
+  const directUrl = `${window.location.origin}/evermark/${evermark.id}`;
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(shareUrl);
+      // Copy the direct URL for easy sharing
+      await navigator.clipboard.writeText(directUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
@@ -90,7 +94,7 @@ const ShareModal: React.FC<{
         <div className="p-6 space-y-4">
           <div className="bg-gray-800 rounded-lg p-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400 truncate mr-3">{shareUrl}</span>
+              <span className="text-sm text-gray-400 truncate mr-3">{directUrl}</span>
               <button
                 onClick={handleCopy}
                 className={cn(
@@ -108,7 +112,7 @@ const ShareModal: React.FC<{
 
           <div className="grid grid-cols-2 gap-3">
             <a
-              href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Check out this Evermark: ${evermark.title}`)}&url=${encodeURIComponent(shareUrl)}`}
+              href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Check out "${evermark.title}" by ${evermark.author}`)}&url=${encodeURIComponent(shareUrl)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
@@ -117,7 +121,7 @@ const ShareModal: React.FC<{
               Twitter
             </a>
             <a
-              href={`https://farcaster.xyz/~/compose?text=${encodeURIComponent(`Check out this Evermark: ${evermark.title} ${shareUrl}`)}`}
+              href={`https://farcaster.xyz/~/compose?text=${encodeURIComponent(`📚 "${evermark.title}" by ${evermark.author} ${shareUrl}`)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 p-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"

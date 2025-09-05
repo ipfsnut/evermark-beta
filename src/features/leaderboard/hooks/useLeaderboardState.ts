@@ -106,30 +106,50 @@ export function useLeaderboardState(): UseLeaderboardStateReturn {
     enabled: !isLoadingEvermarks // Only run when evermarks data is available
   });
 
-  // Leaderboard stats query
-  const { 
-    data: stats,
-    isLoading: isLoadingStats,
-    isRefetching: isRefreshingStats,
-    error: statsError,
-    refetch: refetchStats
-  } = useQuery({
-    queryKey: QUERY_KEYS.stats(filters.period, evermarksHash),
-    queryFn: () => LeaderboardService.fetchLeaderboardStats(
-      filters.period ?? LEADERBOARD_CONSTANTS.DEFAULT_PERIOD,
-      evermarks // Pass evermarks data for stats calculation
-    ),
-    staleTime: 30 * 1000, // 30 seconds
-    retry: 2,
-    retryDelay: 1000,
-    enabled: !isLoadingEvermarks // Only run when evermarks data is available
-  });
-
-  // Extract data from queries
+  // Extract data from queries first
   const entries = leaderboardData?.entries ?? [];
   const totalCount = leaderboardData?.totalCount ?? 0;
-  const totalPages = leaderboardData?.totalPages ?? 0;
   const lastUpdated = leaderboardData?.lastUpdated ?? null;
+
+  // Calculate stats from leaderboard entries directly (more accurate than calculating from evermarks)
+  const stats = useMemo(() => {
+    if (!entries || entries.length === 0) {
+      return {
+        totalEvermarks: 0,
+        totalVotes: BigInt(0),
+        activeVoters: 0,
+        averageVotesPerEvermark: BigInt(0),
+        topEvermarkVotes: BigInt(0),
+        participationRate: 0,
+        period: filters.period ?? LEADERBOARD_CONSTANTS.DEFAULT_PERIOD
+      };
+    }
+    
+    const totalVotes = entries.reduce((sum, entry) => sum + entry.totalVotes, BigInt(0));
+    const topEvermarkVotes = entries[0]?.totalVotes || BigInt(0);
+    const averageVotesPerEvermark = entries.length > 0 ? totalVotes / BigInt(entries.length) : BigInt(0);
+    
+    return {
+      totalEvermarks: totalCount, // Use total count from leaderboard query
+      totalVotes,
+      activeVoters: 0,
+      averageVotesPerEvermark,
+      topEvermarkVotes,
+      participationRate: 0,
+      period: filters.period ?? LEADERBOARD_CONSTANTS.DEFAULT_PERIOD
+    };
+  }, [entries, totalCount, filters.period]);
+
+  // Loading states (removed stats loading since we calculate it locally)
+  const isLoadingStats = false;
+  const isRefreshingStats = false;
+  const statsError = null;
+  const refetchStats = useCallback(async () => {
+    // Stats are calculated from leaderboard data, so refetch that instead
+    await refetchEntries();
+  }, [refetchEntries]);
+  
+  const totalPages = leaderboardData?.totalPages ?? 0;
 
   // Combined loading and error states
   const isLoading = isLoadingEntries || isLoadingStats;

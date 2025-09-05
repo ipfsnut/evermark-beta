@@ -76,17 +76,40 @@ export function EvermarkMeta({ evermark }: EvermarkMetaProps) {
   const title = evermark.title ?? `Evermark #${evermark.id}`;
   const description = evermark.description ?? 
     `A preserved piece of content by ${evermark.author ?? 'Anonymous'} on Evermark`;
-  const imageUrl = evermark.image ?? 'https://evermarks.net/og-image.png';
-  const url = `https://evermarks.net/evermark/${evermark.id}`;
+  
+  // Use the new dynamic sharing endpoint for beautiful book pages
+  const baseUrl = process.env.NODE_ENV === 'development' ? 'http://localhost:8888' : 'https://evermarks.net';
+  const shareEndpoint = `${baseUrl}/.netlify/functions/evermark-share?id=${evermark.id}`;
+  const directUrl = `${baseUrl}/evermark/${evermark.id}`;
   
   return (
-    <FarcasterMeta
-      title={title}
-      description={description}
-      imageUrl={imageUrl}
-      url={url}
-      buttonText="🔖 View Evermark"
-      buttonAction="link"
-    />
+    <Helmet>
+      {/* Farcaster Mini App Embed Meta Tags */}
+      <meta name="fc:miniapp" content="1" />
+      <meta name="fc:miniapp:image" content={shareEndpoint} />
+      <meta name="fc:miniapp:button:1" content="🔖 View Evermark" />
+      <meta name="fc:miniapp:button:1:action" content="link" />
+      <meta name="fc:miniapp:button:1:target" content={directUrl} />
+      
+      {/* Open Graph Meta Tags - point to sharing endpoint for rich previews */}
+      <meta property="og:title" content={title} />
+      <meta property="og:description" content={description} />
+      <meta property="og:image" content={shareEndpoint} />
+      <meta property="og:url" content={shareEndpoint} />
+      <meta property="og:type" content="article" />
+      <meta property="og:site_name" content="Evermark Protocol" />
+      
+      {/* Twitter Card Meta Tags */}
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:title" content={title} />
+      <meta name="twitter:description" content={description} />
+      <meta name="twitter:image" content={shareEndpoint} />
+      
+      {/* Canonical URL points to the actual app page */}
+      <link rel="canonical" href={directUrl} />
+      
+      {/* Dynamic page title */}
+      <title>{title} - Evermark</title>
+    </Helmet>
   );
 }
