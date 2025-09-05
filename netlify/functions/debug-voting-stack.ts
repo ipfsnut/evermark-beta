@@ -56,18 +56,20 @@ export const handler: Handler = async (event, context) => {
     let votingContractReadsWEmark = '0';
     try {
       // Try different function names that might exist
-      votingContractReadsWEmark = await readContract({
+      const result = await readContract({
         contract: votingContract,
         method: 'function getStakedBalance(address account) view returns (uint256)',
         params: [address]
       });
+      votingContractReadsWEmark = (result as bigint).toString();
     } catch (e) {
       try {
-        votingContractReadsWEmark = await readContract({
+        const result2 = await readContract({
           contract: votingContract,
           method: 'function balanceOf(address account) view returns (uint256)',
           params: [address]
         });
+        votingContractReadsWEmark = (result2 as bigint).toString();
       } catch (e2) {
         // Function doesn't exist
       }
@@ -103,31 +105,34 @@ export const handler: Handler = async (event, context) => {
     // Step 6: Check current season
     let currentSeason = '0';
     try {
-      currentSeason = await readContract({
+      const result = await readContract({
         contract: votingContract,
         method: 'function getCurrentSeason() view returns (uint256)',
         params: []
       });
+      currentSeason = (result as bigint).toString();
     } catch (e) {
       try {
-        currentSeason = await readContract({
+        const result2 = await readContract({
           contract: votingContract,
           method: 'function currentSeason() view returns (uint256)',
           params: []
         });
+        currentSeason = (result2 as bigint).toString();
       } catch (e2) {
         currentSeason = 'function not found';
       }
     }
 
     // Step 7: Check if voting is active
-    let votingActive = false;
+    let votingActive: boolean | null = false;
     try {
-      votingActive = await readContract({
+      const result = await readContract({
         contract: votingContract,
         method: 'function isVotingActive() view returns (bool)',
         params: []
       });
+      votingActive = result as boolean;
     } catch (e) {
       votingActive = null;
     }
