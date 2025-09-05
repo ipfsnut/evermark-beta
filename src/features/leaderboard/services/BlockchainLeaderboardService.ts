@@ -43,6 +43,16 @@ export class BlockchainLeaderboardService {
       // Batch contract calls for better performance
       const votingPromises = evermarkIds.map(async (evermarkId) => {
         try {
+          // Check if evermarkId is valid before processing
+          if (!evermarkId || evermarkId === 'undefined') {
+            stakingLogger.warn('Skipping invalid evermarkId', { evermarkId });
+            return {
+              evermarkId: evermarkId || 'undefined',
+              votes: BigInt(0),
+              voterCount: 0
+            };
+          }
+
           const votes = await readContract({
             contract: votingContract,
             method: "function getEvermarkVotesInSeason(uint256 season, uint256 evermarkId) view returns (uint256)",
@@ -102,16 +112,30 @@ export class BlockchainLeaderboardService {
         totalEvermarks: filteredEvermarks.length
       });
       
-      // Get voting data directly from blockchain
-      const evermarkIds = filteredEvermarks.map(em => em.id);
+      // Get voting data directly from blockchain - filter out invalid IDs
+      const evermarkIds = filteredEvermarks
+        .map(em => em.id)
+        .filter(id => id && id !== 'undefined' && typeof id === 'string');
+      
+      stakingLogger.info('Filtered evermark IDs', {
+        originalCount: filteredEvermarks.length,
+        validIdCount: evermarkIds.length,
+        invalidIds: filteredEvermarks.filter(em => !em.id || em.id === 'undefined').map(em => ({ 
+          title: em.title, 
+          id: em.id 
+        }))
+      });
+      
       const blockchainVotingData = await this.getBulkVotingDataFromBlockchain(evermarkIds, targetSeason);
       
-      // Convert to leaderboard entries
-      const entries: LeaderboardEntry[] = filteredEvermarks.map((evermark) => {
-        const votingData = blockchainVotingData.get(evermark.id) || { 
-          votes: BigInt(0), 
-          voterCount: 0 
-        };
+      // Convert to leaderboard entries - only process evermarks with valid IDs
+      const entries: LeaderboardEntry[] = filteredEvermarks
+        .filter(evermark => evermark.id && evermark.id !== 'undefined' && typeof evermark.id === 'string')
+        .map((evermark) => {
+          const votingData = blockchainVotingData.get(evermark.id) || { 
+            votes: BigInt(0), 
+            voterCount: 0 
+          };
         
         const creator = evermark.creator || evermark.author || 'Unknown';
         const createdAt = new Date(evermark.createdAt);

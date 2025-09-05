@@ -103,7 +103,21 @@ export class LeaderboardService {
     }
     
     // Check if we should use blockchain directly (if cache is mostly empty)
-    const evermarkIds = filteredEvermarks.map(em => em.id);
+    // Filter out evermarks with invalid IDs first
+    const validEvermarks = filteredEvermarks.filter(em => em.id && em.id !== 'undefined' && typeof em.id === 'string');
+    
+    if (validEvermarks.length < filteredEvermarks.length) {
+      console.warn('⚠️ Found evermarks with invalid IDs:', {
+        totalEvermarks: filteredEvermarks.length,
+        validEvermarks: validEvermarks.length,
+        invalidEvermarks: filteredEvermarks.filter(em => !em.id || em.id === 'undefined').map(em => ({
+          title: em.title,
+          id: em.id
+        }))
+      });
+    }
+    
+    const evermarkIds = validEvermarks.map(em => em.id);
     const bulkVotingData = await VotingCacheService.getBulkVotingData(evermarkIds);
     
     // If cache has very little data or no significant votes, use blockchain service directly
@@ -113,12 +127,12 @@ export class LeaderboardService {
     // Use blockchain service if cache is empty OR has no real voting data
     if (cacheHitRate < 0.8 || !hasSignificantVotes) {
       console.log(`🔗 Using blockchain leaderboard service (cache hit rate: ${(cacheHitRate * 100).toFixed(1)}%, has votes: ${hasSignificantVotes})`);
-      return await BlockchainLeaderboardService.calculateBlockchainLeaderboard(filteredEvermarks, targetSeason);
+      return await BlockchainLeaderboardService.calculateBlockchainLeaderboard(validEvermarks, targetSeason);
     }
     
     // Convert evermarks to leaderboard entries with blockchain fallback for individual items
     const entries: LeaderboardEntry[] = await Promise.all(
-      filteredEvermarks.map(async (evermark) => {
+      validEvermarks.map(async (evermark) => {
       // Get voting data from bulk fetch result
       let votingData = bulkVotingData.get(evermark.id) || { votes: BigInt(evermark.votes ?? 0), voterCount: 0 };
       
