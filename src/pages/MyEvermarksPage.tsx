@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { FileText, Clock, Eye, Vote, Plus, Share, Copy, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -21,10 +20,9 @@ export default function MyEvermarksPage() {
   const themeClasses = useThemeClasses();
   const { isInFarcaster } = useFarcasterDetection();
   const { evermarks, isLoading, error, loadEvermarks } = useEvermarksState();
-  const { votingHistory, getUserVotesForEvermark } = useVotingState();
   const { userPoints } = useBetaPoints();
   const [activeTab, setActiveTab] = useState<'created' | 'supported'>('created');
-  const [userVotes, setUserVotes] = useState<Record<string, bigint>>({});
+
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<EvermarkFilters>({
     search: '',
@@ -141,48 +139,8 @@ export default function MyEvermarksPage() {
   console.log('Debug - Current filters:', filters);
   console.log('Debug - User address:', user?.address);
   
-  // Query user's supported evermarks directly from Supabase votes table
-  const { data: userSupportedEvermarkIds } = useQuery({
-    queryKey: ['userSupportedEvermarks', user?.address],
-    queryFn: async () => {
-      if (!user?.address) return [];
-      
-      console.log('Fetching user supported evermarks for:', user.address);
-      
-      // Get evermark IDs user has voted on from votes table
-      const { data, error } = await fetch('/.netlify/functions/get-user-votes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: user.address.toLowerCase(),
-          cycle: 3 // current season
-        })
-      }).then(res => res.json());
-      
-      if (error) {
-        console.error('Failed to fetch user votes:', error);
-        return [];
-      }
-      
-      const supportedIds = data?.map((vote: any) => vote.evermark_id) || [];
-      console.log('User has supported evermarks:', supportedIds);
-      return supportedIds;
-    },
-    enabled: !!user?.address,
-    staleTime: 5 * 60 * 1000 // 5 minutes
-  });
-
-  // Convert to votes object for compatibility with existing logic
-  useEffect(() => {
-    if (!userSupportedEvermarkIds) return;
-    
-    const votes: Record<string, bigint> = {};
-    userSupportedEvermarkIds.forEach((evermarkId: string) => {
-      votes[evermarkId] = BigInt(1); // Mark as supported (amount doesn't matter)
-    });
-    
-    setUserVotes(votes);
-  }, [userSupportedEvermarkIds]);
+  // Get current cycle for accurate vote filtering
+  const { votingHistory, currentCycle } = useVotingState();
 
   // Base supported evermarks: ones where user has delegated votes
   const baseSupportedEvermarks = evermarks.filter(evermark => {
@@ -191,19 +149,17 @@ export default function MyEvermarksPage() {
       return false;
     }
     
-    // Check if user has voted on this evermark (from blockchain data)
-    const hasVotedFromContract = userVotes[evermark.id] && userVotes[evermark.id] > BigInt(0);
-    
-    // Also check voting history as backup
-    const hasVotedFromHistory = votingHistory?.some(vote => 
-      vote.evermarkId === evermark.id && vote.amount > 0
+    // Check if user has voted on this evermark using voting history (single source of truth)
+    const hasVoted = votingHistory?.some(vote => 
+      vote.evermarkId === evermark.id && 
+      vote.amount > 0 &&
+      (!currentCycle || vote.cycle === currentCycle.cycleNumber) // Use current cycle if available
     );
-    
-    const hasVoted = hasVotedFromContract || hasVotedFromHistory;
     
     // Debug logging for the first few evermarks
     if (parseInt(evermark.id) <= 5) {
-      console.log(`Evermark ${evermark.id}: hasVotedFromContract=${hasVotedFromContract}, hasVotedFromHistory=${hasVotedFromHistory}, userVote=${userVotes[evermark.id]?.toString()}, supported=${hasVoted}`);
+      const userVote = votingHistory?.find(vote => vote.evermarkId === evermark.id);
+      console.log(`Evermark ${evermark.id}: hasVoted=${hasVoted}, userVote=${userVote?.amount?.toString() || 'none'}, cycle=${userVote?.cycle || 'none'}, currentCycle=${currentCycle?.cycleNumber || 'none'}`);
     }
     
     // Only include if user has actually voted
