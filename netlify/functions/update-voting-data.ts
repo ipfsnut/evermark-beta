@@ -57,8 +57,11 @@ export async function handler(event: HandlerEvent, context: HandlerContext) {
 
     console.log(`Updating voting data for user ${user_id}, evermark ${evermark_id}, amount ${vote_amount}`);
 
-    // 1. Insert/update votes table - using ACTUAL column names from voting.txt
-    const { error: voteError } = await supabase
+    // 1. Upsert user vote record - handles both new votes and vote updates
+    let voteError: any = null;
+    
+    // First, try to use upsert with onConflict (works if constraint exists)
+    const { error: upsertError } = await supabase
       .from('votes')
       .upsert({
         user_id: user_id.toLowerCase(),
@@ -70,6 +73,54 @@ export async function handler(event: HandlerEvent, context: HandlerContext) {
       }, {
         onConflict: 'user_id,evermark_id,cycle'
       });
+    
+    // If upsert failed due to missing constraint, use manual upsert logic
+    if (upsertError && upsertError.code === '42P10') {
+      console.log('Constraint not found, using manual upsert logic');
+      
+      // Try to find existing record first
+      const { data: existing, error: selectError } = await supabase
+        .from('votes')
+        .select('id')
+        .eq('user_id', user_id.toLowerCase())
+        .eq('evermark_id', evermark_id.toString())
+        .eq('cycle', cycle)
+        .maybeSingle();
+
+      if (selectError) {
+        voteError = selectError;
+      } else if (existing) {
+        // Update existing record
+        console.log(`Updating existing vote record for user ${user_id}, evermark ${evermark_id}`);
+        const { error: updateError } = await supabase
+          .from('votes')
+          .update({
+            amount: vote_amount.toString(),
+            action: 'delegate',
+            metadata: transaction_hash ? { transaction_hash } : {}
+          })
+          .eq('id', existing.id);
+        voteError = updateError;
+      } else {
+        // Insert new record
+        console.log(`Inserting new vote record for user ${user_id}, evermark ${evermark_id}`);
+        const { error: insertError } = await supabase
+          .from('votes')
+          .insert({
+            user_id: user_id.toLowerCase(),
+            evermark_id: evermark_id.toString(),
+            cycle: cycle,
+            amount: vote_amount.toString(),
+            action: 'delegate',
+            metadata: transaction_hash ? { transaction_hash } : {},
+            created_at: new Date().toISOString()
+          });
+        voteError = insertError;
+      }
+    } else {
+      // Upsert worked or failed for other reasons
+      voteError = upsertError;
+    }
 
     if (voteError) {
       console.error('Failed to insert vote:', JSON.stringify(voteError, null, 2));
