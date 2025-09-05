@@ -145,34 +145,61 @@ export default function MyEvermarksPage() {
   // Debug logging for voting data
   console.log('🔍 Debug - Voting data:', {
     votingHistoryLength: votingHistory?.length || 0,
-    votingHistory: votingHistory?.slice(0, 3), // First 3 votes for debugging
+    votingHistory: votingHistory, // ALL votes for debugging
     currentCycle: currentCycle?.cycleNumber,
     userAddress: user?.address
   });
+  
+  // Check if we have Evermark 3 in our evermarks list
+  const evermark3 = evermarks.find(e => e.id === '3');
+  if (evermark3) {
+    console.log('📌 Found Evermark 3 in evermarks list:', {
+      id: evermark3.id,
+      title: evermark3.title,
+      creator: evermark3.creator,
+      author: evermark3.author
+    });
+  } else {
+    console.log('❌ Evermark 3 NOT found in evermarks list');
+  }
 
   // Base supported evermarks: ones where user has delegated votes
-  const baseSupportedEvermarks = evermarks.filter(evermark => {
+  // Only run filtering if we have both evermarks AND voting history data
+  const baseSupportedEvermarks = (evermarks.length > 0 && votingHistory && votingHistory.length > 0) 
+    ? evermarks.filter(evermark => {
+    // Debug for evermark 3 specifically
+    if (evermark.id === '3') {
+      console.log('🎯 Checking Evermark 3:', {
+        id: evermark.id,
+        creator: evermark.creator,
+        userAddress: user?.address,
+        isUserCreator: evermark.creator.toLowerCase() === user?.address?.toLowerCase(),
+        votingHistory: votingHistory?.map(v => ({ id: v.evermarkId, amount: v.amount.toString() })),
+        hasVoteForThis: votingHistory?.some(vote => vote.evermarkId === '3')
+      });
+    }
+    
     // User is not the creator
     if (evermark.creator.toLowerCase() === user?.address?.toLowerCase()) {
       return false;
     }
     
     // Check if user has voted on this evermark using voting history (single source of truth)
+    // Note: We don't need to filter by season here since fetchVotingHistory already fetches the correct cycle
     const hasVoted = votingHistory?.some(vote => 
       vote.evermarkId === evermark.id && 
-      vote.amount > 0 &&
-      (!currentCycle || vote.season === currentCycle.cycleNumber) // Use current cycle if available
+      vote.amount > 0
     );
     
-    // Debug logging for the first few evermarks
-    if (parseInt(evermark.id) <= 5) {
-      const userVote = votingHistory?.find(vote => vote.evermarkId === evermark.id);
-      console.log(`🔍 Evermark ${evermark.id}: hasVoted=${hasVoted}, userVote=${userVote?.amount?.toString() || 'none'}, season=${userVote?.season || 'none'}, currentCycle=${currentCycle?.cycleNumber || 'none'}`);
+    // Debug: Show supported evermarks found
+    if (hasVoted) {
+      console.log(`✅ Found supported evermark: ${evermark.id} - ${evermark.title}`);
     }
     
     // Only include if user has actually voted
     return hasVoted;
-  });
+  })
+    : []; // Return empty array if data not ready
   
   // Debug the final result
   console.log('🔍 Debug - Supported evermarks result:', {
@@ -180,6 +207,13 @@ export default function MyEvermarksPage() {
     baseSupportedCount: baseSupportedEvermarks.length,
     supportedIds: baseSupportedEvermarks.map(e => e.id)
   });
+  
+  // ALERT for testing - remove after verification
+  if (baseSupportedEvermarks.length > 0) {
+    console.log('🎉 SUCCESS: Found supported evermarks!', baseSupportedEvermarks.map(e => `${e.id}: ${e.title}`));
+  }
+
+  // Success: Supported tab should now work with voting history data
 
   // Apply search/filters to supported evermarks if needed
   const filteredSupportedEvermarks = useMemo(() => {

@@ -89,27 +89,33 @@ async function enhanceWithVotingData(evermarks: any[]): Promise<any[]> {
     return evermarks;
   }
 
-  try {
-    // Get voting data for all evermarks in batch
-    const evermarkIds = evermarks.map(e => e.token_id.toString());
-    const votingDataMap = await VotingDataService.getBulkVotingData(evermarkIds);
-
-    // Enhance each evermark with voting data
-    return evermarks.map(evermark => ({
-      ...evermark,
-      votes: Math.round(votingDataMap.get(evermark.token_id.toString())?.votes ? 
-        Number(votingDataMap.get(evermark.token_id.toString())!.votes) / (10 ** 18) : 0),
-      voter_count: votingDataMap.get(evermark.token_id.toString())?.voterCount || 0
-    }));
-  } catch (error) {
-    console.error('Failed to enhance with voting data:', error);
-    // Return original data if voting enhancement fails
-    return evermarks.map(evermark => ({
-      ...evermark,
-      votes: 0,
-      voter_count: 0
-    }));
+  // Skip voting data enhancement for large datasets to prevent timeouts
+  const shouldSkipVotingData = evermarks.length > 50;
+  let votingDataMap = new Map();
+  
+  if (!shouldSkipVotingData) {
+    try {
+      // Get voting data for all evermarks in batch
+      const evermarkIds = evermarks.map(e => e.token_id.toString());
+      votingDataMap = await VotingDataService.getBulkVotingData(evermarkIds);
+    } catch (error) {
+      console.error('Failed to get voting data, using defaults:', error);
+      // Continue without voting data
+    }
   }
+
+  // Enhance each evermark with voting data AND map fields to frontend format
+  return evermarks.map(evermark => ({
+    ...evermark,
+    // Map database fields to frontend format
+    id: evermark.token_id.toString(),
+    tokenId: evermark.token_id,
+    creator: evermark.owner,
+    // Keep original fields for backward compatibility
+    votes: Math.round(votingDataMap.get(evermark.token_id.toString())?.votes ? 
+      Number(votingDataMap.get(evermark.token_id.toString())!.votes) / (10 ** 18) : 0),
+    voter_count: votingDataMap.get(evermark.token_id.toString())?.voterCount || 0
+  }));
 }
 
 /**
@@ -120,6 +126,11 @@ async function enhanceSingleWithVotingData(evermark: any): Promise<any> {
     const votingData = await VotingDataService.getEvermarkVotingData(evermark.token_id.toString());
     return {
       ...evermark,
+      // Map database fields to frontend format
+      id: evermark.token_id.toString(),
+      tokenId: evermark.token_id,
+      creator: evermark.owner,
+      // Add voting data
       votes: Math.round(votingData.total_votes),
       voter_count: votingData.voter_count
     };
@@ -127,6 +138,11 @@ async function enhanceSingleWithVotingData(evermark: any): Promise<any> {
     console.error('Failed to enhance single evermark with voting data:', error);
     return {
       ...evermark,
+      // Map database fields to frontend format
+      id: evermark.token_id.toString(),
+      tokenId: evermark.token_id,
+      creator: evermark.owner,
+      // Default voting data
       votes: 0,
       voter_count: 0
     };

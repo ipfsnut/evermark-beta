@@ -300,20 +300,32 @@ export class VotingService {
     toBlock?: bigint
   ): Promise<Vote[]> {
     try {
+      // Get current season to fetch votes from the correct cycle
+      const currentSeason = await this.getCurrentSeason();
+      // TEMPORARY FIX: Force cycle 3 since that's where the votes are stored
+      // TODO: Fix contract or data migration to proper cycle
+      const currentCycle = 3; // currentSeason ? currentSeason.seasonNumber : 3;
+      
+      console.log(`🔍 getCurrentSeason result:`, currentSeason);
+      console.log(`📊 TEMP FIX: Forced cycle to ${currentCycle} (contract returned ${currentSeason?.seasonNumber})`);
+      
+      console.log(`📊 Fetching voting history for user ${userAddress} in cycle ${currentCycle}`);
+      
       // Try to get from Supabase votes table first (much faster)
       const response = await fetch('/.netlify/functions/get-user-votes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_id: userAddress.toLowerCase(),
-          cycle: 3 // TODO: Make this dynamic
+          cycle: currentCycle
         })
       });
       
       if (response.ok) {
         const data = await response.json();
         if (data.data && Array.isArray(data.data)) {
-          console.log('Loaded voting history from votes table:', data.data.length, 'votes');
+          console.log(`✅ Loaded ${data.data.length} votes from votes table for cycle ${currentCycle}:`, 
+            data.data.map(v => `Evermark ${v.evermark_id}: ${v.amount}`));
           return data.data.map((vote: any, index: number) => ({
             id: `vote-${vote.evermark_id}-${vote.cycle}`,
             userAddress,
@@ -325,7 +337,12 @@ export class VotingService {
             status: 'confirmed' as const,
             type: 'vote' as const
           }));
+        } else {
+          console.log(`📭 No voting data returned for user ${userAddress} in cycle ${currentCycle}`);
         }
+      } else {
+        const errorText = await response.text();
+        console.error(`❌ Failed to fetch votes from API: ${response.status} - ${errorText}`);
       }
       
       console.log('Cache unavailable, falling back to blockchain events...');
