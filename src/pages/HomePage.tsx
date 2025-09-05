@@ -24,6 +24,7 @@ import { cn, useIsMobile } from '../utils/responsive';
 // Evermarks feature
 import { useEvermarksState, EvermarkFeed } from '../features/evermarks';
 import { DynamicFarcasterMeta } from '../components/DynamicFarcasterMeta';
+import TopThreeEvermarks from '../components/TopThreeEvermarks';
 
 
 // Real Protocol Stats using the evermarks hook
@@ -420,6 +421,9 @@ const HomePage: React.FC = () => {
         </div>
         <QuickActions />
       </div>
+
+      {/* Top 3 Evermarks Showcase */}
+      <TopThreeEvermarks />
 
       {/* Main Content Layout */}
       <div className={cn(
