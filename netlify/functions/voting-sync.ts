@@ -641,7 +641,8 @@ async function updateVotingCache(
   totalVotes: bigint, 
   voterCount: number
 ): Promise<void> {
-  const { error } = await supabase
+  // Try voting_cache first, fallback to leaderboard if it fails
+  const { error: cacheError } = await supabase
     .from('voting_cache')
     .upsert({
       evermark_id: evermarkId,
@@ -653,9 +654,30 @@ async function updateVotingCache(
       onConflict: 'evermark_id,cycle_number'
     });
 
-  if (error) {
-    console.error('Failed to update voting cache:', error);
-    throw new Error(`Supabase voting_cache upsert failed: ${error.message || error.code || 'Unknown Supabase error'}`);
+  // If voting_cache fails (table doesn't exist), update leaderboard directly
+  if (cacheError) {
+    console.log(`voting_cache update failed for evermark ${evermarkId}, updating leaderboard directly:`, cacheError);
+    
+    const { error: leaderboardError } = await supabase
+      .from('leaderboard')
+      .upsert({
+        evermark_id: evermarkId,
+        cycle_id: season,
+        total_votes: totalVotes.toString(),
+        rank: 1, // Will be recalculated by refresh function
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'evermark_id,cycle_id'
+      });
+
+    if (leaderboardError) {
+      console.error('Failed to update leaderboard:', leaderboardError);
+      throw new Error(`Supabase leaderboard upsert failed: ${leaderboardError.message || leaderboardError.code || 'Unknown Supabase error'}`);
+    }
+    
+    console.log(`Successfully updated leaderboard for evermark ${evermarkId}`);
+  } else {
+    console.log(`Successfully updated voting_cache for evermark ${evermarkId}`);
   }
 }
 

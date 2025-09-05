@@ -34,7 +34,32 @@ export function useLeaderboardState(): UseLeaderboardStateReturn {
       const response = await fetch('/.netlify/functions/evermarks');
       if (!response.ok) throw new Error('Failed to fetch evermarks');
       const data = await response.json();
-      return data.evermarks;
+      
+      // Transform the raw API data to match Evermark interface
+      const transformedEvermarks = (data.evermarks || []).map((item: any) => ({
+        ...item,
+        id: String(item.token_id || item.id), // Map token_id to id field
+        tokenId: Number(item.token_id || item.tokenId || item.id),
+        title: item.title || 'Untitled',
+        author: item.author || 'Unknown',
+        creator: item.owner || item.author || 'Unknown',
+        description: item.description || '',
+        metadataURI: item.token_uri || '',
+        tags: item.tags || [],
+        verified: Boolean(item.verified),
+        creationTime: Date.parse(item.created_at || new Date().toISOString()),
+        createdAt: item.created_at || new Date().toISOString(),
+        updatedAt: item.updated_at || item.created_at || new Date().toISOString(),
+        contentType: item.content_type || 'Custom',
+        sourceUrl: item.source_url,
+        image: item.supabase_image_url || item.image,
+        supabaseImageUrl: item.supabase_image_url,
+        imageStatus: 'processed' as const,
+        votes: item.votes || 0,
+        viewCount: item.access_count || 0
+      }));
+      
+      return transformedEvermarks;
     },
     staleTime: 30 * 1000,
     retry: 2

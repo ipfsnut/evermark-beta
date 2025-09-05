@@ -164,6 +164,12 @@ export class VotingService {
    */
   static async getEvermarkVotes(evermarkId: string, season?: number): Promise<bigint> {
     try {
+      // Validate evermarkId before processing
+      if (!evermarkId || evermarkId === 'undefined' || typeof evermarkId !== 'string') {
+        console.error('Invalid evermarkId provided to getEvermarkVotes:', evermarkId);
+        return BigInt(0);
+      }
+
       const votingContract = getEvermarkVotingContract();
       
       // Get current season if not specified
@@ -192,6 +198,12 @@ export class VotingService {
    */
   static async getUserVotesForEvermark(userAddress: string, evermarkId: string, season?: number): Promise<bigint> {
     try {
+      // Validate evermarkId before processing
+      if (!evermarkId || evermarkId === 'undefined' || typeof evermarkId !== 'string') {
+        console.error('Invalid evermarkId provided to getUserVotesForEvermark:', evermarkId);
+        return BigInt(0);
+      }
+
       const votingContract = getEvermarkVotingContract();
       
       // Get current season if not specified

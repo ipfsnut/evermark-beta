@@ -167,6 +167,11 @@ export function useVotingState(): UseVotingStateReturn {
       throw new Error('Wallet not connected');
     }
 
+    // Validate evermarkId before processing
+    if (!evermarkId || evermarkId === 'undefined' || typeof evermarkId !== 'string') {
+      throw new Error(`Invalid evermarkId provided: ${evermarkId}`);
+    }
+
     setIsDelegating(true);
     setError(null);
 
@@ -255,6 +260,11 @@ export function useVotingState(): UseVotingStateReturn {
   const undelegateVotes = useCallback(async (evermarkId: string, amount: bigint): Promise<VotingTransaction> => {
     if (!userAddress) {
       throw new Error('Wallet not connected');
+    }
+
+    // Validate evermarkId before processing
+    if (!evermarkId || evermarkId === 'undefined' || typeof evermarkId !== 'string') {
+      throw new Error(`Invalid evermarkId provided: ${evermarkId}`);
     }
 
     setIsUndelegating(true);

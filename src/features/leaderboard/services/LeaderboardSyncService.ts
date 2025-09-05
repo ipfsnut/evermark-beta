@@ -287,6 +287,17 @@ export class LeaderboardSyncService {
     isActive: boolean;
   }> {
     try {
+      // Validate evermarkId before processing
+      if (!evermarkId || evermarkId === 'undefined' || typeof evermarkId !== 'string') {
+        stakingLogger.warn('Invalid evermarkId provided to getEvermarkRankingData', { evermarkId });
+        return {
+          votes: BigInt(0),
+          rank: 0,
+          totalVoters: 0,
+          isActive: false
+        };
+      }
+
       const votingContract = getEvermarkVotingContract();
       
       // Get current cycle if not specified
