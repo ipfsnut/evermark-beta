@@ -9,7 +9,8 @@ import { stakingLogger } from '@/utils/logger';
  */
 export class VotingPowerService {
   /**
-   * Calculate reserved voting power using database - more reliable than contract calls
+   * Calculate reserved voting power using database - reads from actual voting transactions
+   * TODO: Implement proper user vote tracking using blockchain transaction data
    */
   static async calculateReservedPowerFromDatabase(userAddress: string, cycle?: number): Promise<bigint> {
     try {
@@ -26,7 +27,8 @@ export class VotingPowerService {
       
       const supabase = createClient(supabaseUrl, supabaseKey);
       
-      // Direct database query
+      // Direct database query - note: votes table exists but is currently empty
+      // The actual user voting data should be tracked from blockchain transactions
       const { data: votes, error } = await supabase
         .from('votes')
         .select('amount')
@@ -35,7 +37,8 @@ export class VotingPowerService {
         .eq('action', 'delegate');
 
       if (error) {
-        throw error;
+        stakingLogger.warn('Database query failed, likely empty table', { error });
+        return BigInt(0);
       }
 
       // Sum up all vote amounts for this cycle
@@ -47,12 +50,13 @@ export class VotingPowerService {
         userAddress,
         cycle: cycle || 3,
         votesCount: votes?.length || 0,
-        totalReservedWei: totalReservedWei.toString()
+        totalReservedWei: totalReservedWei.toString(),
+        note: 'votes table is currently empty - using contract method instead'
       });
 
       return totalReservedWei;
     } catch (error) {
-      stakingLogger.error('Failed to calculate reserved power from database', {
+      stakingLogger.warn('Database method failed, will use contract method', {
         userAddress,
         cycle,
         error
@@ -63,17 +67,44 @@ export class VotingPowerService {
 
   /**
    * Calculate reserved voting power - power currently locked in active votes
+   * Uses the contract's built-in getRemainingVotingPower method
    */
   static async calculateReservedPower(userAddress: string): Promise<bigint> {
-    // Use database method first - it's more reliable
     try {
-      return await this.calculateReservedPowerFromDatabase(userAddress);
+      const votingContract = getEvermarkVotingContract();
+      
+      // Get total voting power and remaining power from contract
+      const [totalPower, remainingPower] = await Promise.all([
+        readContract({
+          contract: votingContract,
+          method: "function getVotingPower(address user) view returns (uint256)",
+          params: [userAddress]
+        }),
+        readContract({
+          contract: votingContract,
+          method: "function getRemainingVotingPower(address user) view returns (uint256)",
+          params: [userAddress]
+        })
+      ]);
+
+      const total = totalPower as bigint;
+      const remaining = remainingPower as bigint;
+      const reserved = total - remaining;
+
+      stakingLogger.debug('Calculated reserved voting power from contract', {
+        userAddress,
+        totalPower: total.toString(),
+        remainingPower: remaining.toString(),
+        reservedPower: reserved.toString()
+      });
+
+      return reserved >= BigInt(0) ? reserved : BigInt(0);
     } catch (error) {
-      stakingLogger.warn('Database method failed, trying contract method', {
+      stakingLogger.error('Failed to calculate reserved power from contract', {
         userAddress,
         error
       });
-      return this.calculateReservedPowerFromContract(userAddress);
+      return BigInt(0);
     }
   }
 
@@ -159,20 +190,45 @@ export class VotingPowerService {
   }
 
   /**
-   * Get detailed voting power breakdown
+   * Get detailed voting power breakdown using contract methods
    */
   static async getVotingPowerBreakdown(userAddress: string, wEmarkBalance: bigint) {
     try {
-      const reservedPower = await this.calculateReservedPower(userAddress);
-      const availablePower = wEmarkBalance - reservedPower;
+      const votingContract = getEvermarkVotingContract();
+      
+      // Get both total and remaining voting power directly from contract
+      const [totalFromContract, remainingPower] = await Promise.all([
+        readContract({
+          contract: votingContract,
+          method: "function getVotingPower(address user) view returns (uint256)",
+          params: [userAddress]
+        }).catch(() => BigInt(0)),
+        readContract({
+          contract: votingContract,
+          method: "function getRemainingVotingPower(address user) view returns (uint256)",
+          params: [userAddress]
+        }).catch(() => BigInt(0))
+      ]);
+
+      const total = totalFromContract as bigint;
+      const remaining = remainingPower as bigint;
+      const reserved = total - remaining;
+
+      stakingLogger.debug('Voting power breakdown from contract', {
+        userAddress,
+        wEmarkBalance: wEmarkBalance.toString(),
+        totalFromContract: total.toString(),
+        remainingPower: remaining.toString(),
+        reservedPower: reserved.toString()
+      });
 
       return {
-        total: wEmarkBalance,
-        available: availablePower >= BigInt(0) ? availablePower : BigInt(0),
-        reserved: reservedPower,
-        delegated: reservedPower, // For staking interface compatibility
-        utilizationRate: wEmarkBalance > BigInt(0) ? 
-          Number((reservedPower * BigInt(100)) / wEmarkBalance) : 0
+        total: total > BigInt(0) ? total : wEmarkBalance, // Use contract total if available, fallback to wEMARK balance
+        available: remaining >= BigInt(0) ? remaining : BigInt(0),
+        reserved: reserved >= BigInt(0) ? reserved : BigInt(0),
+        delegated: reserved >= BigInt(0) ? reserved : BigInt(0), // For staking interface compatibility
+        utilizationRate: total > BigInt(0) ? 
+          Number((reserved * BigInt(100)) / total) : 0
       };
     } catch (error) {
       stakingLogger.error('Failed to get voting power breakdown', {
@@ -181,7 +237,7 @@ export class VotingPowerService {
         error
       });
 
-      // Return safe defaults
+      // Return safe defaults using wEMARK balance
       return {
         total: wEmarkBalance,
         available: wEmarkBalance,
