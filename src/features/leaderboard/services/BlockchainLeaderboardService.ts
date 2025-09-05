@@ -171,8 +171,9 @@ export class BlockchainLeaderboardService {
       // Sort by votes (descending)
       entries.sort((a, b) => Number(b.totalVotes - a.totalVotes));
       
-      // Calculate total votes for percentage
-      const totalVotes = entries.reduce((sum, entry) => sum + Number(entry.totalVotes), 0);
+      // Calculate total votes for percentage (use BigInt to avoid precision loss)
+      const totalVotesBigInt = entries.reduce((sum, entry) => sum + BigInt(entry.totalVotes), BigInt(0));
+      const totalVotes = Number(totalVotesBigInt);
       
       // Take top 100 and assign ranks and percentages
       const top100 = entries.slice(0, 100);

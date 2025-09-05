@@ -189,8 +189,9 @@ export class LeaderboardService {
     // Sort by votes (descending)
     entries.sort((a, b) => Number(b.totalVotes - a.totalVotes));
     
-    // Calculate total votes for percentage
-    const totalVotes = entries.reduce((sum, entry) => sum + Number(entry.totalVotes), 0);
+    // Calculate total votes for percentage (use BigInt to avoid precision loss)
+    const totalVotesBigInt = entries.reduce((sum, entry) => sum + BigInt(entry.totalVotes), BigInt(0));
+    const totalVotes = Number(totalVotesBigInt);
     
     // Take top 100 and assign ranks and percentages
     const top100 = entries.slice(0, 100);
@@ -319,8 +320,9 @@ export class LeaderboardService {
         tags: evermark.tags || []
       }));
       
-      // Calculate percentage of total votes
-      const totalVotes = allEntries.reduce((sum, entry) => sum + Number(entry.totalVotes), 0);
+      // Calculate percentage of total votes (use BigInt to avoid precision loss)
+      const totalVotesBigInt = allEntries.reduce((sum, entry) => sum + BigInt(entry.totalVotes), BigInt(0));
+      const totalVotes = Number(totalVotesBigInt);
       allEntries.forEach(entry => {
         entry.percentageOfTotal = totalVotes > 0 ? (Number(entry.totalVotes) / totalVotes) * 100 : 0;
       });
