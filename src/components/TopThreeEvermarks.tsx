@@ -14,13 +14,37 @@ import {
 
 import { cn, useIsMobile } from '../utils/responsive';
 import { useThemeClasses } from '../providers/ThemeProvider';
-import { useLeaderboardState } from '../features/leaderboard';
+import { useQuery } from '@tanstack/react-query';
 import { VotingService } from '../features/voting';
+
+interface LeaderboardEntry {
+  id: string;
+  title: string;
+  description?: string;
+  image?: string;
+  supabaseImageUrl?: string;
+  totalVotes: string;
+  author: string;
+  rank: number;
+}
 
 const TopThreeEvermarks: React.FC = () => {
   const isMobile = useIsMobile();
   const dynamicTheme = useThemeClasses();
-  const { entries, isLoading, error } = useLeaderboardState();
+  
+  // Use the working leaderboard API endpoint directly
+  const { data: leaderboardData, isLoading, error } = useQuery({
+    queryKey: ['top-three-evermarks'],
+    queryFn: async () => {
+      const response = await fetch('/.netlify/functions/leaderboard-data?limit=3');
+      if (!response.ok) throw new Error('Failed to fetch leaderboard data');
+      return response.json();
+    },
+    staleTime: 30 * 1000, // 30 seconds
+    retry: 2
+  });
+
+  const entries = leaderboardData?.evermarks || [];
 
   // Get top 3 entries
   const top3 = entries?.slice(0, 3) || [];
@@ -167,10 +191,10 @@ const TopThreeEvermarks: React.FC = () => {
 
               {/* Content Preview */}
               <div className="mb-4">
-                {entry.image && (
+                {(entry.supabaseImageUrl || entry.image) && (
                   <div className="w-full h-32 mb-3 bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden">
                     <img
-                      src={entry.image}
+                      src={entry.supabaseImageUrl || entry.image}
                       alt={entry.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       onError={(e) => {
@@ -221,7 +245,7 @@ const TopThreeEvermarks: React.FC = () => {
                     `${dynamicTheme.text.muted} font-medium truncate max-w-24`,
                     isMobile ? "text-xs" : "text-sm"
                   )}>
-                    {entry.creator}
+                    {entry.author}
                   </span>
                 </div>
               </div>
