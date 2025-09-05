@@ -300,21 +300,28 @@ export class VotingService {
     toBlock?: bigint
   ): Promise<Vote[]> {
     try {
-      // Try to get from Supabase cache first (much faster)
-      const response = await fetch(`/.netlify/functions/voting-sync?action=get-user-votes&user_address=${userAddress.toLowerCase()}`);
+      // Try to get from Supabase votes table first (much faster)
+      const response = await fetch('/.netlify/functions/get-user-votes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: userAddress.toLowerCase(),
+          cycle: 3 // TODO: Make this dynamic
+        })
+      });
       
       if (response.ok) {
         const data = await response.json();
-        if (data.success && data.votes) {
-          console.log('Loaded voting history from cache:', data.votes.length, 'votes');
-          return data.votes.map((vote: any, index: number) => ({
-            id: `cache-${vote.evermark_id}-${vote.cycle_number}`,
+        if (data.data && Array.isArray(data.data)) {
+          console.log('Loaded voting history from votes table:', data.data.length, 'votes');
+          return data.data.map((vote: any, index: number) => ({
+            id: `vote-${vote.evermark_id}-${vote.cycle}`,
             userAddress,
             evermarkId: vote.evermark_id,
-            amount: BigInt(vote.vote_amount),
-            season: vote.cycle_number,
-            timestamp: new Date(vote.updated_at),
-            transactionHash: vote.transaction_hash,
+            amount: BigInt(vote.amount),
+            season: vote.cycle,
+            timestamp: new Date(vote.created_at),
+            transactionHash: vote.metadata?.transaction_hash || '',
             status: 'confirmed' as const,
             type: 'vote' as const
           }));

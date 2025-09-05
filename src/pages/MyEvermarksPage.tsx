@@ -141,6 +141,14 @@ export default function MyEvermarksPage() {
   
   // Get current cycle for accurate vote filtering
   const { votingHistory, currentCycle } = useVotingState();
+  
+  // Debug logging for voting data
+  console.log('🔍 Debug - Voting data:', {
+    votingHistoryLength: votingHistory?.length || 0,
+    votingHistory: votingHistory?.slice(0, 3), // First 3 votes for debugging
+    currentCycle: currentCycle?.cycleNumber,
+    userAddress: user?.address
+  });
 
   // Base supported evermarks: ones where user has delegated votes
   const baseSupportedEvermarks = evermarks.filter(evermark => {
@@ -159,11 +167,18 @@ export default function MyEvermarksPage() {
     // Debug logging for the first few evermarks
     if (parseInt(evermark.id) <= 5) {
       const userVote = votingHistory?.find(vote => vote.evermarkId === evermark.id);
-      console.log(`Evermark ${evermark.id}: hasVoted=${hasVoted}, userVote=${userVote?.amount?.toString() || 'none'}, season=${userVote?.season || 'none'}, currentCycle=${currentCycle?.cycleNumber || 'none'}`);
+      console.log(`🔍 Evermark ${evermark.id}: hasVoted=${hasVoted}, userVote=${userVote?.amount?.toString() || 'none'}, season=${userVote?.season || 'none'}, currentCycle=${currentCycle?.cycleNumber || 'none'}`);
     }
     
     // Only include if user has actually voted
     return hasVoted;
+  });
+  
+  // Debug the final result
+  console.log('🔍 Debug - Supported evermarks result:', {
+    totalEvermarks: evermarks.length,
+    baseSupportedCount: baseSupportedEvermarks.length,
+    supportedIds: baseSupportedEvermarks.map(e => e.id)
   });
 
   // Apply search/filters to supported evermarks if needed
