@@ -62,7 +62,7 @@
 
 [[redirects]]
   from = "/share/evermark/:id"
-  to = "/.netlify/functions/shares"
+  to = "/.netlify/functions/evermark-share?id=:id"
   status = 200
 
 [[redirects]]
@@ -129,6 +129,49 @@
   to = "/favicon.ico"
   status = 200
   force = true
+
+# Social media crawler redirects - serve beautiful sharing pages to crawlers
+[[redirects]]
+  from = "/evermark/:id"
+  to = "/.netlify/functions/evermark-share?id=:id"
+  status = 200
+  force = false
+  conditions = {User-Agent = "facebookexternalhit/*"}
+
+[[redirects]]
+  from = "/evermark/:id"
+  to = "/.netlify/functions/evermark-share?id=:id"
+  status = 200
+  force = false
+  conditions = {User-Agent = "Twitterbot/*"}
+
+[[redirects]]
+  from = "/evermark/:id"
+  to = "/.netlify/functions/evermark-share?id=:id"
+  status = 200
+  force = false
+  conditions = {User-Agent = "*WhatsApp*"}
+
+[[redirects]]
+  from = "/evermark/:id"
+  to = "/.netlify/functions/evermark-share?id=:id"
+  status = 200
+  force = false
+  conditions = {User-Agent = "*LinkedInBot*"}
+
+[[redirects]]
+  from = "/evermark/:id"
+  to = "/.netlify/functions/evermark-share?id=:id"
+  status = 200
+  force = false
+  conditions = {User-Agent = "*TelegramBot*"}
+
+[[redirects]]
+  from = "/evermark/:id"
+  to = "/.netlify/functions/evermark-share?id=:id"
+  status = 200
+  force = false
+  conditions = {User-Agent = "*Discord*"}
 
 # SPA fallback - must be last
 [[redirects]]

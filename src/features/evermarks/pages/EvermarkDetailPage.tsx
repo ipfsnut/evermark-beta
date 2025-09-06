@@ -61,7 +61,7 @@ const ShareModal: React.FC<{
   const [copied, setCopied] = useState(false);
   
   // Use the beautiful sharing page for social media shares
-  const shareUrl = `${window.location.origin}/.netlify/functions/evermark-share?id=${evermark.id}`;
+  const shareUrl = `${window.location.origin}/share/evermark/${evermark.id}`;
   const directUrl = `${window.location.origin}/evermark/${evermark.id}`;
 
   const handleCopy = async () => {

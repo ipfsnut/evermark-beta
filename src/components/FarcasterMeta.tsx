@@ -79,7 +79,7 @@ export function EvermarkMeta({ evermark }: EvermarkMetaProps) {
   
   // Use the new dynamic sharing endpoint for beautiful book pages
   const baseUrl = process.env.NODE_ENV === 'development' ? 'http://localhost:8888' : 'https://evermarks.net';
-  const shareEndpoint = `${baseUrl}/.netlify/functions/evermark-share?id=${evermark.id}`;
+  const shareEndpoint = `${baseUrl}/share/evermark/${evermark.id}`;
   const directUrl = `${baseUrl}/evermark/${evermark.id}`;
   
   return (
