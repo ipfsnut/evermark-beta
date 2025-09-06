@@ -21,16 +21,16 @@ interface EvermarkData {
   author: string;
   description?: string;
   supabase_image_url?: string;
-  processed_image_url?: string;
   content_type?: string;
   verified: boolean;
-  creator?: string;
+  owner?: string;
   created_at: string;
   source_url?: string;
 }
 
 async function getEvermarkData(tokenId: string): Promise<EvermarkData | null> {
   try {
+    // Query the database directly
     const { data, error } = await supabase
       .from('beta_evermarks')
       .select(`
@@ -39,10 +39,9 @@ async function getEvermarkData(tokenId: string): Promise<EvermarkData | null> {
         author,
         description,
         supabase_image_url,
-        processed_image_url,
         content_type,
         verified,
-        creator,
+        owner,
         created_at,
         source_url
       `)

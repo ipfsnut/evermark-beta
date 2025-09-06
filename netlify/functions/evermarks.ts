@@ -89,8 +89,9 @@ async function enhanceWithVotingData(evermarks: any[]): Promise<any[]> {
     return evermarks;
   }
 
+  // Temporarily disable voting data enhancement until tables are created
   // Skip voting data enhancement for large datasets to prevent timeouts
-  const shouldSkipVotingData = evermarks.length > 50;
+  const shouldSkipVotingData = true; // evermarks.length > 50;
   let votingDataMap = new Map();
   
   if (!shouldSkipVotingData) {
@@ -111,10 +112,9 @@ async function enhanceWithVotingData(evermarks: any[]): Promise<any[]> {
     id: evermark.token_id.toString(),
     tokenId: evermark.token_id,
     creator: evermark.owner,
-    // Keep original fields for backward compatibility
-    votes: Math.round(votingDataMap.get(evermark.token_id.toString())?.votes ? 
-      Number(votingDataMap.get(evermark.token_id.toString())!.votes) / (10 ** 18) : 0),
-    voter_count: votingDataMap.get(evermark.token_id.toString())?.voterCount || 0
+    // Keep original fields for backward compatibility - use defaults until tables exist
+    votes: 0, // Math.round(votingDataMap.get(evermark.token_id.toString())?.votes ? Number(votingDataMap.get(evermark.token_id.toString())!.votes) / (10 ** 18) : 0),
+    voter_count: 0 // votingDataMap.get(evermark.token_id.toString())?.voterCount || 0
   }));
 }
 
@@ -122,17 +122,18 @@ async function enhanceWithVotingData(evermarks: any[]): Promise<any[]> {
  * Enhance single evermark with voting data
  */
 async function enhanceSingleWithVotingData(evermark: any): Promise<any> {
+  // Temporarily disable voting data enhancement until tables are created
   try {
-    const votingData = await VotingDataService.getEvermarkVotingData(evermark.token_id.toString());
+    // const votingData = await VotingDataService.getEvermarkVotingData(evermark.token_id.toString());
     return {
       ...evermark,
       // Map database fields to frontend format
       id: evermark.token_id.toString(),
       tokenId: evermark.token_id,
       creator: evermark.owner,
-      // Add voting data
-      votes: Math.round(votingData.total_votes),
-      voter_count: votingData.voter_count
+      // Add default voting data until tables exist
+      votes: 0, // Math.round(votingData.total_votes),
+      voter_count: 0 // votingData.voter_count
     };
   } catch (error) {
     console.error('Failed to enhance single evermark with voting data:', error);
