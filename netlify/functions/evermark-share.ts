@@ -112,7 +112,7 @@ function generateEvermarkShareHTML(evermark: EvermarkData, baseUrl: string): str
   <meta property="fc:frame:image:aspect_ratio" content="1.91:1" />
   <meta property="fc:frame:button:1" content="🔖 Open in Evermark" />
   <meta property="fc:frame:button:1:action" content="link" />
-  <meta property="fc:frame:button:1:target" content="${directUrl}" />
+  <meta property="fc:frame:button:1:target" content="${shareUrl}" />
   
   <!-- Open Graph Meta Tags (for other platforms) -->
   <meta property="og:title" content="${title}" />
