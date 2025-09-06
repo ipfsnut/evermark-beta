@@ -52,8 +52,8 @@ export class ReadmeService {
    */
   static isReadmeBook(url: string): boolean {
     const readmePatterns = [
-      // OpenSea README books
-      /opensea\.io\/assets\/matic\/0x931204fb8cea7f7068995dce924f0d76d571df99/i,
+      // OpenSea README books (both URL formats)
+      /opensea\.io\/(assets|item)\/matic\/0x931204fb8cea7f7068995dce924f0d76d571df99/i,
       // NFT Book Bazaar
       /nftbookbazaar\.com/i,
       // PageDAO mint site
@@ -69,14 +69,23 @@ export class ReadmeService {
    * Extract contract address and token ID from URL
    */
   static parseReadmeUrl(url: string): { contract?: string; tokenId?: string; platform?: string } {
-    // OpenSea pattern: opensea.io/assets/matic/[contract]/[tokenId]
-    const openseaMatch = url.match(/opensea\.io\/assets\/matic\/([0-9a-fA-Fx]+)\/(\d+)/);
-    if (openseaMatch) {
-      return {
-        contract: openseaMatch[1].toLowerCase(),
-        tokenId: openseaMatch[2],
-        platform: 'opensea'
-      };
+    // OpenSea patterns: 
+    // - opensea.io/assets/matic/[contract]/[tokenId]
+    // - opensea.io/item/matic/[contract]/[tokenId]
+    const openseaPatterns = [
+      /opensea\.io\/assets\/matic\/([0-9a-fA-Fx]+)\/(\d+)/,
+      /opensea\.io\/item\/matic\/([0-9a-fA-Fx]+)\/(\d+)/
+    ];
+    
+    for (const pattern of openseaPatterns) {
+      const match = url.match(pattern);
+      if (match) {
+        return {
+          contract: match[1].toLowerCase(),
+          tokenId: match[2],
+          platform: 'opensea'
+        };
+      }
     }
 
     // NFT Book Bazaar pattern - would need their URL structure
@@ -88,24 +97,29 @@ export class ReadmeService {
   }
 
   /**
-   * Fetch metadata from OpenSea API
+   * Fetch metadata from OpenSea API via server-side function
    */
   static async fetchOpenSeaMetadata(contract: string, tokenId: string): Promise<ReadmeMetadata | null> {
     try {
-      // OpenSea API endpoint for individual NFTs
-      const openseaUrl = `https://api.opensea.io/api/v1/asset/${contract}/${tokenId}`;
+      console.log(`🔍 Fetching README metadata via server for ${contract}/${tokenId}`);
       
-      const response = await fetch(openseaUrl, {
-        headers: {
-          'User-Agent': 'EvermarkBot/1.0'
-        }
-      });
-
+      // Use our Netlify function to avoid CORS and API key issues
+      const response = await fetch(`/.netlify/functions/readme-metadata?contract=${contract}&tokenId=${tokenId}`);
+      
       if (!response.ok) {
-        throw new Error(`OpenSea API error: ${response.status}`);
+        const errorText = await response.text();
+        console.error(`❌ Server metadata fetch failed: ${response.status} - ${errorText}`);
+        throw new Error(`Server metadata fetch failed: ${response.status}`);
       }
 
-      const data = await response.json();
+      const result = await response.json();
+      console.log('📚 Server metadata response:', result);
+      
+      if (!result.success) {
+        throw new Error(`Server returned error: ${result.error}`);
+      }
+
+      const data = result.data;
       
       // Extract book-specific metadata from OpenSea attributes
       const attributes = data.traits || [];
@@ -166,39 +180,18 @@ export class ReadmeService {
 
     } catch (error) {
       console.error('OpenSea metadata extraction failed:', error);
-      return null;
+      throw error; // Re-throw to let caller handle the error
     }
   }
 
   /**
    * Fetch metadata directly from Polygon contract
+   * TODO: Implement actual contract metadata fetching when we have RPC access
    */
   static async fetchContractMetadata(contract: string, tokenId: string): Promise<ReadmeMetadata | null> {
-    try {
-      // This would require a Polygon RPC endpoint or web3 provider
-      // For now, provide fallback metadata
-      const contractInfo = this.README_CONTRACTS.get(contract.toLowerCase());
-      
-      const readmeData: ReadmeBookData = {
-        bookTitle: 'README Book',
-        bookAuthor: 'Unknown Author',
-        polygonContract: contract,
-        polygonTokenId: tokenId,
-        publisher: contractInfo?.name || 'PageDAO'
-      };
-
-      return {
-        bookTitle: readmeData.bookTitle,
-        bookAuthor: readmeData.bookAuthor,
-        confidence: 'low',
-        extractionMethod: 'contract_fallback',
-        readmeData
-      };
-
-    } catch (error) {
-      console.error('Contract metadata extraction failed:', error);
-      return null;
-    }
+    // This would require a Polygon RPC endpoint or web3 provider
+    // For now, we don't have this implemented, so throw an error
+    throw new Error('Direct contract metadata fetching not yet implemented');
   }
 
   /**
@@ -214,35 +207,12 @@ export class ReadmeService {
 
       const urlInfo = this.parseReadmeUrl(url);
 
-      // Try OpenSea first if we have contract and token ID
+      // Try OpenSea if we have contract and token ID
       if (urlInfo.contract && urlInfo.tokenId) {
-        const openseaMetadata = await this.fetchOpenSeaMetadata(urlInfo.contract, urlInfo.tokenId);
-        if (openseaMetadata) {
-          return openseaMetadata;
-        }
-
-        // Fallback to contract metadata
-        const contractMetadata = await this.fetchContractMetadata(urlInfo.contract, urlInfo.tokenId);
-        if (contractMetadata) {
-          return contractMetadata;
-        }
+        return await this.fetchOpenSeaMetadata(urlInfo.contract, urlInfo.tokenId);
       }
 
-      // Ultimate fallback: basic README metadata
-      return {
-        bookTitle: 'README Book',
-        bookAuthor: 'Unknown Author',
-        confidence: 'low',
-        extractionMethod: 'url_fallback',
-        readmeData: {
-          bookTitle: 'README Book',
-          bookAuthor: 'Unknown Author',
-          polygonContract: urlInfo.contract || '0x931204fb8cea7f7068995dce924f0d76d571df99',
-          polygonTokenId: urlInfo.tokenId || '0',
-          publisher: 'PageDAO',
-          marketplaceUrl: url
-        }
-      };
+      throw new Error('Could not extract contract address and token ID from URL');
 
     } catch (error) {
       console.error('README metadata extraction failed:', error);
