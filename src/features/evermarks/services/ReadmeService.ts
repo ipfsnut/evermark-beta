@@ -114,25 +114,38 @@ export class ReadmeService {
 
       const result = await response.json();
       console.log('📚 Server metadata response:', result);
+      console.log('📚 Server metadata response (JSON):', JSON.stringify(result, null, 2));
       
       if (!result.success) {
+        console.error('❌ Server returned error:', result.error);
         throw new Error(`Server returned error: ${result.error}`);
       }
 
       const data = result.data;
+      console.log('📚 Extracted data from server:', JSON.stringify(data, null, 2));
       
       // Extract book-specific metadata from OpenSea attributes
-      const attributes = data.traits || [];
+      const attributes = data.traits || data.attributes || [];
+      console.log('📋 Found attributes:', JSON.stringify(attributes, null, 2));
+      
       const getAttributeValue = (traitType: string) => {
         const attr = attributes.find((a: any) => 
           a.trait_type?.toLowerCase() === traitType.toLowerCase()
         );
+        console.log(`🔍 Looking for "${traitType}":`, attr);
         return attr?.value;
       };
 
+      console.log('📝 Raw data fields:', {
+        name: data.name,
+        title: data.title,
+        creator: data.creator,
+        collection: data.collection
+      });
+
       const readmeData: ReadmeBookData = {
-        bookTitle: data.name || 'Untitled Book',
-        bookAuthor: getAttributeValue('Author') || data.creator?.user?.username || 'Unknown Author',
+        bookTitle: data.name || data.title || 'Untitled Book',
+        bookAuthor: getAttributeValue('Author') || data.creator?.user?.username || data.creator?.username || 'Unknown Author',
         polygonContract: contract,
         polygonTokenId: tokenId,
         bookDescription: data.description,
@@ -164,12 +177,12 @@ export class ReadmeService {
         ipfsContent = await this.fetchIPFSMetadata(ipfsHash);
       }
 
-      return {
+      const finalResult = {
         bookTitle: readmeData.bookTitle,
         bookAuthor: readmeData.bookAuthor,
         description: data.description,
         image: data.image_url,
-        confidence: 'high',
+        confidence: 'high' as const,
         extractionMethod: 'opensea_api',
         readmeData,
         ipfsContent: ipfsContent ? {
@@ -177,6 +190,9 @@ export class ReadmeService {
           ...ipfsContent
         } : undefined
       };
+
+      console.log('🎯 Final README metadata result:', JSON.stringify(finalResult, null, 2));
+      return finalResult;
 
     } catch (error) {
       console.error('OpenSea metadata extraction failed:', error);

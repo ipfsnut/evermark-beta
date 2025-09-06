@@ -67,31 +67,6 @@ const handler: Handler = async (event: HandlerEvent, context: HandlerContext) =>
     }
 
     if (!data) {
-      // Provide fallback metadata for PageDAO contract
-      if (contract.toLowerCase() === '0x931204fb8cea7f7068995dce924f0d76d571df99') {
-        console.log('🔄 Using PageDAO fallback metadata');
-        return {
-          statusCode: 200,
-          headers,
-          body: JSON.stringify({
-            success: true,
-            method: 'pagedao_fallback',
-            data: {
-              name: `README Book #${tokenId}`,
-              description: `Decentralized book from the PageDAO community. This is token #${tokenId} from the README Books collection on Polygon.`,
-              creator: { user: { username: 'PageDAO' } },
-              collection: { name: 'README Books by PageDAO' },
-              traits: [
-                { trait_type: 'Publisher', value: 'PageDAO' },
-                { trait_type: 'Type', value: 'Decentralized Book' },
-                { trait_type: 'Network', value: 'Polygon' }
-              ],
-              permalink: `https://opensea.io/assets/matic/${contract}/${tokenId}`
-            }
-          })
-        };
-      }
-
       return {
         statusCode: 404,
         headers,
