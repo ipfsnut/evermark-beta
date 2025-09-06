@@ -154,7 +154,7 @@ export function useLeaderboardState(): UseLeaderboardStateReturn {
   // Combined loading and error states
   const isLoading = isLoadingEntries || isLoadingStats;
   const isRefreshing = isRefreshingEntries || isRefreshingStats;
-  const error = entriesError?.message ?? statsError?.message ?? null;
+  const error = entriesError ? (entriesError as any).message : null;
 
   // Available periods query
   const { data: availablePeriods = [] } = useQuery({
