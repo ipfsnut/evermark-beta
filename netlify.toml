@@ -62,7 +62,7 @@
 
 [[redirects]]
   from = "/share/evermark/:id"
-  to = "/.netlify/functions/evermark-share?id=:id"
+  to = "/.netlify/functions/evermark-share/:id"
   status = 200
 
 [[redirects]]

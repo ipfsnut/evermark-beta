@@ -237,13 +237,37 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
   }
 
   const baseUrl = process.env.URL || 'https://evermarks.net';
-  const tokenId = event.queryStringParameters?.id;
+  
+  // Try to get ID from query parameters or path
+  let tokenId = event.queryStringParameters?.id;
+  
+  // If no query param, try to extract from path (for redirected requests)
+  if (!tokenId && event.path) {
+    // Try different path patterns
+    let pathMatch = event.path.match(/\/evermark-share\/(\d+)/);
+    if (!pathMatch) {
+      pathMatch = event.path.match(/\/share\/evermark\/(\d+)/);
+    }
+    if (!pathMatch) {
+      pathMatch = event.path.match(/(\d+)$/);
+    }
+    if (pathMatch) {
+      tokenId = pathMatch[1];
+    }
+  }
+
+  // Debug logging
+  console.log('Debug info:', {
+    path: event.path,
+    queryStringParameters: event.queryStringParameters,
+    tokenId: tokenId
+  });
 
   if (!tokenId) {
     return {
       statusCode: 400,
       headers,
-      body: 'Missing id parameter',
+      body: `Missing id parameter. Path: ${event.path}, Query: ${JSON.stringify(event.queryStringParameters)}`,
     };
   }
 
