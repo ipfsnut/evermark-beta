@@ -21,6 +21,7 @@ interface EvermarkData {
   author: string;
   description?: string;
   supabase_image_url?: string;
+  processed_image_url?: string;
   content_type?: string;
   verified: boolean;
   owner?: string;
