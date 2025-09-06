@@ -39,7 +39,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
       };
     }
 
-    // Upload to Pinata
+    // Upload to Pinata using fetch (built-in to Node.js 18+)
     const pinataResponse = await fetch('https://api.pinata.cloud/pinning/pinJSONToIPFS', {
       method: 'POST',
       headers: {
