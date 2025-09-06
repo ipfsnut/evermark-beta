@@ -60,14 +60,14 @@ const ShareModal: React.FC<{
 }> = ({ isOpen, onClose, evermark }) => {
   const [copied, setCopied] = useState(false);
   
-  // Use the beautiful sharing page for social media shares
+  // Use the beautiful sharing page for all shares
   const shareUrl = `${window.location.origin}/share/evermark/${evermark.id}`;
   const directUrl = `${window.location.origin}/evermark/${evermark.id}`;
 
   const handleCopy = async () => {
     try {
-      // Copy the direct URL for easy sharing
-      await navigator.clipboard.writeText(directUrl);
+      // Copy the beautiful sharing URL
+      await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
@@ -94,7 +94,7 @@ const ShareModal: React.FC<{
         <div className="p-6 space-y-4">
           <div className="bg-gray-800 rounded-lg p-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-400 truncate mr-3">{directUrl}</span>
+              <span className="text-sm text-gray-400 truncate mr-3">{shareUrl}</span>
               <button
                 onClick={handleCopy}
                 className={cn(
