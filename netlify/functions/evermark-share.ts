@@ -106,13 +106,12 @@ function generateEvermarkShareHTML(evermark: EvermarkData, baseUrl: string): str
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${title}</title>
   
-  <!-- Farcaster Frame Meta Tags for Mini-App -->
-  <meta property="fc:frame" content="vNext" />
-  <meta property="fc:frame:image" content="${imageUrl}" />
-  <meta property="fc:frame:image:aspect_ratio" content="1.91:1" />
-  <meta property="fc:frame:button:1" content="🔖 Open in Evermark" />
-  <meta property="fc:frame:button:1:action" content="link" />
-  <meta property="fc:frame:button:1:target" content="${shareUrl}" />
+  <!-- Farcaster Mini App Meta Tags -->
+  <meta name="fc:miniapp" content="1" />
+  <meta name="fc:miniapp:image" content="${imageUrl}" />
+  <meta name="fc:miniapp:button:1" content="🔖 Open Evermark" />
+  <meta name="fc:miniapp:button:1:action" content="link" />
+  <meta name="fc:miniapp:button:1:target" content="${shareUrl}" />
   
   <!-- Open Graph Meta Tags (for other platforms) -->
   <meta property="og:title" content="${title}" />
