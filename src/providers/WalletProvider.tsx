@@ -57,18 +57,43 @@ function FarcasterWalletProvider({ children }: { children: React.ReactNode }): R
       try {
         const { sdk } = await import('@farcaster/miniapp-sdk');
         
-        // Try to get Ethereum provider from SDK
-        const ethProvider = await sdk.wallet.getEthereumProvider();
+        // Try to get Ethereum provider from SDK with retry for Android
+        let ethProvider;
+        let retries = 3;
+        
+        while (retries > 0 && !ethProvider) {
+          try {
+            ethProvider = await sdk.wallet.getEthereumProvider();
+            if (!ethProvider) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              retries--;
+            }
+          } catch (e) {
+            authLogger.debug('Retrying provider connection...', { retries });
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            retries--;
+          }
+        }
         
         if (ethProvider && mounted) {
           // Try to get accounts from the provider
           try {
-            const accounts = await ethProvider.request({ method: 'eth_accounts' });
-            if (accounts && accounts.length > 0) {
+            // Request accounts with explicit chain ID for Android compatibility
+            const accounts = await ethProvider.request({ 
+              method: 'eth_requestAccounts',
+              params: []
+            });
+            
+            if (!accounts || accounts.length === 0) {
+              // Fallback to eth_accounts
+              const fallbackAccounts = await ethProvider.request({ method: 'eth_accounts' });
+              if (fallbackAccounts && fallbackAccounts.length > 0) {
+                setManualAddress(fallbackAccounts[0]);
+                authLogger.info('Got wallet address from Farcaster SDK (fallback)', { address: fallbackAccounts[0] });
+              }
+            } else {
               setManualAddress(accounts[0]);
               authLogger.info('Got wallet address from Farcaster SDK', { address: accounts[0] });
-            } else {
-              authLogger.debug('Farcaster SDK provider available but no accounts connected');
             }
           } catch (accountError) {
             authLogger.warn('Failed to get accounts from Farcaster provider', { error: accountError });
@@ -80,7 +105,10 @@ function FarcasterWalletProvider({ children }: { children: React.ReactNode }): R
     };
 
     // Attempt to get wallet after a delay to let miniapp initialize
-    const timeout = setTimeout(getWalletFromSDK, 2000);
+    // Longer delay for Android devices
+    const isAndroid = /android/i.test(navigator.userAgent);
+    const delay = isAndroid ? 3000 : 2000;
+    const timeout = setTimeout(getWalletFromSDK, delay);
     return () => { 
       clearTimeout(timeout);
       mounted = false; 
