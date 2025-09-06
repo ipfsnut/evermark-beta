@@ -274,7 +274,13 @@ export class WebMetadataService {
   /**
    * Detect content type from URL patterns
    */
-  static detectContentType(url: string): 'Cast' | 'DOI' | 'ISBN' | 'URL' {
+  static detectContentType(url: string): 'Cast' | 'DOI' | 'ISBN' | 'README' | 'URL' {
+    // README books (PageDAO)
+    if (url.match(/opensea\.io\/assets\/matic\/0x931204fb8cea7f7068995dce924f0d76d571df99/) ||
+        url.match(/nftbookbazaar\.com/) ||
+        url.match(/0x931204fb8cea7f7068995dce924f0d76d571df99/)) {
+      return 'README';
+    }
     // Twitter/X content should be treated as Cast
     if (url.match(/(?:twitter\.com|x\.com)\/[^\/]+\/status/)) {
       return 'Cast';

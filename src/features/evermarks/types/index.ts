@@ -17,7 +17,7 @@ export interface Evermark {
   sourceUrl?: string;
   image?: string; // Changed from string | null to string | undefined
   metadataURI: string;
-  contentType: 'DOI' | 'ISBN' | 'Cast' | 'Tweet' | 'URL' | 'Custom';
+  contentType: 'DOI' | 'ISBN' | 'Cast' | 'Tweet' | 'URL' | 'README' | 'Custom';
   tags: string[];
   verified: boolean;
   
@@ -43,6 +43,7 @@ export interface Evermark {
     isbn?: string;
     castData?: FarcasterCastData;
     tweetData?: TwitterTweetData;
+    readmeData?: ReadmeBookData;
     academic?: {
       authors?: Array<{
         given?: string;
@@ -101,6 +102,29 @@ export interface FarcasterCastData {
   }>;
 }
 
+export interface ReadmeBookData {
+  bookTitle: string;
+  bookAuthor: string;
+  isbn?: string;
+  publicationDate?: string;
+  chapterNumber?: number;
+  totalChapters?: number;
+  polygonContract: string;
+  polygonTokenId: string;
+  ipfsHash?: string;
+  pageCount?: number;
+  tokenGated?: boolean;
+  bookDescription?: string;
+  genre?: string;
+  language?: string;
+  publisher?: string;
+  // Metadata from OpenSea/marketplace
+  marketplaceUrl?: string;
+  currentOwner?: string;
+  mintDate?: string;
+  royaltyPercentage?: number;
+}
+
 export interface TwitterTweetData {
   tweetId?: string;
   author?: string;
@@ -140,7 +164,7 @@ export interface EvermarkMetadata {
   imageFile?: File | null;
   customFields?: Array<{ key: string; value: string }>;
   tags?: string[];
-  contentType?: 'Cast' | 'DOI' | 'ISBN' | 'Tweet' | 'URL' | 'Custom';
+  contentType?: 'Cast' | 'DOI' | 'ISBN' | 'Tweet' | 'URL' | 'README' | 'Custom';
   
   // Type-specific fields
   doi?: string;
@@ -153,6 +177,13 @@ export interface EvermarkMetadata {
   volume?: string;
   issue?: string;
   pages?: string;
+  
+  // README book fields
+  readmeUrl?: string;
+  bookTitle?: string;
+  bookAuthor?: string;
+  chapterNumber?: number;
+  polygonTokenId?: string;
 }
 
 export interface CreateEvermarkInput {
@@ -306,6 +337,10 @@ export interface IPFSMetadata {
     
     // URL-specific fields  
     url?: string;
+    
+    // README book-specific fields
+    readmeUrl?: string;
+    readmeData?: ReadmeBookData;
   };
 }
 

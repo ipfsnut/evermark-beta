@@ -83,6 +83,8 @@ export function EvermarkCard({
         return <FileText className="h-4 w-4" />;
       case 'ISBN':
         return <FileText className="h-4 w-4" />;
+      case 'README':
+        return <span className="text-sm">📖</span>;
       case 'URL':
         return <ExternalLink className="h-4 w-4" />;
       default:

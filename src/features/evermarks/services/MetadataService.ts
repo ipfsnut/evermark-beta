@@ -1,4 +1,5 @@
 import type { EvermarkMetadata } from '../types';
+import { ReadmeService } from './ReadmeService';
 
 export interface AuthorInfo {
   given?: string;
@@ -178,10 +179,27 @@ export class MetadataService {
    * Auto-detect content type and fetch appropriate metadata
    */
   static async fetchContentMetadata(sourceUrl: string): Promise<{
-    contentType: 'DOI' | 'ISBN' | null;
+    contentType: 'DOI' | 'ISBN' | 'README' | null;
     metadata: ExtendedMetadata | null;
   }> {
-    // Try DOI first
+    // Try README book first
+    if (ReadmeService.isReadmeBook(sourceUrl)) {
+      const readmeMetadata = await ReadmeService.fetchReadmeMetadata(sourceUrl);
+      if (readmeMetadata) {
+        // Convert README metadata to ExtendedMetadata format
+        const metadata: ExtendedMetadata = {
+          title: readmeMetadata.bookTitle,
+          authors: [{ name: readmeMetadata.bookAuthor }],
+          primaryAuthor: readmeMetadata.bookAuthor,
+          publisher: readmeMetadata.readmeData.publisher,
+          publishedDate: readmeMetadata.readmeData.publicationDate,
+          abstract: readmeMetadata.description
+        };
+        return { contentType: 'README', metadata };
+      }
+    }
+
+    // Try DOI
     const doi = this.extractDOI(sourceUrl);
     if (doi) {
       const metadata = await this.fetchDOIMetadata(doi);

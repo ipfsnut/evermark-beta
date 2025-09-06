@@ -12,6 +12,7 @@ import {
 import { Formatters } from '../../../utils/formatters';
 import type { Evermark } from '../types';
 import { SimpleEvermarkImage } from '../../../components/images/SimpleEvermarkImage';
+import { ReadmeBookViewer } from './ReadmeBookViewer';
 
 interface EvermarkModalProps {
   evermark: Evermark | null;
@@ -187,7 +188,58 @@ export function EvermarkModal({
                     </div>
                   </div>
                 )}
+                {evermark.extendedMetadata.readmeData && (
+                  <div>
+                    <span className="text-gray-400">README Book Details:</span>
+                    <div className="mt-2 bg-gray-700/50 p-3 rounded border border-gray-600">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <div className="text-gray-200 font-medium">{evermark.extendedMetadata.readmeData.bookTitle}</div>
+                          <div className="text-gray-400 text-sm">by {evermark.extendedMetadata.readmeData.bookAuthor}</div>
+                        </div>
+                        {evermark.extendedMetadata.readmeData.genre && (
+                          <span className="bg-blue-800/50 text-blue-200 text-xs px-2 py-1 rounded">
+                            {evermark.extendedMetadata.readmeData.genre}
+                          </span>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs text-gray-400">
+                        <div>Publisher: {evermark.extendedMetadata.readmeData.publisher || 'PageDAO'}</div>
+                        {evermark.extendedMetadata.readmeData.publicationDate && (
+                          <div>Published: {evermark.extendedMetadata.readmeData.publicationDate}</div>
+                        )}
+                        {evermark.extendedMetadata.readmeData.pageCount && (
+                          <div>Pages: {evermark.extendedMetadata.readmeData.pageCount}</div>
+                        )}
+                        {evermark.extendedMetadata.readmeData.chapterNumber && evermark.extendedMetadata.readmeData.totalChapters && (
+                          <div>Chapter: {evermark.extendedMetadata.readmeData.chapterNumber} of {evermark.extendedMetadata.readmeData.totalChapters}</div>
+                        )}
+                      </div>
+                      {evermark.extendedMetadata.readmeData.ipfsHash && (
+                        <div className="mt-2 pt-2 border-t border-gray-600">
+                          <div className="flex items-center gap-2 text-xs text-green-400">
+                            <span>🟢 Full content available on IPFS</span>
+                            <span className="font-mono bg-gray-800/50 px-2 py-1 rounded">
+                              {evermark.extendedMetadata.readmeData.ipfsHash.substring(0, 12)}...
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
+            </div>
+          )}
+          
+          {/* README Book Viewer - Show if it's a README book with data */}
+          {evermark.contentType === 'README' && evermark.extendedMetadata?.readmeData && (
+            <div>
+              <h3 className="text-lg font-medium text-white mb-3">📖 Book Reader</h3>
+              <ReadmeBookViewer 
+                readmeData={evermark.extendedMetadata.readmeData}
+                className="bg-gray-800/50 rounded-lg"
+              />
             </div>
           )}
 

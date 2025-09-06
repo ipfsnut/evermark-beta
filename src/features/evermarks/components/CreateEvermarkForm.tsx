@@ -18,6 +18,7 @@ import {
 import { useEvermarksState } from '../hooks/useEvermarkState';
 import { type CreateEvermarkInput, type EvermarkMetadata, type Evermark, type CreateEvermarkResult } from '../types';
 import { FarcasterService } from '../services/FarcasterService';
+import { ReadmeService } from '../services/ReadmeService';
 import { useAppAuth } from '@/providers/AppContext';
 import { useUserForEvermarks } from '@/providers/IntegratedUserProvider';
 import { useTheme } from '@/providers/ThemeProvider';
@@ -144,6 +145,7 @@ const CONTENT_TYPES = [
   { value: 'Cast', label: 'Farcaster Cast', icon: '💬', description: 'Social media post from Farcaster' },
   { value: 'DOI', label: 'Academic Paper', icon: '📄', description: 'Research paper with DOI' },
   { value: 'ISBN', label: 'Book', icon: '📚', description: 'Published book with ISBN' },
+  { value: 'README', label: 'README Book', icon: '📖', description: 'Decentralized book NFT from PageDAO' },
   { value: 'URL', label: 'Web Content', icon: '🌐', description: 'Content from any website' },
 ] as const;
 
@@ -274,6 +276,9 @@ export function CreateEvermarkForm({
   
   // Cast data state for displaying embeds and metadata
   const [castData, setCastData] = useState<any>(null);
+  
+  // README book data state
+  const [readmeData, setReadmeData] = useState<any>(null);
 
   const getAuthor = useCallback(() => {
     return user?.displayName || user?.username || 'Unknown Author';
@@ -298,7 +303,39 @@ export function CreateEvermarkForm({
       const domain = url.hostname.replace('www.', '');
       
       // Detect content type and fetch data accordingly
-      if (domain.includes('farcaster') || domain.includes('warpcast')) {
+      // Check for README books first
+      if (ReadmeService.isReadmeBook(formData.sourceUrl)) {
+        setFormData(prev => ({ ...prev, contentType: 'README' }));
+        
+        console.log('📚 Fetching README book metadata...');
+        const readmeMetadata = await ReadmeService.fetchReadmeMetadata(formData.sourceUrl);
+        
+        if (readmeMetadata) {
+          setReadmeData(readmeMetadata);
+          
+          setFormData(prev => ({ 
+            ...prev, 
+            title: formData.title || ReadmeService.generateEvermarkTitle(readmeMetadata.readmeData),
+            description: ReadmeService.generateEvermarkDescription(readmeMetadata.readmeData),
+            bookTitle: readmeMetadata.bookTitle,
+            bookAuthor: readmeMetadata.bookAuthor,
+            readmeUrl: formData.sourceUrl
+          }));
+          
+          console.log('✅ README book metadata loaded:', {
+            title: readmeMetadata.bookTitle,
+            author: readmeMetadata.bookAuthor,
+            hasIPFS: !!readmeMetadata.readmeData.ipfsHash
+          });
+        } else {
+          // Fallback for README books
+          setFormData(prev => ({ 
+            ...prev, 
+            title: formData.title || 'README Book',
+            description: `README book from ${formData.sourceUrl}`,
+          }));
+        }
+      } else if (domain.includes('farcaster') || domain.includes('warpcast')) {
         setFormData(prev => ({ ...prev, contentType: 'Cast' }));
         
         // Fetch actual cast content from Farcaster
@@ -370,13 +407,16 @@ export function CreateEvermarkForm({
     setFormData(prev => ({ ...prev, [field]: value }));
     clearCreateError();
     
-    // Auto-detect cast content when Farcaster URL is pasted
+    // Auto-detect content when supported URLs are pasted
     if (field === 'sourceUrl' && value.trim()) {
       try {
         const url = new URL(value);
         const domain = url.hostname.replace('www.', '');
-        if (domain.includes('farcaster') || domain.includes('warpcast')) {
-          // Auto-trigger cast detection after a short delay
+        
+        // Auto-trigger detection for supported content types
+        if (domain.includes('farcaster') || 
+            domain.includes('warpcast') || 
+            ReadmeService.isReadmeBook(value)) {
           setTimeout(() => {
             handleAutoDetect();
           }, 500);
@@ -872,14 +912,20 @@ export function CreateEvermarkForm({
                     "block text-sm font-medium",
                     isDark ? "text-cyan-400" : "text-purple-600"
                   )}>
-                    {formData.contentType === 'Cast' ? 'Cast URL *' : 'Source URL (Optional)'}
+                    {formData.contentType === 'Cast' ? 'Cast URL *' : 
+                     formData.contentType === 'README' ? 'README Book URL *' : 
+                     'Source URL (Optional)'}
                   </label>
                   <div className="flex gap-2">
                     <input
                       type="url"
                       value={formData.sourceUrl}
                       onChange={(e) => handleFieldChange('sourceUrl', e.target.value)}
-                      placeholder={formData.contentType === 'Cast' ? 'https://farcaster.xyz/username/0x...' : 'https://example.com/content'}
+                      placeholder={
+                        formData.contentType === 'Cast' ? 'https://farcaster.xyz/username/0x...' :
+                        formData.contentType === 'README' ? 'https://opensea.io/assets/matic/0x931204fb8cea7f7068995dce924f0d76d571df99/...' :
+                        'https://example.com/content'
+                      }
                       disabled={isFormDisabled}
                       className={cn(
                         "flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-opacity-20 transition-colors",
@@ -888,7 +934,7 @@ export function CreateEvermarkForm({
                           ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-cyan-400" 
                           : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-purple-400 focus:ring-purple-400"
                       )}
-                      required={formData.contentType === 'Cast'}
+                      required={formData.contentType === 'Cast' || formData.contentType === 'README'}
                     />
                     {formData.sourceUrl && (
                       <button
