@@ -101,6 +101,8 @@ const ImagePreviewWithAspectRatio: React.FC<{
       : 'bg-gray-800/30';
   };
 
+  console.log('🖼️ ImagePreviewWithAspectRatio rendering with src:', src);
+  
   return (
     <div 
       className={cn(
@@ -119,7 +121,7 @@ const ImagePreviewWithAspectRatio: React.FC<{
           imageLoaded ? 'opacity-100' : 'opacity-0'
         )}
         onLoad={handleImageLoad}
-        onError={(e) => console.error('Image failed to load:', e)}
+        onError={(e) => console.error('Image failed to load:', src, e)}
       />
       
       {/* Loading indicator */}
@@ -313,18 +315,30 @@ export function CreateEvermarkForm({
         if (readmeMetadata) {
           setReadmeData(readmeMetadata);
           
-          setFormData(prev => ({ 
-            ...prev, 
-            title: formData.title || ReadmeService.generateEvermarkTitle(readmeMetadata.readmeData),
-            description: ReadmeService.generateEvermarkDescription(readmeMetadata.readmeData),
-            bookTitle: readmeMetadata.bookTitle,
-            bookAuthor: readmeMetadata.bookAuthor,
-            readmeUrl: formData.sourceUrl
-          }));
+          setFormData(prev => {
+            const updatedData = { 
+              ...prev, 
+              title: formData.title || ReadmeService.generateEvermarkTitle(readmeMetadata.readmeData),
+              description: ReadmeService.generateEvermarkDescription(readmeMetadata.readmeData),
+              image: readmeMetadata.image, // Set the cover image
+              bookTitle: readmeMetadata.bookTitle,
+              bookAuthor: readmeMetadata.bookAuthor,
+              readmeUrl: formData.sourceUrl
+            };
+            console.log('📝 Updated form data with image:', { image: updatedData.image });
+            return updatedData;
+          });
+          
+          // Set image preview for README book cover
+          if (readmeMetadata.image) {
+            setImagePreview(readmeMetadata.image);
+            console.log('🖼️ Set README image preview:', readmeMetadata.image);
+          }
           
           console.log('✅ README book metadata loaded:', {
             title: readmeMetadata.bookTitle,
             author: readmeMetadata.bookAuthor,
+            image: readmeMetadata.image,
             hasIPFS: !!readmeMetadata.readmeData.ipfsHash
           });
         } else {
@@ -605,7 +619,7 @@ export function CreateEvermarkForm({
 
       const createInput: CreateEvermarkInput = {
         metadata: evermarkMetadata,
-        image: selectedImage || undefined
+        image: selectedImage || formData.image || undefined
       };
       
       const result = await createEvermark(createInput);
@@ -634,7 +648,9 @@ export function CreateEvermarkForm({
   // Add this import at the top if not already imported
   const isFormDisabled = !hasWallet; // Enable form when wallet is connected via app header
 
-  // Debug logging removed for cleaner console
+  // Debug logging for README image preview issue
+  console.log('🐛 CreateEvermarkForm render - imagePreview state:', imagePreview);
+  console.log('🐛 CreateEvermarkForm render - formData.image:', formData.image);
 
   // No longer need SDK configuration - using IPFS-first approach in EvermarkService
 
@@ -1138,12 +1154,14 @@ export function CreateEvermarkForm({
                     </div>
                   )}
 
-                  {selectedImage && (
+                  {(selectedImage || imagePreview) && (
                     <div className="bg-blue-900/20 border border-blue-500/30 p-4 rounded-lg">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
                           <CheckCircleIcon className="h-4 w-4 text-blue-400" />
-                          <span className="text-sm text-blue-300">Image Selected (will upload to IPFS on submit)</span>
+                          <span className="text-sm text-blue-300">
+                            {selectedImage ? 'Image Selected (will upload to IPFS on submit)' : 'Image Preview (from metadata)'}
+                          </span>
                         </div>
                         <button
                           type="button"
@@ -1168,9 +1186,15 @@ export function CreateEvermarkForm({
                       )}
                       
                       <div className="text-xs text-blue-400 space-y-1">
-                        <div>File: {selectedImage.name}</div>
-                        <div>Size: {Math.round(selectedImage.size / 1024)} KB</div>
-                        <div>Type: {selectedImage.type}</div>
+                        {selectedImage ? (
+                          <>
+                            <div>File: {selectedImage.name}</div>
+                            <div>Size: {Math.round(selectedImage.size / 1024)} KB</div>
+                            <div>Type: {selectedImage.type}</div>
+                          </>
+                        ) : (
+                          <div>Source: Extracted from metadata</div>
+                        )}
                         {imagePreview && <div>Preview URL: {imagePreview.substring(0, 50)}...</div>}
                       </div>
                     </div>
@@ -1374,11 +1398,13 @@ export function CreateEvermarkForm({
                   )}
 
                   {/* Upload Status Preview */}
-                  {selectedImage && (
+                  {(selectedImage || imagePreview) && (
                     <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-3">
                       <div className="flex items-center gap-2 mb-2">
                         <CheckCircleIcon className="h-4 w-4 text-blue-400" />
-                        <span className="text-sm text-blue-300">Image Selected for IPFS Upload</span>
+                        <span className="text-sm text-blue-300">
+                          {selectedImage ? 'Image Selected for IPFS Upload' : 'Image Preview (from metadata)'}
+                        </span>
                       </div>
                       
                       {/* Enhanced Image Preview in Sidebar with book cover support */}

@@ -31,6 +31,15 @@ export function EvermarkModal({
   onShare,
   className = ''
 }: EvermarkModalProps) {
+  
+  // Debug ALL modals that open
+  console.log('🐛 Modal Opening:', {
+    tokenId: evermark?.tokenId,
+    contentType: evermark?.contentType,
+    isOpen,
+    hasEvermark: !!evermark
+  });
+
   if (!isOpen || !evermark) return null;
 
   const handleBackdropClick = (e: React.MouseEvent) => {
@@ -121,20 +130,71 @@ export function EvermarkModal({
             </div>
           )}
 
-          {/* Source URL */}
+          {/* Source URL and README Book Links */}
           {evermark.sourceUrl && (
             <div>
-              <h3 className="text-lg font-medium text-white mb-2">Source</h3>
-              <a
-                href={evermark.sourceUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center text-cyan-400 hover:text-cyan-300 transition-colors break-all"
-              >
-                <LinkIcon className="h-4 w-4 mr-2 flex-shrink-0" />
-                {evermark.sourceUrl}
-                <ExternalLinkIcon className="h-3 w-3 ml-1 flex-shrink-0" />
-              </a>
+              <h3 className="text-lg font-medium text-white mb-2">
+                {evermark.contentType === 'README' ? 'Links' : 'Source'}
+              </h3>
+              
+              {evermark.contentType === 'README' ? (
+                <div className="space-y-3">
+                  {/* Get NFT Book Link */}
+                  <a
+                    href={evermark.sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center text-cyan-400 hover:text-cyan-300 transition-colors break-all"
+                  >
+                    <LinkIcon className="h-4 w-4 mr-2 flex-shrink-0" />
+                    Get this NFT Book on OpenSea
+                    <ExternalLinkIcon className="h-3 w-3 ml-1 flex-shrink-0" />
+                  </a>
+                  
+                  {/* Read Book Link - Debug version */}
+                  {(() => {
+                    const hasReadmeData = !!evermark.extendedMetadata?.readmeData;
+                    const hasIpfsHash = !!evermark.extendedMetadata?.readmeData?.ipfsHash;
+                    console.log('🐛 Modal Read Button Debug:', {
+                      tokenId: evermark.tokenId,
+                      contentType: evermark.contentType,
+                      hasReadmeData,
+                      hasIpfsHash,
+                      ipfsHash: evermark.extendedMetadata?.readmeData?.ipfsHash
+                    });
+                    
+                    // Always show button for README books, even if data is missing (for debugging)
+                    return evermark.contentType === 'README' && (hasIpfsHash || hasReadmeData) && (
+                      <div>
+                        <a
+                          href={`https://ipfs.nftbookbazaar.com/ipfs/${evermark.extendedMetadata.readmeData.ipfsHash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center text-green-400 hover:text-green-300 transition-colors bg-green-900/20 px-4 py-2 rounded-lg border border-green-500/30"
+                        >
+                          <span className="mr-2">📖</span>
+                          Read Full Book Content
+                          <ExternalLinkIcon className="h-3 w-3 ml-1 flex-shrink-0" />
+                        </a>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Access the complete book content stored on IPFS
+                        </p>
+                      </div>
+                    );
+                  })()}
+                </div>
+              ) : (
+                <a
+                  href={evermark.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center text-cyan-400 hover:text-cyan-300 transition-colors break-all"
+                >
+                  <LinkIcon className="h-4 w-4 mr-2 flex-shrink-0" />
+                  {evermark.sourceUrl}
+                  <ExternalLinkIcon className="h-3 w-3 ml-1 flex-shrink-0" />
+                </a>
+              )}
             </div>
           )}
 

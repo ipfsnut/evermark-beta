@@ -401,19 +401,57 @@ export default function EvermarkDetailPage(): React.ReactNode {
               </div>
             )}
 
-            {/* Source Link */}
+            {/* Source Link & README Book Links */}
             {evermark.sourceUrl && (
               <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-6">
-                <h2 className="text-lg font-semibold text-blue-300 mb-3">Source</h2>
-                <a
-                  href={evermark.sourceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors break-all"
-                >
-                  <ExternalLink className="h-4 w-4 flex-shrink-0" />
-                  {evermark.sourceUrl}
-                </a>
+                <h2 className="text-lg font-semibold text-blue-300 mb-3">
+                  {evermark.contentType === 'README' ? 'Links' : 'Source'}
+                </h2>
+                
+                {evermark.contentType === 'README' ? (
+                  <div className="space-y-3">
+                    {/* Get NFT Book Link */}
+                    <a
+                      href={evermark.sourceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors break-all"
+                    >
+                      <LinkIcon className="h-4 w-4 flex-shrink-0" />
+                      Get this NFT Book on OpenSea
+                      <ExternalLink className="h-4 w-4 flex-shrink-0" />
+                    </a>
+                    
+                    {/* Read Book Link */}
+                    {evermark.extendedMetadata?.readmeData?.ipfsHash && (
+                      <div>
+                        <a
+                          href={`https://ipfs.nftbookbazaar.com/ipfs/${evermark.extendedMetadata.readmeData.ipfsHash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 bg-green-900/20 text-green-400 hover:text-green-300 px-4 py-3 rounded-lg border border-green-500/30 transition-colors font-medium"
+                        >
+                          <span className="text-lg">📖</span>
+                          Read Full Book Content
+                          <ExternalLink className="h-4 w-4 flex-shrink-0" />
+                        </a>
+                        <p className="text-xs text-gray-400 mt-2">
+                          Access the complete book content stored on IPFS
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <a
+                    href={evermark.sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors break-all"
+                  >
+                    <ExternalLink className="h-4 w-4 flex-shrink-0" />
+                    {evermark.sourceUrl}
+                  </a>
+                )}
               </div>
             )}
 

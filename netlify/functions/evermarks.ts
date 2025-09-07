@@ -119,9 +119,28 @@ async function enhanceWithVotingData(evermarks: any[]): Promise<any[]> {
 }
 
 /**
- * Enhance single evermark with voting data
+ * Enhance single evermark with voting data and metadata parsing
  */
 async function enhanceSingleWithVotingData(evermark: any): Promise<any> {
+  // Parse metadata_json like the list transformation does
+  let tags: string[] = [];
+  let title = '';
+  let author = '';
+  let description = '';
+  let parsedMetadata: any = {};
+  
+  try {
+    if (evermark.metadata_json) {
+      parsedMetadata = JSON.parse(evermark.metadata_json);
+      tags = parsedMetadata.tags ?? [];
+      title = parsedMetadata.title ?? '';
+      author = parsedMetadata.author ?? '';
+      description = parsedMetadata.description ?? '';
+    }
+  } catch {
+    // Use defaults
+  }
+
   // Temporarily disable voting data enhancement until tables are created
   try {
     // const votingData = await VotingDataService.getEvermarkVotingData(evermark.token_id.toString());
@@ -131,6 +150,28 @@ async function enhanceSingleWithVotingData(evermark: any): Promise<any> {
       id: evermark.token_id.toString(),
       tokenId: evermark.token_id,
       creator: evermark.owner,
+      // Add parsed metadata fields
+      title: title || String(evermark.title || '') || 'Untitled',
+      author: author || String(evermark.author || '') || 'Unknown',
+      description: description || String(evermark.description || '') || '',
+      tags,
+      verified: Boolean(evermark.verified),
+      creationTime: Date.parse(String(evermark.created_at || new Date().toISOString())),
+      ipfsHash: evermark.ipfs_metadata_hash as string,
+      supabaseImageUrl: evermark.supabase_image_url as string,
+      image: evermark.supabase_image_url ?? (evermark.ipfs_image_hash ? `ipfs://${evermark.ipfs_image_hash}` : undefined),
+      createdAt: String(evermark.created_at || new Date().toISOString()),
+      updatedAt: String(evermark.updated_at || evermark.created_at || new Date().toISOString()),
+      contentType: (evermark.content_type as any) || 'Custom',
+      sourceUrl: evermark.source_url as string,
+      imageStatus: 'processed' as const,
+      viewCount: evermark.access_count || 0,
+      extendedMetadata: { 
+        tags,
+        castData: parsedMetadata.cast || evermark.cast_data,
+        academic: parsedMetadata.academic,
+        readmeData: parsedMetadata.readmeData
+      },
       // Add default voting data until tables exist
       votes: 0, // Math.round(votingData.total_votes),
       voter_count: 0 // votingData.voter_count
@@ -143,6 +184,28 @@ async function enhanceSingleWithVotingData(evermark: any): Promise<any> {
       id: evermark.token_id.toString(),
       tokenId: evermark.token_id,
       creator: evermark.owner,
+      // Add parsed metadata fields
+      title: title || String(evermark.title || '') || 'Untitled',
+      author: author || String(evermark.author || '') || 'Unknown',
+      description: description || String(evermark.description || '') || '',
+      tags,
+      verified: Boolean(evermark.verified),
+      creationTime: Date.parse(String(evermark.created_at || new Date().toISOString())),
+      ipfsHash: evermark.ipfs_metadata_hash as string,
+      supabaseImageUrl: evermark.supabase_image_url as string,
+      image: evermark.supabase_image_url ?? (evermark.ipfs_image_hash ? `ipfs://${evermark.ipfs_image_hash}` : undefined),
+      createdAt: String(evermark.created_at || new Date().toISOString()),
+      updatedAt: String(evermark.updated_at || evermark.created_at || new Date().toISOString()),
+      contentType: (evermark.content_type as any) || 'Custom',
+      sourceUrl: evermark.source_url as string,
+      imageStatus: 'processed' as const,
+      viewCount: evermark.access_count || 0,
+      extendedMetadata: { 
+        tags,
+        castData: parsedMetadata.cast || evermark.cast_data,
+        academic: parsedMetadata.academic,
+        readmeData: parsedMetadata.readmeData
+      },
       // Default voting data
       votes: 0,
       voter_count: 0

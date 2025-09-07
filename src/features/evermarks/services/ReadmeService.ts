@@ -114,7 +114,7 @@ export class ReadmeService {
 
       const result = await response.json();
       console.log('📚 Server metadata response:', result);
-      console.log('📚 Server metadata response (JSON):', JSON.stringify(result, null, 2));
+      console.log('📚 Full server response structure:', JSON.stringify(result, null, 2));
       
       if (!result.success) {
         console.error('❌ Server returned error:', result.error);
@@ -124,31 +124,53 @@ export class ReadmeService {
       const data = result.data;
       console.log('📚 Extracted data from server:', JSON.stringify(data, null, 2));
       
+      // OpenSea v2 API returns data nested in a "nft" object
+      const nftData = data.nft || data;
+      
       // Extract book-specific metadata from OpenSea attributes
-      const attributes = data.traits || data.attributes || [];
+      const attributes = nftData.traits || nftData.attributes || [];
       console.log('📋 Found attributes:', JSON.stringify(attributes, null, 2));
       
       const getAttributeValue = (traitType: string) => {
         const attr = attributes.find((a: any) => 
-          a.trait_type?.toLowerCase() === traitType.toLowerCase()
+          a.trait_type?.toLowerCase() === traitType.toLowerCase() ||
+          a.trait_type === traitType
         );
         console.log(`🔍 Looking for "${traitType}":`, attr);
         return attr?.value;
       };
 
-      console.log('📝 Raw data fields:', {
-        name: data.name,
-        title: data.title,
-        creator: data.creator,
-        collection: data.collection
+      console.log('📝 Raw NFT data fields:', {
+        name: nftData.name,
+        description: nftData.description,
+        creator: nftData.creator,
+        collection: nftData.collection,
+        image_url: nftData.image_url,
+        image: nftData.image,
+        token_uri: nftData.token_uri,
+        display_image_url: nftData.display_image_url,
+        display_animation_url: nftData.display_animation_url,
+        allKeys: Object.keys(nftData)
       });
 
+      // Extract essential fields with proper error handling
+      const bookTitle = nftData.name || nftData.title;
+      const bookAuthor = getAttributeValue('Author(s)') || getAttributeValue('Author') || nftData.creator?.user?.username || nftData.creator?.username;
+      
+      if (!bookTitle) {
+        throw new Error('Could not extract book title from OpenSea metadata');
+      }
+      
+      if (!bookAuthor) {
+        throw new Error('Could not extract book author from OpenSea metadata');
+      }
+
       const readmeData: ReadmeBookData = {
-        bookTitle: data.name || data.title || 'Untitled Book',
-        bookAuthor: getAttributeValue('Author') || data.creator?.user?.username || data.creator?.username || 'Unknown Author',
+        bookTitle,
+        bookAuthor,
         polygonContract: contract,
         polygonTokenId: tokenId,
-        bookDescription: data.description,
+        bookDescription: nftData.description,
         isbn: getAttributeValue('ISBN'),
         publicationDate: getAttributeValue('Publication Date'),
         chapterNumber: getAttributeValue('Chapter') ? parseInt(getAttributeValue('Chapter')) : undefined,
@@ -158,40 +180,85 @@ export class ReadmeService {
         publisher: getAttributeValue('Publisher') || 'PageDAO',
         pageCount: getAttributeValue('Pages') ? parseInt(getAttributeValue('Pages')) : undefined,
         tokenGated: getAttributeValue('Token Gated') === 'true',
-        marketplaceUrl: data.permalink,
-        currentOwner: data.owner?.address,
-        mintDate: data.asset_contract?.created_date,
-        royaltyPercentage: data.asset_contract?.seller_fee_basis_points ? 
-          data.asset_contract.seller_fee_basis_points / 100 : undefined
+        marketplaceUrl: nftData.permalink,
+        currentOwner: nftData.owner?.address,
+        mintDate: nftData.asset_contract?.created_date,
+        royaltyPercentage: nftData.asset_contract?.seller_fee_basis_points ? 
+          nftData.asset_contract.seller_fee_basis_points / 100 : undefined
       };
 
-      // Try to extract IPFS hash from token URI or image
-      const ipfsHash = this.extractIPFSHash(data.token_uri, data.image_url);
-      if (ipfsHash) {
-        readmeData.ipfsHash = ipfsHash;
+      // Try to extract IPFS hash from various sources
+      const bookContentHash = this.extractIPFSHash(nftData.animation_url, nftData.display_animation_url);
+      const metadataHash = this.extractIPFSHash(nftData.metadata_url);
+      const imageHash = this.extractIPFSHash(nftData.token_uri, nftData.image_url);
+      
+      console.log('📦 IPFS hashes found:', {
+        bookContent: bookContentHash,
+        metadata: metadataHash, 
+        directImage: imageHash
+      });
+
+      // Set book content IPFS hash (this is the actual book file)
+      if (bookContentHash) {
+        readmeData.ipfsHash = bookContentHash;
+        console.log('📖 Book content IPFS hash set:', bookContentHash);
       }
 
-      // Fetch IPFS content metadata if we have a hash
+      // Try to fetch cover image from IPFS metadata
+      let ipfsImageUrl = null;
+      if (metadataHash) {
+        try {
+          console.log('🔍 Fetching NFT metadata from IPFS:', metadataHash);
+          const metadataContent = await this.fetchIPFSContent(metadataHash);
+          if (metadataContent && typeof metadataContent.content === 'string') {
+            const metadata = JSON.parse(metadataContent.content);
+            console.log('📋 IPFS metadata:', metadata);
+            
+            if (metadata.image) {
+              const coverImageHash = this.extractIPFSHash(metadata.image);
+              if (coverImageHash) {
+                ipfsImageUrl = `https://ipfs.io/ipfs/${coverImageHash}`;
+                console.log('🖼️ Found IPFS cover image:', ipfsImageUrl);
+              }
+            }
+          }
+        } catch (error) {
+          console.warn('⚠️ Could not fetch IPFS metadata:', error);
+        }
+      }
+
+      // Fetch IPFS content metadata if we have a book content hash
       let ipfsContent;
-      if (ipfsHash) {
-        ipfsContent = await this.fetchIPFSMetadata(ipfsHash);
+      if (bookContentHash) {
+        ipfsContent = await this.fetchIPFSMetadata(bookContentHash);
       }
 
+      // Prefer IPFS image over OpenSea CDN
+      const openSeaImageUrl = nftData.image_url || nftData.display_image_url || nftData.image;
+      const finalImageUrl = ipfsImageUrl || openSeaImageUrl;
+      
+      console.log('🖼️ Image URL selection:', {
+        ipfs: ipfsImageUrl,
+        opensea: openSeaImageUrl,
+        final: finalImageUrl
+      });
+      
       const finalResult = {
         bookTitle: readmeData.bookTitle,
         bookAuthor: readmeData.bookAuthor,
-        description: data.description,
-        image: data.image_url,
+        description: nftData.description,
+        image: finalImageUrl,
         confidence: 'high' as const,
         extractionMethod: 'opensea_api',
         readmeData,
         ipfsContent: ipfsContent ? {
-          hash: ipfsHash!,
+          hash: bookContentHash!,
           ...ipfsContent
         } : undefined
       };
 
       console.log('🎯 Final README metadata result:', JSON.stringify(finalResult, null, 2));
+      console.log('📊 Image source used:', ipfsImageUrl ? 'IPFS' : 'OpenSea CDN');
       return finalResult;
 
     } catch (error) {

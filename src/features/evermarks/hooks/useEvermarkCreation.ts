@@ -232,8 +232,12 @@ async function createEvermarkWithBlockchain(
       throw new Error('Title is required');
     }
 
+    // Debug: Check what we actually received
+    console.log('🔍 Validation - input.image:', input.image, 'type:', typeof input.image);
+    console.log('🔍 Validation - contentType:', input.metadata?.contentType);
+    
     // Image is optional for Cast content type (since we can generate cast images)
-    // but required for other content types
+    // For README, image should be provided as URL string
     if (!input.image && input.metadata?.contentType !== 'Cast') {
       throw new Error('Image is required for evermark creation');
     }
@@ -295,12 +299,65 @@ async function createEvermarkWithBlockchain(
     let imageUploadResult: { success: boolean; hash?: string; error?: string } | null = null;
     
     if (input.image) {
-      onProgress(20, 'Uploading image to IPFS...');
-      
-      // Upload image to IPFS
-      imageUploadResult = await pinataService.uploadImage(input.image);
-      if (!imageUploadResult.success || !imageUploadResult.hash) {
-        throw new Error(`Image upload failed: ${imageUploadResult.error}`);
+      if (typeof input.image === 'string') {
+        // Handle README book images - process via server-side function to avoid CSP issues
+        onProgress(20, 'Processing README book cover image...');
+        
+        try {
+          // Process image via server-side function to avoid CORS/CSP issues
+          const response = await fetch('/.netlify/functions/process-readme-image', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ imageUrl: input.image })
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => null);
+            throw new Error(`Server image processing failed: ${response.status} - ${errorData?.error || 'Unknown error'}`);
+          }
+
+          const result = await response.json();
+          if (!result.success) {
+            throw new Error(`Image processing failed: ${result.error}`);
+          }
+
+          onProgress(25, 'Converting and uploading to IPFS...');
+
+          // Convert base64 data URL directly to File (avoid CSP fetch restrictions)
+          const base64Data = result.dataUrl.split(',')[1]; // Remove "data:image/...;base64," prefix
+          const byteCharacters = atob(base64Data);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          const imageBlob = new Blob([byteArray], { type: result.contentType });
+          
+          // Create a File object from the blob
+          const fileName = `readme-book-${Date.now()}.${result.contentType?.split('/')[1] || 'png'}`;
+          const imageFile = new File([imageBlob], fileName, { type: result.contentType });
+          
+          // Upload to Pinata like any other image
+          imageUploadResult = await pinataService.uploadImage(imageFile);
+          if (!imageUploadResult.success || !imageUploadResult.hash) {
+            throw new Error(`README book image upload failed: ${imageUploadResult.error}`);
+          }
+          
+          console.log('✅ README book cover uploaded to IPFS:', imageUploadResult.hash);
+        } catch (error) {
+          console.error('❌ README book image processing failed:', error);
+          throw new Error(`README book image processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      } else {
+        // Handle regular File uploads
+        onProgress(20, 'Uploading image to IPFS...');
+        
+        imageUploadResult = await pinataService.uploadImage(input.image);
+        if (!imageUploadResult.success || !imageUploadResult.hash) {
+          throw new Error(`Image upload failed: ${imageUploadResult.error}`);
+        }
       }
     } else if (metadata.contentType === 'Cast') {
       onProgress(20, 'Skipping image upload for Cast content...');
@@ -492,6 +549,18 @@ async function createEvermarkWithBlockchain(
                   siteName: webMetadata.siteName,
                   domain: webMetadata.domain,
                   confidence: webMetadata.confidence
+                }
+              }),
+              // Include README book metadata and image URL for processing
+              ...(metadata.contentType === 'README' && typeof input.image === 'string' && metadata.extendedMetadata?.readmeData && {
+                readme: {
+                  bookTitle: metadata.extendedMetadata.readmeData.bookTitle,
+                  bookAuthor: metadata.extendedMetadata.readmeData.bookAuthor,
+                  imageUrl: input.image, // This will be processed by cache-images
+                  polygonContract: metadata.extendedMetadata.readmeData.polygonContract,
+                  polygonTokenId: metadata.extendedMetadata.readmeData.polygonTokenId,
+                  ipfsHash: metadata.extendedMetadata.readmeData.ipfsHash,
+                  marketplaceUrl: metadata.extendedMetadata.readmeData.marketplaceUrl
                 }
               }),
               tags: [

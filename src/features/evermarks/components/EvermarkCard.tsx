@@ -307,6 +307,20 @@ export function EvermarkCard({
                   </span>
                 )}
               </div>
+              
+              {/* README Book Read Button for List View */}
+              {evermark.contentType === 'README' && evermark.extendedMetadata?.readmeData?.ipfsHash && (
+                <a
+                  href={`https://ipfs.nftbookbazaar.com/ipfs/${evermark.extendedMetadata.readmeData.ipfsHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-green-900/20 text-green-400 hover:text-green-300 border border-green-500/30 rounded transition-colors"
+                  title="Read Full Book Content"
+                >
+                  <span>📖</span>
+                </a>
+              )}
             </div>
           </div>
         </div>
@@ -425,6 +439,21 @@ export function EvermarkCard({
           </div>
 
           <div className="flex items-center gap-2">
+            {/* README Book Read Button */}
+            {evermark.contentType === 'README' && evermark.extendedMetadata?.readmeData?.ipfsHash && (
+              <a
+                href={`https://ipfs.nftbookbazaar.com/ipfs/${evermark.extendedMetadata.readmeData.ipfsHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-green-900/20 text-green-400 hover:text-green-300 border border-green-500/30 rounded transition-colors"
+                title="Read Full Book Content"
+              >
+                <span>📖</span>
+                <span className="hidden sm:inline">Read</span>
+              </a>
+            )}
+            
             {/* Content type indicator */}
             <div className="flex items-center text-xs text-gray-500">
               {getContentTypeIcon(evermark.contentType)}

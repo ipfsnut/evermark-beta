@@ -188,7 +188,7 @@ export interface EvermarkMetadata {
 
 export interface CreateEvermarkInput {
   metadata: EvermarkMetadata;
-  image?: File;
+  image?: File | string; // Support both File uploads and existing URLs
   referrer?: string;
 }
 

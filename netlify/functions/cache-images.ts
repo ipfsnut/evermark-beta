@@ -140,6 +140,7 @@ async function getSpecificEvermarksForCache(tokenIds: number[]) {
   
   // Filter out ones that already have supabase URLs
   const needsCaching = (data || []).filter(item => !item.supabase_image_url);
+  
   console.log('🔍 Need caching:', needsCaching);
   
   return needsCaching;

@@ -242,18 +242,20 @@ async function fetchEvermarks(options: EvermarkFeedOptions): Promise<EvermarkFee
       let title = '';
       let author = '';
       let description = '';
+      let parsedMetadata: any = {};
       
       try {
         if (item.metadata_json) {
-          const metadata = JSON.parse(item.metadata_json);
-          tags = metadata.tags ?? [];
-          title = metadata.title ?? '';
-          author = metadata.author ?? '';
-          description = metadata.description ?? '';
+          parsedMetadata = JSON.parse(item.metadata_json);
+          tags = parsedMetadata.tags ?? [];
+          title = parsedMetadata.title ?? '';
+          author = parsedMetadata.author ?? '';
+          description = parsedMetadata.description ?? '';
         }
       } catch {
         // Use defaults
       }
+
       
       return {
         ...item,
@@ -279,7 +281,9 @@ async function fetchEvermarks(options: EvermarkFeedOptions): Promise<EvermarkFee
         viewCount: item.access_count || 0, // Map access_count to viewCount
         extendedMetadata: { 
           tags,
-          castData: item.cast_data as any
+          castData: parsedMetadata.cast || item.cast_data,
+          academic: parsedMetadata.academic,
+          readmeData: parsedMetadata.readmeData
         }
       } as Evermark;
     });
@@ -310,7 +314,7 @@ async function fetchEvermarks(options: EvermarkFeedOptions): Promise<EvermarkFee
  */
 async function fetchEvermark(id: string): Promise<Evermark | null> {
   try {
-    const response = await fetch(`/api/evermarks?id=${id}`, {
+    const response = await fetch(`/.netlify/functions/evermarks?id=${id}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' }
     });
@@ -343,6 +347,7 @@ async function fetchEvermark(id: string): Promise<Evermark | null> {
     } catch {
       // Use defaults
     }
+
     
     return {
       ...item,
@@ -369,7 +374,8 @@ async function fetchEvermark(id: string): Promise<Evermark | null> {
       extendedMetadata: { 
         tags,
         castData: parsedMetadata.cast || item.cast_data,
-        academic: parsedMetadata.academic
+        academic: parsedMetadata.academic,
+        readmeData: parsedMetadata.readmeData
       }
     } as Evermark;
   } catch (error) {
