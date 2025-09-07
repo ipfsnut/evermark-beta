@@ -619,7 +619,7 @@ export function CreateEvermarkForm({
 
       const createInput: CreateEvermarkInput = {
         metadata: evermarkMetadata,
-        image: selectedImage || formData.image || undefined
+        image: selectedImage || undefined
       };
       
       const result = await createEvermark(createInput);
@@ -648,9 +648,6 @@ export function CreateEvermarkForm({
   // Add this import at the top if not already imported
   const isFormDisabled = !hasWallet; // Enable form when wallet is connected via app header
 
-  // Debug logging for README image preview issue
-  console.log('🐛 CreateEvermarkForm render - imagePreview state:', imagePreview);
-  console.log('🐛 CreateEvermarkForm render - formData.image:', formData.image);
 
   // No longer need SDK configuration - using IPFS-first approach in EvermarkService
 

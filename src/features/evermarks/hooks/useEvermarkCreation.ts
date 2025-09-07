@@ -552,15 +552,15 @@ async function createEvermarkWithBlockchain(
                 }
               }),
               // Include README book metadata and image URL for processing
-              ...(metadata.contentType === 'README' && typeof input.image === 'string' && metadata.extendedMetadata?.readmeData && {
+              ...(metadata.contentType === 'README' && typeof input.image === 'string' && metadata.bookTitle && {
                 readme: {
-                  bookTitle: metadata.extendedMetadata.readmeData.bookTitle,
-                  bookAuthor: metadata.extendedMetadata.readmeData.bookAuthor,
+                  bookTitle: metadata.bookTitle,
+                  bookAuthor: metadata.bookAuthor,
                   imageUrl: input.image, // This will be processed by cache-images
-                  polygonContract: metadata.extendedMetadata.readmeData.polygonContract,
-                  polygonTokenId: metadata.extendedMetadata.readmeData.polygonTokenId,
-                  ipfsHash: metadata.extendedMetadata.readmeData.ipfsHash,
-                  marketplaceUrl: metadata.extendedMetadata.readmeData.marketplaceUrl
+                  polygonContract: metadata.customFields?.find(f => f.key === 'readme_polygon_contract')?.value,
+                  polygonTokenId: metadata.polygonTokenId,
+                  ipfsHash: metadata.customFields?.find(f => f.key === 'readme_ipfs_hash')?.value,
+                  marketplaceUrl: metadata.sourceUrl
                 }
               }),
               tags: [

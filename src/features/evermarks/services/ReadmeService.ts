@@ -205,7 +205,7 @@ export class ReadmeService {
       }
 
       // Try to fetch cover image from IPFS metadata
-      let ipfsImageUrl = null;
+      let ipfsImageUrl: string | null = null;
       if (metadataHash) {
         try {
           console.log('🔍 Fetching NFT metadata from IPFS:', metadataHash);

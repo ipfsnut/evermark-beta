@@ -31,14 +31,6 @@ export function EvermarkModal({
   onShare,
   className = ''
 }: EvermarkModalProps) {
-  
-  // Debug ALL modals that open
-  console.log('🐛 Modal Opening:', {
-    tokenId: evermark?.tokenId,
-    contentType: evermark?.contentType,
-    isOpen,
-    hasEvermark: !!evermark
-  });
 
   if (!isOpen || !evermark) return null;
 
@@ -151,37 +143,24 @@ export function EvermarkModal({
                     <ExternalLinkIcon className="h-3 w-3 ml-1 flex-shrink-0" />
                   </a>
                   
-                  {/* Read Book Link - Debug version */}
-                  {(() => {
-                    const hasReadmeData = !!evermark.extendedMetadata?.readmeData;
-                    const hasIpfsHash = !!evermark.extendedMetadata?.readmeData?.ipfsHash;
-                    console.log('🐛 Modal Read Button Debug:', {
-                      tokenId: evermark.tokenId,
-                      contentType: evermark.contentType,
-                      hasReadmeData,
-                      hasIpfsHash,
-                      ipfsHash: evermark.extendedMetadata?.readmeData?.ipfsHash
-                    });
-                    
-                    // Always show button for README books, even if data is missing (for debugging)
-                    return evermark.contentType === 'README' && (hasIpfsHash || hasReadmeData) && (
-                      <div>
-                        <a
-                          href={`https://ipfs.nftbookbazaar.com/ipfs/${evermark.extendedMetadata.readmeData.ipfsHash}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center text-green-400 hover:text-green-300 transition-colors bg-green-900/20 px-4 py-2 rounded-lg border border-green-500/30"
-                        >
-                          <span className="mr-2">📖</span>
-                          Read Full Book Content
-                          <ExternalLinkIcon className="h-3 w-3 ml-1 flex-shrink-0" />
-                        </a>
-                        <p className="text-xs text-gray-400 mt-1">
-                          Access the complete book content stored on IPFS
-                        </p>
-                      </div>
-                    );
-                  })()}
+                  {/* Read Book Link */}
+                  {evermark.extendedMetadata?.readmeData?.ipfsHash && (
+                    <div>
+                      <a
+                        href={`https://ipfs.nftbookbazaar.com/ipfs/${evermark.extendedMetadata?.readmeData?.ipfsHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center text-green-400 hover:text-green-300 transition-colors bg-green-900/20 px-4 py-2 rounded-lg border border-green-500/30"
+                      >
+                        <span className="mr-2">📖</span>
+                        Read Full Book Content
+                        <ExternalLinkIcon className="h-3 w-3 ml-1 flex-shrink-0" />
+                      </a>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Access the complete book content stored on IPFS
+                      </p>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <a
