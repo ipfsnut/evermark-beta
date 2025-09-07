@@ -15,11 +15,22 @@ const headers = {
   'Cache-Control': 'public, max-age=300',
 };
 
+function escapeHtml(text: string): string {
+  const map: { [key: string]: string } = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return text.replace(/[&<>"']/g, m => map[m]);
+}
+
 function generateFrameHTML(evermark: any, baseUrl: string) {
-  const title = evermark?.title || 'Evermark Protocol';
-  const description = evermark?.description || 'Content preserved forever on blockchain';
+  const title = escapeHtml(evermark?.title || 'Evermark Protocol');
+  const description = escapeHtml(evermark?.description || 'Content preserved forever on blockchain');
   const image = evermark?.supabase_image_url || evermark?.token_uri || `${baseUrl}/og-image.png`;
-  const author = evermark?.author || 'Anonymous';
+  const author = escapeHtml(evermark?.author || 'Anonymous');
   const tokenId = evermark?.token_id;
 
   return `<!DOCTYPE html>
@@ -50,38 +61,67 @@ function generateFrameHTML(evermark: any, baseUrl: string) {
   <meta name="twitter:image" content="${image}" />
   
   <style>
+    * {
+      box-sizing: border-box;
+    }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
       color: white;
       margin: 0;
-      padding: 2rem;
+      padding: 1rem;
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
     }
+    @media (min-width: 640px) {
+      body {
+        padding: 2rem;
+      }
+    }
     .container {
       max-width: 600px;
+      width: 100%;
       text-align: center;
       background: rgba(255, 255, 255, 0.05);
       border-radius: 16px;
       padding: 2rem;
       backdrop-filter: blur(10px);
       border: 1px solid rgba(0, 255, 65, 0.3);
+      box-sizing: border-box;
+      overflow: hidden;
     }
     .title {
-      font-size: 2rem;
+      font-size: 1.5rem;
       font-weight: bold;
       margin-bottom: 1rem;
       background: linear-gradient(45deg, #00ff41, #0080ff);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
+      background-clip: text;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      hyphens: auto;
+      max-width: 100%;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    @media (min-width: 640px) {
+      .title {
+        font-size: 2rem;
+      }
     }
     .author {
       color: #00ff41;
       margin-bottom: 0.5rem;
       font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 100%;
     }
     .token-id {
       color: #888;
@@ -92,17 +132,34 @@ function generateFrameHTML(evermark: any, baseUrl: string) {
       line-height: 1.6;
       margin-bottom: 2rem;
       color: #ccc;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      max-width: 100%;
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .btn {
       display: inline-block;
-      padding: 12px 24px;
+      padding: 10px 20px;
       background: linear-gradient(45deg, #00ff41, #0080ff);
       color: black;
       text-decoration: none;
       border-radius: 8px;
       font-weight: bold;
-      margin: 0.5rem;
+      margin: 0.25rem;
       transition: all 0.3s ease;
+      font-size: 0.9rem;
+      white-space: nowrap;
+    }
+    @media (min-width: 640px) {
+      .btn {
+        padding: 12px 24px;
+        margin: 0.5rem;
+        font-size: 1rem;
+      }
     }
     .btn:hover {
       transform: translateY(-2px);
@@ -118,6 +175,13 @@ function generateFrameHTML(evermark: any, baseUrl: string) {
       font-weight: bold;
       margin-left: 8px;
     }
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-top: 1.5rem;
+    }
   </style>
 </head>
 <body>
@@ -129,8 +193,10 @@ function generateFrameHTML(evermark: any, baseUrl: string) {
     </div>
     ${tokenId ? `<div class="token-id">Token ID: ${tokenId}</div>` : ''}
     <p class="description">${description}</p>
-    <a href="${baseUrl}/evermark/${tokenId}" class="btn">🔗 View Full Evermark</a>
-    <a href="${baseUrl}/explore" class="btn">🚀 Explore More</a>
+    <div class="buttons">
+      <a href="${baseUrl}/evermark/${tokenId}" class="btn">🔗 View Full Evermark</a>
+      <a href="${baseUrl}/explore" class="btn">🚀 Explore More</a>
+    </div>
   </div>
 </body>
 </html>`;
