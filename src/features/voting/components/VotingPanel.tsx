@@ -8,11 +8,16 @@ import {
   CheckCircleIcon, 
   ClockIcon,
   InfoIcon,
-  BarChart3Icon
+  BarChart3Icon,
+  ExternalLinkIcon,
+  HistoryIcon,
+  HelpCircleIcon,
+  Loader2Icon
 } from 'lucide-react';
 import { useVotingState } from '../hooks/useVotingState';
 import { VotingService } from '../services/VotingService';
 import { DelegateButton } from './DelegateButton';
+import { Tooltip } from './Tooltip';
 import { useTheme } from '../../../providers/ThemeProvider';
 import { cn } from '@/utils/responsive';
 import type { VotingPanelProps } from '../types';
@@ -24,9 +29,14 @@ export function VotingPanel({
 }: VotingPanelProps) {
   const [voteAmount, setVoteAmount] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [totalVotes, setTotalVotes] = useState<bigint>(BigInt(0));
   const [userVotes, setUserVotes] = useState<bigint>(BigInt(0));
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
+  const [estimatedGas, setEstimatedGas] = useState<string>('');
+  const [isEstimatingGas, setIsEstimatingGas] = useState(false);
+  const [pendingTxHash, setPendingTxHash] = useState<string | null>(null);
+  const [showTooltip, setShowTooltip] = useState<string | null>(null);
   const { isDark } = useTheme();
   
   const {
@@ -79,11 +89,36 @@ export function VotingPanel({
       }, 5000);
       return () => clearTimeout(timer);
     }
-    return
   }, [error, success, clearErrors, clearSuccess]);
 
   // Validate amount whenever it changes
   const validation = voteAmount ? validateVoteAmount(voteAmount, evermarkId) : null;
+
+  // Estimate gas when amount changes
+  useEffect(() => {
+    if (!voteAmount || !validation?.isValid) {
+      setEstimatedGas('');
+      return;
+    }
+
+    const estimateGas = async () => {
+      setIsEstimatingGas(true);
+      try {
+        const amount = VotingService.parseVoteAmount(voteAmount);
+        const gasUnits = await VotingService.estimateVotingGas(evermarkId, amount);
+        const gasPrice = await VotingService.getGasPriceInUSD(gasUnits);
+        setEstimatedGas(gasPrice);
+      } catch (error) {
+        console.error('Gas estimation failed:', error);
+        setEstimatedGas('~$0.50');
+      } finally {
+        setIsEstimatingGas(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(estimateGas, 500);
+    return () => clearTimeout(debounceTimer);
+  }, [voteAmount, validation?.isValid, evermarkId]);
 
   // Handle max button click
   const handleMaxClick = useCallback(() => {
@@ -128,13 +163,38 @@ export function VotingPanel({
 
   if (!votingPower) {
     return (
-      <div className={cn("bg-gray-800/50 border border-gray-700 rounded-lg shadow-lg p-4 sm:p-6 backdrop-blur-sm", className)}>
+      <div className={cn(
+        "border rounded-lg shadow-lg p-4 sm:p-6 backdrop-blur-sm",
+        isDark 
+          ? "bg-gray-800/50 border-gray-700" 
+          : "bg-white border-gray-300",
+        className
+      )}>
         <div className="animate-pulse">
-          <div className="h-4 bg-gray-700 rounded w-1/4 mb-4"></div>
-          <div className="space-y-2">
-            <div className="h-3 bg-gray-700 rounded w-full"></div>
-            <div className="h-3 bg-gray-700 rounded w-3/4"></div>
-            <div className="h-3 bg-gray-700 rounded w-1/2"></div>
+          <div className="flex items-center mb-4">
+            <div className="w-10 h-10 bg-gray-700 rounded-full mr-3"></div>
+            <div>
+              <div className="h-4 bg-gray-700 rounded w-24 mb-2"></div>
+              <div className="h-3 bg-gray-700 rounded w-32"></div>
+            </div>
+          </div>
+          <div className="space-y-3">
+            <div className="flex justify-between">
+              <div className="h-3 bg-gray-700 rounded w-20"></div>
+              <div className="h-3 bg-gray-700 rounded w-16"></div>
+            </div>
+            <div className="flex justify-between">
+              <div className="h-3 bg-gray-700 rounded w-24"></div>
+              <div className="h-3 bg-gray-700 rounded w-20"></div>
+            </div>
+            <div className="flex justify-between">
+              <div className="h-3 bg-gray-700 rounded w-16"></div>
+              <div className="h-3 bg-gray-700 rounded w-24"></div>
+            </div>
+          </div>
+          <div className="mt-4 text-center text-xs text-gray-500">
+            <Loader2Icon className="h-4 w-4 animate-spin mx-auto mb-2" />
+            Loading voting data...
           </div>
         </div>
       </div>
@@ -161,9 +221,14 @@ export function VotingPanel({
             </div>
             <div>
               <h3 className={cn(
-                "text-base sm:text-lg font-semibold",
+                "text-base sm:text-lg font-semibold flex items-center gap-2",
                 isDark ? "text-white" : "text-gray-900"
-              )}>Voting Power</h3>
+              )}>
+                Voting Power
+                <Tooltip content="wEMARK tokens you can delegate to evermarks to influence their ranking">
+                  <HelpCircleIcon className="h-4 w-4 text-gray-400 hover:text-gray-300 cursor-help" />
+                </Tooltip>
+              </h3>
               <p className={cn(
                 "text-xs sm:text-sm",
                 isDark ? "text-gray-400" : "text-gray-600"
@@ -206,14 +271,29 @@ export function VotingPanel({
         <div className="p-4 border-b border-gray-700">
           <div className="p-3 bg-green-900/20 border border-green-500/30 rounded-lg flex items-start backdrop-blur-sm">
             <CheckCircleIcon className="h-4 w-4 text-green-400 mr-2 mt-0.5 flex-shrink-0" />
-            <span className="text-green-300 text-sm leading-relaxed">{success}</span>
+            <div className="flex-1">
+              <span className="text-green-300 text-sm leading-relaxed">{success}</span>
+              {pendingTxHash && (
+                <div className="mt-2">
+                  <a
+                    href={`https://basescan.org/tx/${pendingTxHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center text-xs text-green-400 hover:text-green-300 transition-colors"
+                  >
+                    View on BaseScan
+                    <ExternalLinkIcon className="h-3 w-3 ml-1" />
+                  </a>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
 
       {/* Voting Stats Grid */}
       <div className="p-4 sm:p-6 border-b border-gray-700">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           <div className="bg-gray-700/30 border border-gray-600/50 p-3 sm:p-4 rounded-lg backdrop-blur-sm">
             <div className="flex items-center">
               <TrendingUpIcon className="h-4 w-4 sm:h-5 sm:w-5 text-green-400 mr-2 flex-shrink-0" />
@@ -336,9 +416,14 @@ export function VotingPanel({
                 amount={voteAmount}
                 variant="default"
                 className="flex-1"
-                onSuccess={() => {
+                onSuccess={(tx) => {
                   setVoteAmount('');
                   clearErrors();
+                  if (tx?.hash) {
+                    setPendingTxHash(tx.hash);
+                    // Clear after 10 seconds
+                    setTimeout(() => setPendingTxHash(null), 10000);
+                  }
                 }}
               />
               
@@ -348,13 +433,45 @@ export function VotingPanel({
                   amount={voteAmount}
                   variant="undelegate"
                   className="flex-1"
-                  onSuccess={() => {
+                  onSuccess={(tx) => {
                     setVoteAmount('');
                     clearErrors();
+                    if (tx?.hash) {
+                      setPendingTxHash(tx.hash);
+                      setTimeout(() => setPendingTxHash(null), 10000);
+                    }
                   }}
                 />
               )}
             </div>
+
+            {/* Voting History Toggle */}
+            {userVotes > BigInt(0) && (
+              <button
+                onClick={() => setShowHistory(!showHistory)}
+                className="flex items-center text-xs text-gray-400 hover:text-gray-300 transition-colors mb-2"
+              >
+                <HistoryIcon className="h-3 w-3 mr-1" />
+                {showHistory ? 'Hide' : 'Show'} Your Voting History
+              </button>
+            )}
+
+            {/* Voting History Display */}
+            {showHistory && userVotes > BigInt(0) && (
+              <div className="mb-4 p-3 bg-gray-700/20 border border-gray-600/30 rounded-lg">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-400">Current Delegation:</span>
+                  <span className="text-cyan-300 font-medium">
+                    {formatVoteAmount(userVotes, 18)} wEMARK
+                  </span>
+                </div>
+                {currentCycle && (
+                  <div className="mt-2 text-xs text-gray-500">
+                    Cycle {currentCycle.cycleNumber} • Active until {currentCycle.endTime.toLocaleDateString()}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Quick Actions */}
             <div className="flex gap-2">
@@ -408,9 +525,19 @@ export function VotingPanel({
                 
                 {voteAmount && validation?.isValid && (
                   <div className="bg-gray-700/20 border border-gray-600/30 rounded-lg p-3 space-y-2">
+                    <div className="text-xs font-medium text-gray-300 mb-2">Vote Preview</div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-400">New Total Votes:</span>
+                      <span className="text-green-400">
+                        {formatVoteAmount(totalVotes + VotingService.parseVoteAmount(voteAmount))}
+                      </span>
+                    </div>
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-400">Estimated Ranking Impact:</span>
-                      <span className="text-green-400">Positive</span>
+                      <span className="text-green-400 flex items-center">
+                        <TrendingUpIcon className="h-3 w-3 mr-1" />
+                        Positive
+                      </span>
                     </div>
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-400">Your Voting Power Usage:</span>
@@ -423,7 +550,13 @@ export function VotingPanel({
                     </div>
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-400">Estimated Gas Cost:</span>
-                      <span className="text-yellow-400">~$0.60 USD</span>
+                      <span className="text-yellow-400">
+                        {isEstimatingGas ? (
+                          <Loader2Icon className="h-3 w-3 animate-spin" />
+                        ) : (
+                          estimatedGas || '~$0.50'
+                        )}
+                      </span>
                     </div>
                   </div>
                 )}

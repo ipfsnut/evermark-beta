@@ -176,7 +176,6 @@ export function DelegateButton({
       }, 3000);
       return () => clearTimeout(timer);
     }
-    return
   }, [localError, localSuccess]);
 
   // Don't render for owners

@@ -795,7 +795,33 @@ export class VotingService {
       return gasEstimate;
     } catch (error) {
       console.error('Failed to estimate gas:', error);
-      return BigInt(21000); // Default gas estimate
+      return BigInt(150000); // More realistic default for contract interaction
+    }
+  }
+
+  /**
+   * Get current gas price in USD
+   */
+  static async getGasPriceInUSD(gasUnits: bigint): Promise<string> {
+    try {
+      // Base network has very low gas costs
+      // Typical gas price: 0.001-0.01 gwei
+      // This would ideally fetch real-time data from an oracle
+      const gasPrice = 0.001; // gwei on Base
+      const ethPrice = 3000; // USD (would fetch real price in production)
+      
+      const gasCostInGwei = Number(gasUnits) * gasPrice;
+      const gasCostInEth = gasCostInGwei / 1e9;
+      const gasCostInUSD = gasCostInEth * ethPrice;
+      
+      // Format to 2 decimal places
+      if (gasCostInUSD < 0.01) {
+        return '<$0.01';
+      }
+      return `$${gasCostInUSD.toFixed(2)}`;
+    } catch (error) {
+      console.error('Failed to calculate gas price:', error);
+      return '$0.50'; // Default estimate
     }
   }
 

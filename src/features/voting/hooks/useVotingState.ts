@@ -426,7 +426,6 @@ export function useVotingState(): UseVotingStateReturn {
       }, 5000);
       return () => clearTimeout(timer);
     }
-    return
   }, [success]);
 
   const refetch = useCallback(async (): Promise<void> => {
