@@ -228,7 +228,7 @@ async function cacheImage(tokenId: number, originalUrl: string) {
     }
 
     // Process image if format conversion is needed
-    let finalImageBuffer = imageBuffer;
+    let finalImageBuffer: Buffer = Buffer.from(imageBuffer);
     
     if (originalContentType.includes('avif') || originalContentType.includes('webp')) {
       console.log(`🔄 Converting ${originalContentType} to ${finalContentType} for tokenId #${tokenId}`);
@@ -240,7 +240,7 @@ async function cacheImage(tokenId: number, originalUrl: string) {
         console.log(`✅ Successfully converted image: ${originalContentType} -> ${finalContentType}`);
       } catch (error) {
         console.warn(`⚠️ Image conversion failed, using original: ${error}`);
-        finalImageBuffer = imageBuffer; // Fall back to original if conversion fails
+        finalImageBuffer = Buffer.from(imageBuffer); // Fall back to original if conversion fails
       }
     }
 
