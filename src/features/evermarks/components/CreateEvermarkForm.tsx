@@ -302,6 +302,7 @@ export function CreateEvermarkForm({
     if (!formData.sourceUrl) return;
     
     try {
+      setAutoDetectError(null); // Clear previous errors
       const url = new URL(formData.sourceUrl);
       const domain = url.hostname.replace('www.', '');
       
@@ -344,7 +345,7 @@ export function CreateEvermarkForm({
           });
         } else {
           // Error for README books - no fallbacks
-          throw new Error('Failed to fetch README book metadata. Please check the URL and try again.');
+          throw new Error('Failed to fetch README book metadata. Please verify the URL is from a supported PageDAO book platform (OpenSea, NFT Book Bazaar) and try again.');
         }
       } else if (domain.includes('farcaster') || domain.includes('warpcast')) {
         setFormData(prev => ({ ...prev, contentType: 'Cast' }));
@@ -370,7 +371,7 @@ export function CreateEvermarkForm({
           });
         } else {
           // Error for Cast - no fallbacks
-          throw new Error('Failed to fetch Farcaster cast data. Please check the URL and try again.');
+          throw new Error('Failed to fetch Farcaster cast data. Please verify the URL is a valid Farcaster cast link and try again.');
         }
       } else if (formData.sourceUrl.includes('doi.org')) {
         setFormData(prev => ({ ...prev, contentType: 'DOI' }));
@@ -407,19 +408,16 @@ export function CreateEvermarkForm({
       
     } catch (error) {
       console.error('URL auto-detection failed:', error);
-      // Set error message for user
+      // Set error message for user display
       const errorMessage = error instanceof Error ? error.message : 'URL auto-detection failed';
-      // Use the existing error display system
-      clearCreateError();
-      setTimeout(() => {
-        throw error; // This will be caught by React's error boundary or display in console
-      }, 0);
+      setAutoDetectError(errorMessage);
     }
   }, [formData.sourceUrl, formData.title, formData.description]);
 
   const handleFieldChange = useCallback((field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     clearCreateError();
+    setAutoDetectError(null); // Clear auto-detect errors when user changes fields
     
     // Auto-detect content when supported URLs are pasted
     if (field === 'sourceUrl' && value.trim()) {
@@ -733,6 +731,40 @@ export function CreateEvermarkForm({
           </div>
         )}
 
+        {/* Auto-Detect Error Display */}
+        {autoDetectError && (
+          <div className={cn(
+            "mb-6 p-4 border rounded-lg flex items-start",
+            isDark 
+              ? "bg-red-900/30 border-red-500/50" 
+              : "bg-red-100/80 border-red-300"
+          )}>
+            <AlertCircleIcon className={cn(
+              "h-5 w-5 mr-3 mt-0.5 flex-shrink-0",
+              isDark ? "text-red-400" : "text-red-600"
+            )} />
+            <div className="flex-1">
+              <p className={cn(
+                "font-medium",
+                isDark ? "text-red-300" : "text-red-700"
+              )}>Auto-Detection Failed</p>
+              <p className={cn(
+                "text-sm",
+                isDark ? "text-red-400" : "text-red-600"
+              )}>{autoDetectError}</p>
+            </div>
+            <button
+              onClick={() => setAutoDetectError(null)}
+              className={cn(
+                "transition-colors",
+                isDark ? "text-red-400 hover:text-red-300" : "text-red-600 hover:text-red-500"
+              )}
+            >
+              <XIcon className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
 
 
         {/* Progress Display */}
@@ -891,12 +923,12 @@ export function CreateEvermarkForm({
                         onClick={handleAutoDetect}
                         disabled={isFormDisabled}
                         className={cn(
-                          "px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors",
+                          "flex-shrink-0 px-3 py-3 sm:px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors",
                           isFormDisabled && "opacity-50 cursor-not-allowed"
                         )}
                         title="Auto-detect content"
                       >
-                        <ZapIcon className="h-4 w-4" />
+                        <ZapIcon className={cn("h-4 w-4", isMobile ? "h-5 w-5" : "h-4 w-4")} />
                       </button>
                     )}
                   </div>

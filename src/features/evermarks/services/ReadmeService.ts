@@ -307,7 +307,7 @@ export class ReadmeService {
       console.log(`📚 Fetching README book metadata for: ${url}`);
 
       if (!this.isReadmeBook(url)) {
-        return null;
+        throw new Error('URL is not from a supported README book platform. Please use URLs from OpenSea, NFT Book Bazaar, or PageDAO mint site.');
       }
 
       const urlInfo = this.parseReadmeUrl(url);
@@ -321,7 +321,7 @@ export class ReadmeService {
 
     } catch (error) {
       console.error('README metadata extraction failed:', error);
-      return null;
+      throw error; // Re-throw the error instead of returning null
     }
   }
 
