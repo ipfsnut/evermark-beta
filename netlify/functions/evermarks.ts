@@ -2,6 +2,7 @@ import { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
 import { extractContentIdentifier, generateSearchPatterns, getDuplicateMessage, getConfidenceDescription, type DuplicateCheckResponse } from '../../src/utils/contentIdentifiers';
 import { VotingDataService } from '../../shared/services/VotingDataService';
+import { ViewTrackingService } from '../../shared/services/ViewTrackingService';
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -41,6 +42,8 @@ interface EvermarkRecord {
   ipfs_image_hash?: string;
   ipfs_metadata_hash?: string;
   ipfs_metadata?: Record<string, unknown>;
+  view_count?: number; // NEW: View count tracking
+  supabase_image_url?: string; // Added missing field
   // referrer_address?: string; // TODO: Add this column to beta_evermarks table
 }
 
@@ -165,7 +168,7 @@ async function enhanceSingleWithVotingData(evermark: any): Promise<any> {
       contentType: (evermark.content_type as any) || 'Custom',
       sourceUrl: evermark.source_url as string,
       imageStatus: 'processed' as const,
-      viewCount: evermark.access_count || 0,
+      viewCount: evermark.view_count || 0,
       extendedMetadata: { 
         tags,
         castData: parsedMetadata.cast || evermark.cast_data,
@@ -199,7 +202,7 @@ async function enhanceSingleWithVotingData(evermark: any): Promise<any> {
       contentType: (evermark.content_type as any) || 'Custom',
       sourceUrl: evermark.source_url as string,
       imageStatus: 'processed' as const,
-      viewCount: evermark.access_count || 0,
+      viewCount: evermark.view_count || 0,
       extendedMetadata: { 
         tags,
         castData: parsedMetadata.cast || evermark.cast_data,
@@ -450,8 +453,15 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
             };
           }
 
+          // Track view (fire-and-forget to avoid blocking response)
+          ViewTrackingService.incrementViewCount(singleId).catch(err => 
+            console.error('View tracking failed:', err)
+          );
+
           // 🔧 THE FIX: Enhance single evermark with voting data
           const enhancedEvermark = await enhanceSingleWithVotingData(data);
+          // Update view count in response to reflect the increment
+          enhancedEvermark.viewCount = (data.view_count || 0) + 1;
 
           return {
             statusCode: 200,
@@ -474,8 +484,15 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
             };
           }
 
+          // Track view (fire-and-forget to avoid blocking response)
+          ViewTrackingService.incrementViewCount(tokenId).catch(err => 
+            console.error('View tracking failed:', err)
+          );
+
           // 🔧 THE FIX: Enhance single evermark with voting data  
           const enhancedEvermark = await enhanceSingleWithVotingData(data);
+          // Update view count in response to reflect the increment
+          enhancedEvermark.viewCount = (data.view_count || 0) + 1;
 
           return {
             statusCode: 200,

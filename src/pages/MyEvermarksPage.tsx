@@ -132,23 +132,8 @@ export default function MyEvermarksPage() {
     return filtered;
   }, [myCreatedEvermarks, activeTab, searchQuery, filters]);
 
-  // Debug: Check if evermarks are being filtered out
-  console.log('Debug - Total evermarks:', evermarks.length);
-  console.log('Debug - My created evermarks:', myCreatedEvermarks.length);
-  console.log('Debug - Filtered created evermarks:', filteredCreatedEvermarks.length);
-  console.log('Debug - Current filters:', filters);
-  console.log('Debug - User address:', user?.address);
-  
   // Get current cycle for accurate vote filtering
   const { votingHistory, currentCycle } = useVotingState();
-  
-  // Debug logging for voting data
-  console.log('🔍 Debug - Voting data:', {
-    votingHistoryLength: votingHistory?.length || 0,
-    votingHistory: votingHistory, // ALL votes for debugging
-    currentCycle: currentCycle?.cycleNumber,
-    userAddress: user?.address
-  });
   
   // Check if we have Evermark 3 in our evermarks list
   const evermark3 = evermarks.find(e => e.id === '3');
@@ -201,17 +186,6 @@ export default function MyEvermarksPage() {
   })
     : []; // Return empty array if data not ready
   
-  // Debug the final result
-  console.log('🔍 Debug - Supported evermarks result:', {
-    totalEvermarks: evermarks.length,
-    baseSupportedCount: baseSupportedEvermarks.length,
-    supportedIds: baseSupportedEvermarks.map(e => e.id)
-  });
-  
-  // ALERT for testing - remove after verification
-  if (baseSupportedEvermarks.length > 0) {
-    console.log('🎉 SUCCESS: Found supported evermarks!', baseSupportedEvermarks.map(e => `${e.id}: ${e.title}`));
-  }
 
   // Success: Supported tab should now work with voting history data
 

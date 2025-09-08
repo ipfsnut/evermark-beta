@@ -202,7 +202,7 @@ function generateFrameHTML(evermark: any, baseUrl: string) {
 </html>`;
 }
 
-export const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
+export const handler: Handler = async (event: HandlerEvent, _context: HandlerContext) => {
   const tokenId = event.path?.split('/').pop();
   const baseUrl = process.env.URL || 'https://evermarks.net';
 

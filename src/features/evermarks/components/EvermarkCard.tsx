@@ -21,13 +21,6 @@ import { ResponsiveEvermarkImage } from '../../../components/images/ResponsiveEv
 import { AttestationPopup } from './AttestationPopup';
 import { type Evermark } from '../types';
 
-// TODO: Replace SDK-based performance monitoring with simple alternatives
-// import { 
-//   performanceMonitor, 
-//   cacheManager, 
-//   getDebugImageLoaderOptions,
-//   getEvermarkStorageConfig 
-// } from '../config/sdk-config';
 
 interface EvermarkCardProps {
   evermark: Evermark;
@@ -147,16 +140,14 @@ export function EvermarkCard({
       ? evermark.thumbnailUrl || evermark.supabaseImageUrl
       : evermark.supabaseImageUrl || evermark.thumbnailUrl;
       
-    // TODO: Replace with simple cache check
-    return false; // primaryUrl ? cacheManager.has(primaryUrl) : false;
+    return false;
   };
 
   // FIXED: Get performance stats for this specific image
   const getImagePerformanceInfo = () => {
     if (!showPerformanceInfo) return null;
     
-    // TODO: Replace with simple performance tracking
-    const stats = { totalLoads: 0, totalFailed: 0, averageLoadTime: 0, cacheHitRate: 0 }; // performanceMonitor.getStats();
+    const stats = { totalLoads: 0, totalFailed: 0, averageLoadTime: 0, cacheHitRate: 0 };
     const imageUrl = evermark.supabaseImageUrl || evermark.thumbnailUrl;
     
     if (!imageUrl) return null;
