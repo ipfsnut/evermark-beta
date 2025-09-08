@@ -27,7 +27,7 @@ import { Formatters } from '../../../utils/formatters';
 import { useTheme } from '../../../providers/ThemeProvider';
 import { cn } from '../../../utils/responsive';
 import { themeClasses } from '../../../utils/theme';
-import { SimpleEvermarkImage } from '../../../components/images/SimpleEvermarkImage';
+import { UnifiedEvermarkImage } from '../../../components/images/UnifiedEvermarkImage';
 
 import useLeaderboardState from '../hooks/useLeaderboardState';
 import { LeaderboardService } from '../services/LeaderboardService';
@@ -360,13 +360,13 @@ export function LeaderboardTable({
                 {/* Evermark Image - prominent on left */}
                 <div className="flex-shrink-0">
                   <div className="relative">
-                    <SimpleEvermarkImage
+                    <UnifiedEvermarkImage
                       tokenId={parseInt(entry.evermarkId)}
                       ipfsHash={entry.image?.replace('ipfs://', '')}
                       originalUrl={entry.sourceUrl}
+                      contentType={entry.contentType}
                       alt={entry.title}
                       variant="list"
-                      contentType={entry.contentType}
                       className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg border border-app-border group-hover:border-app-text-accent transition-colors"
                     />
                     

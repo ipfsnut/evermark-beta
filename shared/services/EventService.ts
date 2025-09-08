@@ -60,7 +60,7 @@ export class EventService {
    * Convert contract event to database vote record
    */
   static eventToVoteRecord(event: ContractEvent, cycle: number): VoteRecord {
-    const voter = event.args.voter || event.args.delegator;
+    const voter = event.args.voter ?? event.args.delegator;
     if (!voter || !event.args.evermarkId || !event.args.amount) {
       throw new Error('Invalid event data: missing required fields');
     }
@@ -83,9 +83,8 @@ export class EventService {
    * Validate event data before processing
    */
   static validateEvent(event: any): event is ContractEvent {
-    return event && 
-           event.args && 
-           (event.args.voter || event.args.delegator) &&
+    return event?.args && 
+           (event.args.voter ?? event.args.delegator) &&
            event.args.evermarkId &&
            event.args.amount &&
            event.transactionHash &&

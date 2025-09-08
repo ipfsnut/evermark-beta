@@ -1,14 +1,13 @@
 // shared/services/ViewTrackingService.ts
 import { createClient } from '@supabase/supabase-js';
 
-// Get environment variables from Vite/Node context
-const SUPABASE_URL = typeof process !== 'undefined' 
-  ? process.env.SUPABASE_URL 
-  : (import.meta as any).env?.VITE_SUPABASE_URL;
-  
-const SUPABASE_ANON_KEY = typeof process !== 'undefined'
-  ? process.env.SUPABASE_ANON_KEY
-  : (import.meta as any).env?.VITE_SUPABASE_ANON_KEY;
+// Get environment variables - works in both Vite and Node.js contexts
+const SUPABASE_URL = (typeof process !== 'undefined' && process.env?.VITE_SUPABASE_URL) ?? 
+                     (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) ?? 
+                     '';
+const SUPABASE_ANON_KEY = (typeof process !== 'undefined' && process.env?.VITE_SUPABASE_ANON_KEY) ?? 
+                          (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) ?? 
+                          '';
 
 const supabase = createClient(
   SUPABASE_URL!,

@@ -39,6 +39,29 @@ export const createMockQueryClient = () =>
     },
   })
 
+// Mock WalletProvider
+const MockWalletProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const mockWalletValue = {
+    context: 'browser' as const,
+    address: '0x1234567890123456789012345678901234567890',
+    isConnected: true,
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+    signMessage: vi.fn(),
+  }
+  
+  return (
+    <div data-testid="mock-wallet-provider">
+      {React.Children.map(children, child => {
+        if (React.isValidElement(child)) {
+          return React.cloneElement(child as any, { walletContext: mockWalletValue })
+        }
+        return child
+      })}
+    </div>
+  )
+}
+
 export const mockWalletContext = {
   address: '0x1234567890123456789012345678901234567890',
   isConnected: true,
@@ -64,9 +87,11 @@ export const AllTheProviders: React.FC<{ children: React.ReactNode }> = ({
 
   return (
     <QueryClientProvider client={queryClient}>
-      <MockThemeProvider>
-        {children}
-      </MockThemeProvider>
+      <MockWalletProvider>
+        <MockThemeProvider>
+          {children}
+        </MockThemeProvider>
+      </MockWalletProvider>
     </QueryClientProvider>
   )
 }

@@ -16,8 +16,8 @@ import { Formatters } from '../../../utils/formatters';
 import { useTheme } from '../../../providers/ThemeProvider';
 import { cn } from '../../../utils/responsive';
 
-// Use ResponsiveEvermarkImage for better aspect ratio handling (especially for book covers)
-import { ResponsiveEvermarkImage } from '../../../components/images/ResponsiveEvermarkImage';
+// Use UnifiedEvermarkImage for consistent image rendering across all variants
+import { UnifiedEvermarkImage } from '../../../components/images/UnifiedEvermarkImage';
 import { AttestationPopup } from './AttestationPopup';
 import { type Evermark } from '../types';
 
@@ -197,16 +197,13 @@ export function EvermarkCard({
           className={`${getVariantClasses()} ${className}`}
           onClick={handleClick}
         >
-          {/* FIXED: Responsive Image Component with dynamic borders */}
+          {/* Unified Image Component */}
           {showImage && (
-            <div className="relative overflow-hidden rounded-lg w-24 h-24 sm:w-32 sm:h-32 flex-shrink-0">
-              <ResponsiveEvermarkImage
-                tokenId={evermark.tokenId}
-                ipfsHash={evermark.ipfsHash}
-                originalUrl={evermark.supabaseImageUrl}
+            <div className="relative flex-shrink-0">
+              <UnifiedEvermarkImage
+                evermark={evermark}
                 variant="list"
-                maintainContainer={true}
-                detectAspectRatio={true}
+                className="w-24 h-24 sm:w-32 sm:h-32"
                 onLoad={() => {
                   if (showPerformanceInfo) {
                     console.log(`✅ List image loaded for evermark #${evermark.tokenId}`);
@@ -332,27 +329,21 @@ export function EvermarkCard({
       className={`${getVariantClasses()} ${className} flex flex-col h-full`}
       onClick={handleClick}
     >
-      {/* FIXED: Responsive Image Component with dynamic borders for book covers */}
+      {/* Unified Image Component for all card types */}
       {showImage && (
-        <div className={`relative overflow-hidden rounded-t-xl ${variant === 'hero' ? 'h-64 sm:h-80' : 'h-48 sm:h-56'}`}>
-          <ResponsiveEvermarkImage
-            tokenId={evermark.tokenId}
-            ipfsHash={evermark.ipfsHash}
-            originalUrl={evermark.supabaseImageUrl}
-            variant={variant}
-            maintainContainer={true}
-            detectAspectRatio={true}
-            onLoad={() => {
-              if (showPerformanceInfo) {
-                console.log(`✅ Card image loaded for evermark #${evermark.tokenId}`);
-              }
-            }}
-            onError={(error) => {
-              console.warn(`❌ Card image error for #${evermark.tokenId}:`, error);
-            }}
-          />
-          <PerformanceIndicator />
-        </div>
+        <UnifiedEvermarkImage
+          evermark={evermark}
+          variant={variant}
+          className="rounded-t-xl"
+          onLoad={() => {
+            if (showPerformanceInfo) {
+              console.log(`✅ Card image loaded for evermark #${evermark.tokenId}`);
+            }
+          }}
+          onError={(error) => {
+            console.warn(`❌ Card image error for #${evermark.tokenId}:`, error);
+          }}
+        />
       )}
 
       {/* Content */}

@@ -367,7 +367,7 @@ export function CreateEvermarkForm({
             content: castData.content || '' // Ensure content is always a string
           }));
           console.log('✅ Cast data loaded successfully:', {
-            content: castData.content?.substring(0, 50) + '...',
+            content: `${castData.content?.substring(0, 50)  }...`,
             embeds: castData.embeds?.length || 0,
             channel: castData.channel
           });
@@ -529,7 +529,7 @@ export function CreateEvermarkForm({
 
     try {
       setIsGeneratingCastImage(true);
-      console.log('🎨 Generating cast preview with content:', contentText.substring(0, 50) + '...');
+      console.log('🎨 Generating cast preview with content:', `${contentText.substring(0, 50)  }...`);
       
       // Create mock evermark data for preview generation
       const mockEvermarkData = {

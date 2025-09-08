@@ -8,7 +8,27 @@ import react from 'eslint-plugin-react';
 
 export default [
   {
-    ignores: ['dist/**', 'build/**', '*.config.js', '*.config.ts', 'netlify/**', '.netlify/**', 'wallet.txt', 'public/**', 'scripts/**']
+    ignores: [
+      'dist/**', 
+      'build/**', 
+      '*.config.js', 
+      '*.config.ts', 
+      'netlify/**', 
+      '.netlify/**', 
+      'wallet.txt', 
+      'public/**', 
+      'scripts/**',
+      '*.js',
+      'e2e/**',
+      'test-*.js',
+      'admin-*.js',
+      'check-*.js',
+      'fix-*.js',
+      'get-*.js',
+      'migrate-*.js',
+      'generate-*.js',
+      'database-*.js'
+    ]
   },
   {
     files: ['**/*.{js,jsx,ts,tsx}'],

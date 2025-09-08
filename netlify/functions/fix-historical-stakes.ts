@@ -76,7 +76,13 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
   try {
     console.log('🔄 Starting historical staking points fix...');
     
-    const results = [];
+    const results: Array<{
+      tx_hash: string;
+      success: boolean;
+      error?: string;
+      points_updated?: number;
+      updated_rows?: number;
+    }> = [];
     
     for (const fix of HISTORICAL_STAKE_FIXES) {
       console.log(`⚡ Fixing ${fix.tx_hash} -> ${fix.correct_points} points`);

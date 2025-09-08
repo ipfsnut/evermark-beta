@@ -7,6 +7,17 @@ vi.mock('@/hooks/core/useWalletAccount', () => ({
   useWalletAccount: vi.fn(() => ({
     address: '0x1234567890123456789012345678901234567890',
   })),
+  useThirdwebAccount: vi.fn(() => ({
+    address: '0x1234567890123456789012345678901234567890',
+  })),
+}))
+
+vi.mock('@/providers/WalletProvider', () => ({
+  useWallet: vi.fn(() => ({
+    context: 'browser',
+    address: '0x1234567890123456789012345678901234567890',
+    isConnected: true,
+  })),
 }))
 
 vi.mock('thirdweb', () => ({

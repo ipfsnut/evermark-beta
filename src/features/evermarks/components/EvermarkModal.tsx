@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { Formatters } from '../../../utils/formatters';
 import type { Evermark } from '../types';
-import { SimpleEvermarkImage } from '../../../components/images/SimpleEvermarkImage';
+import { UnifiedEvermarkImage } from '../../../components/images/UnifiedEvermarkImage';
 import { ReadmeBookViewer } from './ReadmeBookViewer';
 
 interface EvermarkModalProps {
@@ -84,12 +84,9 @@ export function EvermarkModal({
           {/* Image */}
           {(evermark.image || evermark.supabaseImageUrl) && (
             <div className="relative">
-              <SimpleEvermarkImage
-                tokenId={evermark.tokenId}
-                ipfsHash={evermark.ipfsHash}
-                originalUrl={evermark.supabaseImageUrl}
+              <UnifiedEvermarkImage
+                evermark={evermark}
                 variant="hero"
-                contentType={evermark.contentType}
                 alt={evermark.title}
                 className="w-full rounded-lg border border-gray-600"
               />
