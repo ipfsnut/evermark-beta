@@ -1,4 +1,9 @@
 // Simplified EvermarkImage component using new image resolution system
+// 
+// ⚠️  DEPRECATED: Use UnifiedEvermarkImage instead for better README book support
+// This component has been kept for compatibility but UnifiedEvermarkImage provides
+// better aspect ratio handling, especially for README books and other book covers.
+//
 import React from 'react';
 import { useImageResolver } from '../../hooks/useImageResolver';
 import { cn } from '../../utils/responsive';
