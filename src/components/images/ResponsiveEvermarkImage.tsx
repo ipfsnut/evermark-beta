@@ -105,37 +105,37 @@ export function ResponsiveEvermarkImage({
     }
   };
 
-  // Calculate dynamic padding based on aspect ratio
+  // Calculate dynamic padding based on aspect ratio (enhanced for book covers)
   const getDynamicPadding = () => {
     if (!dimensions || !maintainContainer) return '';
     
-    // For tall images (like book covers), add horizontal padding
+    // For tall images (like book covers), add horizontal padding to center properly
     if (dimensions.isTall) {
       switch (variant) {
         case 'hero':
-          return 'px-12 sm:px-20 md:px-32 lg:px-40';
+          return 'px-16 sm:px-24 md:px-32 lg:px-48'; // More generous padding for hero book covers
         case 'standard':
-          return 'px-8 sm:px-12 md:px-16';
+          return 'px-12 sm:px-16 md:px-20'; // Increased padding for better centering
         case 'compact':
-          return 'px-4 sm:px-6';
+          return 'px-6 sm:px-8'; // More breathing room
         case 'list':
-          return 'px-2';
+          return 'px-3'; // Slightly more padding for list view
         default:
-          return 'px-8 sm:px-12';
+          return 'px-12 sm:px-16';
       }
     }
     
-    // For portrait images, add moderate padding
+    // For portrait images (but not extremely tall), add moderate padding
     if (dimensions.isPortrait) {
       switch (variant) {
         case 'hero':
-          return 'px-6 sm:px-10 md:px-16';
+          return 'px-8 sm:px-12 md:px-16';
         case 'standard':
-          return 'px-4 sm:px-6';
+          return 'px-6 sm:px-8';
         case 'compact':
-          return 'px-2 sm:px-3';
+          return 'px-3 sm:px-4';
         default:
-          return 'px-4';
+          return 'px-6';
       }
     }
     
@@ -157,13 +157,18 @@ export function ResponsiveEvermarkImage({
     return 'p-2';
   };
 
-  // Get background pattern for padding areas
+  // Get background pattern for padding areas (enhanced for book covers)
   const getBackgroundPattern = () => {
     if (!dimensions || !maintainContainer) return '';
     
-    // Add subtle gradient or pattern for book covers
+    // Enhanced gradient for book covers to simulate bookshelf effect
     if (dimensions.isTall) {
-      return 'bg-gradient-to-b from-gray-900/50 via-gray-800/30 to-gray-900/50';
+      return 'bg-gradient-to-br from-amber-900/20 via-gray-800/30 to-amber-900/20';
+    }
+    
+    // For portrait images, use a subtle warm background
+    if (dimensions.isPortrait) {
+      return 'bg-gradient-to-br from-gray-800/20 to-gray-700/30';
     }
     
     return 'bg-gray-800/30';

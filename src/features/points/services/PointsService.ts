@@ -100,9 +100,9 @@ export class PointsService {
    * Calculate points for staking action
    */
   static calculateStakePoints(stakeAmount: bigint): number {
-    // 1 point per 1000 EMARK (assuming 18 decimals)
+    // 1 point per 1,000,000 EMARK (assuming 18 decimals)
     const stakeAmountNum = Number(stakeAmount) / (10 ** 18);
-    return Math.floor(stakeAmountNum / 1000);
+    return Math.floor(stakeAmountNum / 1000000);
   }
 
   /**

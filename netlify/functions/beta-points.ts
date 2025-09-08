@@ -35,7 +35,7 @@ const headers = {
 const POINT_VALUES = {
   create_evermark: 10,
   vote: 1,
-  stake: 1 // per 1000 EMARK
+  stake: 1 // per 1,000,000 EMARK
 };
 
 function isValidWalletAddress(address: string): boolean {
@@ -184,9 +184,9 @@ async function handleAwardPoints(event: HandlerEvent) {
   let points_earned = POINT_VALUES[action_type as keyof typeof POINT_VALUES];
   
   if (action_type === 'stake' && stake_amount) {
-    // 1 point per 1000 EMARK staked
+    // 1 point per 1,000,000 EMARK staked
     const stakeAmountNum = parseFloat(stake_amount);
-    points_earned = Math.floor(stakeAmountNum / 1000);
+    points_earned = Math.floor(stakeAmountNum / 1000000);
   }
 
   // Start transaction to update both tables

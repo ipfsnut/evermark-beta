@@ -148,6 +148,7 @@ async function getSpecificEvermarksForCache(tokenIds: number[]) {
 
 /**
  * Cache image from IPFS/Pinata to Supabase storage
+ * Enhanced with proper content-type detection and book cover optimization
  */
 async function cacheImage(tokenId: number, originalUrl: string) {
   try {
@@ -159,6 +160,7 @@ async function cacheImage(tokenId: number, originalUrl: string) {
     ];
 
     let imageBuffer: ArrayBuffer | null = null;
+    let originalContentType = 'image/jpeg'; // Default fallback
     
     // Try each gateway
     for (const url of downloadUrls) {
@@ -169,6 +171,9 @@ async function cacheImage(tokenId: number, originalUrl: string) {
         
         if (response.ok) {
           imageBuffer = await response.arrayBuffer();
+          // Preserve original content type
+          originalContentType = response.headers.get('content-type') || 'image/jpeg';
+          console.log(`📥 Downloaded image: ${imageBuffer.byteLength} bytes, type: ${originalContentType}`);
           break;
         }
       } catch (error) {
@@ -181,12 +186,47 @@ async function cacheImage(tokenId: number, originalUrl: string) {
       throw new Error('Failed to download from all gateways');
     }
 
-    // Store in Supabase (keep original filename/format)
-    const fileName = `evermarks/${tokenId}.jpg`; // Simple naming
+    // Get evermark content type to determine if this is a book cover
+    const { data: evermark } = await supabase
+      .from(EVERMARKS_TABLE)
+      .select('content_type')
+      .eq('token_id', tokenId)
+      .single();
+
+    const isBookCover = evermark?.content_type === 'README' || evermark?.content_type === 'ISBN';
+    
+    // Determine optimal file extension and content type
+    let fileExtension: string;
+    let finalContentType: string;
+
+    if (originalContentType.includes('png')) {
+      // Preserve PNG for transparency (important for some book covers)
+      fileExtension = 'png';
+      finalContentType = 'image/png';
+    } else if (originalContentType.includes('webp')) {
+      // Convert WebP to PNG for better compatibility while preserving quality
+      fileExtension = 'png';
+      finalContentType = 'image/png';
+    } else {
+      // Use JPEG for photos and other images
+      fileExtension = 'jpg';
+      finalContentType = 'image/jpeg';
+    }
+
+    // For book covers, prefer PNG to preserve text clarity and potential transparency
+    if (isBookCover && originalContentType.includes('png')) {
+      console.log(`📚 Preserving PNG format for book cover #${tokenId}`);
+    } else if (isBookCover && !originalContentType.includes('png')) {
+      console.log(`📚 Book cover #${tokenId} detected, keeping original format: ${originalContentType}`);
+    }
+
+    const fileName = `evermarks/${tokenId}.${fileExtension}`;
+    console.log(`💾 Storing as: ${fileName} (${finalContentType})`);
+
     const { data, error } = await supabase.storage
       .from('evermark-images')
       .upload(fileName, imageBuffer, {
-        contentType: 'image/jpeg',
+        contentType: finalContentType,
         upsert: true
       });
 
@@ -208,6 +248,7 @@ async function cacheImage(tokenId: number, originalUrl: string) {
       })
       .eq('token_id', tokenId);
 
+    console.log(`✅ Successfully cached ${isBookCover ? 'book cover' : 'image'} #${tokenId}: ${urlData.publicUrl}`);
     return { success: true, url: urlData.publicUrl };
 
   } catch (error) {
