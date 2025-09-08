@@ -451,7 +451,7 @@ describe('useVotingState', () => {
     expect(VotingService.getCurrentCycle).toHaveBeenCalled()
   })
 
-  it('should handle disconnected wallet state', () => {
+  it('should handle disconnected wallet state', async () => {
     const { useWalletAccount } = await import('@/hooks/core/useWalletAccount')
     const { useStakingData } = await import('@/features/staking/hooks/useStakingData')
     

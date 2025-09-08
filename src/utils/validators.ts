@@ -109,6 +109,12 @@ export class EvermarkValidator {
     const errors: ValidationFieldError[] = [];
     const warnings: ValidationFieldError[] = [];
     
+    // Handle null/undefined metadata
+    if (!metadata || typeof metadata !== 'object') {
+      errors.push({ field: 'metadata', message: 'Metadata is required' });
+      return { isValid: false, errors };
+    }
+    
     // Cast metadata to any for property access - this is a validation function
     // that needs to handle arbitrary input
     const meta = metadata as any;

@@ -37,6 +37,13 @@ const contractInstances: {
   feeCollector?: ReturnType<typeof getContract>;
 } = {};
 
+// Test helper to reset singleton instances
+export function resetContractInstances() {
+  Object.keys(contractInstances).forEach(key => {
+    delete (contractInstances as any)[key];
+  });
+}
+
 // Contract getter functions that return singleton instances
 export function getEmarkTokenContract() {
   if (!CONTRACTS.EMARK_TOKEN) {

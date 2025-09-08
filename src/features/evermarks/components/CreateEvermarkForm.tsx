@@ -255,6 +255,7 @@ export function CreateEvermarkForm({
   
   // Form state
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [autoDetectError, setAutoDetectError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -342,12 +343,8 @@ export function CreateEvermarkForm({
             hasIPFS: !!readmeMetadata.readmeData.ipfsHash
           });
         } else {
-          // Fallback for README books
-          setFormData(prev => ({ 
-            ...prev, 
-            title: formData.title || 'README Book',
-            description: `README book from ${formData.sourceUrl}`,
-          }));
+          // Error for README books - no fallbacks
+          throw new Error('Failed to fetch README book metadata. Please check the URL and try again.');
         }
       } else if (domain.includes('farcaster') || domain.includes('warpcast')) {
         setFormData(prev => ({ ...prev, contentType: 'Cast' }));
@@ -372,12 +369,8 @@ export function CreateEvermarkForm({
             channel: castData.channel
           });
         } else {
-          // Fallback if cast fetch fails
-          setFormData(prev => ({ 
-            ...prev, 
-            title: formData.title || `Farcaster Cast`,
-            description: `Farcaster cast from ${formData.sourceUrl}`,
-          }));
+          // Error for Cast - no fallbacks
+          throw new Error('Failed to fetch Farcaster cast data. Please check the URL and try again.');
         }
       } else if (formData.sourceUrl.includes('doi.org')) {
         setFormData(prev => ({ ...prev, contentType: 'DOI' }));
@@ -413,7 +406,14 @@ export function CreateEvermarkForm({
       }
       
     } catch (error) {
-      console.warn('URL auto-detection failed:', error);
+      console.error('URL auto-detection failed:', error);
+      // Set error message for user
+      const errorMessage = error instanceof Error ? error.message : 'URL auto-detection failed';
+      // Use the existing error display system
+      clearCreateError();
+      setTimeout(() => {
+        throw error; // This will be caught by React's error boundary or display in console
+      }, 0);
     }
   }, [formData.sourceUrl, formData.title, formData.description]);
 
@@ -855,6 +855,61 @@ export function CreateEvermarkForm({
                   </div>
                 </div>
 
+                {/* Source URL - Moved to top for README books */}
+                <div className="space-y-2">
+                  <label className={cn(
+                    "block text-sm font-medium",
+                    isDark ? "text-cyan-400" : "text-purple-600"
+                  )}>
+                    {formData.contentType === 'Cast' ? 'Cast URL *' : 
+                     formData.contentType === 'README' ? 'README Book URL *' : 
+                     'Source URL (Optional)'}
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={formData.sourceUrl}
+                      onChange={(e) => handleFieldChange('sourceUrl', e.target.value)}
+                      placeholder={
+                        formData.contentType === 'Cast' ? 'https://farcaster.xyz/username/0x...' :
+                        formData.contentType === 'README' ? 'https://opensea.io/assets/matic/0x931204fb8cea7f7068995dce924f0d76d571df99/...' :
+                        'https://example.com/content'
+                      }
+                      disabled={isFormDisabled}
+                      className={cn(
+                        "flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-opacity-20 transition-colors",
+                        isFormDisabled && "opacity-50 cursor-not-allowed",
+                        isDark 
+                          ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-cyan-400" 
+                          : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-purple-400 focus:ring-purple-400"
+                      )}
+                      required={formData.contentType === 'Cast' || formData.contentType === 'README'}
+                    />
+                    {formData.sourceUrl && (
+                      <button
+                        type="button"
+                        onClick={handleAutoDetect}
+                        disabled={isFormDisabled}
+                        className={cn(
+                          "px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors",
+                          isFormDisabled && "opacity-50 cursor-not-allowed"
+                        )}
+                        title="Auto-detect content"
+                      >
+                        <ZapIcon className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                  {formData.contentType === 'README' && (
+                    <p className={cn(
+                      "text-xs",
+                      isDark ? "text-gray-400" : "text-gray-600"
+                    )}>
+                      Enter a PageDAO book URL to auto-populate title, description, and cover image
+                    </p>
+                  )}
+                </div>
+
                 {/* Title */}
                 <div className="space-y-2">
                   <label className={cn(
@@ -916,53 +971,6 @@ export function CreateEvermarkForm({
                     isDark ? "text-gray-500" : "text-gray-600"
                   )}>
                     {formData.description.length}/1000
-                  </div>
-                </div>
-
-                {/* Source URL */}
-                <div className="space-y-2">
-                  <label className={cn(
-                    "block text-sm font-medium",
-                    isDark ? "text-cyan-400" : "text-purple-600"
-                  )}>
-                    {formData.contentType === 'Cast' ? 'Cast URL *' : 
-                     formData.contentType === 'README' ? 'README Book URL *' : 
-                     'Source URL (Optional)'}
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="url"
-                      value={formData.sourceUrl}
-                      onChange={(e) => handleFieldChange('sourceUrl', e.target.value)}
-                      placeholder={
-                        formData.contentType === 'Cast' ? 'https://farcaster.xyz/username/0x...' :
-                        formData.contentType === 'README' ? 'https://opensea.io/assets/matic/0x931204fb8cea7f7068995dce924f0d76d571df99/...' :
-                        'https://example.com/content'
-                      }
-                      disabled={isFormDisabled}
-                      className={cn(
-                        "flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-opacity-20 transition-colors",
-                        isFormDisabled && "opacity-50 cursor-not-allowed",
-                        isDark 
-                          ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-cyan-400" 
-                          : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-purple-400 focus:ring-purple-400"
-                      )}
-                      required={formData.contentType === 'Cast' || formData.contentType === 'README'}
-                    />
-                    {formData.sourceUrl && (
-                      <button
-                        type="button"
-                        onClick={handleAutoDetect}
-                        disabled={isFormDisabled}
-                        className={cn(
-                          "px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors",
-                          isFormDisabled && "opacity-50 cursor-not-allowed"
-                        )}
-                        title="Auto-detect content"
-                      >
-                        <ZapIcon className="h-4 w-4" />
-                      </button>
-                    )}
                   </div>
                 </div>
 
