@@ -128,6 +128,25 @@ export function UnifiedEvermarkImage({
       }
       // Square images get no padding (strategy = 'none')
       
+      // Debug logging to trace README book dimensions issue
+      if (import.meta.env.DEV && (tokenId === 22 || tokenId === 23 || contentType === 'README' || contentType === 'ISBN')) {
+        console.log('📚 Image Debug - tokenId', tokenId, 'contentType:', contentType, ':', {
+          originalUrl: imageUrl?.substring(0, 80) + '...',
+          dimensions: dims,
+          actualSize: `${dims.width}x${dims.height}`,
+          aspectRatio: dims.aspectRatio.toFixed(3),
+          classification: {
+            isPortrait: dims.isPortrait,
+            isTall: dims.isTall,
+            isSquare: dims.isSquare,
+            isWide: dims.isWide,
+            isSuperWide: dims.isSuperWide
+          },
+          strategy: strategy,
+          expectedForBooks: 'Should be tall/portrait (aspect < 0.95) if real book cover'
+        });
+      }
+      
       setDimensions(dims);
       setPaddingStrategy(strategy);
     }
@@ -168,26 +187,27 @@ export function UnifiedEvermarkImage({
       }
     })();
     
-    // Smart padding based on detected aspect ratio
+    // Smart padding - only apply to README books which need extra spacing
     const paddingClasses = (() => {
-      if (!imageLoaded || paddingStrategy === 'none') return '';
+      // Only add padding for README books (they're typically very tall)
+      if (!imageLoaded || !isBookCover || paddingStrategy === 'none') return '';
       
       const paddingAmounts = {
-        hero: { horizontal: 'px-8 sm:px-12 md:px-16', vertical: 'py-4 sm:py-6' },
-        standard: { horizontal: 'px-6 sm:px-8', vertical: 'py-3 sm:py-4' },
-        compact: { horizontal: 'px-2', vertical: 'py-1' },
-        list: { horizontal: 'px-1', vertical: 'py-0.5' },
-        thumbnail: { horizontal: 'px-0.5', vertical: 'py-0' }
+        hero: { horizontal: 'px-4 sm:px-6 md:px-8' },
+        standard: { horizontal: 'px-3 sm:px-4' },
+        compact: { horizontal: 'px-1' },
+        list: { horizontal: 'px-1' },
+        thumbnail: { horizontal: 'px-0.5' }
       };
       
       const amounts = paddingAmounts[variant] || paddingAmounts.standard;
       
-      switch (paddingStrategy) {
-        case 'horizontal': return amounts.horizontal;
-        case 'vertical': return amounts.vertical;
-        case 'all': return `${amounts.horizontal} ${amounts.vertical}`;
-        default: return '';
+      // README books are typically tall, so add horizontal padding
+      if (paddingStrategy === 'horizontal') {
+        return amounts.horizontal;
       }
+      
+      return '';
     })();
     
     // Subtle background that works for all content types
@@ -220,9 +240,16 @@ export function UnifiedEvermarkImage({
   const isBookCover = contentType === 'README' || contentType === 'ISBN';
   const showDebugInfo = import.meta.env.DEV && false; // Disabled per user request
   
-  // Get image classes with proper object-fit
+  // Get image classes with intelligent object-fit based on aspect ratio detection
   const getImageClasses = () => {
-    const objectFit = isBookCover ? 'object-contain' : 'object-cover';
+    // CRITICAL: Use object-contain for ALL images to prevent cropping
+    // The container padding will handle the spacing, not object-cover cropping
+    let objectFit = 'object-contain';
+    
+    // Only use object-cover for images that truly benefit from it (square social media images)
+    if (dimensions?.isSquare && !isBookCover) {
+      objectFit = 'object-cover';
+    }
     
     return cn(
       'w-full h-full transition-opacity duration-300',
