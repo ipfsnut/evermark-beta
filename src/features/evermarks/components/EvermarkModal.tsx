@@ -89,8 +89,9 @@ export function EvermarkModal({
                 ipfsHash={evermark.ipfsHash}
                 originalUrl={evermark.supabaseImageUrl}
                 variant="hero"
+                contentType={evermark.contentType}
                 alt={evermark.title}
-                className="w-full h-64 md:h-80 object-cover rounded-lg border border-gray-600"
+                className="w-full rounded-lg border border-gray-600"
               />
               {evermark.verified && (
                 <div className="absolute top-3 right-3 bg-green-600 rounded-full p-2">

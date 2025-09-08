@@ -83,9 +83,110 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
 };
 
 async function handleGetPoints(event: HandlerEvent) {
-  const walletAddress = getWalletAddress(event);
   const { action } = event.queryStringParameters || {};
 
+  if (action === 'cleanup') {
+    // Special admin endpoint to fix duplicate points
+    try {
+      console.log('🔄 Starting points database cleanup...');
+
+      // Get all transactions and group by wallet
+      const { data: allTransactions } = await supabase
+        .from(TRANSACTIONS_TABLE)
+        .select('wallet_address, points_earned');
+
+      if (!allTransactions) {
+        throw new Error('Failed to fetch transactions');
+      }
+
+      // Calculate correct totals
+      const walletTotals = new Map<string, number>();
+      allTransactions.forEach(tx => {
+        const current = walletTotals.get(tx.wallet_address) || 0;
+        walletTotals.set(tx.wallet_address, current + tx.points_earned);
+      });
+
+      // Clear existing points table
+      await supabase.from(POINTS_TABLE).delete().neq('wallet_address', '');
+
+      // Insert correct records
+      const correctRecords = Array.from(walletTotals.entries()).map(([wallet_address, total_points]) => ({
+        wallet_address,
+        total_points,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }));
+
+      const { error: insertError } = await supabase
+        .from(POINTS_TABLE)
+        .insert(correctRecords);
+
+      if (insertError) {
+        throw new Error(`Failed to insert correct records: ${insertError.message}`);
+      }
+
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ 
+          success: true, 
+          message: `Database cleaned up: ${correctRecords.length} wallets with correct totals`,
+          wallets: correctRecords.length
+        }),
+      };
+    } catch (error: any) {
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({ error: `Cleanup failed: ${error.message}` }),
+      };
+    }
+  }
+
+  if (action === 'fix-stakes') {
+    // Fix historical staking points based on migration data
+    try {
+      const HISTORICAL_STAKE_FIXES = [
+        { tx_hash: "0xbc30249d27d2c65e6d8a50f65cda4b87df2eda4d332d9ed55d5f60c570fd8ffa", correct_points: 3 },
+        { tx_hash: "0x9b03ad8d1765cdaca3ca7a139298410f3632b2bdb871a21b20cb22a2075b88ae", correct_points: 5 },
+        { tx_hash: "0x10f1359af5259703d6523f263b295935f44b89e2f02de6bd4c6343b42d74bcd7", correct_points: 5 },
+        { tx_hash: "0x4e3c6bef048c1602c99236f80fe5054d638e7d4c3e6ef474bf73469450b81b18", correct_points: 1 },
+        { tx_hash: "0x625be633b11914339df35b7e79c4f5e7b8b9bf992d95b2db655a06c72767d5da", correct_points: 1 },
+        { tx_hash: "0x8d3622808d22cc8d98c0a463ceadfe105a3ff9756b9984f99a4d8903b8943e11", correct_points: 0 },
+        { tx_hash: "0xf7fa47c3c5ee4e12a306c095daed3b3462fba4e74ec611f1353f63b9963b17c2", correct_points: 6 },
+        { tx_hash: "0xb3e6b0462b9667dd368f6e5fb4d4358d39f95b44c01a04c1781d4d02de77f5ac", correct_points: 2 }
+      ];
+
+      let fixed = 0;
+      for (const fix of HISTORICAL_STAKE_FIXES) {
+        const { error } = await supabase
+          .from(TRANSACTIONS_TABLE)
+          .update({ points_earned: fix.correct_points })
+          .eq('tx_hash', fix.tx_hash)
+          .eq('action_type', 'stake');
+        
+        if (!error) fixed++;
+      }
+
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ 
+          success: true, 
+          message: `Fixed ${fixed} historical staking transactions`,
+          fixed_count: fixed
+        }),
+      };
+    } catch (error: any) {
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({ error: `Stakes fix failed: ${error.message}` }),
+      };
+    }
+  }
+
+  // Admin actions that don't require wallet address
   if (action === 'leaderboard') {
     // Get leaderboard
     const { data: leaderboard, error } = await supabase
@@ -109,6 +210,9 @@ async function handleGetPoints(event: HandlerEvent) {
     };
   }
 
+  // User-specific actions require wallet address
+  const walletAddress = getWalletAddress(event);
+  
   if (!walletAddress) {
     return {
       statusCode: 400,

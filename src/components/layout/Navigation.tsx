@@ -10,7 +10,8 @@ import {
   InfoIcon,
   ShareIcon,
   ArrowUpDownIcon,
-  UserIcon
+  UserIcon,
+  FlaskConicalIcon
 } from 'lucide-react';
 import { useAppAuth } from '../../providers/AppContext';
 import { useTheme } from '../../providers/ThemeProvider';
@@ -57,6 +58,12 @@ const navigationItems: NavItem[] = [
     to: '/staking',
     label: 'Staking',
     icon: CoinsIcon,
+  },
+  {
+    to: '/beta',
+    label: 'Beta',
+    icon: FlaskConicalIcon,
+    requireAuth: true,
   },
 ];
 

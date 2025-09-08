@@ -49,36 +49,66 @@ export function SimpleEvermarkImage({
     if (error && onError) onError(error);
   }, [error, onError]);
 
-  // Get variant-specific classes
+  // Get variant-specific classes with book cover optimization
   const getImageClasses = () => {
-    const baseClasses = 'object-cover transition-opacity duration-200';
+    // For book covers (README/ISBN), use object-contain to preserve aspect ratio
+    const isBookCover = contentType === 'README' || contentType === 'ISBN';
+    const objectFit = isBookCover ? 'object-contain' : 'object-cover';
+    const baseClasses = `${objectFit} transition-opacity duration-200`;
+    
+    // Debug logging
+    if (isBookCover && process.env.NODE_ENV === 'development') {
+      console.log(`🔍 SimpleEvermarkImage - Book cover detected for token ${tokenId}:`, {
+        contentType,
+        isBookCover,
+        objectFit,
+        variant
+      });
+    }
     
     switch (variant) {
       case 'hero':
-        return `${baseClasses} w-full h-64 md:h-96 rounded-xl`;
+        return isBookCover 
+          ? `${baseClasses} w-full h-80 md:h-96 rounded-xl bg-gradient-to-br from-amber-900/10 to-gray-800/20`
+          : `${baseClasses} w-full h-64 md:h-96 rounded-xl`;
       case 'compact':
-        return `${baseClasses} w-16 h-16 rounded-lg`;
+        return isBookCover 
+          ? `${baseClasses} w-16 h-20 rounded-lg bg-gray-800/30`
+          : `${baseClasses} w-16 h-16 rounded-lg`;
       case 'list':
-        return `${baseClasses} w-12 h-12 rounded-md`;
+        return isBookCover 
+          ? `${baseClasses} w-12 h-16 rounded-md bg-gray-800/30`
+          : `${baseClasses} w-12 h-12 rounded-md`;
       case 'standard':
       default:
-        return `${baseClasses} w-full h-48 rounded-lg`;
+        return isBookCover 
+          ? `${baseClasses} w-full h-60 rounded-lg bg-gradient-to-br from-amber-900/10 to-gray-800/20`
+          : `${baseClasses} w-full h-48 rounded-lg`;
     }
   };
 
   const getPlaceholderClasses = () => {
+    const isBookCover = contentType === 'README' || contentType === 'ISBN';
     const baseClasses = 'bg-gray-800 flex items-center justify-center animate-pulse';
     
     switch (variant) {
       case 'hero':
-        return `${baseClasses} w-full h-64 md:h-96 rounded-xl`;
+        return isBookCover 
+          ? `${baseClasses} w-full h-80 md:h-96 rounded-xl`
+          : `${baseClasses} w-full h-64 md:h-96 rounded-xl`;
       case 'compact':
-        return `${baseClasses} w-16 h-16 rounded-lg`;
+        return isBookCover 
+          ? `${baseClasses} w-16 h-20 rounded-lg`
+          : `${baseClasses} w-16 h-16 rounded-lg`;
       case 'list':
-        return `${baseClasses} w-12 h-12 rounded-md`;
+        return isBookCover 
+          ? `${baseClasses} w-12 h-16 rounded-md`
+          : `${baseClasses} w-12 h-12 rounded-md`;
       case 'standard':
       default:
-        return `${baseClasses} w-full h-48 rounded-lg`;
+        return isBookCover 
+          ? `${baseClasses} w-full h-60 rounded-lg`
+          : `${baseClasses} w-full h-48 rounded-lg`;
     }
   };
 

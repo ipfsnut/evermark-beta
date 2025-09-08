@@ -366,6 +366,7 @@ export function LeaderboardTable({
                       originalUrl={entry.sourceUrl}
                       alt={entry.title}
                       variant="list"
+                      contentType={entry.contentType}
                       className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg border border-app-border group-hover:border-app-text-accent transition-colors"
                     />
                     

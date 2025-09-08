@@ -6,7 +6,8 @@ import {
   CompassIcon,
   PlusIcon,
   TrendingUpIcon,
-  ShareIcon
+  ShareIcon,
+  FlaskConicalIcon
 } from 'lucide-react';
 import { useAppAuth } from '../../providers/AppContext';
 import { useFarcasterDetection } from '../../hooks/useFarcasterDetection';
@@ -41,6 +42,12 @@ const mobileNavItems: NavItem[] = [
     to: '/leaderboard',
     label: 'Ranks',
     icon: TrendingUpIcon,
+  },
+  {
+    to: '/beta',
+    label: 'Beta',
+    icon: FlaskConicalIcon,
+    requireAuth: true,
   },
 ];
 

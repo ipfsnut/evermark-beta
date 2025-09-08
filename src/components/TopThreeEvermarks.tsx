@@ -26,6 +26,7 @@ interface LeaderboardEntry {
   totalVotes: string;
   author: string;
   rank: number;
+  contentType?: string;
 }
 
 const TopThreeEvermarks: React.FC = () => {
@@ -192,15 +193,32 @@ const TopThreeEvermarks: React.FC = () => {
               {/* Content Preview */}
               <div className="mb-4">
                 {(entry.supabaseImageUrl || entry.image) && (
-                  <div className="w-full h-32 mb-3 bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden">
+                  <div className={cn(
+                    "w-full mb-3 rounded-lg overflow-hidden",
+                    // Different aspect ratios and backgrounds for different content types
+                    entry.contentType === 'README' || entry.contentType === 'ISBN'
+                      ? "h-40 bg-gradient-to-br from-amber-900/10 to-gray-800/20"  // Taller container for books with warm background
+                      : "h-32 bg-gray-200 dark:bg-gray-700"  // Fixed height for other content
+                  )}>
                     <img
                       src={entry.supabaseImageUrl || entry.image}
                       alt={entry.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className={cn(
+                        "w-full h-full transition-transform duration-300 group-hover:scale-105",
+                        entry.contentType === 'README' || entry.contentType === 'ISBN'
+                          ? "object-contain border-4 border-red-500"  // VERY OBVIOUS: Red border for book covers
+                          : "object-cover border-4 border-blue-500"   // VERY OBVIOUS: Blue border for other content
+                      )}
                       onError={(e) => {
                         e.currentTarget.style.display = 'none';
                       }}
                     />
+                    {/* Debug indicator */}
+                    {(entry.contentType === 'README' || entry.contentType === 'ISBN') && (
+                      <div className="absolute top-2 right-2 bg-red-600 text-white px-2 py-1 text-xs font-bold rounded">
+                        BOOK: {entry.contentType}
+                      </div>
+                    )}
                   </div>
                 )}
                 
