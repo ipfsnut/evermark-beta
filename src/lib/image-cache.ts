@@ -91,10 +91,19 @@ export function getImageUrl(evermark: {
   token_id: number;
   supabase_image_url?: string;
   ipfs_image_hash?: string;
+  content_type?: string;
 }): string {
   // 1. Try Supabase first
   if (evermark.supabase_image_url) {
-    return evermark.supabase_image_url;
+    let url = evermark.supabase_image_url;
+    
+    // Add cache busting for README books to force reload of updated images
+    if (evermark.content_type === 'README') {
+      const separator = url.includes('?') ? '&' : '?';
+      url = `${url}${separator}v=20250908-fix`;
+    }
+    
+    return url;
   }
 
   // 2. Fall back to IPFS via CORS-friendly gateway (not Pinata)
