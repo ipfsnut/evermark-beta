@@ -35,15 +35,24 @@ export class StakingService {
       return { isValid: false, errors, warnings };
     }
 
+    // Clean and validate the input
+    const cleanAmount = amount.trim().replace(/,/g, '');
+    
     // Numeric validation
-    const numericAmount = parseFloat(amount);
+    const numericAmount = parseFloat(cleanAmount);
     if (isNaN(numericAmount) || numericAmount <= 0) {
       errors.push('Amount must be a positive number');
       return { isValid: false, errors, warnings };
     }
 
+    // Validate format (only digits, optional decimal point, and digits)
+    if (!/^\d*\.?\d*$/.test(cleanAmount)) {
+      errors.push('Invalid number format');
+      return { isValid: false, errors, warnings };
+    }
+
     // Convert to wei for comparison (EMARK has 18 decimals)
-    const amountWei = toWei(amount);
+    const amountWei = toWei(cleanAmount);
 
     // Minimum amount check
     if (amountWei < minAmount) {
@@ -89,15 +98,24 @@ export class StakingService {
       return { isValid: false, errors, warnings };
     }
 
+    // Clean and validate the input
+    const cleanAmount = amount.trim().replace(/,/g, '');
+    
     // Numeric validation
-    const numericAmount = parseFloat(amount);
+    const numericAmount = parseFloat(cleanAmount);
     if (isNaN(numericAmount) || numericAmount <= 0) {
       errors.push('Amount must be a positive number');
       return { isValid: false, errors, warnings };
     }
 
+    // Validate format (only digits, optional decimal point, and digits)
+    if (!/^\d*\.?\d*$/.test(cleanAmount)) {
+      errors.push('Invalid number format');
+      return { isValid: false, errors, warnings };
+    }
+
     // Convert to wei for comparison
-    const amountWei = toWei(amount);
+    const amountWei = toWei(cleanAmount);
 
     // Staked balance check
     if (amountWei > stakedBalance) {
@@ -118,6 +136,30 @@ export class StakingService {
       errors,
       warnings
     };
+  }
+
+  /**
+   * Parse user input to token amount in wei, handling commas and decimals
+   */
+  static parseTokenAmount(amount: string): bigint {
+    try {
+      if (!amount || amount.trim() === '') {
+        return BigInt(0);
+      }
+      
+      // Clean the input - remove commas
+      const cleanAmount = amount.trim().replace(/,/g, '');
+      
+      // Validate format (only digits, optional decimal point, and digits)
+      if (!/^\d*\.?\d*$/.test(cleanAmount)) {
+        throw new Error('Invalid number format');
+      }
+      
+      return toWei(cleanAmount);
+    } catch (error) {
+      console.error('Error parsing token amount:', error);
+      throw new Error('Invalid amount format');
+    }
   }
 
   /**

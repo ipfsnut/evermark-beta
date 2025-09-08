@@ -18,6 +18,7 @@ vi.mock('../../voting/services/VotingService', () => ({
 vi.mock('../../voting/services/VotingCacheService', () => ({
   VotingCacheService: {
     getCachedVotingData: vi.fn(),
+    getBulkVotingData: vi.fn(),
     isCacheStale: vi.fn(),
     syncEvermarkToCache: vi.fn()
   }
@@ -25,13 +26,15 @@ vi.mock('../../voting/services/VotingCacheService', () => ({
 
 vi.mock('./LeaderboardSyncService', () => ({
   LeaderboardSyncService: {
-    syncLeaderboard: vi.fn()
+    syncLeaderboard: vi.fn(),
+    getEvermarkRankingData: vi.fn()
   }
 }))
 
 vi.mock('./BlockchainLeaderboardService', () => ({
   BlockchainLeaderboardService: {
-    getLeaderboard: vi.fn()
+    getLeaderboard: vi.fn(),
+    calculateBlockchainLeaderboard: vi.fn()
   }
 }))
 
@@ -61,8 +64,8 @@ describe('LeaderboardService', () => {
         description: 'Test description 1'
       },
       stats: {
-        votes: 100,
-        supporters: 10,
+        votes: 200,
+        supporters: 20,
         comments: 5
       }
     },
@@ -82,8 +85,8 @@ describe('LeaderboardService', () => {
         description: 'Test description 2'
       },
       stats: {
-        votes: 50,
-        supporters: 5,
+        votes: 150,
+        supporters: 15,
         comments: 2
       }
     },
@@ -103,8 +106,8 @@ describe('LeaderboardService', () => {
         description: 'Test description 3'
       },
       stats: {
-        votes: 75,
-        supporters: 8,
+        votes: 100,
+        supporters: 10,
         comments: 3
       }
     }
@@ -122,8 +125,45 @@ describe('LeaderboardService', () => {
       }
     })
 
+    vi.mocked(VotingCacheService.getBulkVotingData).mockImplementation(async (evermarkIds: string[]) => {
+      const result = new Map()
+      evermarkIds.forEach(id => {
+        const evermark = mockEvermarks.find(e => e.id === id)
+        result.set(id, {
+          votes: BigInt(evermark?.stats?.votes || 0),
+          voterCount: evermark?.stats?.supporters || 0
+        })
+      })
+      return result
+    })
+
     vi.mocked(VotingCacheService.isCacheStale).mockResolvedValue(false)
     vi.mocked(FinalizationService.hasStoredFinalization).mockResolvedValue(false)
+
+    // Mock the imported services directly since we already mocked them at module level
+    vi.mocked(LeaderboardSyncService.getEvermarkRankingData).mockResolvedValue({
+      votes: BigInt(100),
+      totalVoters: 10,
+      rank: 1
+    })
+
+    vi.mocked(BlockchainLeaderboardService.calculateBlockchainLeaderboard).mockResolvedValue([
+      {
+        rank: 1,
+        evermarkId: '1',
+        evermark: mockEvermarks[0],
+        votes: BigInt(200),
+        voterCount: 20,
+        score: 200,
+        scoreMultiplier: 1.0,
+        previousRank: 0,
+        rankChange: 1,
+        trendingScore: 0.9,
+        momentum: 'up',
+        category: 'blockchain',
+        seasonNumber: 6
+      }
+    ])
   })
 
   describe('getCachedVotingData', () => {
@@ -308,12 +348,12 @@ describe('LeaderboardService', () => {
 
       const result = await LeaderboardService.calculateLeaderboard(mockEvermarks, 'current')
 
-      expect(result[0].evermarkId).toBe('2') // Highest votes
+      expect(result[0].evermarkId).toBe('1') // Highest votes (200)
       expect(result[0].votes).toBe(BigInt(200))
-      expect(result[1].evermarkId).toBe('3') // Middle votes
-      expect(result[1].votes).toBe(BigInt(100))
-      expect(result[2].evermarkId).toBe('1') // Lowest votes
-      expect(result[2].votes).toBe(BigInt(50))
+      expect(result[1].evermarkId).toBe('2') // Middle votes (150)
+      expect(result[1].votes).toBe(BigInt(150))
+      expect(result[2].evermarkId).toBe('3') // Lowest votes (100)
+      expect(result[2].votes).toBe(BigInt(100))
     })
 
     it('should assign correct ranks', async () => {
