@@ -88,7 +88,7 @@ export const handler: Handler = async (event, context) => {
     const contentType = response.headers.get('content-type') || 'image/png';
 
     // Analyze image dimensions for better rendering decisions
-    let dimensions = null;
+    let dimensions: { width: number; height: number } | null = null;
     try {
       // Basic image dimension detection (works for JPEG, PNG, WebP)
       const buffer = Buffer.from(imageBuffer);
