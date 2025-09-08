@@ -1,6 +1,6 @@
 import React from 'react';
 import { ResponsiveEvermarkImage } from './ResponsiveEvermarkImage';
-import { SimpleEvermarkImage } from './SimpleEvermarkImage';
+import { UnifiedEvermarkImage } from './UnifiedEvermarkImage';
 
 interface EvermarkImageProps {
   tokenId: number;
@@ -36,16 +36,16 @@ export function EvermarkImage({
   onError
 }: EvermarkImageProps) {
   
-  // For thumbnails and simple cases, use SimpleEvermarkImage
+  // For thumbnails and simple cases, use UnifiedEvermarkImage with appropriate variants
   if (variant === 'simple' || variant === 'thumbnail') {
     return (
-      <SimpleEvermarkImage
+      <UnifiedEvermarkImage
         tokenId={tokenId}
         ipfsHash={ipfsHash}
         originalUrl={originalUrl}
         alt={alt}
         className={className}
-        variant={variant as 'hero' | 'standard' | 'compact' | 'list'}
+        variant={variant === 'thumbnail' ? 'thumbnail' : 'compact'}
         contentType={contentType}
         autoGenerate={autoGenerate}
         onLoad={onLoad}
@@ -77,4 +77,4 @@ export function EvermarkImage({
 export default EvermarkImage;
 
 // Re-export the specific components for cases where they're needed directly
-export { ResponsiveEvermarkImage, SimpleEvermarkImage };
+export { ResponsiveEvermarkImage, UnifiedEvermarkImage };

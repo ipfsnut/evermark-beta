@@ -331,6 +331,8 @@ async function handleAwardPoints(event: HandlerEvent) {
       wallet_address: walletAddress,
       total_points: newTotal,
       updated_at: new Date().toISOString()
+    }, {
+      onConflict: 'wallet_address'
     })
     .select()
     .single();
