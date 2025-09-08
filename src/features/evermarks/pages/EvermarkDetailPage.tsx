@@ -22,7 +22,7 @@ import { Formatters } from '../../../utils/formatters';
 
 // Feature imports
 import { useEvermarksState, type Evermark } from '@/features/evermarks';
-import { ResponsiveEvermarkImage } from '@/components/images/ResponsiveEvermarkImage';
+import { UnifiedEvermarkImage } from '@/components/images/UnifiedEvermarkImage';
 import { VotingPanel } from '@/features/voting';
 import { SupportersList } from '../components/SupportersList';
 import { useAppAuth } from '@/providers/AppContext';
@@ -360,15 +360,14 @@ export default function EvermarkDetailPage(): React.ReactNode {
             {/* Featured Image with responsive handling for book covers */}
             {(evermark.image || evermark.supabaseImageUrl) && (
               <div className="relative">
-                <ResponsiveEvermarkImage
+                <UnifiedEvermarkImage
                   tokenId={evermark.tokenId}
                   ipfsHash={evermark.ipfsHash}
                   originalUrl={evermark.supabaseImageUrl}
+                  contentType={evermark.contentType}
                   variant="hero"
                   alt={evermark.title}
-                  className="w-full h-64 md:h-96 rounded-lg border border-gray-700"
-                  maintainContainer={true}
-                  detectAspectRatio={true}
+                  className="rounded-lg border border-gray-700"
                 />
                 {evermark.imageStatus !== 'processed' && (
                   <div className="absolute bottom-4 left-4 bg-black/80 text-white px-3 py-1 rounded-full text-sm backdrop-blur-sm">

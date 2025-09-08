@@ -2,16 +2,16 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Get environment variables - works in both Vite and Node.js contexts
-const SUPABASE_URL = (typeof process !== 'undefined' && process.env?.VITE_SUPABASE_URL) ?? 
-                     (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) ?? 
+const SUPABASE_URL = (typeof process !== 'undefined' && process.env?.VITE_SUPABASE_URL) || 
+                     (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || 
                      '';
-const SUPABASE_ANON_KEY = (typeof process !== 'undefined' && process.env?.VITE_SUPABASE_ANON_KEY) ?? 
-                          (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) ?? 
+const SUPABASE_ANON_KEY = (typeof process !== 'undefined' && process.env?.VITE_SUPABASE_ANON_KEY) || 
+                          (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) || 
                           '';
 
 const supabase = createClient(
-  SUPABASE_URL!,
-  SUPABASE_ANON_KEY!
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY
 );
 
 const EVERMARKS_TABLE = 'beta_evermarks';

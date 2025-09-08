@@ -1,6 +1,7 @@
 // Background job for caching evermark images (simple download and store)
 import { Handler } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
+import sharp from 'sharp';
 
 // Beta table name - using beta_evermarks instead of alpha evermarks table
 const EVERMARKS_TABLE = 'beta_evermarks';
@@ -138,8 +139,9 @@ async function getSpecificEvermarksForCache(tokenIds: number[]) {
   
   console.log('🔍 Found evermarks:', data);
   
-  // Filter out ones that already have supabase URLs
-  const needsCaching = (data || []).filter(item => !item.supabase_image_url);
+  // For manual triggers, force re-cache even if supabase_image_url exists
+  // This allows us to fix incorrectly processed images
+  const needsCaching = (data || []); // Don't filter out existing URLs for manual triggers
   
   console.log('🔍 Need caching:', needsCaching);
   
@@ -207,6 +209,11 @@ async function cacheImage(tokenId: number, originalUrl: string) {
       // Convert WebP to PNG for better compatibility while preserving quality
       fileExtension = 'png';
       finalContentType = 'image/png';
+    } else if (originalContentType.includes('avif')) {
+      // FIXED: Handle AVIF images properly - preserve as PNG to avoid browser issues
+      fileExtension = 'png';
+      finalContentType = 'image/png';
+      console.log(`📚 Converting AVIF to PNG for better browser compatibility: #${tokenId}`);
     } else {
       // Use JPEG for photos and other images
       fileExtension = 'jpg';
@@ -220,12 +227,29 @@ async function cacheImage(tokenId: number, originalUrl: string) {
       console.log(`📚 Book cover #${tokenId} detected, keeping original format: ${originalContentType}`);
     }
 
+    // Process image if format conversion is needed
+    let finalImageBuffer = imageBuffer;
+    
+    if (originalContentType.includes('avif') || originalContentType.includes('webp')) {
+      console.log(`🔄 Converting ${originalContentType} to ${finalContentType} for tokenId #${tokenId}`);
+      try {
+        // Convert to the target format while preserving aspect ratio
+        finalImageBuffer = await sharp(imageBuffer)
+          .png({ quality: 95 }) // High quality PNG for book covers
+          .toBuffer();
+        console.log(`✅ Successfully converted image: ${originalContentType} -> ${finalContentType}`);
+      } catch (error) {
+        console.warn(`⚠️ Image conversion failed, using original: ${error}`);
+        finalImageBuffer = imageBuffer; // Fall back to original if conversion fails
+      }
+    }
+
     const fileName = `evermarks/${tokenId}.${fileExtension}`;
     console.log(`💾 Storing as: ${fileName} (${finalContentType})`);
 
     const { data, error } = await supabase.storage
       .from('evermark-images')
-      .upload(fileName, imageBuffer, {
+      .upload(fileName, finalImageBuffer, {
         contentType: finalContentType,
         upsert: true
       });

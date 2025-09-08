@@ -128,10 +128,10 @@ export function UnifiedEvermarkImage({
       }
       // Square images get no padding (strategy = 'none')
       
-      // Debug logging to trace README book dimensions issue
-      if (import.meta.env.DEV && (tokenId === 22 || tokenId === 23 || contentType === 'README' || contentType === 'ISBN')) {
-        console.log('📚 Image Debug - tokenId', tokenId, 'contentType:', contentType, ':', {
-          originalUrl: imageUrl?.substring(0, 80) + '...',
+      // Debug logging to verify the fix worked
+      if (import.meta.env.DEV && (tokenId === 22 || tokenId === 23)) {
+        console.log('📚 Fixed README Book Debug - tokenId', tokenId, ':', {
+          imageUrl: imageUrl?.substring(0, 80) + '...',
           dimensions: dims,
           actualSize: `${dims.width}x${dims.height}`,
           aspectRatio: dims.aspectRatio.toFixed(3),
@@ -139,11 +139,10 @@ export function UnifiedEvermarkImage({
             isPortrait: dims.isPortrait,
             isTall: dims.isTall,
             isSquare: dims.isSquare,
-            isWide: dims.isWide,
-            isSuperWide: dims.isSuperWide
+            isWide: dims.isWide
           },
           strategy: strategy,
-          expectedForBooks: 'Should be tall/portrait (aspect < 0.95) if real book cover'
+          objectFitWillBe: dims.isSquare && contentType !== 'README' ? 'object-cover' : 'object-contain'
         });
       }
       
