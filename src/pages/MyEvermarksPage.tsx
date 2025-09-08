@@ -78,6 +78,7 @@ export default function MyEvermarksPage() {
   }, [evermarks, searchQuery, filters]);
 
   // Filter by current wallet - check both user address and account address for cross-context compatibility
+  // FIXED: Case-insensitive comparison to handle checksum vs lowercase address inconsistencies
   const myCreatedEvermarks = evermarks.filter(evermark => {
     const creatorLower = evermark.creator.toLowerCase();
     const userAddress = user?.address?.toLowerCase();

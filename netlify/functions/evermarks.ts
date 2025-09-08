@@ -528,7 +528,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
             query = query.ilike('author', `%${author}%`);
           }
           if (owner) {
-            query = query.eq('owner', owner);
+            query = query.eq('owner', owner.toLowerCase());
           }
           if (creator && isValidWalletAddress(creator)) {
             query = query.eq('owner', creator.toLowerCase());
