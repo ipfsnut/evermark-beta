@@ -227,21 +227,69 @@ async function cacheImage(tokenId: number, originalUrl: string) {
       console.log(`📚 Book cover #${tokenId} detected, keeping original format: ${originalContentType}`);
     }
 
-    // Process image if format conversion is needed
+    // Process image with aspect ratio preservation and optimization for book covers
     let finalImageBuffer: Buffer = Buffer.from(imageBuffer);
     
-    if (originalContentType.includes('avif') || originalContentType.includes('webp')) {
-      console.log(`🔄 Converting ${originalContentType} to ${finalContentType} for tokenId #${tokenId}`);
-      try {
-        // Convert to the target format while preserving aspect ratio
-        finalImageBuffer = await sharp(imageBuffer)
-          .png({ quality: 95 }) // High quality PNG for book covers
-          .toBuffer();
-        console.log(`✅ Successfully converted image: ${originalContentType} -> ${finalContentType}`);
-      } catch (error) {
-        console.warn(`⚠️ Image conversion failed, using original: ${error}`);
-        finalImageBuffer = Buffer.from(imageBuffer); // Fall back to original if conversion fails
+    try {
+      // Get image metadata for processing decisions
+      const imageInfo = await sharp(imageBuffer).metadata();
+      console.log(`📏 Original image dimensions: ${imageInfo.width}x${imageInfo.height}, format: ${imageInfo.format}`);
+      
+      // Calculate aspect ratio for book cover detection
+      const aspectRatio = imageInfo.width && imageInfo.height ? imageInfo.width / imageInfo.height : 1;
+      const isLikelyBookCover = isBookCover && aspectRatio < 0.8; // Typical book cover is tall
+      
+      console.log(`📐 Aspect ratio: ${aspectRatio.toFixed(3)}, Book cover detected: ${isLikelyBookCover}`);
+      
+      // Process image based on content type and format
+      if (originalContentType.includes('avif') || originalContentType.includes('webp') || isLikelyBookCover) {
+        console.log(`🔄 Processing ${originalContentType} to ${finalContentType} for tokenId #${tokenId}`);
+        
+        let sharpProcessor = sharp(imageBuffer);
+        
+        // For book covers, preserve maximum quality and clarity
+        if (isLikelyBookCover) {
+          console.log(`📚 Applying book cover optimizations for #${tokenId}`);
+          
+          // Preserve original dimensions - DO NOT RESIZE
+          // Only convert format and optimize quality
+          if (finalContentType === 'image/png') {
+            sharpProcessor = sharpProcessor.png({ 
+              quality: 100,           // Maximum quality for book covers
+              compressionLevel: 6,    // Good compression without quality loss
+              progressive: false      // Better for book covers with text
+            });
+          } else {
+            sharpProcessor = sharpProcessor.jpeg({ 
+              quality: 95,            // Very high quality
+              progressive: false,     // Better for book covers
+              mozjpeg: true          // Better compression
+            });
+          }
+        } else {
+          // Standard processing for non-book content
+          if (finalContentType === 'image/png') {
+            sharpProcessor = sharpProcessor.png({ quality: 90 });
+          } else {
+            sharpProcessor = sharpProcessor.jpeg({ quality: 85 });
+          }
+        }
+        
+        finalImageBuffer = await sharpProcessor.toBuffer();
+        
+        // Verify the processed image maintains aspect ratio
+        const processedInfo = await sharp(finalImageBuffer).metadata();
+        const newAspectRatio = processedInfo.width && processedInfo.height ? processedInfo.width / processedInfo.height : 1;
+        
+        console.log(`✅ Processed image: ${processedInfo.width}x${processedInfo.height}, aspect ratio: ${newAspectRatio.toFixed(3)}`);
+        console.log(`📊 Aspect ratio preserved: ${Math.abs(aspectRatio - newAspectRatio) < 0.001 ? 'YES' : 'NO'}`);
+        
+      } else {
+        console.log(`✅ Using original image without processing for tokenId #${tokenId}`);
       }
+    } catch (error) {
+      console.warn(`⚠️ Image processing failed, using original: ${error}`);
+      finalImageBuffer = Buffer.from(imageBuffer); // Fall back to original if processing fails
     }
 
     const fileName = `evermarks/${tokenId}.${fileExtension}`;

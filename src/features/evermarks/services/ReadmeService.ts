@@ -214,11 +214,33 @@ export class ReadmeService {
             const metadata = JSON.parse(metadataContent.content);
             console.log('📋 IPFS metadata:', metadata);
             
-            if (metadata.image) {
-              const coverImageHash = this.extractIPFSHash(metadata.image);
-              if (coverImageHash) {
-                ipfsImageUrl = `https://ipfs.io/ipfs/${coverImageHash}`;
-                console.log('🖼️ Found IPFS cover image:', ipfsImageUrl);
+            // Try multiple possible image fields in the metadata
+            const possibleImageFields = ['image', 'image_url', 'cover_image', 'thumbnail', 'imageUrl'];
+            
+            for (const field of possibleImageFields) {
+              if (metadata[field]) {
+                const coverImageHash = this.extractIPFSHash(metadata[field]);
+                if (coverImageHash) {
+                  // Use multiple IPFS gateways for better reliability
+                  const gateways = [
+                    'https://ipfs.io/ipfs/',
+                    'https://gateway.pinata.cloud/ipfs/',
+                    'https://cloudflare-ipfs.com/ipfs/'
+                  ];
+                  
+                  ipfsImageUrl = `${gateways[0]}${coverImageHash}`;
+                  console.log(`🖼️ Found IPFS cover image from field '${field}':`, ipfsImageUrl);
+                  break;
+                }
+              }
+            }
+            
+            // If no IPFS image found in metadata, try to extract from OpenSea data
+            if (!ipfsImageUrl && (nftData.image_url || nftData.display_image_url)) {
+              const opensSeaImageHash = this.extractIPFSHash(nftData.image_url || nftData.display_image_url);
+              if (opensSeaImageHash) {
+                ipfsImageUrl = `https://ipfs.io/ipfs/${opensSeaImageHash}`;
+                console.log('🖼️ Extracted IPFS hash from OpenSea image URL:', ipfsImageUrl);
               }
             }
           }

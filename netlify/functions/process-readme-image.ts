@@ -43,6 +43,44 @@ function getImageDimensions(buffer: Buffer, contentType: string): { width: numbe
   return null;
 }
 
+// Helper function to extract IPFS alternatives from OpenSea URLs
+function getIPFSAlternatives(imageUrl: string): string[] {
+  const alternatives: string[] = [];
+  
+  // If it's an OpenSea CDN URL, try to extract the IPFS hash
+  if (imageUrl.includes('openseauserdata.com') || imageUrl.includes('opensea.io')) {
+    // OpenSea often includes IPFS hashes in their URLs
+    const ipfsHashMatch = imageUrl.match(/([a-zA-Z0-9]{46,})/);
+    if (ipfsHashMatch) {
+      const ipfsHash = ipfsHashMatch[1];
+      alternatives.push(
+        `https://ipfs.io/ipfs/${ipfsHash}`,
+        `https://gateway.pinata.cloud/ipfs/${ipfsHash}`,
+        `https://cloudflare-ipfs.com/ipfs/${ipfsHash}`
+      );
+    }
+  }
+  
+  return alternatives;
+}
+
+// Helper function to get different OpenSea image sizes
+function getOpenSeaAlternatives(imageUrl: string): string[] {
+  const alternatives: string[] = [];
+  
+  if (imageUrl.includes('openseauserdata.com')) {
+    // Try removing size parameters to get original
+    const baseUrl = imageUrl.split('=')[0];
+    alternatives.push(
+      baseUrl, // Original size
+      `${baseUrl}=s550`, // Large size
+      `${baseUrl}=s250`  // Medium size (fallback)
+    );
+  }
+  
+  return alternatives;
+}
+
 export const handler: Handler = async (event, context) => {
   // Handle preflight
   if (event.httpMethod === 'OPTIONS') {
@@ -71,16 +109,48 @@ export const handler: Handler = async (event, context) => {
 
     console.log('🖼️ Processing README book image:', imageUrl);
 
-    // Download the image from external URL (server-side, no CORS issues)
-    const response = await fetch(imageUrl, {
-      headers: {
-        'User-Agent': 'EvermarkBot/1.0'
-      },
-      signal: AbortSignal.timeout(30000) // 30 second timeout
-    });
+    // Try multiple strategies to get the best quality image
+    const imageUrls = [
+      imageUrl,
+      // Try to get IPFS version if this is an OpenSea CDN URL
+      ...getIPFSAlternatives(imageUrl),
+      // Try different OpenSea image sizes if available
+      ...getOpenSeaAlternatives(imageUrl)
+    ].filter(Boolean);
 
-    if (!response.ok) {
-      throw new Error(`Failed to download image: ${response.status} ${response.statusText}`);
+    console.log(`🔄 Trying ${imageUrls.length} image sources for best quality`);
+
+    let response: Response | null = null;
+    let finalUrl: string = imageUrl;
+
+    // Try each URL until we find one that works
+    for (const url of imageUrls) {
+      try {
+        console.log(`📥 Attempting to fetch: ${url}`);
+        const fetchResponse = await fetch(url, {
+          headers: {
+            'User-Agent': 'EvermarkBot/1.0',
+            'Accept': 'image/*',
+          },
+          signal: AbortSignal.timeout(15000) // 15 second timeout per attempt
+        });
+
+        if (fetchResponse.ok) {
+          response = fetchResponse;
+          finalUrl = url;
+          console.log(`✅ Successfully fetched from: ${url}`);
+          break;
+        } else {
+          console.warn(`⚠️ Failed to fetch from ${url}: ${fetchResponse.status}`);
+        }
+      } catch (error) {
+        console.warn(`⚠️ Error fetching from ${url}:`, error);
+        continue;
+      }
+    }
+
+    if (!response) {
+      throw new Error('Failed to download image from all attempted sources');
     }
 
     // Get the image data
@@ -102,10 +172,12 @@ export const handler: Handler = async (event, context) => {
     const dataUrl = `data:${contentType};base64,${base64Data}`;
 
     console.log(`✅ Successfully processed README book image:`, {
+      source: finalUrl,
       size: `${imageBuffer.byteLength} bytes`,
       type: contentType,
       dimensions: dimensions ? `${dimensions.width}x${dimensions.height}` : 'unknown',
-      aspectRatio: dimensions ? (dimensions.width / dimensions.height).toFixed(3) : 'unknown'
+      aspectRatio: dimensions ? (dimensions.width / dimensions.height).toFixed(3) : 'unknown',
+      isLikelyBookCover: dimensions ? (dimensions.width / dimensions.height) < 0.8 : 'unknown'
     });
 
     return {
