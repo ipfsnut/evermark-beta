@@ -55,8 +55,8 @@ export const handler: Handler = async (event, context) => {
     console.log(`🔍 Fetching tokenURI from Polygon contract ${contract} for token ${tokenId}`);
 
     // Try multiple RPC endpoints in case one fails
-    let tokenUri = null;
-    let lastError = null;
+    let tokenUri: string | null = null;
+    let lastError: unknown = null;
 
     for (const rpcUrl of POLYGON_RPC_URLS) {
       try {
@@ -69,17 +69,18 @@ export const handler: Handler = async (event, context) => {
         });
         
         // Call uri() function (ERC1155 standard)
-        tokenUri = await client.readContract({
+        const result = await client.readContract({
           address: contract as `0x${string}`,
           abi: ERC1155_ABI,
           functionName: 'uri',
           args: [BigInt(tokenId)],
         });
         
+        tokenUri = result as string;
         console.log(`✅ Got tokenURI: ${tokenUri}`);
         
         // Replace {id} placeholder with actual token ID (ERC1155 standard)
-        if (tokenUri.includes('{id}')) {
+        if (tokenUri && tokenUri.includes('{id}')) {
           // Convert tokenId to hex and pad to 64 characters
           const hexId = BigInt(tokenId).toString(16).padStart(64, '0');
           tokenUri = tokenUri.replace('{id}', hexId);
@@ -99,8 +100,8 @@ export const handler: Handler = async (event, context) => {
     }
 
     // Fetch the metadata from IPFS
-    let metadata = null;
-    if (tokenUri.startsWith('ipfs://')) {
+    let metadata: any = null;
+    if (tokenUri && tokenUri.startsWith('ipfs://')) {
       const ipfsHash = tokenUri.replace('ipfs://', '');
       const ipfsGateways = [
         `https://ipfs.nftbookbazaar.com/ipfs/${ipfsHash}`,
