@@ -34,9 +34,12 @@ export default defineConfig(({ mode }) => {
           '**/*.spec.{ts,tsx}',
           '**/types/',
           '**/abis/',
+          'tests/',
+          'dist/',
+          'shared/',
         ],
       },
-      include: ['src/**/*.{test,spec}.{ts,tsx}'],
+      include: ['src/**/*.{test,spec}.{ts,tsx}', 'tests/**/*.{test,spec}.{ts,tsx}'],
       exclude: ['node_modules', 'dist', '.idea', '.git', '.cache'],
     },
     resolve: {

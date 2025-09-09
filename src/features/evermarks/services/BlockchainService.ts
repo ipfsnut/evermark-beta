@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { prepareContractCall, readContract, getRpcClient, sendTransaction, waitForReceipt } from 'thirdweb';
+import { eth_getBalance } from 'thirdweb/rpc';
 import type { Account } from 'thirdweb/wallets';
 import { client } from '@/lib/thirdweb';
 import { CONTRACTS, getEvermarkNFTContract } from '@/lib/contracts';
@@ -496,17 +497,19 @@ export class EvermarkBlockchainService {
         return false;
       }
 
-      const rpcRequest = getRpcClient({
-        client,
-        chain: getEvermarkNFTContract().chain,
-      });
+      const balance = await eth_getBalance(
+        getRpcClient({
+          client,
+          chain: getEvermarkNFTContract().chain,
+        }),
+        {
+          address: account.address,
+          blockTag: 'latest'
+        }
+      );
       
-      const balance = await rpcRequest({
-        method: 'eth_getBalance',
-        params: [account.address, 'latest'],
-      });
-      
-      const balanceBigInt = BigInt(balance as string);
+      // eth_getBalance returns a bigint in Thirdweb v5
+      const balanceBigInt = typeof balance === 'bigint' ? balance : BigInt(balance as string);
       
       // Use provided minting fee or use a reasonable default
       const fee = mintingFee ?? BigInt('1000000000000000'); // 0.001 ETH default
