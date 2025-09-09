@@ -131,7 +131,7 @@ export class VotingService {
       // Prepare the contract call
       const _transaction = prepareContractCall({
         contract: votingContract,
-        method: "function voteForEvermark(uint256 evermarkId, uint256 votes) payable",
+        method: "function voteForEvermark(uint256 evermarkId, uint256 votes)",
         params: [BigInt(evermarkId), votes]
       });
 
@@ -563,7 +563,7 @@ export class VotingService {
       
       const _transaction = prepareContractCall({
         contract: votingContract,
-        method: "function startNewVotingCycle() payable",
+        method: "function startNewSeason()",
         params: []
       });
 
@@ -786,7 +786,7 @@ export class VotingService {
       
       const _transaction = prepareContractCall({
         contract: votingContract,
-        method: "function voteForEvermark(uint256 evermarkId, uint256 votes) payable",
+        method: "function voteForEvermark(uint256 evermarkId, uint256 votes)",
         params: [BigInt(evermarkId), amount]
       });
 
