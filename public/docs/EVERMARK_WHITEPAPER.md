@@ -1,4 +1,4 @@
-# Evermark: Decentralized Content Preservation and Curation Platform
+# **[DRAFT]** Evermark: Decentralized Content Preservation and Curation Platform
 ## Technical Whitepaper v1.0
 
 ### Abstract
@@ -19,8 +19,7 @@ Evermark is a decentralized application (dApp) built on the Base blockchain that
 8. [User Experience Design](#user-experience-design)
 9. [Security Considerations](#security-considerations)
 10. [Development & Testing](#development--testing)
-11. [Roadmap](#roadmap)
-12. [Conclusion](#conclusion)
+11. [Conclusion](#conclusion)
 
 ---
 
@@ -240,30 +239,47 @@ interface FrameIntegration {
 
 ## Tokenomics
 
-### $EMARK Token Utility
+### $EMARK Token
 
-**Primary Use Cases:**
-1. **Staking for Voting Power**: Users stake tokens to participate in governance
-2. **Transaction Fees**: Platform operations require token payments
-3. **Reward Distribution**: Stakers receive rewards from platform fees
-4. **Content Incentives**: Creators and curators earn tokens for quality content
+**Token Status:** ✅ **LIVE** - Trading on Clanker  
+**Contract Address:** `0xf87F3ebbF8CaCF321C2a4027bb66Df639a6f4B07`  
+**Platform:** [Clanker.world](https://www.clanker.world/clanker/0xf87F3ebbF8CaCF321C2a4027bb66Df639a6f4B07)
 
-**Token Distribution:**
-- **Community Rewards**: 40% - Distributed through staking and participation
-- **Development Team**: 25% - Vested over 4 years
-- **Ecosystem Fund**: 20% - Partnerships and integrations
-- **Public Sale**: 10% - Community fundraising
-- **Reserve Fund**: 5% - Emergency and governance
+### Primary Use Cases
 
-**Economic Model:**
-- **Deflationary Mechanism**: Token burns from platform fees
-- **Staking Incentives**: APY ranges from 8-15% based on stake duration
-- **Vote-to-Earn**: Active voters receive additional rewards
-- **Quality Bonuses**: Extra rewards for highly-rated content
+1. **Staking for Voting Power**: Users stake tokens to participate in content curation and governance
+2. **Transaction Fees**: Platform operations and premium features require token payments
+3. **Reward Distribution**: Active participants earn tokens for quality contributions
+4. **Content Incentives**: Creators and curators receive tokens for valuable content and engagement
+
+### Token Distribution
+
+**Reserved Supply Allocation (10% of Total Supply):**
+- **Airdrop**: 33% - Community distribution to early adopters and contributors
+- **User Incentives**: 33% - Ongoing rewards for platform participation and quality content
+- **Staking Rewards**: 34% - Long-term incentives for token holders who stake and participate in governance
+
+**Circulating Supply:**
+- **90%** - Available for public trading on Clanker and other exchanges
+- **Active Trading** - Full liquidity and market-driven price discovery
+
+### Economic Model
+
+**Utility-Driven Value:**
+- **Governance Participation**: Staked tokens provide voting power for platform decisions
+- **Content Curation**: Voting power determines content rankings and quality signals
+- **Reward Multipliers**: Longer staking periods increase earning potential
+- **Platform Access**: Premium features and enhanced functionality for token holders
+
+**Sustainable Incentives:**
+- **Quality-Based Rewards**: Higher rewards for content that receives community validation
+- **Participation Bonuses**: Active voters and curators earn additional token incentives
+- **Staking Benefits**: Long-term holders receive preferential reward distributions
+- **Ecosystem Growth**: Token value aligned with platform adoption and user engagement
 
 ### Beta Points System
 
-**Transitional Incentives:**
+**Current Transitional Incentives:**
 ```typescript
 interface BetaPoints {
   createEvermark: 10;      // Points per Evermark created
@@ -273,11 +289,11 @@ interface BetaPoints {
 }
 ```
 
-**Conversion Mechanism:**
-- Beta points convert to $EMARK tokens at mainnet launch
-- Conversion rate based on total participation
-- Additional bonuses for consistent engagement
-- Retroactive rewards for quality contributions
+**Integration with $EMARK:**
+- Beta points serve as additional rewards alongside $EMARK token incentives
+- Points track user contributions and platform engagement
+- Future conversion mechanisms may integrate points with token rewards
+- Early adopter bonuses for users who participate during beta phase
 
 ## Smart Contract System
 
@@ -505,43 +521,6 @@ Test Categories:
 - Component test implementation: ConnectButton (15 tests), BetaPage (19 tests)
 - Cross-platform compatibility verified
 
-## Roadmap
-
-### Phase 1: Beta Launch (Current)
-- ✅ Core platform functionality
-- ✅ Basic NFT minting and preservation
-- ✅ Community voting system
-- ✅ Farcaster Frame integration
-- ✅ Beta points system
-- ✅ Comprehensive testing framework
-
-### Phase 2: Mainnet Launch (Q2 2024)
-- $EMARK token launch and distribution
-- Full staking and rewards system activation
-- Advanced leaderboard features
-- Mobile app development
-- Community governance implementation
-
-### Phase 3: Ecosystem Expansion (Q3-Q4 2024)
-- Third-party API and SDK release
-- Content creator monetization tools
-- Advanced curation algorithms
-- Multi-chain support exploration
-- Enterprise partnership program
-
-### Phase 4: Decentralized Governance (2025)
-- DAO formation and governance token migration
-- Community-driven platform development
-- Protocol upgrade mechanisms
-- Ecosystem fund management
-- Long-term sustainability initiatives
-
-### Future Innovations
-- AI-powered content quality assessment
-- Cross-platform content syndication
-- Decentralized identity integration
-- Layer 2 scaling solutions
-- Interoperability with other content platforms
 
 ## Conclusion
 
