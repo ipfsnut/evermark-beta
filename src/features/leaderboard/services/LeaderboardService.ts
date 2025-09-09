@@ -635,4 +635,129 @@ export class LeaderboardService {
     if (currentRank > previousRank) return 'down';
     return 'stable';
   }
+
+  /**
+   * Get finalized leaderboard for a specific season
+   */
+  static async getFinalizedLeaderboard(seasonNumber: number): Promise<LeaderboardFeedResult> {
+    try {
+      const response = await fetch(`/.netlify/functions/finalized-leaderboard-data?season=${seasonNumber}`);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          // Season not finalized yet
+          return {
+            entries: [],
+            totalCount: 0,
+            totalPages: 1,
+            currentPage: 1,
+            pageSize: 50,
+            hasNextPage: false,
+            hasPreviousPage: false,
+            lastUpdated: new Date(),
+            filters: { period: `season-${seasonNumber}` }
+          };
+        }
+        throw new Error(`Failed to fetch finalized leaderboard: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const evermarksWithVotes = data.evermarks || [];
+      
+      // Convert to LeaderboardEntry format
+      const entries: LeaderboardEntry[] = evermarksWithVotes.map((evermark: any) => ({
+        id: evermark.id,
+        rank: evermark.rank,
+        evermarkId: evermark.id,
+        title: evermark.title || 'Untitled',
+        description: evermark.description || '',
+        creator: evermark.author || evermark.owner || 'Unknown',
+        totalVotes: BigInt(evermark.totalVotes || 0),
+        voteCount: evermark.voterCount || 0,
+        percentageOfTotal: evermark.percentageOfTotal || 0,
+        contentType: evermark.contentType || 'Custom',
+        verified: evermark.verified || false,
+        createdAt: evermark.createdAt,
+        change: { direction: 'same', positions: 0 }, // Historical data
+        image: evermark.supabaseImageUrl,
+        sourceUrl: evermark.sourceUrl,
+        tags: evermark.tags || []
+      }));
+      
+      return {
+        entries,
+        totalCount: entries.length,
+        totalPages: 1, // Finalized data is not paginated
+        currentPage: 1,
+        pageSize: entries.length,
+        hasNextPage: false,
+        hasPreviousPage: false,
+        lastUpdated: new Date(),
+        filters: { period: `season-${seasonNumber}` },
+        seasonInfo: data.seasonInfo
+      };
+      
+    } catch (error) {
+      console.error('Failed to fetch finalized leaderboard:', error);
+      return {
+        entries: [],
+        totalCount: 0,
+        totalPages: 1,
+        currentPage: 1,
+        pageSize: 50,
+        hasNextPage: false,
+        hasPreviousPage: false,
+        lastUpdated: new Date(),
+        filters: { period: `season-${seasonNumber}` }
+      };
+    }
+  }
+
+  /**
+   * Get list of available finalized seasons
+   */
+  static async getAvailableFinalizedSeasons(): Promise<FinalizedSeason[]> {
+    try {
+      const response = await fetch('/.netlify/functions/finalized-seasons');
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch finalized seasons: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.seasons || [];
+      
+    } catch (error) {
+      console.error('Failed to fetch finalized seasons:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Check if a season is finalized
+   */
+  static async isSeasonFinalized(seasonNumber: number): Promise<boolean> {
+    try {
+      const finalizedSeasons = await this.getAvailableFinalizedSeasons();
+      return finalizedSeasons.some(season => season.seasonNumber === seasonNumber);
+    } catch (error) {
+      console.error('Failed to check if season is finalized:', error);
+      return false;
+    }
+  }
+}
+
+// Export finalized season type for use in components
+export interface FinalizedSeason {
+  seasonNumber: number;
+  startTime: string;
+  endTime: string;
+  totalVotes: string;
+  totalEvermarksCount: number;
+  topEvermarkId: string | null;
+  topEvermarkVotes: string;
+  finalizedAt: string;
+  duration: number;
+  label: string;
+  description: string;
 }

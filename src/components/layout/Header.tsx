@@ -24,30 +24,30 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 border-b transition-colors duration-200 bg-app-bg-secondary backdrop-blur-sm border-app-border">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
+      <div className="container mx-auto px-2 sm:px-4">
+        <div className="flex items-center justify-between h-14 sm:h-16">
           {/* Left section */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 sm:space-x-4">
             {/* Sidebar toggle - show on mobile, hidden on desktop */}
             {isMobile && (
               <button
                 onClick={toggleSidebar}
-                className="p-2 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="p-1.5 sm:p-2 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 flex-shrink-0"
                 aria-label="Toggle menu"
               >
-                <MenuIcon className="h-5 w-5" />
+                <MenuIcon className="h-4 w-4 sm:h-5 sm:w-5" />
               </button>
             )}
             
             {/* Logo */}
             <Link 
               to="/" 
-              className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
+              className="flex items-center space-x-1 sm:space-x-2 hover:opacity-80 transition-opacity flex-shrink-0"
             >
-              <div className="relative w-8 h-8 bg-gradient-to-r from-cyber-primary to-cyber-secondary rounded-lg flex items-center justify-center">
-                <span className="text-black font-bold text-sm">E</span>
+              <div className="relative w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-r from-cyber-primary to-cyber-secondary rounded-lg flex items-center justify-center">
+                <span className="text-black font-bold text-xs sm:text-sm">E</span>
                 {isMobile && (
-                  <span className="absolute -top-1 -right-1 px-1 py-0.5 text-[8px] font-bold rounded-full bg-gradient-to-r from-purple-500 to-cyan-500 text-white">
+                  <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 px-1 py-0.5 text-[7px] sm:text-[8px] font-bold rounded-full bg-gradient-to-r from-purple-500 to-cyan-500 text-white">
                     β
                   </span>
                 )}
@@ -80,29 +80,31 @@ export function Header() {
           )}
 
           {/* Right section */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-1 sm:space-x-3">
             {/* Search icon for mobile */}
             {isMobile && (
               <Link 
                 to="/explore"
-                className="p-2 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="p-1.5 sm:p-2 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 flex-shrink-0"
               >
-                <SearchIcon className="h-5 w-5" />
+                <SearchIcon className="h-4 w-4 sm:h-5 sm:w-5" />
               </Link>
             )}
 
             {/* Theme toggle */}
-            <ThemeToggle size="sm" />
+            <div className="flex-shrink-0">
+              <ThemeToggle size="sm" />
+            </div>
 
             {/* Notifications */}
-            <div className="relative">
+            <div className="relative flex-shrink-0">
               <button 
                 onClick={() => setIsNotificationOpen(!isNotificationOpen)}
-                className="relative p-2 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="relative p-1.5 sm:p-2 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
               >
-                <BellIcon className="h-5 w-5" />
+                <BellIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                 {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center">
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
@@ -115,28 +117,30 @@ export function Header() {
             </div>
 
             {/* User info or wallet connect */}
-            {isAuthenticated && user ? (
-              <div className="flex items-center space-x-2 p-2 rounded-lg">
-                {user.pfpUrl ? (
-                  <img 
-                    src={user.pfpUrl} 
-                    alt={user.displayName || user.username || 'User'} 
-                    className="w-8 h-8 rounded-full"
-                  />
-                ) : (
-                  <div className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center">
-                    <UserIcon className="h-4 w-4" />
-                  </div>
-                )}
-                {!isMobile && (
-                  <span className="text-sm font-medium">
-                    {user.displayName || user.username || 'User'}
-                  </span>
-                )}
-              </div>
-            ) : (
-              <WalletConnect />
-            )}
+            <div className="flex-shrink-0">
+              {isAuthenticated && user ? (
+                <div className="flex items-center space-x-1 sm:space-x-2 p-1 sm:p-2 rounded-lg">
+                  {user.pfpUrl ? (
+                    <img 
+                      src={user.pfpUrl} 
+                      alt={user.displayName || user.username || 'User'} 
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-full"
+                    />
+                  ) : (
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gray-700 rounded-full flex items-center justify-center">
+                      <UserIcon className="h-3 w-3 sm:h-4 sm:w-4" />
+                    </div>
+                  )}
+                  {!isMobile && (
+                    <span className="text-sm font-medium">
+                      {user.displayName || user.username || 'User'}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <WalletConnect />
+              )}
+            </div>
           </div>
         </div>
       </div>

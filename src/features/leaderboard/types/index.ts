@@ -73,6 +73,7 @@ export interface LeaderboardFeedResult {
   hasPreviousPage: boolean;
   lastUpdated: Date;
   filters: LeaderboardFilters;
+  seasonInfo?: any; // Optional season metadata for finalized leaderboards
 }
 
 export interface LeaderboardStats {

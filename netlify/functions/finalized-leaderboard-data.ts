@@ -1,22 +1,11 @@
-// Netlify function to fetch evermarks with voting data for leaderboard
+// Netlify function to fetch finalized leaderboard data for completed seasons
 import type { HandlerEvent, HandlerContext } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
-import { readContract, createThirdwebClient } from 'thirdweb';
-import { base } from 'thirdweb/chains';
-import { getContract } from 'thirdweb';
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL!,
   process.env.VITE_SUPABASE_ANON_KEY!
 );
-
-// Create client for backend use
-const client = createThirdwebClient({
-  clientId: process.env.THIRDWEB_CLIENT_ID || process.env.VITE_THIRDWEB_CLIENT_ID!
-});
-
-// Contract addresses from environment
-const VOTING_CONTRACT_ADDRESS = process.env.VITE_EVERMARK_VOTING_ADDRESS!;
 
 const headers = {
   'Access-Control-Allow-Origin': '*',
@@ -39,37 +28,69 @@ export async function handler(event: HandlerEvent, context: HandlerContext) {
   }
 
   try {
-    const { cycle } = event.queryStringParameters || {};
-    // Default to current cycle (4) but allow override via query param
-    const currentCycle = cycle ? parseInt(cycle) : 4; // Default to current season
+    const { season } = event.queryStringParameters || {};
     
-    console.log(`Getting leaderboard data for cycle ${currentCycle}`);
+    if (!season) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: 'Season parameter is required' })
+      };
+    }
 
-    // Query the leaderboard table directly - this is the source of truth
+    const seasonNumber = parseInt(season);
+    if (isNaN(seasonNumber) || seasonNumber <= 0) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: 'Invalid season number' })
+      };
+    }
+
+    console.log(`Getting finalized leaderboard data for season ${seasonNumber}`);
+
+    // Check if the season is finalized
+    const { data: seasonData, error: seasonError } = await supabase
+      .from('finalized_seasons')
+      .select('*')
+      .eq('season_number', seasonNumber)
+      .single();
+
+    if (seasonError || !seasonData) {
+      console.log(`Season ${seasonNumber} not found in finalized_seasons table`);
+      return {
+        statusCode: 404,
+        headers,
+        body: JSON.stringify({ 
+          error: 'Season not finalized or not found',
+          message: `Season ${seasonNumber} has not been finalized yet`
+        })
+      };
+    }
+
+    // Get the finalized leaderboard data
     const { data: leaderboardData, error: leaderboardError } = await supabase
-      .from('leaderboard')
-      .select('evermark_id, total_votes, rank')
-      .eq('cycle_id', currentCycle)
-      .order('rank', { ascending: true });
+      .from('finalized_leaderboards')
+      .select('*')
+      .eq('season_number', seasonNumber)
+      .order('final_rank', { ascending: true });
 
     if (leaderboardError) {
-      console.error('Leaderboard query error:', leaderboardError);
+      console.error('Finalized leaderboard query error:', leaderboardError);
       throw leaderboardError;
     }
 
-    console.log(`Found ${leaderboardData?.length || 0} evermarks in leaderboard for cycle ${currentCycle}`);
-
     if (!leaderboardData || leaderboardData.length === 0) {
-      // No leaderboard data found - return empty results
       return {
         statusCode: 200,
         headers,
         body: JSON.stringify({
           evermarks: [],
-          cycle: currentCycle,
+          season: seasonNumber,
+          seasonInfo: seasonData,
           total: 0,
           timestamp: new Date().toISOString(),
-          message: `No leaderboard data found for cycle ${currentCycle}. Leaderboard table may need to be populated.`
+          message: `No leaderboard data found for finalized season ${seasonNumber}`
         })
       };
     }
@@ -98,7 +119,7 @@ export async function handler(event: HandlerEvent, context: HandlerContext) {
       throw evermarksError;
     }
 
-    // Combine leaderboard data with evermark metadata, maintaining rank order
+    // Combine finalized leaderboard data with evermark metadata
     const transformedEvermarks = leaderboardData.map(leader => {
       const evermark = evermarksData?.find(e => e.token_id.toString() === leader.evermark_id);
       
@@ -121,7 +142,9 @@ export async function handler(event: HandlerEvent, context: HandlerContext) {
         supabaseImageUrl: evermark.supabase_image_url,
         ipfsHash: evermark.ipfs_image_hash,
         totalVotes: leader.total_votes,
-        rank: leader.rank,
+        rank: leader.final_rank,
+        percentageOfTotal: leader.percentage_of_total,
+        finalizedAt: leader.finalized_at,
         voterCount: 0, // Not tracked in current schema
         tags: []
       };
@@ -132,19 +155,29 @@ export async function handler(event: HandlerEvent, context: HandlerContext) {
       headers,
       body: JSON.stringify({
         evermarks: transformedEvermarks,
-        cycle: currentCycle,
+        season: seasonNumber,
+        seasonInfo: {
+          seasonNumber: seasonData.season_number,
+          startTime: seasonData.start_time,
+          endTime: seasonData.end_time,
+          totalVotes: seasonData.total_votes,
+          totalEvermarksCount: seasonData.total_evermarks_count,
+          topEvermarkId: seasonData.top_evermark_id,
+          topEvermarkVotes: seasonData.top_evermark_votes,
+          finalizedAt: seasonData.finalized_at
+        },
         total: transformedEvermarks.length,
         timestamp: new Date().toISOString(),
         debug: {
-          leaderboardEntries: leaderboardData?.length || 0,
+          finalizedLeaderboardEntries: leaderboardData?.length || 0,
           evermarkMatches: transformedEvermarks.length,
-          dataSource: 'leaderboard_table'
+          dataSource: 'finalized_leaderboards_table'
         }
       })
     };
 
   } catch (error) {
-    console.error('Leaderboard data fetch error:', error);
+    console.error('Finalized leaderboard data fetch error:', error);
     return {
       statusCode: 500,
       headers,
