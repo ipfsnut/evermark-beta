@@ -20,6 +20,9 @@ export function Header() {
   const isMobile = useIsMobile(1024); // Use 1024px breakpoint (lg screen) to show hamburger on tablets too
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
+  // Show hamburger button if mobile OR in Farcaster miniapp context (since no native nav)
+  const shouldShowHamburger = isMobile || isInFarcaster;
+
   const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
@@ -28,8 +31,8 @@ export function Header() {
         <div className="flex items-center justify-between h-14 sm:h-16">
           {/* Left section */}
           <div className="flex items-center space-x-2 sm:space-x-4">
-            {/* Sidebar toggle - show on mobile/tablet, hidden on desktop */}
-            {isMobile && (
+            {/* Sidebar toggle - show on mobile/tablet OR in Farcaster miniapp context */}
+            {shouldShowHamburger && (
               <button
                 onClick={toggleSidebar}
                 className="p-1.5 lg:p-2 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 flex-shrink-0"
@@ -65,8 +68,8 @@ export function Header() {
             </Link>
           </div>
 
-          {/* Center section - Search (desktop only) */}
-          {!isMobile && !isInFarcaster && (
+          {/* Center section - Search (desktop only, but allow in Farcaster if not mobile) */}
+          {!isMobile && (
             <div className="flex-1 max-w-md mx-8">
               <div className="relative">
                 <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />

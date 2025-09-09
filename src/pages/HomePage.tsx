@@ -42,9 +42,14 @@ const ProtocolStats: React.FC = () => {
     thisWeek: safeEvermarks.filter(e => {
       if (!e?.createdAt) return false;
       try {
-        const weekAgo = new Date();
-        weekAgo.setDate(weekAgo.getDate() - 7);
-        return new Date(e.createdAt) > weekAgo;
+        const now = new Date();
+        const startOfWeek = new Date(now);
+        // Get start of current week (Sunday at 00:00:00)
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+        
+        const createdAt = new Date(e.createdAt);
+        return createdAt >= startOfWeek;
       } catch {
         return false;
       }
