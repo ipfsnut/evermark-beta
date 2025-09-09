@@ -324,24 +324,50 @@ async function handleAwardPoints(event: HandlerEvent) {
   const currentTotal = existingPoints?.total_points || 0;
   const newTotal = currentTotal + points_earned;
 
-  // Upsert total points with proper increment
-  const { data: updatedPoints, error: pointsError } = await supabase
-    .from(POINTS_TABLE)
-    .upsert({
-      wallet_address: walletAddress,
-      total_points: newTotal,
-      updated_at: new Date().toISOString()
-    }, {
-      onConflict: 'wallet_address'
-    })
-    .select()
-    .single();
+  // Update or insert total points
+  const now = new Date().toISOString();
+  let updatedPoints, pointsError;
+
+  if (existingPoints) {
+    // Update existing record
+    const { data, error } = await supabase
+      .from(POINTS_TABLE)
+      .update({
+        total_points: newTotal,
+        updated_at: now
+      })
+      .eq('wallet_address', walletAddress)
+      .select()
+      .single();
+    
+    updatedPoints = data;
+    pointsError = error;
+  } else {
+    // Insert new record
+    const { data, error } = await supabase
+      .from(POINTS_TABLE)
+      .insert({
+        wallet_address: walletAddress,
+        total_points: newTotal,
+        created_at: now,
+        updated_at: now
+      })
+      .select()
+      .single();
+    
+    updatedPoints = data;
+    pointsError = error;
+  }
 
   if (pointsError) {
+    console.error('Points upsert error:', pointsError);
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: 'Failed to update points total' }),
+      body: JSON.stringify({ 
+        error: 'Failed to update points total',
+        details: pointsError.message 
+      }),
     };
   }
 

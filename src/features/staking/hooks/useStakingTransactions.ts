@@ -110,16 +110,17 @@ export function useStakingTransactions(): StakingTransactions {
       
       // Award points for staking
       try {
-        const stakeAmountFormatted = (Number(amount) / (10 ** 18)).toString();
+        // Convert from wei to EMARK (divide by 10^18) for points calculation
+        const stakeAmountInEmark = Number(amount) / (10 ** 18);
         await PointsService.awardPoints(
           account.address,
           'stake',
           undefined,
           result.transactionHash,
-          stakeAmountFormatted
+          stakeAmountInEmark.toString()
         );
         const pointsEarned = PointsService.calculateStakePoints(amount);
-        console.log(`✅ Awarded ${pointsEarned} points for staking ${stakeAmountFormatted} EMARK`);
+        console.log(`✅ Awarded ${pointsEarned} points for staking ${stakeAmountInEmark} EMARK`);
       } catch (pointsError) {
         console.warn('⚠️ Failed to award points for staking:', pointsError);
       }

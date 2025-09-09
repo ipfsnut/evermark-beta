@@ -21,8 +21,11 @@ vi.mock('../services/LeaderboardService', () => ({
       sortOrder: 'desc'
     })),
     calculateLeaderboard: vi.fn(),
+    getCurrentLeaderboard: vi.fn(),
     getLeaderboardFeed: vi.fn(),
-    getLeaderboardStats: vi.fn()
+    getLeaderboardStats: vi.fn(),
+    getAvailablePeriods: vi.fn(),
+    getPeriodById: vi.fn()
   }
 }))
 
@@ -35,7 +38,15 @@ const createWrapper = () => {
     defaultOptions: {
       queries: {
         retry: false,
+        staleTime: 0,
+        gcTime: 0,
+        refetchOnWindowFocus: false,
       },
+    },
+    logger: {
+      log: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
     },
   })
   
@@ -328,7 +339,7 @@ describe('useLeaderboardState', () => {
 
     // Then reset
     act(() => {
-      result.current.resetFilters()
+      result.current.clearFilters()
     })
 
     expect(result.current.filters).toEqual({
@@ -356,9 +367,14 @@ describe('useLeaderboardState', () => {
       })
     })
 
-    // Then reset
+    // Then reset - use setPagination with default values
     act(() => {
-      result.current.resetPagination()
+      result.current.setPagination({
+        page: 1,
+        pageSize: 20,
+        sortBy: 'votes',
+        sortOrder: 'desc'
+      })
     })
 
     expect(result.current.pagination).toEqual({

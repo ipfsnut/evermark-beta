@@ -16,16 +16,16 @@ Track all anomalies, inconsistencies, and issues found during comprehensive test
 **Cross-Platform Impact**: All platforms
 **Fix Applied**: Updated tests to match actual hook API, fixed mock completeness and React Testing Library patterns
 
-### 2. React Testing Library Migration Incomplete (MEDIUM PRIORITY) 
+### 2. React Testing Library Migration Issues (ONGOING)
 **Files**: 
-- `src/features/voting/hooks/useVotingState.test.tsx`
-- `src/features/leaderboard/hooks/useLeaderboardState.test.tsx`
-**Issue**: Tests using deprecated `waitForNextUpdate()` instead of `waitFor()`
-**Impact**: 20+ test failures
-**Root Cause**: Upgrade to newer testing library version
-**Status**: PARTIALLY FIXED
+- `src/features/voting/hooks/useVotingState.test.tsx` ✅ **FIXED** (21/21 passing)
+- `src/features/leaderboard/hooks/useLeaderboardState.test.tsx` ❌ **PENDING** (16/20 failing)
+**Issue**: Multiple problems: deprecated `waitForNextUpdate()`, React Query conditional enabling, API mismatches (`resetFilters` vs `clearFilters`), service mock setup
+**Impact**: Originally 30+ test failures, now reduced to 16 leaderboard failures
+**Root Cause**: Test-implementation mismatch + React Query testing complexity + outdated test expectations
+**Status**: 50% COMPLETE - Voting hook fully migrated, leaderboard hook needs API alignment
 **Cross-Platform Impact**: All platforms
-**Fix Applied**: Converting to `waitFor()` pattern
+**Fix Applied**: Converted useVotingState to proper patterns. Need to fix leaderboard test API mismatches and React Query setup.
 
 ### 3. Mock Completeness Issues (MEDIUM PRIORITY)
 **File**: `src/features/voting/hooks/useVotingState.test.tsx`
