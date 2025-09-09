@@ -684,7 +684,7 @@ export class LeaderboardService {
         tags: evermark.tags || []
       }));
       
-      return {
+      const result: LeaderboardFeedResult = {
         entries,
         totalCount: entries.length,
         totalPages: 1, // Finalized data is not paginated
@@ -696,6 +696,8 @@ export class LeaderboardService {
         filters: { period: `season-${seasonNumber}` },
         seasonInfo: data.seasonInfo
       };
+      
+      return result;
       
     } catch (error) {
       console.error('Failed to fetch finalized leaderboard:', error);
