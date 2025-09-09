@@ -1,26 +1,42 @@
-// src/pages/BetaPage.test.tsx
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import BetaPage from './BetaPage'
 
+// Create mock functions
+const mockUseWalletAccount = vi.fn()
+const mockUseBetaPoints = vi.fn()
+const mockUseTheme = vi.fn()
+const mockFormatPoints = vi.fn()
+
 // Mock dependencies
 vi.mock('@/providers/ThemeProvider', () => ({
-  useTheme: () => ({ isDark: false })
+  useTheme: () => mockUseTheme()
 }))
 
 vi.mock('@/hooks/core/useWalletAccount', () => ({
-  useWalletAccount: vi.fn()
+  useWalletAccount: () => mockUseWalletAccount()
 }))
 
 vi.mock('@/features/points/hooks/useBetaPoints', () => ({
-  useBetaPoints: vi.fn()
+  useBetaPoints: () => mockUseBetaPoints()
 }))
 
 vi.mock('@/features/points/services/PointsService', () => ({
   PointsService: {
-    formatPoints: vi.fn((points) => points.toString())
+    formatPoints: (points: number) => mockFormatPoints(points) || points.toString()
   }
+}))
+
+// Mock Lucide React icons
+vi.mock('lucide-react', () => ({
+  TrophyIcon: () => <div data-testid="trophy-icon">🏆</div>,
+  CoinsIcon: () => <div data-testid="coins-icon">🪙</div>,
+  UserIcon: () => <div data-testid="user-icon">👤</div>,
+  CalendarIcon: () => <div data-testid="calendar-icon">📅</div>,
+  ExternalLinkIcon: () => <div data-testid="external-link-icon">🔗</div>,
+  FlaskConicalIcon: () => <div data-testid="flask-icon">🧪</div>,
+  Loader2: () => <div data-testid="loader-icon" className="animate-spin">⟳</div>
 }))
 
 // Create a test wrapper with React Query
@@ -83,23 +99,20 @@ describe('BetaPage', () => {
     }
   ]
 
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks()
     
-    // Reset to default mocks  
-    const { useWalletAccount } = await import('@/hooks/core/useWalletAccount')
-    const { useBetaPoints } = await import('@/features/points/hooks/useBetaPoints')
-    const { useTheme } = await import('@/providers/ThemeProvider')
-    
-    vi.mocked(useWalletAccount).mockReturnValue(mockAccount)
-    vi.mocked(useBetaPoints).mockReturnValue({
+    // Set up default mock returns
+    mockUseWalletAccount.mockReturnValue(mockAccount)
+    mockUseBetaPoints.mockReturnValue({
       userPoints: mockUserPoints,
       transactions: mockTransactions,
       leaderboard: mockLeaderboard,
       isLoading: false,
       error: null
     })
-    vi.mocked(useTheme).mockReturnValue({ isDark: false })
+    mockUseTheme.mockReturnValue({ isDark: false })
+    mockFormatPoints.mockImplementation((points) => points.toString())
   })
 
   it('should render beta dashboard when wallet is connected', () => {
@@ -134,8 +147,9 @@ describe('BetaPage', () => {
     render(<BetaPage />, { wrapper: createWrapper() })
 
     expect(screen.getByText('Recent Activity')).toBeInTheDocument()
-    expect(screen.getByText('Create Evermark')).toBeInTheDocument()
-    expect(screen.getByText('Vote')).toBeInTheDocument()
+    // Check activity list contains both actions (text appears in multiple places)
+    expect(screen.getAllByText('Create Evermark')).toHaveLength(2) // Once in activity, once in guide
+    expect(screen.getAllByText('Vote')).toHaveLength(2) // Once in activity, once in guide
     expect(screen.getByText('+10 pts')).toBeInTheDocument()
     expect(screen.getByText('+1 pts')).toBeInTheDocument()
   })
@@ -162,9 +176,8 @@ describe('BetaPage', () => {
     expect(screen.getByText('1 point per 1M EMARK staked')).toBeInTheDocument()
   })
 
-  it('should show unranked when user is not in leaderboard', async () => {
-    const { useBetaPoints } = await import('@/features/points/hooks/useBetaPoints')
-    vi.mocked(useBetaPoints).mockReturnValueOnce({
+  it('should show unranked when user is not in leaderboard', () => {
+    mockUseBetaPoints.mockReturnValue({
       userPoints: mockUserPoints,
       transactions: mockTransactions,
       leaderboard: [
@@ -183,9 +196,8 @@ describe('BetaPage', () => {
     expect(screen.getByText('Unranked')).toBeInTheDocument()
   })
 
-  it('should show empty state when no activities', async () => {
-    const { useBetaPoints } = await import('@/features/points/hooks/useBetaPoints')
-    vi.mocked(useBetaPoints).mockReturnValueOnce({
+  it('should show empty state when no activities', () => {
+    mockUseBetaPoints.mockReturnValue({
       userPoints: { total_points: 0, last_updated: new Date().toISOString() },
       transactions: [],
       leaderboard: mockLeaderboard,
@@ -196,12 +208,11 @@ describe('BetaPage', () => {
     render(<BetaPage />, { wrapper: createWrapper() })
 
     expect(screen.getByText('No activity yet. Start by creating Evermarks, voting, or staking!')).toBeInTheDocument()
-    expect(screen.getByText('0')).toBeInTheDocument() // Total activities
+    expect(screen.getAllByText('0')).toHaveLength(2) // Points and total activities both show 0
   })
 
-  it('should show wallet connection prompt when not connected', async () => {
-    const { useWalletAccount } = await import('@/hooks/core/useWalletAccount')
-    vi.mocked(useWalletAccount).mockReturnValueOnce(null)
+  it('should show wallet connection prompt when not connected', () => {
+    mockUseWalletAccount.mockReturnValue(null)
 
     render(<BetaPage />, { wrapper: createWrapper() })
 
@@ -210,9 +221,8 @@ describe('BetaPage', () => {
     expect(screen.queryByText('Recent Activity')).not.toBeInTheDocument()
   })
 
-  it('should show loading state', async () => {
-    const { useBetaPoints } = await import('@/features/points/hooks/useBetaPoints')
-    vi.mocked(useBetaPoints).mockReturnValueOnce({
+  it('should show loading state', () => {
+    mockUseBetaPoints.mockReturnValue({
       userPoints: null,
       transactions: [],
       leaderboard: [],
@@ -223,14 +233,13 @@ describe('BetaPage', () => {
     render(<BetaPage />, { wrapper: createWrapper() })
 
     expect(screen.getByText('Loading beta data...')).toBeInTheDocument()
-    // Loading spinner might not have role="status", so let's just check for the spinner div
-    const loadingSpinner = screen.getByText('Loading beta data...').previousElementSibling
-    expect(loadingSpinner).toHaveClass('animate-spin')
+    // Loading spinner is rendered as a div with animate-spin class, not using Loader2 icon
+    const spinner = screen.getByText('Loading beta data...').previousElementSibling
+    expect(spinner).toHaveClass('animate-spin')
   })
 
-  it('should show error state', async () => {
-    const { useBetaPoints } = await import('@/features/points/hooks/useBetaPoints')
-    vi.mocked(useBetaPoints).mockReturnValueOnce({
+  it('should show error state', () => {
+    mockUseBetaPoints.mockReturnValue({
       userPoints: null,
       transactions: [],
       leaderboard: [],
@@ -243,9 +252,8 @@ describe('BetaPage', () => {
     expect(screen.getByText('Failed to load beta data')).toBeInTheDocument()
   })
 
-  it('should handle missing points data gracefully', async () => {
-    const { useBetaPoints } = await import('@/features/points/hooks/useBetaPoints')
-    vi.mocked(useBetaPoints).mockReturnValueOnce({
+  it('should handle missing points data gracefully', () => {
+    mockUseBetaPoints.mockReturnValue({
       userPoints: null,
       transactions: mockTransactions,
       leaderboard: mockLeaderboard,
@@ -255,7 +263,9 @@ describe('BetaPage', () => {
 
     render(<BetaPage />, { wrapper: createWrapper() })
 
-    expect(screen.getByText('0')).toBeInTheDocument() // Should default to 0 points
+    // Should show 0 points when userPoints is null
+    const pointsCards = screen.getAllByText('0')
+    expect(pointsCards.length).toBeGreaterThan(0)
   })
 
   it('should format dates correctly in activity list', () => {
@@ -272,16 +282,57 @@ describe('BetaPage', () => {
     // Check for proper heading structure
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Beta Dashboard')
     expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Recent Activity')
-    expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('How to Earn Points')
+    
+    // Multiple h3 elements exist, so check by text content
+    const h3Headings = screen.getAllByRole('heading', { level: 3 })
+    expect(h3Headings.some(heading => heading.textContent === 'How to Earn Points')).toBe(true)
   })
 
-  it('should handle dark theme properly', async () => {
-    const { useTheme } = await import('@/providers/ThemeProvider')
-    vi.mocked(useTheme).mockReturnValueOnce({ isDark: true })
+  it('should handle dark theme properly', () => {
+    mockUseTheme.mockReturnValue({ isDark: true })
 
     render(<BetaPage />, { wrapper: createWrapper() })
 
     // Component should render without crashing in dark mode
     expect(screen.getByText('Beta Dashboard')).toBeInTheDocument()
+  })
+
+  describe('Component structure', () => {
+    it('should render all expected sections when loaded', () => {
+      render(<BetaPage />, { wrapper: createWrapper() })
+
+      // Should have stats cards
+      expect(screen.getByText('Total Points')).toBeInTheDocument()
+      expect(screen.getByText('Leaderboard Rank')).toBeInTheDocument()
+      expect(screen.getByText('Total Activities')).toBeInTheDocument()
+
+      // Should have activity section
+      expect(screen.getByText('Recent Activity')).toBeInTheDocument()
+
+      // Should have points guide
+      expect(screen.getByText('How to Earn Points')).toBeInTheDocument()
+    })
+
+    it('should handle points formatting', () => {
+      mockFormatPoints.mockReturnValue('150 pts')
+      
+      render(<BetaPage />, { wrapper: createWrapper() })
+
+      expect(mockFormatPoints).toHaveBeenCalledWith(150)
+    })
+
+    it('should handle empty transactions gracefully', () => {
+      mockUseBetaPoints.mockReturnValue({
+        userPoints: mockUserPoints,
+        transactions: [],
+        leaderboard: mockLeaderboard,
+        isLoading: false,
+        error: null
+      })
+
+      render(<BetaPage />, { wrapper: createWrapper() })
+
+      expect(screen.getByText('No activity yet. Start by creating Evermarks, voting, or staking!')).toBeInTheDocument()
+    })
   })
 })

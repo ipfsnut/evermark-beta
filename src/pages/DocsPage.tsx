@@ -17,10 +17,10 @@ interface DocItem {
 
 const DOCS_ITEMS: DocItem[] = [
   {
-    id: 'alpha-retirement',
-    title: 'Alpha Retirement Notice',
-    description: 'Important information about Alpha contract retirement and user fund refunds',
-    filename: 'alpha-retirement.md',
+    id: 'whitepaper',
+    title: 'Evermark Whitepaper',
+    description: 'Comprehensive technical whitepaper covering platform architecture, tokenomics, and roadmap',
+    filename: 'EVERMARK_WHITEPAPER.md',
     type: 'md'
   },
   {
@@ -63,6 +63,13 @@ const DOCS_ITEMS: DocItem[] = [
     title: 'Beta Points System',
     description: 'How to earn and convert beta points to EMARK tokens',
     filename: 'beta-points.md',
+    type: 'md'
+  },
+  {
+    id: 'alpha-retirement',
+    title: 'Alpha Retirement Notice',
+    description: 'Important information about Alpha contract retirement and user fund refunds',
+    filename: 'alpha-retirement.md',
     type: 'md'
   }
 ];

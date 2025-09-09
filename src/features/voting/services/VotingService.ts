@@ -302,14 +302,13 @@ export class VotingService {
     try {
       // Get current season to fetch votes from the correct cycle
       const currentSeason = await this.getCurrentSeason();
-      // TEMPORARY FIX: Force cycle 3 since that's where the votes are stored
-      // TODO: Fix contract or data migration to proper cycle
-      const currentCycle = 3; // currentSeason ? currentSeason.seasonNumber : 3;
+      // Use actual current season from contract (was previously hardcoded to 3)
+      const currentCycle = currentSeason ? currentSeason.seasonNumber : 3;
       
       console.log(`🔍 getCurrentSeason result:`, currentSeason);
-      console.log(`📊 TEMP FIX: Forced cycle to ${currentCycle} (contract returned ${currentSeason?.seasonNumber})`);
+      console.log(`📊 Using current season ${currentCycle} (contract returned ${currentSeason?.seasonNumber})`);
       
-      console.log(`📊 Fetching voting history for user ${userAddress} in cycle ${currentCycle}`);
+      console.log(`📊 Fetching voting history for user ${userAddress} in season ${currentCycle}`);
       
       // Try to get from Supabase votes table first (much faster)
       const response = await fetch('/.netlify/functions/get-user-votes', {

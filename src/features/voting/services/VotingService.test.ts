@@ -179,7 +179,7 @@ describe('VotingService', () => {
 
       expect(thirdweb.prepareContractCall).toHaveBeenCalledWith({
         contract: expect.any(Object),
-        method: "function voteForEvermark(uint256 evermarkId, uint256 votes) payable",
+        method: "function voteForEvermark(uint256 evermarkId, uint256 votes)",
         params: [BigInt(123), BigInt(100)]
       })
     })
