@@ -20,7 +20,7 @@ const ReferralsPage = React.lazy(() => import('../src/pages/ReferralsPage'));
 const BetaPage = React.lazy(() => import('./pages/BetaPage'));
 const AdminPage = React.lazy(() => import('../src/pages/AdminPage'));
 const TransactionTestPage = React.lazy(() => import('../src/pages/TransactionTestPage'));
-const DevDashboardPage = React.lazy(() => import('../src/pages/DevDashboardPage'));
+const DevDashboardPage = React.lazy(() => import('../src/pages/DevDashboardPage').then(module => ({ default: module.default })));
 const NotFoundPage = React.lazy(() => import('../src/pages/NotFoundPage'));
 
 // Loading fallback component

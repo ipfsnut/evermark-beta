@@ -1,7 +1,7 @@
 import React from 'react';
 import { WalletBalanceDashboard } from '../components/dev/WalletBalanceTracker';
 
-export function DevDashboardPage() {
+function DevDashboardPage() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       <div className="mb-8">
@@ -113,3 +113,6 @@ export function DevDashboardPage() {
     </div>
   );
 }
+
+export default DevDashboardPage;
+export { DevDashboardPage };

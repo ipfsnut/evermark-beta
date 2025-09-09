@@ -11,7 +11,8 @@ import {
   ShareIcon,
   ArrowUpDownIcon,
   UserIcon,
-  FlaskConicalIcon
+  FlaskConicalIcon,
+  MonitorIcon
 } from 'lucide-react';
 import { useAppAuth } from '../../providers/AppContext';
 import { useTheme } from '../../providers/ThemeProvider';
@@ -82,6 +83,11 @@ const infoItems: NavItem[] = [
     to: '/about',
     label: 'About',
     icon: InfoIcon,
+  },
+  {
+    to: '/dev-dashboard',
+    label: 'Dev Dashboard',
+    icon: MonitorIcon,
   },
 ];
 
