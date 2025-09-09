@@ -222,7 +222,7 @@ function FinalizedLeaderboardView({
         
         const result = await LeaderboardService.getFinalizedLeaderboard(seasonNumber);
         setLeaderboardData(result.entries);
-        setSeasonInfo(result.seasonInfo);
+        setSeasonInfo(result.seasonInfo || null);
         
       } catch (err) {
         console.error('Failed to fetch finalized leaderboard:', err);
