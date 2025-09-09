@@ -17,7 +17,7 @@ export function Header() {
   const { toggleSidebar, notifications } = useAppUI();
   const { isAuthenticated, user } = useAppAuth();
   const { isInFarcaster } = useFarcasterDetection();
-  const isMobile = useIsMobile();
+  const isMobile = useIsMobile(1024); // Use 1024px breakpoint (lg screen) to show hamburger on tablets too
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -28,14 +28,14 @@ export function Header() {
         <div className="flex items-center justify-between h-14 sm:h-16">
           {/* Left section */}
           <div className="flex items-center space-x-2 sm:space-x-4">
-            {/* Sidebar toggle - show on mobile, hidden on desktop */}
+            {/* Sidebar toggle - show on mobile/tablet, hidden on desktop */}
             {isMobile && (
               <button
                 onClick={toggleSidebar}
-                className="p-1.5 sm:p-2 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 flex-shrink-0"
+                className="p-1.5 lg:p-2 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 flex-shrink-0"
                 aria-label="Toggle menu"
               >
-                <MenuIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                <MenuIcon className="h-4 w-4 lg:h-5 lg:w-5" />
               </button>
             )}
             
