@@ -16,7 +16,11 @@ import {
 } from 'lucide-react';
 import { useAppAuth } from '../../providers/AppContext';
 import { useTheme } from '../../providers/ThemeProvider';
+import { useWalletAddress } from '../../hooks/core/useWalletAccount';
 import { cn } from '../../utils/responsive';
+
+// Development wallet address
+const DEVELOPMENT_WALLET_ADDRESS = '0x3427b4716B90C11F9971e43999a48A47Cf5B571E';
 
 // Navigation item interface
 interface NavItem {
@@ -95,6 +99,15 @@ export function Navigation() {
   const { isAuthenticated } = useAppAuth();
   const { isDark } = useTheme();
   const location = useLocation();
+  const walletAddress = useWalletAddress();
+  
+  // Check if connected wallet is the development wallet
+  const isDevWallet = walletAddress?.toLowerCase() === DEVELOPMENT_WALLET_ADDRESS.toLowerCase();
+  
+  // Filter info items to only show dev dashboard for development wallet
+  const filteredInfoItems = infoItems.filter(item => 
+    item.to !== '/dev-dashboard' || isDevWallet
+  );
 
   // Check if a route is active
   const isActiveRoute = (path: string) => {
@@ -233,7 +246,7 @@ export function Navigation() {
         )}>
           Info
         </h3>
-        {infoItems.map(item => renderNavItem(item))}
+        {filteredInfoItems.map(item => renderNavItem(item))}
       </div>
 
       {/* Auth prompt for non-authenticated users */}

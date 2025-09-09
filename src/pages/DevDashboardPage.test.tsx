@@ -8,6 +8,11 @@ vi.mock('../components/dev/WalletBalanceTracker', () => ({
   WalletBalanceDashboard: vi.fn(() => <div data-testid="wallet-balance-dashboard">Mock Wallet Balance Dashboard</div>)
 }))
 
+// Mock the wallet address hook
+vi.mock('../hooks/core/useWalletAccount', () => ({
+  useWalletAddress: vi.fn(() => '0x3427b4716B90C11F9971e43999a48A47Cf5B571E') // Return dev wallet address
+}))
+
 const createTestWrapper = () => {
   const queryClient = new QueryClient({
     defaultOptions: {

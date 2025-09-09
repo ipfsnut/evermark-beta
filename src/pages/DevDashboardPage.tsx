@@ -1,7 +1,22 @@
 import React from 'react';
+import { Navigate } from 'react-router-dom';
 import { WalletBalanceDashboard } from '../components/dev/WalletBalanceTracker';
+import { useWalletAddress } from '../hooks/core/useWalletAccount';
+
+// Development wallet address
+const DEVELOPMENT_WALLET_ADDRESS = '0x3427b4716B90C11F9971e43999a48A47Cf5B571E';
 
 function DevDashboardPage() {
+  const walletAddress = useWalletAddress();
+  
+  // Check if connected wallet is the development wallet
+  const isDevWallet = walletAddress?.toLowerCase() === DEVELOPMENT_WALLET_ADDRESS.toLowerCase();
+  
+  // Redirect to home if not connected with development wallet
+  if (!isDevWallet) {
+    return <Navigate to="/" replace />;
+  }
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       <div className="mb-8">

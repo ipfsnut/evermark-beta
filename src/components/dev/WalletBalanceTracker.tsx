@@ -1,7 +1,10 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { formatEther } from 'viem';
-import { usePublicClient } from 'wagmi';
+import { eth_getBalance } from 'thirdweb/rpc';
+import { getRpcClient } from 'thirdweb/rpc';
+import { client } from '@/lib/thirdweb';
+import { base } from 'thirdweb/chains';
 
 interface WalletBalanceTrackerProps {
   walletAddress: `0x${string}`;
@@ -16,16 +19,24 @@ export function WalletBalanceTracker({
   description,
   refreshInterval = 30000 // 30 seconds
 }: WalletBalanceTrackerProps) {
-  const publicClient = usePublicClient();
-
   const { data: balance, isLoading, error, isRefetching } = useQuery({
     queryKey: ['wallet-balance', walletAddress],
     queryFn: async () => {
-      if (!publicClient) throw new Error('No public client available');
-      return await publicClient.getBalance({ address: walletAddress });
+      const rpcRequest = getRpcClient({
+        client,
+        chain: base,
+      });
+      
+      const balance = await eth_getBalance(rpcRequest, {
+        address: walletAddress,
+        blockTag: 'latest',
+      });
+      
+      // eth_getBalance returns a bigint in Thirdweb v5
+      return typeof balance === 'bigint' ? balance : BigInt(balance as string);
     },
     refetchInterval: refreshInterval,
-    enabled: !!publicClient && !!walletAddress,
+    enabled: !!walletAddress,
   });
 
   const formatBalance = (balance: bigint) => {
