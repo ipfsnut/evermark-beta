@@ -20,6 +20,7 @@ const ReferralsPage = React.lazy(() => import('../src/pages/ReferralsPage'));
 const BetaPage = React.lazy(() => import('./pages/BetaPage'));
 const AdminPage = React.lazy(() => import('../src/pages/AdminPage'));
 const TransactionTestPage = React.lazy(() => import('../src/pages/TransactionTestPage'));
+const DevDashboardPage = React.lazy(() => import('../src/pages/DevDashboardPage'));
 const NotFoundPage = React.lazy(() => import('../src/pages/NotFoundPage'));
 
 // Loading fallback component
@@ -84,6 +85,9 @@ function AppContent() {
             
             {/* Test route for transaction functionality */}
             <Route path="/transaction-test" element={<TransactionTestPage />} />
+            
+            {/* Development dashboard */}
+            <Route path="/dev-dashboard" element={<DevDashboardPage />} />
             
             {/* Catch-all route */}
             <Route path="*" element={<NotFoundPage />} />
