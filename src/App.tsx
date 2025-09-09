@@ -19,6 +19,7 @@ const CreatePage = React.lazy(() => import('../src/features/evermarks/pages/Crea
 const ReferralsPage = React.lazy(() => import('../src/pages/ReferralsPage'));
 const BetaPage = React.lazy(() => import('./pages/BetaPage'));
 const AdminPage = React.lazy(() => import('../src/pages/AdminPage'));
+const TransactionTestPage = React.lazy(() => import('../src/pages/TransactionTestPage'));
 const NotFoundPage = React.lazy(() => import('../src/pages/NotFoundPage'));
 
 // Loading fallback component
@@ -80,6 +81,9 @@ function AppContent() {
             
             {/* Admin route */}
             <Route path="/admin" element={<AdminPage />} />
+            
+            {/* Test route for transaction functionality */}
+            <Route path="/transaction-test" element={<TransactionTestPage />} />
             
             {/* Catch-all route */}
             <Route path="*" element={<NotFoundPage />} />

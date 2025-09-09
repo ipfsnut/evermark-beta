@@ -6,6 +6,7 @@ import { client } from '@/lib/thirdweb';
 import { base } from 'thirdweb/chains';
 import { useWallet } from '@/providers/WalletProvider';
 import { useWalletAccount, useThirdwebAccount } from './useWalletAccount';
+import { useFarcasterTransactions } from './useFarcasterTransactions';
 
 export interface ContextualTransaction {
   contract: any;
@@ -21,12 +22,16 @@ export interface TransactionResult {
 
 /**
  * Context-aware transaction hook that works in both Farcaster and browser environments
+ * Now uses split architecture to avoid hook violations
  */
 export function useContextualTransactions() {
   const { context } = useWallet();
   const account = useWalletAccount();
   const thirdwebAccount = useThirdwebAccount();
   const { mutateAsync: thirdwebSendTx } = useThirdwebSendTransaction();
+  
+  // Always call Farcaster hook but only use result in Farcaster context
+  const farcasterTx = useFarcasterTransactions();
 
   const sendTransaction = useCallback(async (transaction: ContextualTransaction): Promise<TransactionResult> => {
     if (!account) {
@@ -60,73 +65,26 @@ export function useContextualTransactions() {
       };
     }
 
-    // In Farcaster context, use Wagmi with miniapp-wagmi-connector
+    // In Farcaster context, use the dedicated Farcaster hook
     if (context === 'farcaster') {
-      try {
-        // Dynamically import wagmi to avoid hook call in browser context
-        const { useSendTransaction } = await import('wagmi');
-        const { encodeFunctionData } = await import('viem');
-        
-        // This is a hack - we need to get the wagmi hook result somehow
-        // For now, fallback to the manual SDK approach until we can restructure
-        const { sdk } = await import('@farcaster/miniapp-sdk');
-        const ethProvider = await sdk.wallet.getEthereumProvider();
-        
-        if (!ethProvider) {
-          throw new Error('Farcaster wallet provider not available');
-        }
-
-        // Parse the function signature to extract function name
-        const functionMatch = transaction.method.match(/function\s+(\w+)\s*\((.*?)\)(?:\s+.*)?$/);
-        if (!functionMatch) {
-          throw new Error(`Invalid function signature: ${transaction.method}`);
-        }
-
-        const functionName = functionMatch[1];
-        
-        // Encode the function data using viem
-        const data = encodeFunctionData({
-          abi: transaction.contract.abi,
-          functionName,
-          args: transaction.params
-        });
-
-        // Send transaction through Farcaster's wallet provider
-        const txHash = await ethProvider.request({
-          method: 'eth_sendTransaction',
-          params: [{
-            to: transaction.contract.address,
-            data,
-            value: transaction.value ? `0x${transaction.value.toString(16)}` : '0x0',
-            from: account.address
-          }]
-        }) as string;
-
-        // Wait for confirmation using Thirdweb's utilities
-        const receipt = await waitForReceipt({
-          client,
-          chain: base,
-          transactionHash: txHash as `0x${string}`
-        });
-
-        return {
-          transactionHash: txHash,
-          blockNumber: Number(receipt.blockNumber)
-        };
-      } catch (error) {
-        console.error('Farcaster transaction failed:', error);
-        throw new Error(`Transaction failed in Farcaster context: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      if (!farcasterTx) {
+        throw new Error('Farcaster transaction hook not available');
       }
+      return farcasterTx.sendTransaction(transaction);
     }
 
     throw new Error(`Unsupported wallet context: ${context}`);
-  }, [context, account, thirdwebAccount, thirdwebSendTx]);
+  }, [context, account, thirdwebAccount, thirdwebSendTx, farcasterTx]);
 
   const isTransactionSupported = useCallback((): boolean => {
     return !!account && (context === 'browser' || context === 'pwa' || context === 'farcaster');
   }, [account, context]);
 
   const getTransactionCapabilities = useCallback(() => {
+    if (context === 'farcaster' && farcasterTx) {
+      return farcasterTx.getTransactionCapabilities();
+    }
+    
     return {
       canSendTransaction: isTransactionSupported(),
       context,
@@ -134,7 +92,7 @@ export function useContextualTransactions() {
       hasFarcasterSupport: context === 'farcaster',
       accountAddress: account?.address || null
     };
-  }, [context, account, isTransactionSupported]);
+  }, [context, account, isTransactionSupported, farcasterTx]);
 
   return {
     sendTransaction,
