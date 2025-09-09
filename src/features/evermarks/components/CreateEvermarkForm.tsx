@@ -897,7 +897,10 @@ export function CreateEvermarkForm({
                      formData.contentType === 'README' ? 'README Book URL *' : 
                      'Source URL (Optional)'}
                   </label>
-                  <div className="flex gap-2">
+                  <div className={cn(
+                    "flex flex-col gap-2",
+                    "sm:flex-row"
+                  )}>
                     <input
                       type="url"
                       value={formData.sourceUrl}
@@ -909,7 +912,7 @@ export function CreateEvermarkForm({
                       }
                       disabled={isFormDisabled}
                       className={cn(
-                        "flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-opacity-20 transition-colors",
+                        "w-full sm:flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-opacity-20 transition-colors",
                         isFormDisabled && "opacity-50 cursor-not-allowed",
                         isDark 
                           ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-cyan-400" 
@@ -923,12 +926,13 @@ export function CreateEvermarkForm({
                         onClick={handleAutoDetect}
                         disabled={isFormDisabled}
                         className={cn(
-                          "flex-shrink-0 px-3 py-3 sm:px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors",
+                          "w-full sm:w-auto sm:flex-shrink-0 px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2",
                           isFormDisabled && "opacity-50 cursor-not-allowed"
                         )}
                         title="Auto-detect content"
                       >
-                        <ZapIcon className={cn("h-4 w-4", isMobile ? "h-5 w-5" : "h-4 w-4")} />
+                        <ZapIcon className="h-5 w-5" />
+                        <span className="sm:hidden text-sm font-medium">Auto-detect</span>
                       </button>
                     )}
                   </div>

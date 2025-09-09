@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
+import { renderHook, act, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useLeaderboardState } from './useLeaderboardState'
 import { LeaderboardService } from '../services/LeaderboardService'
@@ -199,11 +199,11 @@ describe('useLeaderboardState', () => {
   })
 
   it('should load evermarks data', async () => {
-    const { result, waitForNextUpdate } = renderHook(() => useLeaderboardState(), {
+    const { result } = renderHook(() => useLeaderboardState(), {
       wrapper: createWrapper()
     })
 
-    await waitForNextUpdate()
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     expect(fetch).toHaveBeenCalledWith('/.netlify/functions/evermarks')
     
@@ -239,22 +239,22 @@ describe('useLeaderboardState', () => {
       status: 500
     } as Response)
 
-    const { result, waitForNextUpdate } = renderHook(() => useLeaderboardState(), {
+    const { result } = renderHook(() => useLeaderboardState(), {
       wrapper: createWrapper()
     })
 
-    await waitForNextUpdate()
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     expect(result.current.isLoading).toBe(false)
     // Should handle error gracefully
   })
 
   it('should load leaderboard entries', async () => {
-    const { result, waitForNextUpdate } = renderHook(() => useLeaderboardState(), {
+    const { result } = renderHook(() => useLeaderboardState(), {
       wrapper: createWrapper()
     })
 
-    await waitForNextUpdate()
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     expect(result.current.entries).toEqual(mockLeaderboardEntries)
     expect(result.current.stats).toEqual(mockLeaderboardStats)
@@ -262,11 +262,11 @@ describe('useLeaderboardState', () => {
   })
 
   it('should update filters', async () => {
-    const { result, waitForNextUpdate } = renderHook(() => useLeaderboardState(), {
+    const { result } = renderHook(() => useLeaderboardState(), {
       wrapper: createWrapper()
     })
 
-    await waitForNextUpdate()
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     act(() => {
       result.current.setFilters({
@@ -286,11 +286,11 @@ describe('useLeaderboardState', () => {
   })
 
   it('should update pagination', async () => {
-    const { result, waitForNextUpdate } = renderHook(() => useLeaderboardState(), {
+    const { result } = renderHook(() => useLeaderboardState(), {
       wrapper: createWrapper()
     })
 
-    await waitForNextUpdate()
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     act(() => {
       result.current.setPagination({
@@ -310,11 +310,11 @@ describe('useLeaderboardState', () => {
   })
 
   it('should reset filters to default', async () => {
-    const { result, waitForNextUpdate } = renderHook(() => useLeaderboardState(), {
+    const { result } = renderHook(() => useLeaderboardState(), {
       wrapper: createWrapper()
     })
 
-    await waitForNextUpdate()
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     // First set custom filters
     act(() => {
@@ -340,11 +340,11 @@ describe('useLeaderboardState', () => {
   })
 
   it('should reset pagination to default', async () => {
-    const { result, waitForNextUpdate } = renderHook(() => useLeaderboardState(), {
+    const { result } = renderHook(() => useLeaderboardState(), {
       wrapper: createWrapper()
     })
 
-    await waitForNextUpdate()
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     // First set custom pagination
     act(() => {
@@ -370,11 +370,11 @@ describe('useLeaderboardState', () => {
   })
 
   it('should go to next page', async () => {
-    const { result, waitForNextUpdate } = renderHook(() => useLeaderboardState(), {
+    const { result } = renderHook(() => useLeaderboardState(), {
       wrapper: createWrapper()
     })
 
-    await waitForNextUpdate()
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     act(() => {
       result.current.nextPage()
@@ -384,11 +384,11 @@ describe('useLeaderboardState', () => {
   })
 
   it('should go to previous page', async () => {
-    const { result, waitForNextUpdate } = renderHook(() => useLeaderboardState(), {
+    const { result } = renderHook(() => useLeaderboardState(), {
       wrapper: createWrapper()
     })
 
-    await waitForNextUpdate()
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     // First go to page 2
     act(() => {
@@ -404,11 +404,11 @@ describe('useLeaderboardState', () => {
   })
 
   it('should not go below page 1', async () => {
-    const { result, waitForNextUpdate } = renderHook(() => useLeaderboardState(), {
+    const { result } = renderHook(() => useLeaderboardState(), {
       wrapper: createWrapper()
     })
 
-    await waitForNextUpdate()
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     act(() => {
       result.current.previousPage()
@@ -418,11 +418,11 @@ describe('useLeaderboardState', () => {
   })
 
   it('should go to specific page', async () => {
-    const { result, waitForNextUpdate } = renderHook(() => useLeaderboardState(), {
+    const { result } = renderHook(() => useLeaderboardState(), {
       wrapper: createWrapper()
     })
 
-    await waitForNextUpdate()
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     act(() => {
       result.current.goToPage(5)
@@ -432,11 +432,11 @@ describe('useLeaderboardState', () => {
   })
 
   it('should refresh data', async () => {
-    const { result, waitForNextUpdate } = renderHook(() => useLeaderboardState(), {
+    const { result } = renderHook(() => useLeaderboardState(), {
       wrapper: createWrapper()
     })
 
-    await waitForNextUpdate()
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     await act(async () => {
       await result.current.refresh()
@@ -458,22 +458,22 @@ describe('useLeaderboardState', () => {
   it('should handle errors in leaderboard queries', async () => {
     vi.mocked(LeaderboardService.getLeaderboardFeed).mockRejectedValue(new Error('Service error'))
 
-    const { result, waitForNextUpdate } = renderHook(() => useLeaderboardState(), {
+    const { result } = renderHook(() => useLeaderboardState(), {
       wrapper: createWrapper()
     })
 
-    await waitForNextUpdate()
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     expect(result.current.error).toBeDefined()
     expect(result.current.entries).toEqual([])
   })
 
   it('should transform evermarks data correctly', async () => {
-    const { result, waitForNextUpdate } = renderHook(() => useLeaderboardState(), {
+    const { result } = renderHook(() => useLeaderboardState(), {
       wrapper: createWrapper()
     })
 
-    await waitForNextUpdate()
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     // The transformation should happen internally
     // We can verify this by checking the service was called with transformed data
@@ -490,11 +490,11 @@ describe('useLeaderboardState', () => {
   })
 
   it('should create evermarks hash for cache invalidation', async () => {
-    const { result, waitForNextUpdate } = renderHook(() => useLeaderboardState(), {
+    const { result } = renderHook(() => useLeaderboardState(), {
       wrapper: createWrapper()
     })
 
-    await waitForNextUpdate()
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     // The hash should be used internally for cache management
     // We can't access it directly but it should affect query keys
@@ -507,13 +507,13 @@ describe('useLeaderboardState', () => {
       json: () => Promise.resolve({ evermarks: [] })
     } as Response)
 
-    const { result, waitForNextUpdate } = renderHook(() => useLeaderboardState(), {
+    const { result } = renderHook(() => useLeaderboardState(), {
       wrapper: createWrapper()
     })
 
-    await waitForNextUpdate()
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    expect(result.current.entries).toEqual(mockLeberboardEntries) // Service should still be called
+    expect(result.current.entries).toEqual(mockLeaderboardEntries) // Service should still be called
   })
 
   it('should handle malformed evermarks data', async () => {
@@ -529,28 +529,26 @@ describe('useLeaderboardState', () => {
       })
     } as Response)
 
-    const { result, waitForNextUpdate } = renderHook(() => useLeaderboardState(), {
+    const { result } = renderHook(() => useLeaderboardState(), {
       wrapper: createWrapper()
     })
 
-    await waitForNextUpdate()
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     // Should handle gracefully with default values
     expect(LeaderboardService.getLeaderboardFeed).toHaveBeenCalled()
   })
 
   it('should expose correct loading states', async () => {
-    const { result, waitForNextUpdate } = renderHook(() => useLeaderboardState(), {
+    const { result } = renderHook(() => useLeaderboardState(), {
       wrapper: createWrapper()
     })
 
     expect(result.current.isLoading).toBe(true)
 
-    await waitForNextUpdate()
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     expect(result.current.isLoading).toBe(false)
   })
 })
 
-// Fix typo in test
-const mockLeberboardEntries = mockLeaderboardEntries

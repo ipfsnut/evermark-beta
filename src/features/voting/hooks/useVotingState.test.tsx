@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
+import { renderHook, act, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useVotingState } from './useVotingState'
 import { VotingService } from '../services/VotingService'
@@ -19,7 +19,9 @@ vi.mock('@/features/staking/hooks/useStakingData', () => ({
     wEmarkBalance: toWei('1000'),
     availableVotingPower: toWei('800'),
     delegatedPower: toWei('200'),
-    reservedPower: toWei('0')
+    reservedPower: toWei('0'),
+    isLoading: false,
+    error: null
   }))
 }))
 
@@ -144,12 +146,14 @@ describe('useVotingState', () => {
   })
 
   it('should load current cycle data', async () => {
-    const { result, waitForNextUpdate } = renderHook(() => useVotingState(), {
+    const { result } = renderHook(() => useVotingState(), {
       wrapper: createWrapper()
     })
 
     // Wait for the query to resolve
-    await waitForNextUpdate()
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+    })
 
     expect(result.current.currentCycle).toEqual({
       cycleNumber: 5,
@@ -174,11 +178,13 @@ describe('useVotingState', () => {
   })
 
   it('should load voting stats', async () => {
-    const { result, waitForNextUpdate } = renderHook(() => useVotingState(), {
+    const { result } = renderHook(() => useVotingState(), {
       wrapper: createWrapper()
     })
 
-    await waitForNextUpdate()
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+    })
 
     expect(result.current.votingStats).toEqual({
       totalVotesCast: BigInt(1000),
@@ -198,11 +204,13 @@ describe('useVotingState', () => {
   })
 
   it('should load user voting history', async () => {
-    const { result, waitForNextUpdate } = renderHook(() => useVotingState(), {
+    const { result } = renderHook(() => useVotingState(), {
       wrapper: createWrapper()
     })
 
-    await waitForNextUpdate()
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+    })
 
     expect(result.current.userVotes).toHaveLength(1)
     expect(result.current.userVotes[0]).toEqual({
