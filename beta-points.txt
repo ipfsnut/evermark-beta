@@ -5,7 +5,7 @@ Simple point rewards for user actions during beta period.
 ## Point Values
 - **Create evermark**: 10 points
 - **Vote on evermark**: 1 point  
-- **Stake EMARK**: 1 point per 1000 EMARK staked
+- **Stake EMARK**: 1 point per 1,000,000 EMARK staked
 
 ## Implementation
 - Points stored in `beta_points` table (wallet_address → total_points)
