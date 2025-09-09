@@ -14,7 +14,7 @@ import { NotificationDropdown } from '../notifications/NotificationDropdown';
 import { useIsMobile } from '../../utils/responsive';
 
 export function Header() {
-  const { toggleSidebar, notifications } = useAppUI();
+  const { toggleSidebar, notifications, sidebarOpen } = useAppUI();
   const { isAuthenticated, user } = useAppAuth();
   const { isInFarcaster } = useFarcasterDetection();
   const isMobile = useIsMobile(1024); // Use 1024px breakpoint (lg screen) to show hamburger on tablets too
@@ -35,8 +35,9 @@ export function Header() {
             {shouldShowHamburger && (
               <button
                 onClick={toggleSidebar}
-                className="p-1.5 lg:p-2 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 flex-shrink-0"
+                className="p-1.5 lg:p-2 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 flex-shrink-0 touch-manipulation"
                 aria-label="Toggle menu"
+                type="button"
               >
                 <MenuIcon className="h-4 w-4 lg:h-5 lg:w-5" />
               </button>

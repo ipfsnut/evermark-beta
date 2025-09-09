@@ -38,9 +38,12 @@ const ExploreStats: React.FC<{
   // Calculate stats from real data
   const thisWeekCount = evermarks.filter(em => {
     const createdAt = new Date(em.createdAt);
-    const weekAgo = new Date();
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    return createdAt >= weekAgo;
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    // Get start of current week (Sunday at 00:00:00)
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+    return createdAt >= startOfWeek;
   }).length;
   
   const uniqueCreators = new Set(evermarks.map(em => em.owner)).size;

@@ -453,15 +453,20 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
             };
           }
 
-          // Track view (fire-and-forget to avoid blocking response)
-          ViewTrackingService.incrementViewCount(singleId).catch(err => 
+          // Track view and wait for it to complete
+          await ViewTrackingService.incrementViewCount(singleId).catch(err => 
             console.error('View tracking failed:', err)
           );
 
+          // Fetch the updated data with new view count
+          const { data: updatedData } = await supabase
+            .from(EVERMARKS_TABLE)
+            .select('*')
+            .eq('token_id', parseInt(singleId))
+            .single();
+
           // 🔧 THE FIX: Enhance single evermark with voting data
-          const enhancedEvermark = await enhanceSingleWithVotingData(data);
-          // Update view count in response to reflect the increment
-          enhancedEvermark.viewCount = (data.view_count || 0) + 1;
+          const enhancedEvermark = await enhanceSingleWithVotingData(updatedData || data);
 
           return {
             statusCode: 200,
@@ -484,15 +489,20 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
             };
           }
 
-          // Track view (fire-and-forget to avoid blocking response)
-          ViewTrackingService.incrementViewCount(tokenId).catch(err => 
+          // Track view and wait for it to complete
+          await ViewTrackingService.incrementViewCount(tokenId).catch(err => 
             console.error('View tracking failed:', err)
           );
 
+          // Fetch the updated data with new view count
+          const { data: updatedData } = await supabase
+            .from(EVERMARKS_TABLE)
+            .select('*')
+            .eq('token_id', parseInt(tokenId))
+            .single();
+
           // 🔧 THE FIX: Enhance single evermark with voting data  
-          const enhancedEvermark = await enhanceSingleWithVotingData(data);
-          // Update view count in response to reflect the increment
-          enhancedEvermark.viewCount = (data.view_count || 0) + 1;
+          const enhancedEvermark = await enhanceSingleWithVotingData(updatedData || data);
 
           return {
             statusCode: 200,

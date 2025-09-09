@@ -19,8 +19,9 @@ export function Layout({ children }: LayoutProps) {
   const isMobile = useIsMobileDevice();
 
   // Mobile-first: Use slide-out menu on mobile, sidebar on desktop
+  // Special case: Always use mobile menu in Farcaster miniapp context (no native nav)
   const showDesktopSidebar = !isMobile && !isInFarcaster;
-  const showMobileMenu = isMobile;
+  const showMobileMenu = isMobile || isInFarcaster;
 
   return (
     <div className={themeClasses.page}>
