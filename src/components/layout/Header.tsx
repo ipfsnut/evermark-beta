@@ -44,13 +44,23 @@ export function Header() {
               to="/" 
               className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
             >
-              <div className="w-8 h-8 bg-gradient-to-r from-cyber-primary to-cyber-secondary rounded-lg flex items-center justify-center">
+              <div className="relative w-8 h-8 bg-gradient-to-r from-cyber-primary to-cyber-secondary rounded-lg flex items-center justify-center">
                 <span className="text-black font-bold text-sm">E</span>
+                {isMobile && (
+                  <span className="absolute -top-1 -right-1 px-1 py-0.5 text-[8px] font-bold rounded-full bg-gradient-to-r from-purple-500 to-cyan-500 text-white">
+                    β
+                  </span>
+                )}
               </div>
               {!isMobile && (
-                <span className="text-lg font-bold bg-gradient-to-r from-cyber-primary to-cyber-secondary bg-clip-text text-transparent">
-                  Evermark
-                </span>
+                <div className="flex items-center space-x-2">
+                  <span className="text-lg font-bold bg-gradient-to-r from-cyber-primary to-cyber-secondary bg-clip-text text-transparent">
+                    Evermark
+                  </span>
+                  <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gradient-to-r from-purple-500 to-cyan-500 text-white">
+                    BETA
+                  </span>
+                </div>
               )}
             </Link>
           </div>

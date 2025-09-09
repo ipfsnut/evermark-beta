@@ -11,7 +11,8 @@ import {
   LayersIcon,
   XIcon,
   ExternalLinkIcon,
-  UserIcon
+  UserIcon,
+  FlaskConicalIcon
 } from 'lucide-react';
 import { useAppAuth } from '../../providers/AppContext';
 import { useFarcasterDetection } from '../../hooks/useFarcasterDetection';
@@ -64,6 +65,11 @@ const MAIN_NAV_ITEMS: NavItem[] = [
     to: '/leaderboard',
     label: 'Leaderboard',
     icon: TrendingUpIcon,
+  },
+  {
+    to: '/beta',
+    label: 'Beta Points',
+    icon: FlaskConicalIcon,
   },
 ];
 
