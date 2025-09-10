@@ -145,7 +145,7 @@ export function UnifiedEvermarkImage({
       // Debug logging for README books and development
       if (import.meta.env.DEV && isBookCover) {
         console.log(`📚 README Book Image Analysis - Token #${tokenId}:`, {
-          imageUrl: imageUrl?.substring(0, 80) + '...',
+          imageUrl: `${imageUrl?.substring(0, 80)  }...`,
           dimensions: dims,
           actualSize: `${dims.width}x${dims.height}`,
           aspectRatio: dims.aspectRatio.toFixed(3),
@@ -157,8 +157,8 @@ export function UnifiedEvermarkImage({
             isSuperWide: dims.isSuperWide
           },
           paddingStrategy: strategy,
-          contentType: contentType,
-          isBookCover: isBookCover
+          contentType,
+          isBookCover
         });
       }
       
