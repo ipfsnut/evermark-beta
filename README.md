@@ -53,6 +53,8 @@ src/
 - **Voting**: Delegate voting power to quality content
 - **Leaderboard**: Community-driven content rankings
 - **Tokens**: Manage $EMARK balances and transactions
+- **Marketplace**: Buy and sell Evermark NFTs with real-time listings
+- **Points System**: Earn points for community participation and marketplace activity
 
 ### Technical Features
 - **IPFS Storage**: Direct uploads to IPFS with Pinata/Web3.Storage integration
@@ -63,6 +65,46 @@ src/
 - **Responsive Design**: Mobile-first with cyber theme
 - **SDK Integration**: Powered by evermark-sdk for robust image/metadata handling
 - **Error Handling**: Comprehensive error boundaries and validation
+
+## 🏆 Points System
+
+Evermark rewards community participation with a comprehensive points system designed to encourage quality content creation and marketplace activity.
+
+### How to Earn Points
+
+| Action | Points | Description |
+|--------|--------|-------------|
+| **Create Evermark** | 10 points | Mint a new Evermark NFT with quality content |
+| **Vote on Content** | 1 point | Delegate voting power to help curate quality |
+| **Stake $EMARK** | 1 point/1M tokens | Lock tokens to gain voting power (minimum 1M $EMARK) |
+| **Buy NFT** | 1 point | Purchase an Evermark from the marketplace |
+| **List NFT for Sale** | 1 point | Create a marketplace listing for your Evermark |
+
+### Marketplace Integration
+
+The marketplace system is fully integrated with the points reward structure:
+
+- **Buying**: Every successful NFT purchase earns 1 point automatically
+- **Selling**: Creating a marketplace listing earns 1 point when the listing is created
+- **Real-time Updates**: Points are awarded immediately upon transaction confirmation
+- **Cross-platform**: Works in both browser and Farcaster miniapp environments
+
+### Points Strategy
+
+**Content Creators**: Focus on creating high-quality Evermarks (10 points each) and engaging with the community through voting (1 point each).
+
+**Collectors**: Participate in the marketplace by buying quality Evermarks (1 point each) and listing your own collection (1 point per listing).
+
+**Stakeholders**: Stake large amounts of $EMARK tokens for consistent point accumulation and increased voting power.
+
+### Leaderboard Competition
+
+- View real-time rankings on the leaderboard
+- Points are tracked permanently with full transaction history
+- Top performers gain community recognition and influence
+- Historical data preserved for long-term achievement tracking
+
+The points system creates a sustainable economy that rewards both content creation and marketplace participation, driving organic growth and community engagement.
 
 ## 🛠️ Tech Stack
 

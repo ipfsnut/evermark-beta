@@ -8,7 +8,7 @@ export class PointsService {
    */
   static async awardPoints(
     walletAddress: string,
-    actionType: 'create_evermark' | 'vote' | 'stake',
+    actionType: 'create_evermark' | 'vote' | 'stake' | 'marketplace_buy' | 'marketplace_sell',
     relatedId?: string,
     txHash?: string,
     stakeAmount?: string

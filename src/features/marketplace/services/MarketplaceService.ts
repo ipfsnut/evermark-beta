@@ -5,6 +5,7 @@ import { client } from '@/lib/thirdweb';
 import { base } from 'thirdweb/chains';
 import { CONTRACTS } from '@/lib/contracts';
 import { formatEther, parseEther } from 'viem';
+import { PointsService } from '@/features/points/services/PointsService';
 import type { MarketplaceListing, MarketplaceStats, CreateListingParams, MarketplaceCurrency } from '../types';
 import type { ContextualTransaction, TransactionResult } from '@/hooks/core/useContextualTransactions';
 import type { Account } from 'thirdweb/wallets';
@@ -263,6 +264,20 @@ export async function createDirectListing(
     
     console.log('Listing created successfully:', result.transactionHash);
     
+    // Award points for creating a marketplace listing (selling)
+    try {
+      await PointsService.awardPoints(
+        account.address,
+        'marketplace_sell',
+        params.tokenId,
+        result.transactionHash
+      );
+      console.log('✅ Awarded 1 point for marketplace listing');
+    } catch (pointsError) {
+      console.error('Failed to award points for marketplace listing:', pointsError);
+      // Don't fail the transaction if points fail
+    }
+    
     return { 
       success: true, 
       listingId: result.transactionHash, // Use transaction hash as temporary ID
@@ -323,6 +338,20 @@ export async function buyDirectListing(
     
     // Execute transaction using contextual transaction system
     const result = await sendTransactionFn(transaction);
+    
+    // Award points for buying an NFT
+    try {
+      await PointsService.awardPoints(
+        account.address,
+        'marketplace_buy',
+        listingId,
+        result.transactionHash
+      );
+      console.log('✅ Awarded 1 point for marketplace buy');
+    } catch (pointsError) {
+      console.error('Failed to award points for marketplace buy:', pointsError);
+      // Don't fail the transaction if points fail
+    }
     
     return { 
       success: true, 

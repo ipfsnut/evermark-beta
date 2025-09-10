@@ -10,7 +10,7 @@ export interface BetaPointsRecord {
 export interface PointTransaction {
   id: string;
   wallet_address: string;
-  action_type: 'create_evermark' | 'vote' | 'stake';
+  action_type: 'create_evermark' | 'vote' | 'stake' | 'marketplace_buy' | 'marketplace_sell';
   points_earned: number;
   related_id?: string;
   tx_hash?: string;
@@ -34,7 +34,7 @@ export interface UseBetaPointsReturn {
   error: string | null;
   
   // Actions
-  awardPoints: (actionType: 'create_evermark' | 'vote' | 'stake', relatedId?: string, txHash?: string, stakeAmount?: string) => Promise<void>;
+  awardPoints: (actionType: 'create_evermark' | 'vote' | 'stake' | 'marketplace_buy' | 'marketplace_sell', relatedId?: string, txHash?: string, stakeAmount?: string) => Promise<void>;
   refresh: () => Promise<void>;
   clearError: () => void;
 }

@@ -18,7 +18,7 @@ interface PointsRecord {
 
 interface PointTransaction {
   wallet_address: string;
-  action_type: 'create_evermark' | 'vote' | 'stake';
+  action_type: 'create_evermark' | 'vote' | 'stake' | 'marketplace_buy' | 'marketplace_sell';
   points_earned: number;
   related_id?: string;
   tx_hash?: string;
@@ -35,7 +35,9 @@ const headers = {
 const POINT_VALUES = {
   create_evermark: 10,
   vote: 1,
-  stake: 1 // per 1,000,000 EMARK
+  stake: 1, // per 1,000,000 EMARK
+  marketplace_buy: 1,
+  marketplace_sell: 1
 };
 
 function isValidWalletAddress(address: string): boolean {

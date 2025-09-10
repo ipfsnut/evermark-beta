@@ -53,6 +53,8 @@ src/features/[feature-name]/
 3. **Voting** - Delegation system for content curation
 4. **Leaderboard** - Community-driven content rankings
 5. **Tokens** - $EMARK balance and transaction management
+6. **Marketplace** - NFT trading with Thirdweb marketplace integration
+7. **Points System** - Community rewards for engagement and marketplace activity
 
 ### Provider Hierarchy
 Providers wrap the app in this specific order:
@@ -78,6 +80,7 @@ Providers wrap the app in this specific order:
   - `shares.ts` - Social sharing features
   - `webhook.ts` - External integrations
   - `dev-dashboard.ts` - Development utilities
+  - `beta-points.ts` - Points system API with marketplace rewards
 - **Database**: Supabase for metadata and caching
 - **Blockchain**: Base network (chain ID 8453) via Thirdweb SDK
 
@@ -88,6 +91,7 @@ Contracts are accessed via getters in `/src/lib/contracts.ts`:
 - `getEvermarkNFTContract()` - Evermark NFT minting
 - `getEvermarkVotingContract()` - Voting mechanism
 - `getEvermarkLeaderboardContract()` - Ranking system
+- `getMarketplaceContract()` - Thirdweb marketplace for NFT trading
 
 Each feature imports its own ABI from `features/[name]/abis/`.
 
@@ -104,6 +108,43 @@ Each feature imports its own ABI from `features/[name]/abis/`.
 3. **Type Safety**: Strict TypeScript with no implicit `any`
 4. **Clean Separation**: UI components contain no business logic
 5. **Feature Isolation**: Features are independently testable
+
+### Points System Architecture
+
+The points system incentivizes community participation and marketplace activity through automatic reward distribution:
+
+#### Point Values
+```typescript
+const POINT_VALUES = {
+  create_evermark: 10,    // Creating new content
+  vote: 1,                // Community curation
+  stake: 1,               // Per 1,000,000 EMARK staked
+  marketplace_buy: 1,     // NFT purchases
+  marketplace_sell: 1     // Creating listings
+};
+```
+
+#### Database Schema
+- **beta_points**: User point totals with wallet address
+- **beta_point_transactions**: Individual point-earning actions with transaction hashes
+
+#### Integration Points
+- **MarketplaceService**: Automatically awards points after successful buy/sell transactions
+- **PointsService**: API service for awarding and retrieving points
+- **Backend API**: Netlify function `beta-points.ts` handles all point operations
+- **Supabase**: Persistent storage with real-time updates
+
+#### Award Flow
+1. User completes qualifying action (buy NFT, create listing, etc.)
+2. Service calls `PointsService.awardPoints()` with transaction details
+3. Backend validates and records transaction in `beta_point_transactions`
+4. User's total points updated in `beta_points` table
+5. Points immediately visible in UI via React Query caching
+
+#### Error Handling
+- Points failures don't block main transactions
+- Comprehensive logging for debugging point awards
+- Graceful fallbacks if points API is unavailable
 
 ### Environment Variables Required
 ```
