@@ -105,7 +105,7 @@ export function useMarketplaceState() {
 
     setIsBuying(true);
     try {
-      const result = await buyDirectListing(listingId, walletAccount, quantity);
+      const result = await buyDirectListing(listingId, walletAccount, quantity, sendTransaction);
       
       if (result.success) {
         await refetchListings();

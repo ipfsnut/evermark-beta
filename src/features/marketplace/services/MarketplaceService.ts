@@ -143,6 +143,32 @@ export async function getUserListings(userAddress: string): Promise<MarketplaceL
 }
 
 /**
+ * Check if a specific token ID is currently listed for sale
+ */
+export async function isTokenListed(tokenId: string): Promise<boolean> {
+  try {
+    const listings = await getActiveListings();
+    return listings.some(listing => listing.tokenId === tokenId && listing.isActive);
+  } catch (error) {
+    console.error('Error checking if token is listed:', error);
+    return false;
+  }
+}
+
+/**
+ * Get listing details for a specific token ID
+ */
+export async function getTokenListing(tokenId: string): Promise<MarketplaceListing | null> {
+  try {
+    const listings = await getActiveListings();
+    return listings.find(listing => listing.tokenId === tokenId && listing.isActive) || null;
+  } catch (error) {
+    console.error('Error fetching token listing:', error);
+    return null;
+  }
+}
+
+/**
  * Get marketplace statistics
  */
 export async function getMarketplaceStats(): Promise<MarketplaceStats> {
@@ -252,25 +278,63 @@ export async function createDirectListing(
 
 /**
  * Buy an NFT from a direct listing
- * Simulates marketplace purchase
- * TODO: Implement with proper Thirdweb marketplace contract calls
+ * Uses proper Thirdweb marketplace contract calls with contextual transaction support
  */
 export async function buyDirectListing(
   listingId: string,
   account: Account,
-  quantity: number = 1
+  quantity: number = 1,
+  sendTransactionFn: (transaction: ContextualTransaction) => Promise<TransactionResult>
 ): Promise<{ success: boolean; transactionHash?: string; error?: string }> {
   try {
     console.log('Buying listing:', listingId, 'for account:', account.address);
     
-    // TODO: Implement actual marketplace contract call
-    // For now, simulate the transaction
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    const marketplaceContract = getMarketplaceContract();
     
-    return { 
-      success: true, 
-      transactionHash: `0x${Math.random().toString(16).slice(2)}`,
-    };
+    // Get listing details to determine payment amount
+    const listings = await getActiveListings();
+    const listing = listings.find(l => l.listingId === listingId);
+    
+    if (!listing) {
+      return {
+        success: false,
+        error: 'Listing not found or no longer active'
+      };
+    }
+    
+    // Convert price to Wei if it's ETH
+    const priceInWei = listing.currency === 'ETH' 
+      ? parseEther(listing.price)
+      : BigInt(0); // ERC20 purchases don't need ETH value
+    
+    // Prepare the buy transaction
+    const transaction = prepareContractCall({
+      contract: marketplaceContract,
+      method: "function buyFromListing(uint256 _listingId, address _buyFor, uint256 _quantityToBuy, address _currency, uint256 _totalPrice)",
+      params: [
+        BigInt(listingId),
+        account.address as `0x${string}`,
+        BigInt(quantity),
+        listing.currency === 'ETH' ? SUPPORTED_PAYMENT_TOKENS.ETH as `0x${string}` : SUPPORTED_PAYMENT_TOKENS.EMARK as `0x${string}`,
+        parseEther(listing.price)
+      ],
+      value: priceInWei // Include ETH value for ETH purchases
+    });
+    
+    // Execute transaction using contextual transaction system
+    const result = await sendTransactionFn(transaction);
+    
+    if (result.success && result.hash) {
+      return { 
+        success: true, 
+        transactionHash: result.hash
+      };
+    } else {
+      return {
+        success: false,
+        error: result.error || 'Transaction failed'
+      };
+    }
   } catch (error) {
     console.error('Error buying from marketplace:', error);
     return { 

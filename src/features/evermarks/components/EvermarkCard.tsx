@@ -10,7 +10,8 @@ import {
   MessageCircle,
   Clock,
   Zap,
-  CheckCircle
+  CheckCircle,
+  ShoppingCart
 } from 'lucide-react';
 import { Formatters } from '../../../utils/formatters';
 import { useTheme } from '../../../providers/ThemeProvider';
@@ -19,6 +20,8 @@ import { cn } from '../../../utils/responsive';
 // Use UnifiedEvermarkImage for consistent image rendering across all variants
 import { UnifiedEvermarkImage } from '../../../components/images/UnifiedEvermarkImage';
 import { AttestationPopup } from './AttestationPopup';
+import { useListingStatus } from '../../marketplace/hooks/useListingStatus';
+import { formatCurrencySymbol } from '../../marketplace/services/MarketplaceService';
 import { type Evermark } from '../types';
 
 
@@ -31,6 +34,7 @@ interface EvermarkCardProps {
   showDescription?: boolean;
   showImage?: boolean;
   showPerformanceInfo?: boolean;
+  showMarketplaceIndicator?: boolean;
   enableRetry?: boolean;
   className?: string;
 }
@@ -44,11 +48,13 @@ export function EvermarkCard({
   showDescription = true,
   showImage = true,
   showPerformanceInfo = import.meta.env.NODE_ENV === 'development',
+  showMarketplaceIndicator = true,
   enableRetry = true,
   className = ''
 }: EvermarkCardProps) {
   const { isDark } = useTheme();
   const [showAttestationPopup, setShowAttestationPopup] = useState(false);
+  const { isListed, listing, isLoading: isLoadingListing } = useListingStatus(evermark.tokenId);
   
   const handleClick = () => {
     onClick?.(evermark);
@@ -214,6 +220,14 @@ export function EvermarkCard({
                 }}
               />
               <PerformanceIndicator />
+              
+              {/* Marketplace Indicator */}
+              {showMarketplaceIndicator && isListed && !isLoadingListing && listing && (
+                <div className="absolute top-2 right-2 bg-green-600/90 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm flex items-center gap-1">
+                  <ShoppingCart className="h-3 w-3" />
+                  {listing.price} {formatCurrencySymbol(listing.currency)}
+                </div>
+              )}
             </div>
           )}
 
@@ -331,19 +345,37 @@ export function EvermarkCard({
     >
       {/* Unified Image Component for all card types */}
       {showImage && (
-        <UnifiedEvermarkImage
-          evermark={evermark}
-          variant={variant}
-          className="rounded-t-xl"
-          onLoad={() => {
-            if (showPerformanceInfo) {
-              console.log(`✅ Card image loaded for evermark #${evermark.tokenId}`);
-            }
-          }}
-          onError={(error) => {
-            console.warn(`❌ Card image error for #${evermark.tokenId}:`, error);
-          }}
-        />
+        <div className="relative">
+          <UnifiedEvermarkImage
+            evermark={evermark}
+            variant={variant}
+            className="rounded-t-xl"
+            onLoad={() => {
+              if (showPerformanceInfo) {
+                console.log(`✅ Card image loaded for evermark #${evermark.tokenId}`);
+              }
+            }}
+            onError={(error) => {
+              console.warn(`❌ Card image error for #${evermark.tokenId}:`, error);
+            }}
+          />
+          
+          {/* Marketplace Indicator */}
+          {showMarketplaceIndicator && isListed && !isLoadingListing && listing && (
+            <div className="absolute top-3 right-3 bg-green-600/90 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm flex items-center gap-1 shadow-lg">
+              <ShoppingCart className="h-3 w-3" />
+              {variant === 'hero' ? (
+                <span className="font-medium">
+                  {listing.price} {formatCurrencySymbol(listing.currency)}
+                </span>
+              ) : (
+                <span>
+                  {listing.price} {formatCurrencySymbol(listing.currency)}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
       )}
 
       {/* Content */}

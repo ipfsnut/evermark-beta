@@ -12,7 +12,8 @@ import {
   XIcon,
   ExternalLinkIcon,
   UserIcon,
-  FlaskConicalIcon
+  FlaskConicalIcon,
+  ShoppingCartIcon
 } from 'lucide-react';
 import { useAppAuth } from '../../providers/AppContext';
 import { useFarcasterDetection } from '../../hooks/useFarcasterDetection';
@@ -49,6 +50,11 @@ const MAIN_NAV_ITEMS: NavItem[] = [
     label: 'Create',
     icon: PlusIcon,
     requireAuth: true,
+  },
+  {
+    to: '/marketplace',
+    label: 'Marketplace',
+    icon: ShoppingCartIcon,
   },
   {
     to: '/swap',

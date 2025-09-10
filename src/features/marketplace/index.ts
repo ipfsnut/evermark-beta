@@ -5,6 +5,7 @@ export type * from './types';
 
 // Hooks
 export { useMarketplaceState } from './hooks/useMarketplaceState';
+export { useListingStatus } from './hooks/useListingStatus';
 
 // Services
 export {
@@ -15,6 +16,9 @@ export {
   createDirectListing,
   buyDirectListing,
   cancelListing,
+  isTokenListed,
+  getTokenListing,
+  formatCurrencySymbol,
   getMarketplaceAddress,
   getMarketplaceExplorerUrl,
 } from './services/MarketplaceService';
