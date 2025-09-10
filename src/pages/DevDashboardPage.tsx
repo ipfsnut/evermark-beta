@@ -98,6 +98,37 @@ function DevDashboardPage() {
             >
               Development Wallet
             </a>
+            <a 
+              href="https://basescan.org/address/0x88E5C57FFC8De966eD789ebd5A8E3B290Ed2B55C"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full text-center bg-orange-600 text-white py-2 px-4 rounded hover:bg-orange-700 text-sm"
+            >
+              EvermarkRewards Contract
+            </a>
+            <a 
+              href="https://basescan.org/address/0x56b178A3AA23d323Ae9d8E85Bd633f2F5Ff98FAD"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full text-center bg-pink-600 text-white py-2 px-4 rounded hover:bg-pink-700 text-sm"
+            >
+              Marketplace Contract
+            </a>
+          </div>
+          
+          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded">
+            <h4 className="font-medium text-blue-900 mb-2">💰 Deposit $EMARK to Staking Rewards</h4>
+            <p className="text-sm text-blue-700 mb-3">
+              Use the EvermarkRewards contract's <code className="bg-blue-100 px-1 rounded">fundEmarkRewards</code> function to deposit $EMARK tokens to the staking rewards pool.
+            </p>
+            <a 
+              href="https://basescan.org/address/0x88E5C57FFC8De966eD789ebd5A8E3B290Ed2B55C#writeContract"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 text-sm font-medium"
+            >
+              Open Write Contract Interface →
+            </a>
           </div>
         </div>
       </div>

@@ -40,14 +40,37 @@ contract NFTStaking is
     
     uint256 public totalStakedNFTs;
     uint256 public emergencyPauseTimestamp;
+    
+    // Emergency Security Enhancements
+    uint256 public constant EMERGENCY_DELAY = 48 hours;
+    uint256 public constant UPGRADE_DELAY = 7 days;
+    uint256 public constant ROLE_DELAY = 48 hours;
+    address public emergencyMultisig;
+    mapping(bytes32 => uint256) public emergencyProposals;
+    mapping(address => uint256) public pendingUpgrades;
+    mapping(bytes32 => mapping(address => uint256)) public roleTransitions;
 
     event NFTStaked(address indexed staker, uint256 indexed tokenId, uint256 timestamp);
     event UnbondingStarted(address indexed staker, uint256 indexed tokenId, uint256 unbondingEnd);
     event NFTUnstaked(address indexed staker, uint256 indexed tokenId, uint256 timestamp);
     event EmergencyPauseUpdated(uint256 pauseUntilTimestamp);
+    
+    // Security Events
+    event EmergencyNFTWithdrawProposed(uint256 indexed tokenId, uint256 executeAfter);
+    event EmergencyNFTWithdrawExecuted(uint256 indexed tokenId, address recipient);
+    event UpgradeProposed(address indexed newImplementation, uint256 executeAfter);
+    event UpgradeExecuted(address indexed newImplementation);
+    event RoleTransitionProposed(bytes32 indexed role, address indexed account, uint256 executeAfter);
+    event RoleTransitionExecuted(bytes32 indexed role, address indexed account);
+    event EmergencyMultisigUpdated(address indexed oldMultisig, address indexed newMultisig);
 
     modifier notInEmergency() {
         require(block.timestamp > emergencyPauseTimestamp, "Emergency pause active");
+        _;
+    }
+    
+    modifier onlyEmergencyMultisig() {
+        require(msg.sender == emergencyMultisig, "Not emergency multisig");
         _;
     }
 
@@ -191,20 +214,83 @@ contract NFTStaking is
         _unpause();
     }
 
-    function emergencyUnstakeNFT(uint256 tokenId, address recipient) external onlyRole(ADMIN_ROLE) {
+    // SECURE EMERGENCY WITHDRAW SYSTEM
+    function proposeEmergencyNFTWithdraw(uint256 tokenId) external onlyRole(ADMIN_ROLE) {
         require(stakes[tokenId].staker != address(0), "NFT not staked");
+        bytes32 proposalHash = keccak256(abi.encodePacked(tokenId, block.timestamp));
+        emergencyProposals[proposalHash] = block.timestamp + EMERGENCY_DELAY;
+        emit EmergencyNFTWithdrawProposed(tokenId, block.timestamp + EMERGENCY_DELAY);
+    }
+    
+    function executeEmergencyNFTWithdraw(uint256 tokenId, address recipient) external onlyEmergencyMultisig {
+        require(recipient != address(0), "Invalid recipient");
+        require(stakes[tokenId].staker != address(0), "NFT not staked");
+        
+        bytes32 proposalHash = keccak256(abi.encodePacked(tokenId, block.timestamp - EMERGENCY_DELAY));
+        require(emergencyProposals[proposalHash] != 0, "No valid proposal");
+        require(block.timestamp >= emergencyProposals[proposalHash], "Delay not met");
         
         address originalStaker = stakes[tokenId].staker;
         _removeFromUserTokens(originalStaker, tokenId);
         delete stakes[tokenId];
         totalStakedNFTs--;
+        delete emergencyProposals[proposalHash];
 
         evermarkNFT.safeTransferFrom(address(this), recipient, tokenId);
         
-        emit NFTUnstaked(originalStaker, tokenId, block.timestamp);
+        emit EmergencyNFTWithdrawExecuted(tokenId, recipient);
+    }
+    
+    function setEmergencyMultisig(address _multisig) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(_multisig != address(0), "Invalid multisig address");
+        address oldMultisig = emergencyMultisig;
+        emergencyMultisig = _multisig;
+        emit EmergencyMultisigUpdated(oldMultisig, _multisig);
     }
 
-    function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) {}
+    // SECURE ROLE MANAGEMENT SYSTEM
+    function proposeRoleGrant(bytes32 role, address account) external onlyRole(getRoleAdmin(role)) {
+        require(account != address(0), "Invalid account");
+        if (role == ADMIN_ROLE || role == UPGRADER_ROLE || role == DEFAULT_ADMIN_ROLE) {
+            roleTransitions[role][account] = block.timestamp + ROLE_DELAY;
+            emit RoleTransitionProposed(role, account, block.timestamp + ROLE_DELAY);
+        } else {
+            // For non-critical roles, grant immediately
+            super.grantRole(role, account);
+        }
+    }
+    
+    function executeRoleGrant(bytes32 role, address account) external onlyRole(getRoleAdmin(role)) {
+        require(roleTransitions[role][account] != 0, "No pending transition");
+        require(block.timestamp >= roleTransitions[role][account], "Delay not met");
+        delete roleTransitions[role][account];
+        super.grantRole(role, account);
+        emit RoleTransitionExecuted(role, account);
+    }
+    
+    // Override grantRole to enforce delays for critical roles
+    function grantRole(bytes32 role, address account) public override {
+        if (role == ADMIN_ROLE || role == UPGRADER_ROLE || role == DEFAULT_ADMIN_ROLE) {
+            // Force use of secure proposal system for critical roles
+            revert("Use proposeRoleGrant for critical roles");
+        } else {
+            super.grantRole(role, account);
+        }
+    }
+    
+    // SECURE UPGRADE SYSTEM
+    function proposeUpgrade(address newImplementation) external onlyRole(UPGRADER_ROLE) {
+        require(newImplementation != address(0), "Invalid implementation");
+        pendingUpgrades[newImplementation] = block.timestamp + UPGRADE_DELAY;
+        emit UpgradeProposed(newImplementation, block.timestamp + UPGRADE_DELAY);
+    }
+    
+    function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) {
+        require(pendingUpgrades[newImplementation] != 0, "Upgrade not proposed");
+        require(block.timestamp >= pendingUpgrades[newImplementation], "Delay not met");
+        delete pendingUpgrades[newImplementation];
+        emit UpgradeExecuted(newImplementation);
+    }
 
     function supportsInterface(bytes4 interfaceId) public view override returns (bool) {
         return super.supportsInterface(interfaceId);

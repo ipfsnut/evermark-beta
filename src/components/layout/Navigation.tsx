@@ -12,7 +12,8 @@ import {
   ArrowUpDownIcon,
   UserIcon,
   FlaskConicalIcon,
-  MonitorIcon
+  MonitorIcon,
+  ShoppingCartIcon
 } from 'lucide-react';
 import { useAppAuth } from '../../providers/AppContext';
 import { useTheme } from '../../providers/ThemeProvider';
@@ -58,6 +59,11 @@ const navigationItems: NavItem[] = [
     to: '/swap',
     label: 'Swap',
     icon: ArrowUpDownIcon,
+  },
+  {
+    to: '/marketplace',
+    label: 'Marketplace',
+    icon: ShoppingCartIcon,
   },
   {
     to: '/staking',

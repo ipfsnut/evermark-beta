@@ -17,12 +17,30 @@ contract FeeCollector {
     IERC20 public wethToken;
     IERC20 public emarkToken;
     
+    // Emergency Security Enhancements
+    uint256 public constant EMERGENCY_DELAY = 48 hours;
+    address public emergencyMultisig;
+    mapping(bytes32 => uint256) public emergencyProposals;
+    
+    // Circuit Breaker
+    uint256 public dailyWithdrawLimit = 10 ether;
+    uint256 public dailyWithdrawn;
+    uint256 public lastWithdrawReset;
+    
     event FeesCollected(uint256 amount, address from);
     event TokenFeesCollected(address indexed token, uint256 amount, address from);
     event TokensForwardedToRewards(address indexed token, uint256 amount);
     event FeeRecipientChanged(address indexed oldRecipient, address indexed newRecipient);
     event RewardsContractChanged(address indexed oldRewards, address indexed newRewards);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    
+    // Security Events
+    event EmergencyWithdrawProposed(uint256 amount, uint256 executeAfter);
+    event EmergencyWithdrawExecuted(uint256 amount, address recipient);
+    event EmergencyTokenWithdrawProposed(address token, uint256 amount, uint256 executeAfter);
+    event EmergencyTokenWithdrawExecuted(address token, uint256 amount, address recipient);
+    event EmergencyMultisigUpdated(address indexed oldMultisig, address indexed newMultisig);
+    event DailyLimitUpdated(uint256 newLimit);
     
     constructor(
         address _feeRecipient,
@@ -41,6 +59,21 @@ contract FeeCollector {
     
     modifier onlyOwner() {
         require(msg.sender == owner, "Only owner can call this");
+        _;
+    }
+    
+    modifier onlyEmergencyMultisig() {
+        require(msg.sender == emergencyMultisig, "Not emergency multisig");
+        _;
+    }
+    
+    modifier circuitBreaker(uint256 amount) {
+        if (block.timestamp >= lastWithdrawReset + 1 days) {
+            dailyWithdrawn = 0;
+            lastWithdrawReset = block.timestamp;
+        }
+        require(dailyWithdrawn + amount <= dailyWithdrawLimit, "Daily limit exceeded");
+        dailyWithdrawn += amount;
         _;
     }
     
@@ -130,18 +163,64 @@ contract FeeCollector {
         emarkBalance = emarkToken.balanceOf(address(this));
     }
     
-    function emergencyWithdraw() external onlyOwner {
-        uint256 balance = address(this).balance;
-        if (balance > 0) {
-            (bool success,) = feeRecipient.call{value: balance}("");
-            require(success, "Emergency withdrawal failed");
-        }
+    // SECURE EMERGENCY WITHDRAW SYSTEM
+    function proposeEmergencyWithdraw(uint256 amount) external onlyOwner {
+        require(amount > 0 && amount <= address(this).balance, "Invalid amount");
+        bytes32 proposalHash = keccak256(abi.encodePacked("ETH", amount, block.timestamp));
+        emergencyProposals[proposalHash] = block.timestamp + EMERGENCY_DELAY;
+        emit EmergencyWithdrawProposed(amount, block.timestamp + EMERGENCY_DELAY);
     }
     
-    function emergencyWithdrawToken(address token, uint256 amount) external onlyOwner {
+    function executeEmergencyWithdraw(uint256 amount, address recipient) external onlyEmergencyMultisig circuitBreaker(amount) {
+        require(recipient != address(0), "Invalid recipient");
+        bytes32 proposalHash = keccak256(abi.encodePacked("ETH", amount, block.timestamp - EMERGENCY_DELAY));
+        require(emergencyProposals[proposalHash] != 0, "No valid proposal");
+        require(block.timestamp >= emergencyProposals[proposalHash], "Delay not met");
+        require(amount <= address(this).balance, "Insufficient balance");
+        
+        delete emergencyProposals[proposalHash];
+        
+        (bool success,) = payable(recipient).call{value: amount}("");
+        require(success, "Emergency withdrawal failed");
+        
+        emit EmergencyWithdrawExecuted(amount, recipient);
+    }
+    
+    function proposeEmergencyTokenWithdraw(address token, uint256 amount) external onlyOwner {
         require(token != address(0), "Invalid token");
         require(token != address(wethToken) && token != address(emarkToken), "Use proper forwarding for rewards tokens");
-        IERC20(token).safeTransfer(feeRecipient, amount);
+        require(amount > 0 && amount <= IERC20(token).balanceOf(address(this)), "Invalid amount");
+        
+        bytes32 proposalHash = keccak256(abi.encodePacked(token, amount, block.timestamp));
+        emergencyProposals[proposalHash] = block.timestamp + EMERGENCY_DELAY;
+        emit EmergencyTokenWithdrawProposed(token, amount, block.timestamp + EMERGENCY_DELAY);
+    }
+    
+    function executeEmergencyTokenWithdraw(address token, uint256 amount, address recipient) external onlyEmergencyMultisig {
+        require(recipient != address(0), "Invalid recipient");
+        require(token != address(wethToken) && token != address(emarkToken), "Use proper forwarding for rewards tokens");
+        
+        bytes32 proposalHash = keccak256(abi.encodePacked(token, amount, block.timestamp - EMERGENCY_DELAY));
+        require(emergencyProposals[proposalHash] != 0, "No valid proposal");
+        require(block.timestamp >= emergencyProposals[proposalHash], "Delay not met");
+        require(amount <= IERC20(token).balanceOf(address(this)), "Insufficient balance");
+        
+        delete emergencyProposals[proposalHash];
+        IERC20(token).safeTransfer(recipient, amount);
+        
+        emit EmergencyTokenWithdrawExecuted(token, amount, recipient);
+    }
+    
+    function setEmergencyMultisig(address _multisig) external onlyOwner {
+        require(_multisig != address(0), "Invalid multisig address");
+        address oldMultisig = emergencyMultisig;
+        emergencyMultisig = _multisig;
+        emit EmergencyMultisigUpdated(oldMultisig, _multisig);
+    }
+    
+    function setDailyWithdrawLimit(uint256 _limit) external onlyOwner {
+        dailyWithdrawLimit = _limit;
+        emit DailyLimitUpdated(_limit);
     }
     
     function withdrawSpamToken(address spamToken) external onlyOwner {

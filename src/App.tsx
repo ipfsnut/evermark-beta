@@ -21,6 +21,7 @@ const BetaPage = React.lazy(() => import('./pages/BetaPage'));
 const AdminPage = React.lazy(() => import('../src/pages/AdminPage'));
 const TransactionTestPage = React.lazy(() => import('../src/pages/TransactionTestPage'));
 const DevDashboardPage = React.lazy(() => import('../src/pages/DevDashboardPage').then(module => ({ default: module.default })));
+const MarketplacePage = React.lazy(() => import('../src/features/marketplace/pages/MarketplacePage'));
 const NotFoundPage = React.lazy(() => import('../src/pages/NotFoundPage'));
 
 // Loading fallback component
@@ -71,6 +72,7 @@ function AppContent() {
             <Route path="/docs" element={<DocsPage />} />
             <Route path="/docs/:docId" element={<DocsPage />} />
             <Route path="/swap" element={<SwapPage />} />
+            <Route path="/marketplace" element={<MarketplacePage />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
             <Route path="/staking" element={<StakingPage />} />
             <Route path="/beta" element={<BetaPage />} />

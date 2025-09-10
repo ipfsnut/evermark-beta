@@ -130,50 +130,97 @@ export function WalletBalanceTracker({
 export function WalletBalanceDashboard() {
   const developmentWallet = '0x3427b4716B90C11F9971e43999a48A47Cf5B571E' as const;
   const feeCollectorAddress = '0xaab93405679576ec743fDAA57AA603D949850604' as const;
+  const evermarkRewardsAddress = '0x88E5C57FFC8De966eD789ebd5A8E3B290Ed2B55C' as const;
 
   return (
     <div className="space-y-6">
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h2 className="text-xl font-bold text-blue-900 mb-2">Evermark Fee Flow Monitoring</h2>
+        <h2 className="text-xl font-bold text-blue-900 mb-2">Evermark Protocol Balance Monitoring</h2>
         <p className="text-blue-700 text-sm">
-          Real-time balance tracking for Evermark protocol fee collection and development funding.
+          Real-time balance tracking for fee collection, development funding, and staking rewards.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <WalletBalanceTracker
           walletAddress={developmentWallet}
           walletName="Development Wallet"
-          description="Final destination for minting fees (emark.base.eth). Funds development costs and anti-spam operations."
+          description="Development funding wallet (emark.base.eth). Receives 90% of anti-spam fees from evermark creation."
           refreshInterval={30000}
         />
 
         <WalletBalanceTracker
           walletAddress={feeCollectorAddress}
           walletName="Fee Collector"
-          description="Temporary collection point that immediately forwards fees to development wallet."
+          description="Captures trading fees from Clanker pool and forwards them to EvermarkRewards for staker distribution."
+          refreshInterval={30000}
+        />
+
+        <WalletBalanceTracker
+          walletAddress={evermarkRewardsAddress}
+          walletName="Staking Rewards Pool"
+          description="EvermarkRewards contract. Receives $EMARK and WETH from FeeCollector to fund staking rewards."
           refreshInterval={30000}
         />
       </div>
 
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-        <h3 className="font-semibold text-gray-900 mb-2">Fee Flow Explanation</h3>
-        <div className="text-sm text-gray-700 space-y-2">
-          <div className="flex items-center space-x-2">
-            <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-            <span>User pays 0.00007 ETH minting fee</span>
+        <h3 className="font-semibold text-gray-900 mb-2">Protocol Revenue Streams</h3>
+        <div className="text-sm text-gray-700 space-y-3">
+          <div>
+            <h4 className="font-medium text-gray-900 mb-1">1. Anti-Spam Fee (0.00007 ETH per Evermark)</h4>
+            <div className="space-y-1 ml-2">
+              <div className="flex items-center space-x-2">
+                <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                <span>Rate-limits creation, ensures users only create quality content</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                <span>10% to referrer (if applicable)</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                <span>90% to Development Wallet (operational costs)</span>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center space-x-2 ml-4">
-            <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-            <span>10% goes to referrer (if applicable)</span>
+          
+          <div>
+            <h4 className="font-medium text-gray-900 mb-1">2. Trading Fees (Clanker Pool)</h4>
+            <div className="space-y-1 ml-2">
+              <div className="flex items-center space-x-2">
+                <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
+                <span>Fee Collector captures trading revenue</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="w-2 h-2 bg-teal-500 rounded-full"></span>
+                <span>Fee Collector forwards → EvermarkRewards (staking rewards)</span>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center space-x-2 ml-4">
-            <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
-            <span>90% goes to Fee Collector → Development Wallet</span>
+          
+          <div>
+            <h4 className="font-medium text-gray-900 mb-1">3. Marketplace Trading (1% fee)</h4>
+            <div className="space-y-1 ml-2">
+              <div className="flex items-center space-x-2">
+                <span className="w-2 h-2 bg-pink-500 rounded-full"></span>
+                <span>Trading fees from Evermark NFT marketplace</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="w-2 h-2 bg-rose-500 rounded-full"></span>
+                <span>Revenue funds leaderboard rewards for top performers</span>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center space-x-2 ml-8">
-            <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-            <span>Funds development costs, server maintenance, anti-spam measures</span>
+          
+          <div>
+            <h4 className="font-medium text-gray-900 mb-1">4. Manual Contributions</h4>
+            <div className="space-y-1 ml-2">
+              <div className="flex items-center space-x-2">
+                <span className="w-2 h-2 bg-indigo-500 rounded-full"></span>
+                <span>Direct $EMARK deposits → EvermarkRewards (additional staking rewards)</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

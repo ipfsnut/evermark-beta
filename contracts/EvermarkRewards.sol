@@ -61,6 +61,20 @@ contract EvermarkRewards is
 
     uint256 public emergencyPauseUntil;
     
+    // Emergency Security Enhancements
+    uint256 public constant EMERGENCY_DELAY = 48 hours;
+    uint256 public constant UPGRADE_DELAY = 7 days;
+    uint256 public constant ROLE_DELAY = 48 hours;
+    address public emergencyMultisig;
+    mapping(bytes32 => uint256) public emergencyProposals;
+    mapping(address => uint256) public pendingUpgrades;
+    mapping(bytes32 => mapping(address => uint256)) public roleTransitions;
+    
+    // Circuit Breaker
+    uint256 public dailyWithdrawLimit = 100 ether; // Higher limit for rewards contract
+    uint256 public dailyWithdrawn;
+    uint256 public lastWithdrawReset;
+    
     // V2 Storage (added for upgrade)
     uint256 public currentPeriodNumber;
 
@@ -79,6 +93,16 @@ contract EvermarkRewards is
     event EmarkRewardPaid(address indexed user, uint256 reward);
     event EthPoolFunded(uint256 amount, address indexed from);
     event EmarkPoolFunded(uint256 amount, address indexed from);
+    
+    // Security Events
+    event EmergencyWithdrawProposed(address token, uint256 amount, uint256 executeAfter);
+    event EmergencyWithdrawExecuted(address token, uint256 amount, address recipient);
+    event UpgradeProposed(address indexed newImplementation, uint256 executeAfter);
+    event UpgradeExecuted(address indexed newImplementation);
+    event RoleTransitionProposed(bytes32 indexed role, address indexed account, uint256 executeAfter);
+    event RoleTransitionExecuted(bytes32 indexed role, address indexed account);
+    event EmergencyMultisigUpdated(address indexed oldMultisig, address indexed newMultisig);
+    event DailyLimitUpdated(uint256 newLimit);
 
     function initialize(
         address _emarkToken,           
@@ -125,6 +149,21 @@ contract EvermarkRewards is
 
     modifier onlyWhenActive() {
         require(block.timestamp > emergencyPauseUntil, "Emergency pause active");
+        _;
+    }
+    
+    modifier onlyEmergencyMultisig() {
+        require(msg.sender == emergencyMultisig, "Not emergency multisig");
+        _;
+    }
+    
+    modifier circuitBreaker(uint256 amount) {
+        if (block.timestamp >= lastWithdrawReset + 1 days) {
+            dailyWithdrawn = 0;
+            lastWithdrawReset = block.timestamp;
+        }
+        require(dailyWithdrawn + amount <= dailyWithdrawLimit, "Daily limit exceeded");
+        dailyWithdrawn += amount;
         _;
     }
 
@@ -394,7 +433,98 @@ contract EvermarkRewards is
     }
 
 
-    function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) {}
+    // SECURE EMERGENCY WITHDRAW SYSTEM
+    function proposeEmergencyWithdraw(address token, uint256 amount) external onlyRole(ADMIN_ROLE) {
+        require(token != address(0), "Invalid token");
+        require(amount > 0, "Invalid amount");
+        
+        uint256 balance;
+        if (token == address(wethToken)) {
+            balance = wethToken.balanceOf(address(this));
+        } else if (token == address(emarkToken)) {
+            balance = emarkToken.balanceOf(address(this));
+        } else {
+            revert("Only WETH/EMARK withdrawals allowed");
+        }
+        
+        require(amount <= balance, "Insufficient balance");
+        bytes32 proposalHash = keccak256(abi.encodePacked(token, amount, block.timestamp));
+        emergencyProposals[proposalHash] = block.timestamp + EMERGENCY_DELAY;
+        emit EmergencyWithdrawProposed(token, amount, block.timestamp + EMERGENCY_DELAY);
+    }
+    
+    function executeEmergencyWithdraw(address token, uint256 amount, address recipient) external onlyEmergencyMultisig circuitBreaker(amount) {
+        require(recipient != address(0), "Invalid recipient");
+        require(token == address(wethToken) || token == address(emarkToken), "Invalid token");
+        
+        bytes32 proposalHash = keccak256(abi.encodePacked(token, amount, block.timestamp - EMERGENCY_DELAY));
+        require(emergencyProposals[proposalHash] != 0, "No valid proposal");
+        require(block.timestamp >= emergencyProposals[proposalHash], "Delay not met");
+        
+        uint256 balance = IERC20(token).balanceOf(address(this));
+        require(amount <= balance, "Insufficient balance");
+        
+        delete emergencyProposals[proposalHash];
+        IERC20(token).safeTransfer(recipient, amount);
+        
+        emit EmergencyWithdrawExecuted(token, amount, recipient);
+    }
+    
+    function setEmergencyMultisig(address _multisig) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(_multisig != address(0), "Invalid multisig address");
+        address oldMultisig = emergencyMultisig;
+        emergencyMultisig = _multisig;
+        emit EmergencyMultisigUpdated(oldMultisig, _multisig);
+    }
+    
+    function setDailyWithdrawLimit(uint256 _limit) external onlyRole(ADMIN_ROLE) {
+        dailyWithdrawLimit = _limit;
+        emit DailyLimitUpdated(_limit);
+    }
+    
+    // SECURE ROLE MANAGEMENT SYSTEM
+    function proposeRoleGrant(bytes32 role, address account) external onlyRole(getRoleAdmin(role)) {
+        require(account != address(0), "Invalid account");
+        if (role == ADMIN_ROLE || role == UPGRADER_ROLE || role == DEFAULT_ADMIN_ROLE) {
+            roleTransitions[role][account] = block.timestamp + ROLE_DELAY;
+            emit RoleTransitionProposed(role, account, block.timestamp + ROLE_DELAY);
+        } else {
+            // For non-critical roles, grant immediately
+            super.grantRole(role, account);
+        }
+    }
+    
+    function executeRoleGrant(bytes32 role, address account) external onlyRole(getRoleAdmin(role)) {
+        require(roleTransitions[role][account] != 0, "No pending transition");
+        require(block.timestamp >= roleTransitions[role][account], "Delay not met");
+        delete roleTransitions[role][account];
+        super.grantRole(role, account);
+        emit RoleTransitionExecuted(role, account);
+    }
+    
+    // Override grantRole to enforce delays for critical roles
+    function grantRole(bytes32 role, address account) public override {
+        if (role == ADMIN_ROLE || role == UPGRADER_ROLE || role == DEFAULT_ADMIN_ROLE) {
+            // Force use of secure proposal system for critical roles
+            revert("Use proposeRoleGrant for critical roles");
+        } else {
+            super.grantRole(role, account);
+        }
+    }
+    
+    // SECURE UPGRADE SYSTEM
+    function proposeUpgrade(address newImplementation) external onlyRole(UPGRADER_ROLE) {
+        require(newImplementation != address(0), "Invalid implementation");
+        pendingUpgrades[newImplementation] = block.timestamp + UPGRADE_DELAY;
+        emit UpgradeProposed(newImplementation, block.timestamp + UPGRADE_DELAY);
+    }
+    
+    function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) {
+        require(pendingUpgrades[newImplementation] != 0, "Upgrade not proposed");
+        require(block.timestamp >= pendingUpgrades[newImplementation], "Delay not met");
+        delete pendingUpgrades[newImplementation];
+        emit UpgradeExecuted(newImplementation);
+    }
 
     function supportsInterface(bytes4 interfaceId) public view override returns (bool) {
         return super.supportsInterface(interfaceId);

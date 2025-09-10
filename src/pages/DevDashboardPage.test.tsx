@@ -84,15 +84,18 @@ describe('DevDashboardPage', () => {
     const evermarkNftLink = screen.getByText('EvermarkNFT Contract')
     const feeCollectorLink = screen.getByText('FeeCollector Contract')
     const devWalletLink = screen.getByText('Development Wallet')
+    const evermarkRewardsLink = screen.getByText('EvermarkRewards Contract')
 
     expect(evermarkNftLink).toBeInTheDocument()
     expect(feeCollectorLink).toBeInTheDocument()
     expect(devWalletLink).toBeInTheDocument()
+    expect(evermarkRewardsLink).toBeInTheDocument()
 
     // Check that they are links
     expect(evermarkNftLink.closest('a')).toHaveAttribute('href', 'https://basescan.org/address/0x504a0BDC3aea29237a6f8E53D0ECDA8e4c9009F2')
     expect(feeCollectorLink.closest('a')).toHaveAttribute('href', 'https://basescan.org/address/0xaab93405679576ec743fDAA57AA603D949850604')
     expect(devWalletLink.closest('a')).toHaveAttribute('href', 'https://basescan.org/address/0x3427b4716B90C11F9971e43999a48A47Cf5B571E')
+    expect(evermarkRewardsLink.closest('a')).toHaveAttribute('href', 'https://basescan.org/address/0x88E5C57FFC8De966eD789ebd5A8E3B290Ed2B55C')
   })
 
   it('should render fee structure summary', () => {
@@ -174,5 +177,23 @@ describe('DevDashboardPage', () => {
     // Check for responsive grid classes
     expect(container.querySelector('.md\\:grid-cols-2')).toBeInTheDocument()
     expect(container.querySelector('.lg\\:grid-cols-3')).toBeInTheDocument()
+  })
+
+  it('should render the deposit section with correct content', () => {
+    render(<DevDashboardPage />, { wrapper: createTestWrapper() })
+
+    expect(screen.getByText('💰 Deposit $EMARK to Staking Rewards')).toBeInTheDocument()
+    expect(screen.getByText('fundEmarkRewards')).toBeInTheDocument()
+    expect(screen.getByText('Open Write Contract Interface →')).toBeInTheDocument()
+    
+    const depositLink = screen.getByText('Open Write Contract Interface →')
+    expect(depositLink.closest('a')).toHaveAttribute('href', 'https://basescan.org/address/0x88E5C57FFC8De966eD789ebd5A8E3B290Ed2B55C#writeContract')
+  })
+
+  it('should render orange button for EvermarkRewards contract', () => {
+    const { container } = render(<DevDashboardPage />, { wrapper: createTestWrapper() })
+
+    const orangeButton = container.querySelector('.bg-orange-600')
+    expect(orangeButton).toBeInTheDocument()
   })
 })
