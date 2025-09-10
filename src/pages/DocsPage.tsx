@@ -71,6 +71,13 @@ const DOCS_ITEMS: DocItem[] = [
     description: 'Important information about Alpha contract retirement and user fund refunds',
     filename: 'alpha-retirement.md',
     type: 'md'
+  },
+  {
+    id: 'dual-rewards-system',
+    title: '[DRAFT] Dual Rewards System',
+    description: 'Proposed dual rewards architecture for stakers and leaderboard winners',
+    filename: 'draft-dual-rewards-system.md',
+    type: 'md'
   }
 ];
 
