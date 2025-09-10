@@ -301,6 +301,11 @@ describe('SeasonSelector', () => {
   it('should show chevron rotation when dropdown is open', async () => {
     render(<SeasonSelector onSeasonChange={mockOnSeasonChange} />)
     
+    // Wait for loading to complete and button to be available
+    await waitFor(() => {
+      expect(screen.getByRole('button')).toBeInTheDocument()
+    })
+    
     const dropdownButton = screen.getByRole('button')
     const chevron = dropdownButton.querySelector('.lucide-chevron-down')
     

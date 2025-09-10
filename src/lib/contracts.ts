@@ -36,6 +36,7 @@ const contractInstances: {
   nftStaking?: ReturnType<typeof getContract>;
   evermarkRewards?: ReturnType<typeof getContract>;
   feeCollector?: ReturnType<typeof getContract>;
+  marketplace?: ReturnType<typeof getContract>;
 } = {};
 
 // Test helper to reset singleton instances
@@ -163,6 +164,24 @@ export function getFeeCollectorContract() {
   }
   
   return contractInstances.feeCollector;
+}
+
+export function getMarketplaceContract() {
+  if (!CONTRACTS.MARKETPLACE) {
+    throw new Error('MARKETPLACE address not configured');
+  }
+  
+  if (!contractInstances.marketplace) {
+    contractInstances.marketplace = getContract({
+      client,
+      chain: CHAIN,
+      address: CONTRACTS.MARKETPLACE as `0x${string}`,
+      // Note: Thirdweb marketplace contracts have standard ABIs
+      // We don't need to import the ABI as Thirdweb SDK handles this
+    });
+  }
+  
+  return contractInstances.marketplace;
 }
 
 // Contract validation

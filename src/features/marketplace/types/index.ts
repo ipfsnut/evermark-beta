@@ -4,12 +4,12 @@ export interface MarketplaceListing {
   listingId: string;
   tokenId: string;
   seller: string;
-  price: string; // In ETH, as string to avoid precision issues
+  price: string; // In ETH/EMARK, as string to avoid precision issues
   currency: string; // Contract address of payment token
   startTime: number;
   endTime: number;
   isActive: boolean;
-  listingType: 'direct' | 'auction';
+  quantity: number;
 }
 
 export interface MarketplaceSale {
@@ -35,8 +35,20 @@ export interface MarketplaceStats {
 export interface MarketplaceFilter {
   priceMin?: string;
   priceMax?: string;
-  listingType?: 'direct' | 'auction' | 'all';
+  currency?: 'all' | 'ETH' | 'EMARK';
   sortBy?: 'price_asc' | 'price_desc' | 'newest' | 'oldest';
+}
+
+export interface MarketplaceCurrency {
+  symbol: string;
+  address: string;
+  name: string;
+}
+
+export interface CreateListingParams {
+  tokenId: string;
+  price: string;
+  currency: 'ETH' | 'EMARK';
 }
 
 export type MarketplaceTab = 'browse' | 'my-listings' | 'my-purchases' | 'activity';

@@ -9,17 +9,26 @@ import {
   createDirectListing,
   buyDirectListing,
   cancelListing,
+  approveMarketplace,
+  isApprovedForMarketplace,
 } from '../services/MarketplaceService';
+import { useWalletAccount } from '@/hooks/core/useWalletAccount';
+import { useContextualTransactions } from '@/hooks/core/useContextualTransactions';
+import type { Account } from 'thirdweb/wallets';
+import type { CreateListingParams } from '../types';
 import type { MarketplaceListing, MarketplaceStats, MarketplaceFilter, MarketplaceTab } from '../types';
 
 export function useMarketplaceState() {
   const walletAddress = useWalletAddress();
+  const walletAccount = useWalletAccount() as unknown as Account | null;
+  const { sendTransaction } = useContextualTransactions();
   const [activeTab, setActiveTab] = useState<MarketplaceTab>('browse');
   const [filters, setFilters] = useState<MarketplaceFilter>({
     sortBy: 'newest'
   });
   const [isCreatingListing, setIsCreatingListing] = useState(false);
   const [isBuying, setIsBuying] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
 
   // Query for all active listings
   const {
@@ -59,17 +68,22 @@ export function useMarketplaceState() {
   // Create a direct listing
   const handleCreateListing = async (
     tokenId: string,
-    priceInEth: string,
-    durationInDays: number
+    price: string,
+    currency: 'ETH' | 'EMARK' = 'ETH'
   ) => {
-    if (!walletAddress) {
+    if (!walletAccount) {
       throw new Error('Wallet not connected');
     }
 
     setIsCreatingListing(true);
     try {
-      const durationInSeconds = durationInDays * 24 * 60 * 60;
-      const result = await createDirectListing(tokenId, priceInEth, durationInSeconds);
+      const listingParams: CreateListingParams = {
+        tokenId,
+        price,
+        currency
+      };
+      
+      const result = await createDirectListing(listingParams, walletAccount, sendTransaction);
       
       if (result.success) {
         await refetchUserListings();
@@ -84,14 +98,14 @@ export function useMarketplaceState() {
   };
 
   // Buy an NFT
-  const handleBuyNFT = async (listingId: string) => {
-    if (!walletAddress) {
+  const handleBuyNFT = async (listingId: string, quantity: number = 1) => {
+    if (!walletAccount) {
       throw new Error('Wallet not connected');
     }
 
     setIsBuying(true);
     try {
-      const result = await buyDirectListing(listingId);
+      const result = await buyDirectListing(listingId, walletAccount, quantity);
       
       if (result.success) {
         await refetchListings();
@@ -107,12 +121,12 @@ export function useMarketplaceState() {
 
   // Cancel a listing
   const handleCancelListing = async (listingId: string) => {
-    if (!walletAddress) {
+    if (!walletAccount) {
       throw new Error('Wallet not connected');
     }
 
     try {
-      const result = await cancelListing(listingId);
+      const result = await cancelListing(listingId, walletAccount);
       
       if (result.success) {
         await refetchUserListings();
@@ -127,6 +141,38 @@ export function useMarketplaceState() {
     }
   };
 
+  // Approve marketplace for NFT
+  const handleApproveMarketplace = async (tokenId: string) => {
+    if (!walletAccount) {
+      throw new Error('Wallet not connected');
+    }
+
+    setIsApproving(true);
+    try {
+      const result = await approveMarketplace(tokenId, walletAccount, sendTransaction);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to approve marketplace');
+      }
+      
+      return result;
+    } finally {
+      setIsApproving(false);
+    }
+  };
+
+  // Check if marketplace is approved for tokenId
+  const checkApproval = async (tokenId: string): Promise<boolean> => {
+    if (!walletAddress) return false;
+    
+    try {
+      return await isApprovedForMarketplace(walletAddress, tokenId);
+    } catch (error) {
+      console.error('Error checking approval:', error);
+      return false;
+    }
+  };
+
   // Filter listings based on current filters
   const filteredListings = listings.filter((listing) => {
     if (filters.priceMin && parseFloat(listing.price) < parseFloat(filters.priceMin)) {
@@ -135,8 +181,15 @@ export function useMarketplaceState() {
     if (filters.priceMax && parseFloat(listing.price) > parseFloat(filters.priceMax)) {
       return false;
     }
-    if (filters.listingType && filters.listingType !== 'all' && listing.listingType !== filters.listingType) {
-      return false;
+    if (filters.currency && filters.currency !== 'all') {
+      const listingCurrency = listing.currency.toLowerCase();
+      const expectedCurrency = filters.currency.toLowerCase();
+      if (expectedCurrency === 'eth' && !listingCurrency.includes('eth') && !listingCurrency.includes('0x000')) {
+        return false;
+      }
+      if (expectedCurrency === 'emark' && !listingCurrency.toLowerCase().includes('emark')) {
+        return false;
+      }
     }
     return true;
   }).sort((a, b) => {
@@ -159,6 +212,7 @@ export function useMarketplaceState() {
     filters,
     isCreatingListing,
     isBuying,
+    isApproving,
     
     // Data
     listings: filteredListings,
@@ -179,6 +233,8 @@ export function useMarketplaceState() {
     handleCreateListing,
     handleBuyNFT,
     handleCancelListing,
+    handleApproveMarketplace,
+    checkApproval,
     refetchListings,
     refetchUserListings,
     
@@ -186,5 +242,6 @@ export function useMarketplaceState() {
     isConnected: !!walletAddress,
     hasListings: filteredListings.length > 0,
     hasUserListings: userListings.length > 0,
+    walletAccount,
   };
 }

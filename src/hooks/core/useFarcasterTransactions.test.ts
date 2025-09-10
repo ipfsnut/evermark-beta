@@ -39,6 +39,9 @@ describe('useFarcasterTransactions', () => {
   let mockWaitForReceipt: any;
 
   beforeEach(async () => {
+    // Suppress console.error during tests to avoid stderr output
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    
     mockUseWallet = vi.mocked((await import('@/providers/WalletProvider')).useWallet);
     mockEncodeFunctionData = vi.mocked((await import('viem')).encodeFunctionData);
     mockWaitForReceipt = vi.mocked((await import('thirdweb')).waitForReceipt);

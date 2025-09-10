@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { VotingService } from './VotingService'
 import { VOTING_CONSTANTS, VOTING_ERRORS } from '../types'
 import * as thirdweb from 'thirdweb'
@@ -32,6 +32,8 @@ describe('VotingService', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.useFakeTimers()
+    // Suppress console.error during tests to avoid stderr output
+    vi.spyOn(console, 'error').mockImplementation(() => {})
   })
 
   afterEach(() => {

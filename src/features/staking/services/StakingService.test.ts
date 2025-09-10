@@ -4,6 +4,10 @@ import { STAKING_CONSTANTS, STAKING_ERRORS } from '../types'
 import { toWei } from 'thirdweb/utils'
 
 describe('StakingService', () => {
+  beforeEach(() => {
+    // Suppress console.error during tests to avoid stderr output
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+  })
   describe('validateStakeAmount', () => {
     const balance = toWei('1000') // 1000 EMARK
 

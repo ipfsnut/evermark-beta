@@ -1,7 +1,9 @@
 // Marketplace page for trading Evermark NFTs
-import React from 'react';
+import React, { useState } from 'react';
 import { useMarketplaceState } from '../hooks/useMarketplaceState';
 import { getMarketplaceExplorerUrl } from '../services/MarketplaceService';
+import CreateListingModal from '../components/CreateListingModal';
+import { MarketplaceListingCard } from '../components/MarketplaceListingCard';
 
 export default function MarketplacePage() {
   const {
@@ -16,7 +18,44 @@ export default function MarketplacePage() {
     isConnected,
     hasListings,
     hasUserListings,
+    handleBuyNFT,
+    handleCancelListing,
+    isBuying,
+    isApproving,
   } = useMarketplaceState();
+
+  const [selectedListing, setSelectedListing] = useState<string | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
+  const handleBuyClick = async (listingId: string) => {
+    try {
+      setSelectedListing(listingId);
+      const result = await handleBuyNFT(listingId);
+      if (result.success) {
+        // Handle success (could show a toast notification)
+        console.log('NFT purchased successfully!');
+      }
+    } catch (error) {
+      console.error('Purchase failed:', error);
+      // Handle error (could show error toast)
+    } finally {
+      setSelectedListing(null);
+    }
+  };
+
+  const handleCancelClick = async (listingId: string) => {
+    try {
+      setSelectedListing(listingId);
+      const result = await handleCancelListing(listingId);
+      if (result.success) {
+        console.log('Listing cancelled successfully!');
+      }
+    } catch (error) {
+      console.error('Cancel failed:', error);
+    } finally {
+      setSelectedListing(null);
+    }
+  };
 
   const tabs = [
     { id: 'browse' as const, label: 'Browse', icon: '🛍️' },
@@ -105,21 +144,27 @@ export default function MarketplacePage() {
             ) : hasListings ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {listings.map((listing) => (
-                  <div key={listing.listingId} className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-                    <div className="text-white font-medium mb-2">Evermark #{listing.tokenId}</div>
-                    <div className="text-cyber-primary text-lg font-bold mb-2">{listing.price} ETH</div>
-                    <div className="text-gray-400 text-sm mb-4">by {listing.seller.slice(0, 6)}...{listing.seller.slice(-4)}</div>
-                    <button className="w-full bg-cyber-primary text-black py-2 rounded-md hover:bg-opacity-90 transition-colors">
-                      Buy Now
-                    </button>
-                  </div>
+                  <MarketplaceListingCard
+                    key={listing.listingId}
+                    listing={listing}
+                    onBuy={handleBuyClick}
+                    isLoading={selectedListing === listing.listingId && isBuying}
+                  />
                 ))}
               </div>
             ) : (
               <div className="text-center py-12">
                 <div className="text-6xl mb-4">🛍️</div>
                 <h3 className="text-xl font-semibold text-white mb-2">No listings yet</h3>
-                <p className="text-gray-400">Be the first to list an Evermark NFT for sale!</p>
+                <p className="text-gray-400 mb-6">Be the first to list an Evermark NFT for sale!</p>
+                {isConnected && (
+                  <button
+                    onClick={() => setShowCreateModal(true)}
+                    className="bg-cyber-primary text-black px-6 py-3 rounded-md hover:bg-opacity-90 transition-colors font-medium"
+                  >
+                    Create First Listing
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -129,7 +174,10 @@ export default function MarketplacePage() {
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-white">My Listings</h2>
-              <button className="bg-cyber-primary text-black px-4 py-2 rounded-md hover:bg-opacity-90 transition-colors">
+              <button 
+                onClick={() => setShowCreateModal(true)}
+                className="bg-cyber-primary text-black px-4 py-2 rounded-md hover:bg-opacity-90 transition-colors"
+              >
                 Create Listing
               </button>
             </div>
@@ -148,16 +196,12 @@ export default function MarketplacePage() {
             ) : hasUserListings ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {userListings.map((listing) => (
-                  <div key={listing.listingId} className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-                    <div className="text-white font-medium mb-2">Evermark #{listing.tokenId}</div>
-                    <div className="text-cyber-primary text-lg font-bold mb-2">{listing.price} ETH</div>
-                    <div className={`text-sm mb-4 ${listing.isActive ? 'text-green-400' : 'text-red-400'}`}>
-                      {listing.isActive ? 'Active' : 'Inactive'}
-                    </div>
-                    <button className="w-full bg-red-600 text-white py-2 rounded-md hover:bg-red-700 transition-colors">
-                      Cancel Listing
-                    </button>
-                  </div>
+                  <MarketplaceListingCard
+                    key={listing.listingId}
+                    listing={listing}
+                    onCancel={handleCancelClick}
+                    isLoading={selectedListing === listing.listingId}
+                  />
                 ))}
               </div>
             ) : (
@@ -187,6 +231,16 @@ export default function MarketplacePage() {
           creating additional incentives for quality content creation and community engagement.
         </p>
       </div>
+
+      {/* Create Listing Modal */}
+      <CreateListingModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={() => {
+          // Refresh listings after successful creation
+          console.log('Listing created successfully!');
+        }}
+      />
     </div>
   );
 }

@@ -29,6 +29,7 @@ import { useAppAuth } from '@/providers/AppContext';
 import { useFarcasterDetection } from '@/hooks/useFarcasterDetection';
 import { EvermarkMeta } from '@/components/FarcasterMeta';
 import { VotingStats } from '@/components/VotingStats';
+import { EvermarkMarketplaceWidget } from '@/features/marketplace/components/EvermarkMarketplaceWidget';
 
 // Utility function for responsive classes
 function cn(...classes: (string | undefined | null | false)[]): string {
@@ -514,6 +515,12 @@ export default function EvermarkDetailPage(): React.ReactNode {
 
           {/* Sidebar */}
           <div className="space-y-6">
+            {/* Marketplace Widget */}
+            <EvermarkMarketplaceWidget 
+              tokenId={evermark.tokenId.toString()}
+              ownerAddress={evermark.creator}
+            />
+
             {/* Voting Panel */}
             {showVoting && isAuthenticated ? (
               <div className="bg-gray-800/50 border border-gray-700 rounded-lg">
