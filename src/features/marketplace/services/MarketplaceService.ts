@@ -307,8 +307,8 @@ export async function buyDirectListing(
       ? parseEther(listing.price)
       : BigInt(0); // ERC20 purchases don't need ETH value
     
-    // Prepare the buy transaction
-    const transaction = prepareContractCall({
+    // Prepare the contextual transaction
+    const transaction: ContextualTransaction = {
       contract: marketplaceContract,
       method: "function buyFromListing(uint256 _listingId, address _buyFor, uint256 _quantityToBuy, address _currency, uint256 _totalPrice)",
       params: [
@@ -319,22 +319,15 @@ export async function buyDirectListing(
         parseEther(listing.price)
       ],
       value: priceInWei // Include ETH value for ETH purchases
-    });
+    };
     
     // Execute transaction using contextual transaction system
     const result = await sendTransactionFn(transaction);
     
-    if (result.success && result.hash) {
-      return { 
-        success: true, 
-        transactionHash: result.hash
-      };
-    } else {
-      return {
-        success: false,
-        error: result.error || 'Transaction failed'
-      };
-    }
+    return { 
+      success: true, 
+      transactionHash: result.transactionHash
+    };
   } catch (error) {
     console.error('Error buying from marketplace:', error);
     return { 
