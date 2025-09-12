@@ -60,24 +60,24 @@ async function generateCastImage(castData: any): Promise<Buffer> {
   
   // Generate text lines with improved positioning
   const textLines = displayText.map((line, index) => 
-    `<text x="30" y="${180 + index * 28}" font-family="Inter, -apple-system, BlinkMacSystemFont, sans-serif" font-size="16" fill="#1F2937" font-weight="400">${escapeXml(line)}</text>`
+    `<text x="50" y="${180 + index * 28}" font-family="Inter, -apple-system, BlinkMacSystemFont, sans-serif" font-size="16" fill="#1F2937" font-weight="400">${escapeXml(line)}</text>`
   ).join('\n    ');
   
   // Add truncation indicator if text is cut off
   const truncationIndicator = hasMoreText ? 
-    `<text x="30" y="${180 + displayText.length * 28}" font-family="Inter, sans-serif" font-size="16" fill="#9CA3AF" font-weight="400">...</text>` : '';
+    `<text x="50" y="${180 + displayText.length * 28}" font-family="Inter, sans-serif" font-size="16" fill="#9CA3AF" font-weight="400">...</text>` : '';
 
   // Channel badge if available
   const channelBadge = castData.channel ? 
     `<!-- Channel Badge -->
-     <rect x="580" y="106" rx="12" ry="12" width="${Math.min(castData.channel.length * 8 + 40, 160)}" height="24" fill="#F3F4F6" stroke="#E5E7EB"/>
-     <text x="596" y="122" font-family="Inter, sans-serif" font-size="12" fill="#6B7280" font-weight="500">📺 ${escapeXml(castData.channel)}</text>` : '';
+     <rect x="600" y="106" rx="12" ry="12" width="${Math.min(castData.channel.length * 8 + 40, 140)}" height="24" fill="#F3F4F6" stroke="#E5E7EB"/>
+     <text x="616" y="122" font-family="Inter, sans-serif" font-size="12" fill="#6B7280" font-weight="500">📺 ${escapeXml(castData.channel)}</text>` : '';
 
   // Embed indicators
   const embedIndicators = getEmbedIndicators(castData.embeds);
   
   const svg = `
-<svg width="800" height="400" xmlns="http://www.w3.org/2000/svg">
+<svg width="800" height="400" viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <!-- Background gradient -->
     <linearGradient id="bgGradient" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -98,7 +98,7 @@ async function generateCastImage(castData: any): Promise<Buffer> {
     
     <!-- Profile picture circular mask -->
     <clipPath id="profileClip">
-      <circle cx="46" cy="126" r="20"/>
+      <circle cx="62" cy="126" r="20"/>
     </clipPath>
   </defs>
   
@@ -110,25 +110,25 @@ async function generateCastImage(castData: any): Promise<Buffer> {
   <rect width="800" height="52" y="8" fill="url(#headerGradient)"/>
   
   <!-- Header content -->
-  <text x="24" y="38" font-family="Inter, sans-serif" font-size="18" font-weight="600" fill="white">Farcaster Cast</text>
-  <text x="720" y="38" font-family="Inter, sans-serif" font-size="14" font-weight="500" fill="#E2E8F0">Evermarks</text>
+  <text x="40" y="38" font-family="Inter, sans-serif" font-size="18" font-weight="600" fill="white">Farcaster Cast</text>
+  <text x="700" y="38" font-family="Inter, sans-serif" font-size="14" font-weight="500" fill="#E2E8F0">Evermarks</text>
   
   <!-- Author section background -->
-  <rect x="16" y="76" width="768" height="64" fill="#FFFFFF" rx="8" ry="8" opacity="0.8"/>
+  <rect x="32" y="76" width="736" height="64" fill="#FFFFFF" rx="8" ry="8" opacity="0.8"/>
   
   <!-- Profile picture -->
-  <circle cx="46" cy="126" r="22" fill="#E5E7EB" stroke="#8B5CF6" stroke-width="2" opacity="0.2"/>
-  ${profileImageDataUri ? `<image x="26" y="106" width="40" height="40" href="${profileImageDataUri}" clip-path="url(#profileClip)"/>` : 
-    `<text x="46" y="132" font-family="Inter, sans-serif" font-size="16" font-weight="600" fill="#8B5CF6" text-anchor="middle">${escapeXml((castData.author_username || 'U').charAt(0).toUpperCase())}</text>`}
+  <circle cx="62" cy="126" r="22" fill="#E5E7EB" stroke="#8B5CF6" stroke-width="2" opacity="0.2"/>
+  ${profileImageDataUri ? `<image x="42" y="106" width="40" height="40" href="${profileImageDataUri}" clip-path="url(#profileClip)"/>` : 
+    `<text x="62" y="132" font-family="Inter, sans-serif" font-size="16" font-weight="600" fill="#8B5CF6" text-anchor="middle">${escapeXml((castData.author_username || 'U').charAt(0).toUpperCase())}</text>`}
   
   <!-- Author info -->
-  <text x="78" y="118" font-family="Inter, sans-serif" font-size="18" font-weight="600" fill="#1F2937">${escapeXml(castData.author_display_name || castData.author_username || 'Unknown')}</text>
-  <text x="78" y="136" font-family="Inter, sans-serif" font-size="14" font-weight="400" fill="#6B7280">@${escapeXml(castData.author_username || 'unknown')} • ${timeAgo}</text>
+  <text x="94" y="118" font-family="Inter, sans-serif" font-size="18" font-weight="600" fill="#1F2937">${escapeXml(castData.author_display_name || castData.author_username || 'Unknown')}</text>
+  <text x="94" y="136" font-family="Inter, sans-serif" font-size="14" font-weight="400" fill="#6B7280">@${escapeXml(castData.author_username || 'unknown')} • ${timeAgo}</text>
   
   ${channelBadge}
   
   <!-- Content section background -->
-  <rect x="16" y="156" width="768" height="180" fill="#FFFFFF" rx="8" ry="8" opacity="0.6"/>
+  <rect x="32" y="156" width="736" height="180" fill="#FFFFFF" rx="8" ry="8" opacity="0.6"/>
   
   <!-- Cast text with improved typography -->
   ${textLines}
@@ -137,11 +137,11 @@ async function generateCastImage(castData: any): Promise<Buffer> {
   ${embedIndicators}
   
   <!-- Engagement section background -->
-  <rect x="16" y="352" width="768" height="32" fill="#F8FAFC" rx="6" ry="6"/>
+  <rect x="32" y="352" width="736" height="32" fill="#F8FAFC" rx="6" ry="6"/>
   
   <!-- Enhanced engagement metrics -->
   ${castData.likes !== undefined || castData.recasts !== undefined || castData.replies !== undefined ? 
-    `<text x="28" y="372" font-family="Inter, sans-serif" font-size="13" font-weight="500" fill="#6B7280">
+    `<text x="48" y="372" font-family="Inter, sans-serif" font-size="13" font-weight="500" fill="#6B7280">
        ${castData.likes !== undefined ? `❤️ ${formatNumber(castData.likes)}` : ''}
        ${castData.likes !== undefined && castData.recasts !== undefined ? '   ' : ''}
        ${castData.recasts !== undefined ? `🔄 ${formatNumber(castData.recasts)}` : ''}
@@ -254,7 +254,7 @@ function getEmbedIndicators(embeds: any[]): string {
     }
     
     if (indicator) {
-      indicators.push(`<text x="${30 + index * 80}" y="${yPosition}" font-family="Inter, sans-serif" font-size="12" fill="#8B5CF6" font-weight="500">${indicator}</text>`);
+      indicators.push(`<text x="${50 + index * 80}" y="${yPosition}" font-family="Inter, sans-serif" font-size="12" fill="#8B5CF6" font-weight="500">${indicator}</text>`);
     }
   });
   

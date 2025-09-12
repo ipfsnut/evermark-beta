@@ -74,8 +74,13 @@ export class FarcasterService {
    */
   static async fetchCastMetadata(castInput: string): Promise<FarcasterCastData | null> {
     try {
+      console.log('🎭 FarcasterService.fetchCastMetadata called with:', castInput);
+      
       const validation = this.validateFarcasterInput(castInput);
+      console.log('🔍 Validation result:', validation);
+      
       if (!validation.isValid) {
+        console.error('❌ Invalid cast hash or URL:', validation.error);
         throw new Error('Invalid cast hash or URL');
       }
 
@@ -91,14 +96,21 @@ export class FarcasterService {
         apiUrl = `${FARCASTER_CONFIG.API_BASE}/farcaster-cast?hash=${castInput}`;
       }
 
+      console.log('🔗 API URL:', apiUrl);
+
       // Try to fetch via our API endpoint
       const response = await fetch(apiUrl);
+      console.log('📡 API Response status:', response.status, response.statusText);
       
       if (response.ok) {
         const result = await response.json();
+        console.log('📄 API Response body:', result);
+        
         if (result.success && result.data) {
           const data = result.data;
-          return {
+          console.log('✅ Cast data found:', data);
+          
+          const castData = {
             castHash: data.castHash || this.extractCastHash(castInput) || castInput,
             author: data.author || 'Unknown',
             username: data.username || '',
@@ -110,7 +122,15 @@ export class FarcasterService {
               replies: data.engagement?.replies || 0
             }
           };
+          
+          console.log('📋 Formatted cast data:', castData);
+          return castData;
+        } else {
+          console.log('❌ API response missing success/data:', result);
         }
+      } else {
+        const errorText = await response.text();
+        console.error('❌ API Error response:', errorText);
       }
 
       // Fallback: Create basic metadata
