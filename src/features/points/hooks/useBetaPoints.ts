@@ -26,7 +26,7 @@ export function useBetaPoints(): UseBetaPointsReturn {
   });
 
   const awardPoints = useCallback(async (
-    actionType: 'create_evermark' | 'vote' | 'stake',
+    actionType: 'create_evermark' | 'vote' | 'stake' | 'marketplace_buy' | 'marketplace_sell',
     relatedId?: string,
     txHash?: string,
     stakeAmount?: string
