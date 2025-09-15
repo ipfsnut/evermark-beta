@@ -1,6 +1,8 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { WalletBalanceDashboard } from '../components/dev/WalletBalanceTracker';
+import { ProtocolBalancesDashboard } from '../components/dev/ProtocolBalancesDashboard';
+import { TreasuryHistoryAnalyzer } from '../components/dev/TreasuryHistoryAnalyzer';
 import { useWalletAddress } from '../hooks/core/useWalletAccount';
 
 // Development wallet address
@@ -27,6 +29,14 @@ function DevDashboardPage() {
       </div>
 
       <WalletBalanceDashboard />
+
+      {/* Protocol Balances - Missing $EMARK and WETH data */}
+      <ProtocolBalancesDashboard />
+
+      {/* Treasury History and Transaction Analysis */}
+      <div className="mt-12">
+        <TreasuryHistoryAnalyzer />
+      </div>
 
       <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="bg-white rounded-lg shadow p-6 border">

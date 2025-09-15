@@ -672,7 +672,7 @@ export function CreateEvermarkWizard({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl mx-auto">
               {CONTENT_TYPES.map((type) => (
                 <button
-                  key={type.value}
+                  key={`wizard-${type.value}`}
                   type="button"
                   onClick={() => {
                     handleFieldChange('contentType', type.value);
