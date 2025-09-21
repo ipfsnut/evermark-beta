@@ -2,13 +2,13 @@
 
 ## What is Evermark?
 
-Evermark Protocol is a decentralized system for creating permanent, verifiable references to online content. Built on the Base blockchain, it allows users to mark any digital content and ensure it remains accessible and attributable forever.
+Evermark Protocol v2.0 is a decentralized system for creating permanent, verifiable references to online content. Built on the Base blockchain with ArDrive storage, it allows users to mark any digital content and ensure it remains accessible and attributable forever.
 
 ## Key Features
 
 ### Permanent References
 - Create immutable links to any online content
-- Store metadata on IPFS for decentralized access
+- Store metadata on ArDrive (Arweave) for true permanent decentralized access
 - Blockchain-verified ownership and timestamps
 
 ### Social Discovery
@@ -25,7 +25,7 @@ Evermark Protocol is a decentralized system for creating permanent, verifiable r
 
 1. **Create**: Submit a DOI, ISBN, URL, Farcaster cast, or Custom Object to create an Evermark
 
-2. **Store**: Metadata is stored on IPFS, reference recorded on-chain, and served via Supabase to create a reliable user experience with robust Web3 resiliency
+2. **Store**: Metadata is permanently stored on ArDrive (Arweave), reference recorded on-chain, and cached via Supabase for optimal performance with true permanence
 
 3. **Share**: Your Evermark becomes part of the permanent web
 

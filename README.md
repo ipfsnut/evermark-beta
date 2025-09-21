@@ -1,6 +1,6 @@
 # Evermark Beta
 
-> Decentralized content preservation with IPFS-first architecture - Built for permanence, optimized for performance.
+> Decentralized content preservation with unified storage architecture - Built for permanence, optimized for performance.
 
 ## 🚀 Quick Start
 
@@ -37,13 +37,14 @@ src/
 
 ### Core Principles
 
-- **IPFS-First Storage**: Content uploads directly to IPFS for true decentralization
+- **Unified Storage**: Content preserved on ArDrive (Arweave) for permanence, IPFS for speed
 - **Feature Isolation**: Each feature is independently testable and maintainable
 - **Pure Functions**: All business logic as testable pure functions
 - **Single State Hook**: One hook per feature for centralized state management
 - **Type Safety**: Comprehensive TypeScript coverage with strict mode
 - **Clean Separation**: UI components contain no business logic
 - **SDK-Powered**: Core functionality provided by the evermark-sdk
+- **Season Management**: Automated weekly seasons with smart contract coordination
 
 ## 🎯 Features
 
@@ -55,9 +56,11 @@ src/
 - **Tokens**: Manage $EMARK balances and transactions
 - **Marketplace**: Buy and sell Evermark NFTs with real-time listings
 - **Points System**: Earn points for community participation and marketplace activity
+- **Season Management**: Automated weekly progression with leaderboard finalization
+- **Advanced Analytics**: Comprehensive data integrity and performance monitoring
 
 ### Technical Features
-- **IPFS Storage**: Direct uploads to IPFS with Pinata/Web3.Storage integration
+- **Unified Storage**: ArDrive (Arweave) for permanent preservation, IPFS for fast access
 - **Hybrid Caching**: Supabase caching layer for optimal performance
 - **Farcaster Integration**: Native Frame/Mini-app support
 - **Blockchain**: Thirdweb SDK with Base network (Chain ID: 8453)
@@ -65,6 +68,7 @@ src/
 - **Responsive Design**: Mobile-first with cyber theme
 - **SDK Integration**: Powered by evermark-sdk for robust image/metadata handling
 - **Error Handling**: Comprehensive error boundaries and validation
+- **Dynamic Sharing**: Optimized social media integration with platform-specific meta tags
 
 ## 🏆 Points System
 
@@ -111,7 +115,7 @@ The points system creates a sustainable economy that rewards both content creati
 - **Frontend**: React 18 + TypeScript + Vite
 - **Styling**: Tailwind CSS with custom cyber theme
 - **State Management**: React Query + React Context
-- **Storage**: IPFS (Pinata) + Supabase caching + evermark-sdk
+- **Storage**: ArDrive (Arweave) + IPFS (Pinata) + Supabase caching
 - **Blockchain**: Thirdweb SDK + Wagmi + Viem (Base Network)
 - **Backend**: Netlify Functions + Supabase
 - **Testing**: Vitest + React Testing Library
@@ -119,12 +123,12 @@ The points system creates a sustainable economy that rewards both content creati
 ### Storage Architecture
 
 ```
-User Upload → IPFS (Primary) → Blockchain (Metadata URI)
-                ↓
-            Supabase (Cache) ← Background Sync
+User Upload → ArDrive (Permanent) → Blockchain (Metadata URI)
+                ↓            ↓
+           IPFS (Fast)   Supabase (Cache) ← Background Sync
 ```
 
-**IPFS-First Approach**: All content uploads directly to IPFS for permanent decentralized storage, with Supabase providing fast caching for optimal user experience.
+**Unified Storage Approach**: Content stored on ArDrive (Arweave) for permanent preservation, IPFS for fast access, with Supabase providing optimized caching for the best user experience.
 
 ## 📚 Development
 
@@ -176,7 +180,12 @@ VITE_SUPABASE_URL=your_supabase_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_KEY=your_service_key  # Backend only
 
-# IPFS Storage (Required)
+# Storage Systems (Required)
+# ArDrive (Arweave) - Primary permanent storage
+VITE_ARDRIVE_API_KEY=your_ardrive_api_key
+VITE_ARDRIVE_WALLET_KEY=your_ardrive_wallet_key
+
+# IPFS - Fast access layer
 VITE_PINATA_API_KEY=your_pinata_api_key
 VITE_PINATA_SECRET_KEY=your_pinata_secret
 VITE_PINATA_JWT=your_pinata_jwt
@@ -190,6 +199,7 @@ VITE_EVERMARK_VOTING_ADDRESS=0x...
 VITE_EVERMARK_LEADERBOARD_ADDRESS=0x...
 VITE_EVERMARK_REWARDS_ADDRESS=0x...
 VITE_FEE_COLLECTOR_ADDRESS=0x...
+VITE_MARKETPLACE_ADDRESS=0x...
 
 # Farcaster Integration (Optional)
 VITE_FARCASTER_DEVELOPER_FID=your_developer_fid
@@ -200,16 +210,18 @@ VITE_FARCASTER_MINI_APP_ID=your_mini_app_id
 ### Local Development Setup
 
 1. Copy environment variables from `.env.local.example`
-2. Configure Pinata for IPFS uploads
-3. Set up Supabase database and storage
-4. Deploy smart contracts to Base network
-5. Run `npx netlify dev` for full functionality
+2. Configure ArDrive for permanent storage
+3. Configure Pinata for IPFS uploads
+4. Set up Supabase database and storage
+5. Deploy smart contracts to Base network
+6. Run `npx netlify dev` for full functionality
 
 ## 📖 Key Documentation
 
 - **[CLAUDE.md](./CLAUDE.md)** - Complete development guide for Claude Code
-- **[Architecture Overview](#-architecture)** - Feature-first design principles  
-- **[Storage Architecture](#storage-architecture)** - IPFS-first approach
+- **[SEASON_MANAGEMENT_SYSTEM.md](./SEASON_MANAGEMENT_SYSTEM.md)** - Season orchestration and ArDrive integration
+- **[Architecture Overview](#-architecture)** - Feature-first design principles
+- **[Storage Architecture](#storage-architecture)** - Unified storage approach
 - **[Environment Setup](#local-development-setup)** - Local development guide
 
 ### SDK Integration
@@ -243,6 +255,6 @@ MIT License - see [LICENSE](./LICENSE) for details.
 
 ---
 
-**Evermark Beta** - Decentralized content preservation, built for permanence 🚀
+**Evermark Beta v2.0** - Decentralized content preservation, built for permanence 🚀
 
-*Powered by IPFS, secured by blockchain, optimized for performance.*
+*Powered by ArDrive + IPFS, secured by blockchain, optimized for performance.*

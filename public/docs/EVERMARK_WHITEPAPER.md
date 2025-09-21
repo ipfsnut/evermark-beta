@@ -1,5 +1,5 @@
 # **[DRAFT]** Evermark: Decentralized Content Preservation and Curation Platform
-## Technical Whitepaper v1.0
+## Technical Whitepaper v2.0
 
 ### Abstract
 
@@ -27,7 +27,7 @@ Evermark is a decentralized application (dApp) built on the Base blockchain that
 
 In an era of information abundance and digital content proliferation, the challenge of preserving valuable content while filtering signal from noise has become increasingly critical. Traditional content platforms are centralized, subject to censorship, and vulnerable to data loss. Evermark addresses these limitations by creating a decentralized, community-governed platform for content preservation and curation.
 
-Built on Base blockchain infrastructure, Evermark leverages the immutability of blockchain technology, the permanence of IPFS storage, and the wisdom of decentralized communities to create a robust content preservation ecosystem.
+Built on Base blockchain infrastructure, Evermark v2.0 leverages the immutability of blockchain technology, the permanence of ArDrive (Arweave) storage, and the wisdom of decentralized communities to create a robust content preservation ecosystem.
 
 ## Problem Statement
 
@@ -53,11 +53,12 @@ Evermark solves these challenges through a multi-layered approach:
 
 ### Core Solution Components
 
-1. **NFT-Based Content Preservation**: Content is permanently preserved by minting it as NFTs on the Base blockchain, with metadata and files stored on IPFS
+1. **NFT-Based Content Preservation**: Content is permanently preserved by minting it as NFTs on the Base blockchain, with metadata and files stored on ArDrive (Arweave)
 2. **Token-Based Voting System**: Community members stake $EMARK tokens to gain voting power and participate in content curation
 3. **Reputation and Ranking**: A sophisticated leaderboard system ranks content based on community votes and engagement
-4. **Decentralized Storage**: Content files are stored on IPFS with Pinata integration, ensuring permanent availability
-5. **Multi-Platform Access**: Support for web browsers, mobile devices, and Farcaster Frame integration
+4. **Permanent Storage**: Content files are stored on ArDrive (Arweave) ensuring true permanent availability with 200+ year data guarantees
+5. **Season Management**: Automated weekly progression with oracle coordination and reward distribution
+6. **Multi-Platform Access**: Support for web browsers, mobile devices, and Farcaster Frame integration
 
 ### Value Propositions
 
@@ -108,16 +109,17 @@ netlify/functions/
 ├── frame.ts           // Farcaster Frame support
 ├── shares.ts          // Social sharing features
 ├── webhook.ts         // External integrations
-├── upload-image.ts    // IPFS image upload proxy
+├── upload-image.ts    // ArDrive image upload proxy
 └── dev-dashboard.ts   // Development utilities
 ```
 
-### Storage Layer
+### Storage Layer - ArDrive Primary Architecture
 
-**IPFS Integration**
-- **Pinata Service**: Professional IPFS pinning for reliability
+**ArDrive (Arweave) Integration**
+- **Permanent Storage**: True permanent storage with 200+ year data guarantees
 - **Supabase Caching**: Performance optimization for frequently accessed content
-- **Redundant Storage**: Multiple pinning services for enhanced durability
+- **Legacy IPFS Support**: Backward compatibility for existing content
+- **Cost Transparency**: Real-time storage cost estimation and monitoring
 
 ### Web3 Integration
 
@@ -153,7 +155,7 @@ interface Evermark {
 **Content Processing Pipeline:**
 1. User submits content URL or uploads file
 2. Content metadata extraction and validation
-3. File upload to IPFS via Pinata
+3. File upload to ArDrive for permanent storage
 4. NFT minting on Base blockchain
 5. Metadata storage in Supabase for fast access
 6. Content indexing for search and discovery
@@ -390,7 +392,7 @@ contract EvermarkLeaderboard is AccessControl {
 **3. Performance Optimization**
 - React Query for efficient data fetching
 - Supabase caching for instant content access
-- IPFS gateway optimization for fast file loading
+- ArDrive gateway optimization for fast file loading
 - Progressive image loading and content streaming
 
 ### User Journey Examples
@@ -453,7 +455,7 @@ contract EvermarkLeaderboard is AccessControl {
 **Data Protection:**
 - Client-side encryption for sensitive data
 - Secure key management practices
-- IPFS content integrity verification
+- ArDrive content integrity verification
 - Privacy-preserving analytics
 
 ### Infrastructure Security
@@ -544,7 +546,7 @@ As the digital content landscape continues to evolve, Evermark provides the infr
 **Blockchain:** Base (Chain ID: 8453)  
 **Token Standard:** ERC-20 ($EMARK)  
 **NFT Standard:** ERC-721 (Evermarks)  
-**Storage:** IPFS with Pinata pinning  
+**Storage:** ArDrive (Arweave) with permanent data guarantees  
 **Frontend:** React 18 + TypeScript + Tailwind CSS  
 **Backend:** Netlify Functions + Supabase  
 **Testing:** Vitest (544 tests, 100% coverage)  

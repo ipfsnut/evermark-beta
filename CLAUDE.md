@@ -28,9 +28,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run test` - Run tests with Vitest
 - `npm run test:coverage` - Run tests with coverage report
 
-### Data Migration
+### Data Migration & Operations
 - `npm run migrate:legacy` - Migrate legacy evermarks
 - `npm run migrate:dry` - Dry run migration without making changes
+- `npm run migrate:ardrive` - Migrate content to ArDrive storage
+- `npm run season:status` - Check current season management status
+- `npm run storage:metrics` - Analyze storage system performance
 
 ## Architecture Overview
 
@@ -55,6 +58,8 @@ src/features/[feature-name]/
 5. **Tokens** - $EMARK balance and transaction management
 6. **Marketplace** - NFT trading with Thirdweb marketplace integration
 7. **Points System** - Community rewards for engagement and marketplace activity
+8. **Season Management** - Automated weekly progression with oracle coordination
+9. **Admin Tools** - Season finalization, reward distribution, and analytics
 
 ### Provider Hierarchy
 Providers wrap the app in this specific order:
@@ -81,8 +86,13 @@ Providers wrap the app in this specific order:
   - `webhook.ts` - External integrations
   - `dev-dashboard.ts` - Development utilities
   - `beta-points.ts` - Points system API with marketplace rewards
+  - `season-oracle.ts` - Season management coordination
+  - `admin-*` functions - Season finalization and reward distribution
+  - `dynamic-og-image.ts` - Social media optimization
+- **Storage**: ArDrive (permanent) + IPFS (fast access) + Supabase (caching)
 - **Database**: Supabase for metadata and caching
 - **Blockchain**: Base network (chain ID 8453) via Thirdweb SDK
+- **Season Management**: Automated weekly progression with oracle coordination
 
 ### Smart Contract Integration
 Contracts are accessed via getters in `/src/lib/contracts.ts`:
@@ -91,6 +101,8 @@ Contracts are accessed via getters in `/src/lib/contracts.ts`:
 - `getEvermarkNFTContract()` - Evermark NFT minting
 - `getEvermarkVotingContract()` - Voting mechanism
 - `getEvermarkLeaderboardContract()` - Ranking system
+- `getEvermarkRewardsContract()` - Reward distribution
+- `getFeeCollectorContract()` - Protocol fee management
 - `getMarketplaceContract()` - Thirdweb marketplace for NFT trading
 
 Each feature imports its own ABI from `features/[name]/abis/`.
@@ -108,6 +120,8 @@ Each feature imports its own ABI from `features/[name]/abis/`.
 3. **Type Safety**: Strict TypeScript with no implicit `any`
 4. **Clean Separation**: UI components contain no business logic
 5. **Feature Isolation**: Features are independently testable
+6. **Unified Storage**: ArDrive for permanence, IPFS for speed, Supabase for caching
+7. **Season Coordination**: Automated progression with smart contract synchronization
 
 ### Points System Architecture
 
@@ -148,16 +162,41 @@ const POINT_VALUES = {
 
 ### Environment Variables Required
 ```
+# Core Configuration
 VITE_THIRDWEB_CLIENT_ID=
 VITE_CHAIN_ID=8453
 VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=
-VITE_FARCASTER_DEVELOPER_FID=
+SUPABASE_SERVICE_KEY=  # Backend only
+
+# Storage Systems
+# ArDrive (Arweave) - Primary permanent storage
+VITE_ARDRIVE_API_KEY=
+VITE_ARDRIVE_WALLET_KEY=
+# IPFS - Fast access layer
+VITE_PINATA_API_KEY=
+VITE_PINATA_SECRET_KEY=
+VITE_PINATA_JWT=
+VITE_PINATA_GATEWAY=
+
+# Smart Contracts
 VITE_EMARK_TOKEN_ADDRESS=
-VITE_CARD_CATALOG_ADDRESS=
+VITE_WEMARK_ADDRESS=
 VITE_EVERMARK_NFT_ADDRESS=
 VITE_EVERMARK_VOTING_ADDRESS=
 VITE_EVERMARK_LEADERBOARD_ADDRESS=
+VITE_EVERMARK_REWARDS_ADDRESS=
+VITE_FEE_COLLECTOR_ADDRESS=
+VITE_MARKETPLACE_ADDRESS=
+VITE_NFT_STAKING_ADDRESS=
+
+# Farcaster Integration
+VITE_FARCASTER_DEVELOPER_FID=
+VITE_NEYNAR_API_KEY=
+VITE_FARCASTER_MINI_APP_ID=
+
+# Season Management
+SEASON_ORACLE_ENABLED=true
 ```
 
 ### Common Workflows
@@ -181,3 +220,15 @@ VITE_EVERMARK_LEADERBOARD_ADDRESS=
 2. Test on Base network (chain ID 8453)
 3. Monitor transactions in BaseScan
 4. Use React Query for caching blockchain data
+
+#### Managing Storage Systems
+1. Primary storage on ArDrive for permanent preservation
+2. IPFS for fast access and existing content
+3. Supabase for caching and search optimization
+4. Monitor storage metrics via `npm run storage:metrics`
+
+#### Season Management
+1. Check status with `npm run season:status`
+2. Use admin dashboard for season finalization
+3. Monitor oracle coordination in dev dashboard
+4. Verify smart contract synchronization

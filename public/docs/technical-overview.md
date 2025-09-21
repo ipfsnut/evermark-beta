@@ -1,6 +1,6 @@
 # Technical Overview
 
-Evermark Protocol is built on modern blockchain infrastructure to ensure permanence, decentralization, and scalability.
+Evermark Protocol v2.0 is built on modern blockchain infrastructure with ArDrive permanent storage to ensure true permanence, decentralization, and scalability.
 
 ## Core Infrastructure
 
@@ -10,9 +10,10 @@ Evermark Protocol is built on modern blockchain infrastructure to ensure permane
 - **Fast Finality**: Quick confirmation times
 - **Ethereum Security**: Inherits base layer security guarantees
 
-### Storage Layer  
-- **IPFS**: Decentralized storage for Evermark metadata
-- **Pinata**: Reliable pinning service for content availability
+### Storage Layer - ArDrive Primary Architecture
+- **ArDrive (Arweave)**: Primary permanent storage for all new content
+- **Supabase**: Performance caching layer for optimal user experience
+- **Legacy IPFS**: Backward compatibility for existing content
 - **Content Addressing**: Cryptographic hashes ensure data integrity
 - **Gateway Access**: Multiple access points for redundancy
 
@@ -22,7 +23,7 @@ Evermark Protocol is built on modern blockchain infrastructure to ensure permane
 
 **EvermarkNFT**
 - Creates and manages Evermark NFT tokens representing preserved content
-- Stores content hashes and metadata references to IPFS
+- Stores content hashes and metadata references to ArDrive permanent storage
 - UUPS upgradeable with role-based access control
 - Handles ownership, transfer, and minting functionality
 
