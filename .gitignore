@@ -133,3 +133,28 @@ temp/
 
 # Vitest
 coverage/
+
+# Migration and temporary files
+*.cjs
+migrate-*.js
+sync-*.js
+update-*.js
+test-*.js
+*-migration*.json
+*-summary.json
+*.tmp
+
+# Backup files
+*.backup
+*2.tsx
+*2.ts
+*2.js
+node_modules_backup_*
+package-lock.json.backup
+pnpm-lock.yaml
+
+# Development notes
+dev-*.txt
+*-notes.txt
+*-plan.md
+TODO*.md

@@ -20,7 +20,7 @@ import {
   ImageIcon,
   ZapIcon
 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns/formatDistanceToNow';
 
 // Feature imports
 import { useEvermarksState, type Evermark } from '@/features/evermarks';

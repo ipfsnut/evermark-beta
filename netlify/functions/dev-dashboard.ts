@@ -119,7 +119,7 @@ async function getProtocolBalances() {
     const [rewardsWeth, rewardsEmark] = rewardsBalances as [bigint, bigint];
 
     // Calculate total EMARK across all contracts
-    const totalEmarkInContracts = Object.values(contractEmarkBalances).reduce((sum, balance) => {
+    const totalEmarkInContracts = Object.values(contractEmarkBalances).reduce((sum: number, balance) => {
       return sum + parseFloat(balance as string);
     }, 0);
 
@@ -140,12 +140,12 @@ async function getProtocolBalances() {
       },
       // ACTUAL $EMARK BALANCES BY CONTRACT
       contracts: {
-        voting: contractEmarkBalances.VOTING,
-        nft: contractEmarkBalances.NFT,
-        staking: contractEmarkBalances.STAKING,
-        rewards: contractEmarkBalances.REWARDS,
-        feeCollector: contractEmarkBalances.FEE_COLLECTOR,
-        marketplace: contractEmarkBalances.MARKETPLACE
+        voting: (contractEmarkBalances as any).VOTING,
+        nft: (contractEmarkBalances as any).NFT,
+        staking: (contractEmarkBalances as any).STAKING,
+        rewards: (contractEmarkBalances as any).REWARDS,
+        feeCollector: (contractEmarkBalances as any).FEE_COLLECTOR,
+        marketplace: (contractEmarkBalances as any).MARKETPLACE
       },
       total: {
         emark: totalEmarkInContracts.toFixed(2),
@@ -339,7 +339,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
   <div class="header">
     <h1>🚀 EVERMARK DEV DASHBOARD</h1>
     <p>System Control Center • Environment: ${process.env.NODE_ENV || 'development'}</p>
-    <p><strong>Total Evermarks:</strong> ${evermarksCount?.count || 0} • <strong>Verified:</strong> ${verifiedCount?.count || 0} • <strong>Beta Points Users:</strong> ${pointsStats?.count || 0}</p>
+    <p><strong>Total Evermarks:</strong> ${(evermarksCount as any)?.count || 0} • <strong>Verified:</strong> ${(verifiedCount as any)?.count || 0} • <strong>Beta Points Users:</strong> ${(pointsStats as any)?.count || 0}</p>
     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: 1rem; font-size: 0.9em;">
       <div style="text-align: center; padding: 0.5rem; background: rgba(0,255,65,0.1); border-radius: 6px;">
         <div style="color: #00ff41; font-weight: bold;">${protocolBalances.total.emark} $EMARK</div>
@@ -375,7 +375,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
         </div>
         <div class="stat-item">
           <div class="stat-label">Total Votes Cast</div>
-          <div class="stat-value" id="total-votes">${voteRecords?.count || 0}</div>
+          <div class="stat-value" id="total-votes">${(voteRecords as any)?.count || 0}</div>
         </div>
         <div class="stat-item">
           <div class="stat-label">Season End Time</div>
@@ -419,7 +419,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
         </div>
         <div class="stat-item">
           <div class="stat-label">Metadata Missing</div>
-          <div class="stat-value ${needsMetadata?.count ? 'warning' : 'success'}">${needsMetadata?.count || 0}</div>
+          <div class="stat-value ${(needsMetadata as any)?.count ? 'warning' : 'success'}">${(needsMetadata as any)?.count || 0}</div>
         </div>
         <div class="stat-item">
           <div class="stat-label">Blockchain Health</div>
@@ -454,7 +454,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
         </div>
         <div class="stat-item">
           <div class="stat-label">Points Users</div>
-          <div class="stat-value">${pointsStats?.count || 0}</div>
+          <div class="stat-value">${(pointsStats as any)?.count || 0}</div>
         </div>
         <div class="stat-item">
           <div class="stat-label">Top Points</div>

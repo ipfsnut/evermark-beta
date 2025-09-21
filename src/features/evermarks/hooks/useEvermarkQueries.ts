@@ -11,7 +11,7 @@ import {
 
 // Query keys for React Query
 const QUERY_KEYS = {
-  evermarks: (options: EvermarkFeedOptions) => ['evermarks', options],
+  evermarks: (options: EvermarkFeedOptions) => ['evermarks', options, 'v2'], // Added v2 to force cache refresh
   evermark: (id: string) => ['evermark', id],
   all: () => ['evermarks'] as const
 } as const;

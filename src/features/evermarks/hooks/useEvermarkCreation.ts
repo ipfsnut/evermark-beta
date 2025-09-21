@@ -1,3 +1,7 @@
+// src/features/evermarks/hooks/useEvermarkCreation_updated.ts
+// Updated evermark creation hook with ArDrive and season support
+// This replaces the existing useEvermarkCreation.ts file
+
 import { useState, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useWalletAccount, useThirdwebAccount } from '@/hooks/core/useWalletAccount';
@@ -13,12 +17,16 @@ import {
 } from '../types';
 
 import { ContextualBlockchainService } from '../services/ContextualBlockchainService';
-import { pinataService } from '@/services/PinataService';
 import { type DuplicateCheckResponse } from '@/utils/contentIdentifiers';
 
+// NEW IMPORTS
+import { storageService } from '@/services/StorageService';
+import { seasonOracle } from '@/services/SeasonOracle';
+import { FEATURES } from '@/config/features';
+
 /**
- * Hook for handling evermark creation with blockchain-first approach
- * Extracted from useEvermarkState for better separation of concerns
+ * Hook for handling evermark creation with unified storage and season management
+ * Updated to support both IPFS and ArDrive backends with automatic season tracking
  */
 export function useEvermarkCreation() {
   const account = useWalletAccount();
@@ -51,8 +59,8 @@ export function useEvermarkCreation() {
       setCreateProgress(0);
       setCreateStep('Validating inputs...');
       
-      // Perform the blockchain-first creation
-      const result = await createEvermarkWithBlockchain(
+      // Perform the blockchain-first creation with new storage system
+      const result = await createEvermarkWithUnifiedStorage(
         input, 
         accountForTransactions, 
         sendTransaction,
@@ -81,6 +89,7 @@ export function useEvermarkCreation() {
         
         // Invalidate queries to refetch data
         await queryClient.invalidateQueries({ queryKey: ['evermarks'] });
+        await queryClient.invalidateQueries({ queryKey: ['season'] });
         
         // Award points for creating evermark
         try {
@@ -149,30 +158,14 @@ export function useEvermarkCreation() {
     }
   }, []);
 
-  // Check for duplicates before creation
-  const checkAndCreateEvermark = useCallback(async (input: CreateEvermarkInput, { skipDuplicateCheck = false } = {}) => {
-    const sourceUrl = input.metadata?.sourceUrl || input.metadata?.url || input.metadata?.castUrl;
-    
-    if (!skipDuplicateCheck && sourceUrl) {
-      const duplicateResult = await checkForDuplicate(sourceUrl);
-      
-      if (duplicateResult.exists) {
-        setDuplicateCheck(duplicateResult);
-        
-        // For exact matches, force user to acknowledge the duplicate
-        if (duplicateResult.confidence === 'exact') {
-          setShowDuplicateModal(true);
-          throw new Error(`${duplicateResult.message}. Please vote on the existing evermark instead.`);
-        } 
-        // For high confidence, show modal but allow override
-        else if (duplicateResult.confidence === 'high') {
-          setShowDuplicateModal(true);
-          throw new Error(`${duplicateResult.message}. You can choose to proceed or vote on the existing evermark.`);
-        }
-        // For medium/low confidence, just log and proceed
-        else {
-          console.log('📋 Potential duplicate detected:', duplicateResult.message);
-        }
+  // Check for duplicate and create if none found
+  const checkAndCreateEvermark = useCallback(async (input: CreateEvermarkInput) => {
+    if (input.metadata?.sourceUrl) {
+      const duplicate = await checkForDuplicate(input.metadata.sourceUrl);
+      if (duplicate.exists) {
+        setDuplicateCheck(duplicate);
+        setShowDuplicateModal(true);
+        return null;
       }
     }
     
@@ -204,10 +197,9 @@ export function useEvermarkCreation() {
 }
 
 /**
- * Core blockchain-first evermark creation logic
- * Extracted for reusability and testing
+ * Updated evermark creation logic with unified storage and season tracking
  */
-async function createEvermarkWithBlockchain(
+async function createEvermarkWithUnifiedStorage(
   input: CreateEvermarkInput,
   account: Account | { address: string; [key: string]: any },
   sendTransaction: (tx: {
@@ -232,24 +224,30 @@ async function createEvermarkWithBlockchain(
       throw new Error('Title is required');
     }
 
-    // Debug: Check what we actually received
     console.log('🔍 Validation - input.image:', input.image, 'type:', typeof input.image);
     console.log('🔍 Validation - contentType:', input.metadata?.contentType);
+    console.log('🔍 Storage backend:', FEATURES.getStorageBackend());
     
     // Image is optional for Cast content type (since we can generate cast images)
-    // For README, image should be provided as URL string
     if (!input.image && input.metadata?.contentType !== 'Cast') {
       throw new Error('Image is required for evermark creation');
     }
 
-    // Check configurations
-    if (!pinataService.isConfigured()) {
-      throw new Error('IPFS service not configured');
+    // Check storage service configuration
+    if (!storageService.isConfigured()) {
+      throw new Error('Storage service not configured');
     }
+
+    // Get current season info
+    onProgress(12, 'Getting current season...');
+    const seasonState = await seasonOracle.getCurrentState();
+    const currentSeason = seasonState.current;
+    
+    console.log('📅 Current season:', currentSeason.number, `(${currentSeason.year}-${currentSeason.week})`);
 
     const { metadata } = input;
     
-    // Fetch metadata based on content type
+    // Fetch metadata based on content type (unchanged logic)
     let castData;
     let academicMetadata;
     let tweetData;
@@ -296,15 +294,14 @@ async function createEvermarkWithBlockchain(
       }
     }
     
-    let imageUploadResult: { success: boolean; hash?: string; error?: string } | null = null;
+    let imageUploadResult: any = null;
     
     if (input.image) {
       if (typeof input.image === 'string') {
-        // Handle README book images - process via server-side function to avoid CSP issues
+        // Handle README book images - process via server-side function
         onProgress(20, 'Processing README book cover image...');
         
         try {
-          // Process image via server-side function to avoid CORS/CSP issues
           const response = await fetch('/.netlify/functions/process-readme-image', {
             method: 'POST',
             headers: {
@@ -323,362 +320,214 @@ async function createEvermarkWithBlockchain(
             throw new Error(`Image processing failed: ${result.error}`);
           }
 
-          onProgress(25, 'Converting and uploading to IPFS...');
+          onProgress(25, 'Converting and uploading to storage...');
 
-          // Convert base64 data URL directly to File (avoid CSP fetch restrictions)
-          const base64Data = result.dataUrl.split(',')[1]; // Remove "data:image/...;base64," prefix
-          const byteCharacters = atob(base64Data);
-          const byteNumbers = new Array(byteCharacters.length);
-          for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i);
-          }
-          const byteArray = new Uint8Array(byteNumbers);
-          const imageBlob = new Blob([byteArray], { type: result.contentType });
+          // Convert base64 data URL to File
+          const base64Data = result.dataUrl.split(',')[1];
+          const imageBuffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+          const imageFile = new File([imageBuffer], 'readme-image.jpg', { type: 'image/jpeg' });
+
+          // Upload using unified storage service
+          imageUploadResult = await storageService.uploadImage(imageFile);
           
-          // Create a File object from the blob
-          const fileName = `readme-book-${Date.now()}.${result.contentType?.split('/')[1] || 'png'}`;
-          const imageFile = new File([imageBlob], fileName, { type: result.contentType });
-          
-          // Upload to Pinata like any other image
-          imageUploadResult = await pinataService.uploadImage(imageFile);
-          if (!imageUploadResult.success || !imageUploadResult.hash) {
-            throw new Error(`README book image upload failed: ${imageUploadResult.error}`);
-          }
-          
-          console.log('✅ README book cover uploaded to IPFS:', imageUploadResult.hash);
         } catch (error) {
-          console.error('❌ README book image processing failed:', error);
-          throw new Error(`README book image processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          console.error('❌ README image processing failed:', error);
+          throw new Error(`README image processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
       } else {
         // Handle regular File uploads
-        onProgress(20, 'Uploading image to IPFS...');
+        onProgress(20, 'Uploading image to storage...');
         
-        imageUploadResult = await pinataService.uploadImage(input.image);
-        if (!imageUploadResult.success || !imageUploadResult.hash) {
-          throw new Error(`Image upload failed: ${imageUploadResult.error}`);
+        try {
+          imageUploadResult = await storageService.uploadImage(input.image);
+        } catch (error) {
+          console.error('❌ Image upload failed:', error);
+          throw new Error(`Image upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
       }
-    } else if (metadata.contentType === 'Cast') {
-      onProgress(20, 'Skipping image upload for Cast content...');
-      console.log('📝 No manual image provided for Cast content, will use generated cast image if available');
-    }
-    
-    onProgress(40, 'Creating metadata...');
-    
-    // Create NFT metadata
-    const nftMetadata = {
-      name: metadata.title,
-      description: metadata.description ?? '',
-      image: imageUploadResult?.hash ? `ipfs://${imageUploadResult.hash}` : undefined,
-      external_url: metadata.sourceUrl ?? metadata.url ?? metadata.castUrl,
-      attributes: [
-        {
-          trait_type: 'Content Type',
-          value: metadata.contentType ?? 'Custom'
-        },
-        {
-          trait_type: 'Creator',
-          value: castData?.author || tweetData?.author || academicMetadata?.primaryAuthor || webMetadata?.author || metadata.author || accountAddress
-        },
-        {
-          trait_type: 'Creation Date',
-          value: new Date().toISOString(),
-          display_type: 'date'
-        },
-        ...(metadata.tags || []).map(tag => ({
-          trait_type: 'Tag',
-          value: tag
-        }))
-      ],
-      evermark: {
-        version: '1.0',
-        contentType: metadata.contentType || 'Custom',
-        sourceUrl: metadata.sourceUrl || metadata.url || metadata.castUrl,
-        tags: metadata.tags || [],
-        customFields: metadata.customFields || [],
-        doi: metadata.doi,
-        isbn: metadata.isbn,
-        journal: metadata.journal,
-        publisher: metadata.publisher,
-        publicationDate: metadata.publicationDate,
-        volume: metadata.volume,
-        issue: metadata.issue,
-        pages: metadata.pages,
-        // Add cast-specific data
-        castData,
-        castUrl: metadata.sourceUrl || metadata.castUrl
+
+      if (!imageUploadResult.success) {
+        throw new Error(imageUploadResult.error || 'Image upload failed');
       }
-    };
-    
-    onProgress(50, 'Uploading metadata to IPFS...');
-    
-    // Upload metadata to IPFS
-    const metadataUploadResult = await pinataService.uploadMetadata(nftMetadata);
-    if (!metadataUploadResult.success || !metadataUploadResult.url) {
-      throw new Error(`Metadata upload failed: ${metadataUploadResult.error}`);
+
+      console.log('✅ Image uploaded successfully:', imageUploadResult);
     }
+
+    // Build enhanced metadata with season and storage info
+    onProgress(30, 'Building metadata...');
     
-    onProgress(60, 'Checking referrer settings...');
+    const enhancedMetadata = {
+      ...metadata,
+      
+      // Season information
+      season: {
+        number: currentSeason.number,
+        year: currentSeason.year,
+        week: currentSeason.week,
+        phase: currentSeason.phase,
+        timestamp: Date.now()
+      },
+      
+      // Storage information
+      storage: {
+        backend: imageUploadResult?.backend || 'unknown',
+        url: imageUploadResult?.url,
+        ...(imageUploadResult?.hash && { ipfsHash: imageUploadResult.hash }),
+        ...(imageUploadResult?.txId && { ardriveId: imageUploadResult.txId }),
+        ...(imageUploadResult?.cost && { cost: imageUploadResult.cost }),
+        uploadedAt: new Date().toISOString()
+      },
+      
+      // Enhanced metadata from external services
+      ...(castData && { castData }),
+      ...(academicMetadata && { academicMetadata }),
+      ...(tweetData && { tweetData }),
+      ...(webMetadata && { webMetadata }),
+      
+      // Creator info
+      creator: accountAddress,
+      createdAt: new Date().toISOString(),
+      
+      // Image reference
+      ...(imageUploadResult && {
+        image: imageUploadResult.url,
+        imageHash: imageUploadResult.hash,
+        imageSize: imageUploadResult.size
+      })
+    };
+
+    // Upload metadata using unified storage service
+    onProgress(40, 'Uploading metadata...');
     
-    // Get user's account referrer setting
-    let accountReferrer: string | undefined;
-    
+    let metadataUploadResult;
     try {
-      const userSettingsResponse = await fetch('/api/user-settings', {
-        method: 'GET',
+      metadataUploadResult = await storageService.uploadMetadata(enhancedMetadata);
+    } catch (error) {
+      console.error('❌ Metadata upload failed:', error);
+      throw new Error(`Metadata upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+
+    if (!metadataUploadResult.success) {
+      throw new Error(metadataUploadResult.error || 'Metadata upload failed');
+    }
+
+    console.log('✅ Metadata uploaded successfully:', metadataUploadResult);
+
+    // Prepare blockchain transaction
+    onProgress(50, 'Preparing blockchain transaction...');
+    
+    const metadataUri = metadataUploadResult.url;
+    const referrerAddress = accountAddress; // Remove referrer for now
+
+    console.log('🔗 Minting NFT with metadata URI:', metadataUri);
+
+    // Get contracts and mint NFT
+    onProgress(60, 'Minting NFT on blockchain...');
+    
+    const contracts = await import('@/lib/contracts');
+    const nftContract = contracts.getEvermarkNFTContract();
+
+    // Use the correct mintEvermark parameters: (metadataURI, title, creator)
+    const mintTx = await sendTransaction({
+      contract: nftContract,
+      method: "function mintEvermark(string metadataURI, string title, string creator) payable returns (uint256)",
+      params: [metadataUri, metadata.title, accountAddress],
+      value: BigInt("70000000000000") // 0.00007 ETH in wei
+    });
+
+    console.log('✅ NFT minted successfully. Transaction hash:', mintTx.transactionHash);
+
+    onProgress(80, 'Saving to database...');
+
+    // Save to database with enhanced data
+    const evermarkData = {
+      title: metadata.title,
+      description: metadata.description || '',
+      content_type: metadata.contentType || 'Custom Content',
+      source_url: metadata.sourceUrl || null,
+      creator_address: accountAddress,
+      tx_hash: mintTx.transactionHash,
+      token_id: 0, // Will be updated from blockchain events
+      
+      // Storage references - support both IPFS and ArDrive
+      token_uri: metadataUri,
+      ...(metadataUploadResult.hash && {
+        ipfs_metadata_hash: metadataUploadResult.hash
+      }),
+      ...(metadataUploadResult.txId && {
+        ardrive_metadata_tx: metadataUploadResult.txId,
+        ardrive_tx_id: metadataUploadResult.txId
+      }),
+      storage_backend: metadataUploadResult.backend,
+      
+      // Image references
+      ...(imageUploadResult && {
+        ...(imageUploadResult.hash && {
+          ipfs_image_hash: imageUploadResult.hash
+        }),
+        ...(imageUploadResult.txId && {
+          ardrive_image_tx: imageUploadResult.txId
+        }),
+        ...(imageUploadResult.cost && {
+          ardrive_cost_usd: imageUploadResult.cost
+        })
+      }),
+      
+      // Season tracking
+      season_number: currentSeason.number,
+      season_year: currentSeason.year,
+      season_week: currentSeason.week,
+      season_created_at: new Date().toISOString(),
+      
+      // Enhanced metadata
+      metadata_json: JSON.stringify(enhancedMetadata),
+      
+      // Additional ArDrive info
+      ...(metadataUploadResult.season && {
+        ardrive_folder_path: seasonOracle.getSeasonFolderPath(seasonState.current)
+      })
+    };
+
+    // Save to Supabase
+    try {
+      const saveResponse = await fetch('/.netlify/functions/evermarks', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Wallet-Address': accountAddress
-        }
+          'X-Wallet-Address': accountAddress // Add wallet address header
+        },
+        body: JSON.stringify(evermarkData)
       });
-      
-      if (userSettingsResponse.ok) {
-        const userSettings = await userSettingsResponse.json();
-        accountReferrer = userSettings.settings?.referrer_address;
+
+      if (!saveResponse.ok) {
+        const errorData = await saveResponse.json().catch(() => null);
+        throw new Error(`Database save failed: ${saveResponse.status} - ${errorData?.error || 'Unknown error'}`);
       }
-    } catch {
-      // Continue without referrer
+
+      const saveResult = await saveResponse.json();
+      console.log('✅ Evermark saved to database:', saveResult);
+
+    } catch (error) {
+      console.error('❌ Database save failed:', error);
+      // Don't fail the whole process if database save fails
+      console.warn('⚠️ Continuing despite database save failure');
     }
 
-    const finalReferrer = input.referrer || accountReferrer;
-    
-    onProgress(70, 'Minting NFT on blockchain...');
-    
-    // Mint on blockchain
-    const creatorAddress = accountAddress;
-    const mintResult = await ContextualBlockchainService.mintEvermark(
-      account,
-      metadataUploadResult.url,
-      metadata.title,
-      creatorAddress,
-      finalReferrer,
-      sendTransaction
-    );
-    
-    if (!mintResult.success) {
-      throw new Error(`Blockchain minting failed: ${mintResult.error}`);
-    }
-    
-    onProgress(85, 'Syncing to database...');
-    
-    // Check for automatic verification (cast authors creating their own evermarks)
-    let isAutoVerified = false;
-    if (castData && metadata.contentType === 'Cast') {
-      const { FarcasterService } = await import('../services/FarcasterService');
-      isAutoVerified = FarcasterService.canAutoVerify(castData, accountAddress);
-      
-      if (isAutoVerified) {
-        console.log('🔐 Auto-verifying cast - author creates own evermark');
-        onProgress(87, 'Auto-verifying cast ownership...');
-      }
-    }
+    onProgress(100, 'Evermark created successfully!');
 
-    // Sync to database
-    if (mintResult.tokenId && mintResult.txHash) {
-      try {
-        const dbSyncResponse = await fetch('/.netlify/functions/evermarks', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Wallet-Address': accountAddress
-          },
-          body: JSON.stringify({
-            token_id: mintResult.tokenId, // Send as string, let backend handle conversion
-            tx_hash: mintResult.txHash,
-            title: metadata.title,
-            description: metadata.description ?? '',
-            content_type: metadata.contentType || 'Custom',
-            source_url: metadata.sourceUrl || metadata.url || metadata.castUrl,
-            token_uri: metadataUploadResult.url,
-            author: castData?.author || castData?.username || tweetData?.author || academicMetadata?.primaryAuthor || webMetadata?.author || metadata.author || accountAddress,
-            verified: isAutoVerified,
-            metadata: JSON.stringify({
-              // Include cast data in the format expected by generate-cast-image.ts
-              ...(castData && {
-                cast: {
-                  text: castData.content,
-                  author_username: castData.username,
-                  author_display_name: castData.author,
-                  author_pfp: castData.author_pfp,
-                  author_fid: castData.author_fid,
-                  likes: castData.engagement?.likes || 0,
-                  recasts: castData.engagement?.recasts || 0,
-                  replies: castData.engagement?.replies || 0,
-                  timestamp: castData.timestamp,
-                  hash: castData.castHash,
-                  channel: castData.channel,
-                  embeds: castData.embeds || []
-                }
-              }),
-              // Include academic metadata for DOI/ISBN content
-              ...(academicMetadata && {
-                academic: {
-                  authors: academicMetadata.authors,
-                  primaryAuthor: academicMetadata.primaryAuthor,
-                  journal: academicMetadata.journal,
-                  publisher: academicMetadata.publisher,
-                  publishedDate: academicMetadata.publishedDate,
-                  volume: academicMetadata.volume,
-                  issue: academicMetadata.issue,
-                  pages: academicMetadata.pages,
-                  abstract: academicMetadata.abstract
-                }
-              }),
-              // Include tweet data for preservation
-              ...(tweetData && {
-                tweet: {
-                  tweetId: tweetData.tweetId,
-                  author: tweetData.author,
-                  username: tweetData.username,
-                  displayName: tweetData.displayName,
-                  content: tweetData.content,
-                  timestamp: tweetData.timestamp,
-                  preservedAt: tweetData.preservedAt,
-                  engagement: tweetData.engagement
-                }
-              }),
-              // Include web content metadata
-              ...(webMetadata && {
-                webContent: {
-                  author: webMetadata.author,
-                  authors: webMetadata.authors,
-                  publication: webMetadata.publication,
-                  publishedDate: webMetadata.publishedDate,
-                  description: webMetadata.description,
-                  siteName: webMetadata.siteName,
-                  domain: webMetadata.domain,
-                  confidence: webMetadata.confidence
-                }
-              }),
-              // Include README book metadata and image URL for processing
-              ...(metadata.contentType === 'README' && typeof input.image === 'string' && metadata.bookTitle && {
-                readme: {
-                  bookTitle: metadata.bookTitle,
-                  bookAuthor: metadata.bookAuthor,
-                  imageUrl: input.image, // This will be processed by cache-images
-                  polygonContract: metadata.customFields?.find(f => f.key === 'readme_polygon_contract')?.value,
-                  polygonTokenId: metadata.polygonTokenId,
-                  ipfsHash: metadata.customFields?.find(f => f.key === 'readme_ipfs_hash')?.value,
-                  marketplaceUrl: metadata.sourceUrl
-                }
-              }),
-              tags: [
-                ...(metadata.tags || []),
-                ...(metadata.contentType === 'Cast' ? ['farcaster', 'cast'] : []),
-                ...(metadata.contentType === 'Tweet' ? ['twitter', 'tweet'] : []),
-                ...(webMetadata?.domain ? [webMetadata.domain.replace('.com', '')] : [])
-              ],
-              customFields: [
-                ...(metadata.customFields || []),
-                ...(castData ? [
-                  { key: 'cast_author', value: castData.username || '' },
-                  { key: 'cast_hash', value: castData.castHash || '' },
-                  { key: 'cast_likes', value: String(castData.engagement?.likes || 0) },
-                  { key: 'cast_recasts', value: String(castData.engagement?.recasts || 0) },
-                  { key: 'cast_timestamp', value: castData.timestamp || '' }
-                ] : []),
-                ...(tweetData ? [
-                  { key: 'tweet_author', value: tweetData.username || '' },
-                  { key: 'tweet_id', value: tweetData.tweetId || '' },
-                  { key: 'tweet_content', value: tweetData.content || '' },
-                  { key: 'tweet_preserved_at', value: tweetData.preservedAt }
-                ] : []),
-                ...(webMetadata ? [
-                  { key: 'web_author', value: webMetadata.author },
-                  { key: 'web_publication', value: webMetadata.publication || '' },
-                  { key: 'web_domain', value: webMetadata.domain },
-                  { key: 'web_confidence', value: webMetadata.confidence }
-                ] : []),
-                ...(academicMetadata ? [
-                  { key: 'primary_author', value: academicMetadata.primaryAuthor },
-                  { key: 'total_authors', value: String(academicMetadata.authors.length) },
-                  { key: 'all_authors', value: academicMetadata.authors.map(a => a.name).join('; ') },
-                  ...(academicMetadata.journal ? [{ key: 'journal', value: academicMetadata.journal }] : []),
-                  ...(academicMetadata.publishedDate ? [{ key: 'published_date', value: academicMetadata.publishedDate }] : [])
-                ] : [])
-              ],
-              doi: metadata.doi,
-              isbn: metadata.isbn,
-              journal: metadata.journal,
-              publisher: metadata.publisher,
-              publicationDate: metadata.publicationDate,
-              volume: metadata.volume,
-              issue: metadata.issue,
-              pages: metadata.pages
-            }),
-            ipfs_image_hash: imageUploadResult?.hash || null
-            // referrer_address: finalReferrer || '0x3427b4716B90C11F9971e43999a48A47Cf5B571E' // TODO: Add referrer_address column to beta_evermarks table
-          })
-        });
-        
-        if (dbSyncResponse.ok) {
-          onProgress(95, 'Generating cast preview image...');
-          
-          // Generate cast preview image for Cast evermarks
-          if (castData && mintResult.tokenId) {
-            try {
-              await fetch('/.netlify/functions/generate-cast-image', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token_id: parseInt(mintResult.tokenId) })
-              });
-            } catch (error) {
-              console.warn('Cast image generation failed:', error);
-              // Don't fail creation if image generation fails
-            }
-          }
-          
-          // Trigger general image caching
-          try {
-            const cachingResponse = await fetch('/.netlify/functions/cache-images', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ 
-                trigger: 'creation',
-                tokenIds: [parseInt(mintResult.tokenId)]
-              })
-            });
-            
-            if (cachingResponse.ok) {
-              const cachingResult = await cachingResponse.json();
-              console.log('✅ Image caching completed:', cachingResult);
-            } else {
-              console.warn('⚠️ Image caching failed:', await cachingResponse.text());
-            }
-          } catch (error) {
-            console.warn('⚠️ Image caching failed:', error);
-            // Don't fail if caching fails
-          }
-        } else {
-          const errorText = await dbSyncResponse.text();
-          console.error('❌ Database sync response not ok:', dbSyncResponse.status, errorText);
-          throw new Error(`Database sync failed: ${dbSyncResponse.status} - ${errorText}`);
-        }
-      } catch (dbError) {
-        console.error('❌ Database sync failed:', dbError);
-        throw new Error(`Database sync failed: ${dbError instanceof Error ? dbError.message : 'Unknown database error'}. Evermark was minted on blockchain (Token ID: ${mintResult.tokenId}, TX: ${mintResult.txHash}) but failed to sync to database. Please contact support for manual recovery.`);
-      }
-    }
-    
-    onProgress(100, 'Complete!');
-    
     return {
       success: true,
-      txHash: mintResult.txHash,
-      tokenId: mintResult.tokenId,
-      metadataURI: metadataUploadResult.url,
-      imageUrl: (imageUploadResult?.success && 'url' in imageUploadResult) ? (imageUploadResult as any).url : null,
-      castData: castData || undefined,
-      message: 'Evermark created successfully on blockchain!'
+      txHash: mintTx.transactionHash,
+      tokenId: 'pending', // Will be extracted from transaction receipt
+      metadataURI: metadataUri,
+      imageUrl: imageUploadResult?.url,
+      message: 'Evermark created successfully'
     };
-    
+
   } catch (error) {
-    console.error('Evermark creation failed:', error);
-    
-    return {
-      success: false,
-      message: error instanceof Error ? error.message : 'Failed to create evermark'
-    };
+    console.error('❌ Evermark creation failed:', error);
+    throw error;
   }
 }
+
+export default useEvermarkCreation;

@@ -1,3 +1,7 @@
+// src/features/evermarks/components/CreateEvermarkForm_updated.tsx
+// Updated evermark creation form with storage cost estimation and unified storage
+// This replaces the existing CreateEvermarkForm.tsx file
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -13,7 +17,8 @@ import {
   UploadIcon
 } from 'lucide-react';
 
-// Removed ImageUpload component - using simple file input with IPFS-first approach in EvermarkService
+// Import the new StorageCostEstimator component
+import { StorageCostEstimator } from '@/components/StorageCostEstimator';
 
 import { useEvermarksState } from '../hooks/useEvermarkState';
 import { type CreateEvermarkInput, type EvermarkMetadata, type Evermark, type CreateEvermarkResult } from '../types';
@@ -199,21 +204,30 @@ const HelpModal: React.FC<{
               "text-lg font-semibold mb-2",
               isDark ? "text-white" : "text-gray-900"
             )}>What is an Evermark?</h4>
-            <p>Evermarks preserve content permanently on the blockchain with hybrid storage for optimal performance.</p>
+            <p>Evermarks preserve content permanently on the blockchain with unified storage for optimal performance and permanence.</p>
           </div>
           
           <div>
             <h4 className={cn(
               "text-lg font-semibold mb-2",
               isDark ? "text-white" : "text-gray-900"
-            )}>Hybrid Storage</h4>
-            <p>Your content is stored using our hybrid approach:</p>
+            )}>Unified Storage System</h4>
+            <p>Your content is stored using our unified approach:</p>
             <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
-              <li><strong className="text-green-400">Primary:</strong> Supabase for fast loading</li>
-              <li><strong className="text-cyan-400">Backup:</strong> IPFS for permanent decentralized storage</li>
-              <li><strong className="text-purple-400">Auto-transfer:</strong> Seamless fallback between sources</li>
-              <li><strong className="text-yellow-400">Auto:</strong> Intelligent image handling and optimization</li>
+              <li><strong className="text-blue-400">IPFS:</strong> Fast decentralized storage via Pinata</li>
+              <li><strong className="text-green-400">ArDrive:</strong> Permanent Arweave storage (200+ years)</li>
+              <li><strong className="text-purple-400">Dual Storage:</strong> Optional upload to both systems</li>
+              <li><strong className="text-yellow-400">Season Management:</strong> Organized by weekly cycles</li>
+              <li><strong className="text-cyan-400">Cost Transparency:</strong> See costs before uploading</li>
             </ul>
+          </div>
+
+          <div>
+            <h4 className={cn(
+              "text-lg font-semibold mb-2",
+              isDark ? "text-white" : "text-gray-900"
+            )}>Storage Costs</h4>
+            <p>The storage cost estimator shows you exactly how much permanent storage will cost before you commit to creating your Evermark.</p>
           </div>
         </div>
       </div>
@@ -268,8 +282,7 @@ export function CreateEvermarkForm({
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   
-  // FIXED: Store both File and URL data for SDK compatibility
-  // Simple image upload state for IPFS-first approach
+  // Store both File and URL data for SDK compatibility
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   
@@ -286,7 +299,6 @@ export function CreateEvermarkForm({
   const getAuthor = useCallback(() => {
     return user?.displayName || user?.username || 'Unknown Author';
   }, [user]);
-
 
   // Cleanup preview URL on unmount
   useEffect(() => {
@@ -464,8 +476,7 @@ export function CreateEvermarkForm({
            formData.description.trim().length > 0;
   }, [formData.title, formData.description]);
 
-  // FIXED: Handle SDK upload completion with auth check
-  // Simple file selection handler with preview - no upload until form submission
+  // Simple file selection handler with preview
   const handleImageSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -588,9 +599,9 @@ export function CreateEvermarkForm({
     } else {
       setCastImagePreview(null);
     }
-  }, [formData.contentType, formData.sourceUrl, formData.content, castData]); // Removed generateCastImagePreview to prevent infinite loop
+  }, [formData.contentType, formData.sourceUrl, formData.content, castData]);
 
-  // UPDATED: Form submission with comprehensive auth checks
+  // Form submission
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -643,11 +654,7 @@ export function CreateEvermarkForm({
     hasWallet
   ]);
 
-  // Add this import at the top if not already imported
   const isFormDisabled = !hasWallet; // Enable form when wallet is connected via app header
-
-
-  // No longer need SDK configuration - using IPFS-first approach in EvermarkService
 
   return (
     <div className={cn(
@@ -689,8 +696,8 @@ export function CreateEvermarkForm({
               "max-w-3xl mx-auto text-lg",
               isDark ? "text-gray-300" : "text-gray-700"
             )}>
-              Transform any content into a permanent reference with our hybrid storage. 
-              <span className="text-green-400 font-bold"> Hybrid storage</span> ensures optimal performance and permanence.
+              Transform any content into a permanent reference with our unified storage system. 
+              <span className="text-green-400 font-bold"> Smart storage</span> selection and cost transparency.
             </p>
           </div>
         </div>
@@ -765,8 +772,6 @@ export function CreateEvermarkForm({
           </div>
         )}
 
-
-
         {/* Progress Display */}
         {isCreating && (
           <div className={cn(
@@ -827,7 +832,7 @@ export function CreateEvermarkForm({
                   isDark ? "text-gray-400" : "text-gray-600"
                 )}>
                   <FileTextIcon className="h-4 w-4 mr-2" />
-                  <span>Blockchain</span>
+                  <span>Unified Storage</span>
                 </div>
               </div>
 
@@ -887,7 +892,7 @@ export function CreateEvermarkForm({
                   </div>
                 </div>
 
-                {/* Source URL - Moved to top for README books */}
+                {/* Source URL */}
                 <div className="space-y-2">
                   <label className={cn(
                     "block text-sm font-medium",
@@ -1051,7 +1056,6 @@ export function CreateEvermarkForm({
                   </div>
                 )}
 
-
                 {/* Tags */}
                 <div className="space-y-3">
                   <label className={cn(
@@ -1127,13 +1131,13 @@ export function CreateEvermarkForm({
                   </p>
                 </div>
 
-                {/* FIXED: SDK Image Upload with proper error handling */}
+                {/* Image Upload with Storage Cost Estimator */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="font-medium text-cyan-400">Cover Image (Optional)</h3>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500 bg-green-900/20 px-2 py-1 rounded">
-                        IPFS Ready
+                      <span className="text-xs text-gray-500 bg-blue-900/20 px-2 py-1 rounded">
+                        Unified Storage
                       </span>
                       <span className="text-xs text-green-400 bg-green-900/20 px-2 py-1 rounded">
                         ✅ Wallet Ready
@@ -1164,6 +1168,14 @@ export function CreateEvermarkForm({
                       </label>
                     </div>
                   </div>
+
+                  {/* Storage Cost Estimator - NEW */}
+                  {selectedImage && (
+                    <StorageCostEstimator 
+                      file={selectedImage} 
+                      showComparison={true}
+                    />
+                  )}
 
                   {/* Cast Image Preview - Always show for Cast content type */}
                   {formData.contentType === 'Cast' && (
@@ -1201,7 +1213,7 @@ export function CreateEvermarkForm({
                         <div className="flex items-center gap-2">
                           <CheckCircleIcon className="h-4 w-4 text-blue-400" />
                           <span className="text-sm text-blue-300">
-                            {selectedImage ? 'Image Selected (will upload to IPFS on submit)' : 'Image Preview (from metadata)'}
+                            {selectedImage ? 'Image Selected (unified storage ready)' : 'Image Preview (from metadata)'}
                           </span>
                         </div>
                         <button
@@ -1241,10 +1253,9 @@ export function CreateEvermarkForm({
                     </div>
                   )}
 
-
                   <div className="bg-green-900/20 border border-green-500/30 p-3 rounded-lg">
                     <p className="text-green-300 text-sm">
-                      ✅ Hybrid upload: IPFS storage with Supabase caching for optimal performance
+                      ✅ Unified storage: Intelligent backend selection with cost transparency
                     </p>
                   </div>
                 </div>
@@ -1290,13 +1301,13 @@ export function CreateEvermarkForm({
             </div>
           </div>
 
-          {/* Right Column - Preview */}
+          {/* Right Column - Preview (same as original but updated storage info) */}
           <div className="space-y-6">
             <div className="bg-gray-800/50 border border-gray-700 rounded-lg shadow-lg p-6 sticky top-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-medium text-cyan-400">Live Preview</h3>
                 <div className="text-xs text-gray-500 bg-purple-900/20 px-2 py-1 rounded">
-                  Hybrid Storage
+                  Unified Storage
                 </div>
               </div>
               
@@ -1380,45 +1391,6 @@ export function CreateEvermarkForm({
                     </div>
                   )}
 
-                  {/* Cast Embeds Preview */}
-                  {formData.contentType === 'Cast' && castData?.embeds?.length > 0 && (
-                    <div className="bg-purple-900/30 border border-purple-500/30 rounded-lg p-3 mb-4">
-                      <div className="text-xs font-medium text-purple-300 mb-2">
-                        Embeds ({castData.embeds.length})
-                      </div>
-                      <div className="space-y-2">
-                        {castData.embeds.slice(0, 3).map((embed: any, index: number) => (
-                          <div key={index} className="flex items-center gap-2 text-xs">
-                            {embed.url ? (
-                              <>
-                                {embed.url.includes('youtube.com') || embed.url.includes('youtu.be') ? (
-                                  <span>🎥 Video</span>
-                                ) : embed.url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
-                                  <span>🖼️ Image</span>
-                                ) : (
-                                  <span>🔗 Link</span>
-                                )}
-                                <span className="text-purple-200 truncate">{embed.url}</span>
-                              </>
-                            ) : embed.cast_id ? (
-                              <>
-                                <span>💬 Cast</span>
-                                <span className="text-purple-200">Quoted cast</span>
-                              </>
-                            ) : (
-                              <span className="text-purple-400">Unknown embed</span>
-                            )}
-                          </div>
-                        ))}
-                        {castData.embeds.length > 3 && (
-                          <div className="text-xs text-purple-400">
-                            +{castData.embeds.length - 3} more embeds
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
                   {/* Cast Preview Image in Sidebar */}
                   {formData.contentType === 'Cast' && castImagePreview && (
                     <div className="bg-purple-900/30 border border-purple-500/30 rounded-lg p-3 mb-4">
@@ -1444,7 +1416,7 @@ export function CreateEvermarkForm({
                       <div className="flex items-center gap-2 mb-2">
                         <CheckCircleIcon className="h-4 w-4 text-blue-400" />
                         <span className="text-sm text-blue-300">
-                          {selectedImage ? 'Image Selected for IPFS Upload' : 'Image Preview (from metadata)'}
+                          {selectedImage ? 'Image Selected for Unified Upload' : 'Image Preview (from metadata)'}
                         </span>
                       </div>
                       
@@ -1460,36 +1432,43 @@ export function CreateEvermarkForm({
                       )}
                       
                       <div className="text-xs text-blue-400">
-                        Will upload to IPFS when you submit the form
+                        Will use unified storage when you submit the form
                       </div>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* SDK Architecture Info */}
+              {/* Updated Storage Architecture Info */}
               <div className="mt-6 pt-4 border-t border-gray-700">
-                <h4 className="text-sm font-medium text-gray-300 mb-3">Storage Architecture</h4>
+                <h4 className="text-sm font-medium text-gray-300 mb-3">Unified Storage Architecture</h4>
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+                    <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
                     <div>
-                      <div className="text-xs font-medium text-green-400">Direct Upload</div>
-                      <div className="text-xs text-gray-500">Supabase Storage with CDN</div>
+                      <div className="text-xs font-medium text-blue-400">IPFS Storage</div>
+                      <div className="text-xs text-gray-500">Fast decentralized storage</div>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 bg-cyan-400 rounded-full"></div>
+                    <div className="w-3 h-3 bg-green-400 rounded-full"></div>
                     <div>
-                      <div className="text-xs font-medium text-cyan-400">Auto Thumbnails</div>
-                      <div className="text-xs text-gray-500">Generated for performance</div>
+                      <div className="text-xs font-medium text-green-400">ArDrive Storage</div>
+                      <div className="text-xs text-gray-500">Permanent Arweave (200+ years)</div>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="w-3 h-3 bg-purple-400 rounded-full"></div>
                     <div>
-                      <div className="text-xs font-medium text-purple-400">Smart Loading</div>
-                      <div className="text-xs text-gray-500">Intelligent source fallbacks</div>
+                      <div className="text-xs font-medium text-purple-400">Season Management</div>
+                      <div className="text-xs text-gray-500">Organized by weekly cycles</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
+                    <div>
+                      <div className="text-xs font-medium text-yellow-400">Cost Transparency</div>
+                      <div className="text-xs text-gray-500">See costs before uploading</div>
                     </div>
                   </div>
                   
@@ -1500,7 +1479,7 @@ export function CreateEvermarkForm({
                         Wallet Connected
                       </div>
                       <div className="text-xs text-gray-500">
-                        Ready for uploads
+                        Ready for unified uploads
                       </div>
                     </div>
                   </div>

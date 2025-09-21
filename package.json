@@ -2,7 +2,7 @@
   "name": "evermark-beta",
   "private": true,
   "version": "0.0.1",
-  "description": "Evermark Beta - Content curation & collective memory",
+  "description": "Evermark Beta - Content curation & collective memory with unified storage",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
@@ -23,9 +23,13 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "migrate:legacy": "npx tsx fix-legacy-evermarks.ts",
-    "migrate:dry": "DRY_RUN=true npx tsx fix-legacy-evermarks.ts"
+    "migrate:dry": "DRY_RUN=true npx tsx fix-legacy-evermarks.ts",
+    "migrate:ardrive": "npx tsx scripts/migrate-to-ardrive.ts",
+    "season:status": "npx tsx scripts/season-status.ts",
+    "storage:metrics": "npx tsx scripts/storage-metrics.ts"
   },
   "dependencies": {
+    "@ardrive/turbo-sdk": "^1.31.1",
     "@farcaster/frame-wagmi-connector": "^0.0.42",
     "@farcaster/miniapp-sdk": "^0.1.9",
     "@farcaster/miniapp-wagmi-connector": "^1.0.0",
@@ -41,7 +45,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-helmet-async": "^2.0.5",
-    "react-router-dom": "^7.6.2",
+    "react-router-dom": "^6.28.0",
     "sharp": "^0.34.3",
     "thirdweb": "^5.101.1",
     "viem": "^2.21.54",
@@ -75,6 +79,7 @@
     "prettier": "^3.3.3",
     "prettier-plugin-tailwindcss": "^0.6.8",
     "tailwindcss": "^3.4.17",
+    "tsx": "^4.7.0",
     "typescript": "^5.9.2",
     "vite": "^6.0.1",
     "vitest": "^2.1.8"
