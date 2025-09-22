@@ -6,7 +6,6 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-package-lock.json
 
 # Runtime data
 pids
@@ -151,7 +150,6 @@ test-*.js
 *2.js
 node_modules_backup_*
 package-lock.json.backup
-pnpm-lock.yaml
 
 # Development notes
 dev-*.txt
