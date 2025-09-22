@@ -22,17 +22,17 @@ class FeaturesService implements FeatureConfig {
    * Check if ArDrive storage is enabled
    */
   isArDriveEnabled(): boolean {
-    // Check environment variable first
-    const envFlag = process.env.VITE_ARDRIVE_ENABLED;
+    // Check environment variable first (use import.meta.env for Vite)
+    const envFlag = import.meta.env.VITE_ARDRIVE_ENABLED;
     if (envFlag !== undefined) {
       return envFlag === 'true' || envFlag === '1';
     }
     
     // Check if ArDrive private key is configured (server-side or client-side)
-    const hasPrivateKey = Boolean(process.env.ARDRIVE_PRIVATE_KEY || process.env.VITE_ARDRIVE_PRIVATE_KEY);
+    const hasPrivateKey = Boolean(import.meta.env.ARDRIVE_PRIVATE_KEY || import.meta.env.VITE_ARDRIVE_PRIVATE_KEY);
     
     // Default to false in production, true in development if private key exists
-    return process.env.NODE_ENV === 'development' ? hasPrivateKey : false;
+    return import.meta.env.MODE === 'development' ? hasPrivateKey : false;
   }
 
   /**
@@ -45,7 +45,7 @@ class FeaturesService implements FeatureConfig {
     }
     
     // Check environment variable
-    const envFlag = process.env.VITE_DUAL_STORAGE;
+    const envFlag = import.meta.env.VITE_DUAL_STORAGE;
     if (envFlag !== undefined) {
       return envFlag === 'true' || envFlag === '1';
     }
@@ -59,7 +59,7 @@ class FeaturesService implements FeatureConfig {
    */
   getStorageBackend(): 'ipfs' | 'ardrive' | 'dual' {
     // Check explicit backend setting
-    const backendSetting = process.env.VITE_STORAGE_BACKEND;
+    const backendSetting = import.meta.env.VITE_STORAGE_BACKEND;
     if (backendSetting === 'ipfs' || backendSetting === 'ardrive' || backendSetting === 'dual') {
       return backendSetting;
     }
@@ -78,7 +78,7 @@ class FeaturesService implements FeatureConfig {
    * Check if season management is enabled
    */
   isSeasonManagementEnabled(): boolean {
-    const envFlag = process.env.VITE_SEASON_MANAGEMENT;
+    const envFlag = import.meta.env.VITE_SEASON_MANAGEMENT;
     if (envFlag !== undefined) {
       return envFlag === 'true' || envFlag === '1';
     }
@@ -91,7 +91,7 @@ class FeaturesService implements FeatureConfig {
    * Check if storage cost estimation is enabled
    */
   isCostEstimationEnabled(): boolean {
-    const envFlag = process.env.VITE_COST_ESTIMATION;
+    const envFlag = import.meta.env.VITE_COST_ESTIMATION;
     if (envFlag !== undefined) {
       return envFlag === 'true' || envFlag === '1';
     }
@@ -104,7 +104,7 @@ class FeaturesService implements FeatureConfig {
    * Check if development mode features are enabled
    */
   isDevModeEnabled(): boolean {
-    return process.env.NODE_ENV === 'development' || process.env.VITE_DEV_MODE === 'true';
+    return import.meta.env.MODE === 'development' || import.meta.env.VITE_DEV_MODE === 'true';
   }
 
   /**
@@ -118,9 +118,9 @@ class FeaturesService implements FeatureConfig {
       seasonManagement: this.isSeasonManagementEnabled(),
       costEstimation: this.isCostEstimationEnabled(),
       devMode: this.isDevModeEnabled(),
-      environment: process.env.NODE_ENV,
-      hasArDriveKey: Boolean(process.env.ARDRIVE_PRIVATE_KEY || process.env.VITE_ARDRIVE_PRIVATE_KEY),
-      hasPinataKey: Boolean(process.env.VITE_PINATA_JWT)
+      environment: import.meta.env.MODE,
+      hasArDriveKey: Boolean(import.meta.env.ARDRIVE_PRIVATE_KEY || import.meta.env.VITE_ARDRIVE_PRIVATE_KEY),
+      hasPinataKey: Boolean(import.meta.env.VITE_PINATA_JWT)
     };
   }
 
@@ -131,12 +131,12 @@ class FeaturesService implements FeatureConfig {
     const warnings: string[] = [];
     
     // Check for missing ArDrive configuration
-    if (this.isArDriveEnabled() && !process.env.ARDRIVE_PRIVATE_KEY && !process.env.VITE_ARDRIVE_PRIVATE_KEY) {
+    if (this.isArDriveEnabled() && !import.meta.env.ARDRIVE_PRIVATE_KEY && !import.meta.env.VITE_ARDRIVE_PRIVATE_KEY) {
       warnings.push('ArDrive is enabled but ARDRIVE_PRIVATE_KEY is not configured');
     }
     
     // Check for missing IPFS configuration
-    if (!process.env.VITE_PINATA_JWT) {
+    if (!import.meta.env.VITE_PINATA_JWT) {
       warnings.push('IPFS storage requires VITE_PINATA_JWT to be configured');
     }
     

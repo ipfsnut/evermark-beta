@@ -421,6 +421,10 @@ async function createEvermarkWithUnifiedStorage(
 
     console.log('🔗 Minting NFT with metadata URI:', metadataUri);
 
+    // Add a delay before minting to avoid MetaMask rate limiting
+    onProgress(55, 'Preparing blockchain transaction...');
+    await new Promise(resolve => setTimeout(resolve, 1500)); // 1.5 second delay
+
     // Get contracts and mint NFT
     onProgress(60, 'Minting NFT on blockchain...');
     
