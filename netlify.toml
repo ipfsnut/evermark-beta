@@ -9,8 +9,8 @@
   framework = "#custom"
 
 [build]
-  # Clean npm build (migrated from pnpm)
-  command = "rm -rf node_modules package-lock.json pnpm-lock.yaml .pnpm && npm install --legacy-peer-deps && npm run build"
+  # Standard npm build (pnpm migration complete)
+  command = "npm ci --legacy-peer-deps && npm run build"
   publish = "dist"
   functions = "netlify/functions"
   
