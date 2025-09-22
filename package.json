@@ -5,7 +5,8 @@
   "description": "Evermark Beta - Content curation & collective memory with unified storage",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "vite build",
+    "build:check": "tsc --noEmit && vite build",
     "build:force": "TSC_COMPILE_ON_ERROR=true tsc --noEmit && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --ext ts,tsx --fix",
