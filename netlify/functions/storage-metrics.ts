@@ -57,7 +57,7 @@ async function getStorageOverview(headers: Record<string, string>) {
     const seasonService = new ArDriveSeasonService();
     
     // Get current season info
-    const seasonState = await seasonService.getCurrentState();
+    const seasonState = await seasonService.getCurrentSeasonState();
     const currentSeason = seasonState.current;
     
     // Mock storage cost estimates - would integrate with actual ArDrive pricing
@@ -152,7 +152,7 @@ async function getStorageEstimate(req: Request, headers: Record<string, string>)
 async function getSeasonMetrics(headers: Record<string, string>) {
   try {
     const seasonService = new ArDriveSeasonService();
-    const seasonState = await seasonService.getCurrentState();
+    const seasonState = await seasonService.getCurrentSeasonState();
     
     // Mock season storage data - in production this would query actual storage usage
     const seasonMetrics = {

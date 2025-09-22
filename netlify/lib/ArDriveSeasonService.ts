@@ -48,6 +48,13 @@ export class ArDriveSeasonService extends ArDriveService {
   }
 
   /**
+   * Get current season state from oracle
+   */
+  async getCurrentSeasonState() {
+    return this.seasonOracle.getCurrentState();
+  }
+
+  /**
    * Upload to current season with automatic folder management
    */
   async uploadToCurrentSeason(

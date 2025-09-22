@@ -90,19 +90,11 @@
   "overrides": {
     "@types/react": "^18.2.79",
     "@types/react-dom": "^18.2.25",
-    "use-sync-external-store": "^1.2.2"
-  },
-  "resolutions": {
-    "@types/react": "^18.2.79",
-    "@types/react-dom": "^18.2.25",
-    "use-sync-external-store": "^1.2.2"
-  },
-  "pnpm": {
-    "overrides": {
-      "@types/react": "^18.3.23",
-      "@types/react-dom": "^18.3.7",
-      "use-sync-external-store": "^1.2.2"
-    }
+    "use-sync-external-store": "^1.2.2",
+    "@reown/appkit-common": "*",
+    "@reown/appkit-controllers": "*",
+    "@reown/appkit-polyfills": "*",
+    "@reown/appkit-wallet": "*"
   },
   "type": "module"
 }
