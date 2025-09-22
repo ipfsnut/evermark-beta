@@ -9,8 +9,8 @@
   framework = "#custom"
 
 [build]
-  # Standard npm build (pnpm migration complete)
-  command = "npm ci --legacy-peer-deps && npm run build"
+  # Build with pnpm package manager
+  command = "npx pnpm install --frozen-lockfile && npx pnpm run build"
   publish = "dist"
   functions = "netlify/functions"
   
