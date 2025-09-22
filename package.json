@@ -1,7 +1,7 @@
 {
   "name": "evermark-beta",
   "private": true,
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Evermark Beta - Content curation & collective memory with unified storage",
   "scripts": {
     "dev": "vite",
@@ -94,7 +94,12 @@
     "@reown/appkit-common": "*",
     "@reown/appkit-controllers": "*",
     "@reown/appkit-polyfills": "*",
-    "@reown/appkit-wallet": "*"
+    "@reown/appkit-wallet": "*",
+    "@reown/appkit-utils": "*",
+    "@reown/appkit-pay": "*",
+    "@reown/appkit": "*",
+    "magicast": "*",
+    "crossws": "*"
   },
   "type": "module"
 }

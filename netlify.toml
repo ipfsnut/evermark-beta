@@ -9,8 +9,8 @@
   framework = "#custom"
 
 [build]
-  # Use npm to avoid workspace dependency issues
-  command = "npm install --legacy-peer-deps && npm run build"
+  # Clear cache and use npm to avoid workspace dependency issues
+  command = "rm -rf node_modules package-lock.json && npm install --legacy-peer-deps && npm run build"
   publish = "dist"
   functions = "netlify/functions"
   
@@ -18,6 +18,8 @@
   [build.environment]
     NODE_VERSION = "20"
     NPM_FLAGS = "--legacy-peer-deps"
+    NPM_CONFIG_PACKAGE_LOCK = "true"
+    NPM_CONFIG_PREFER_OFFLINE = "false"
 
 # Build processing configuration
 [build.processing]
