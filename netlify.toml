@@ -9,8 +9,8 @@
   framework = "#custom"
 
 [build]
-  # Build with pnpm package manager
-  command = "npx pnpm install --frozen-lockfile && npx pnpm rebuild && npx pnpm run build"
+  # Build with pnpm package manager and install function dependencies
+  command = "npx pnpm install --frozen-lockfile && cd netlify/functions && npm install && cd ../.. && npx pnpm run build"
   publish = "dist"
   functions = "netlify/functions"
   
@@ -35,10 +35,15 @@
 [build.processing.html]
   pretty_urls = true
 
+# Local plugin for handling native modules
+[[plugins]]
+  package = "./plugins/netlify-plugin-native-modules"
+
 # Function configuration for native dependencies
 [functions]
   node_bundler = "esbuild"
-  external_node_modules = ["secp256k1", "keccak"]
+  external_node_modules = ["secp256k1", "keccak", "@ardrive/turbo-sdk"]
+  included_files = ["node_modules/secp256k1/**", "node_modules/keccak/**"]
 
 # Scheduled function for blockchain sync (every hour)
 [functions."sync-blockchain"]
