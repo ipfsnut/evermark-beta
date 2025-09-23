@@ -56,14 +56,17 @@ export class ArDriveService {
     if (this.initialized) return;
 
     try {
-      // Use server-side private key (no VITE_ prefix = server-only)
-      const privateKey = process.env.ARDRIVE_PRIVATE_KEY;
-      if (!privateKey) {
-        throw new Error('ARDRIVE_PRIVATE_KEY environment variable not set');
+      // Use server-side Arweave JWK wallet (no VITE_ prefix = server-only)
+      const walletJWK = process.env.ARDRIVE_WALLET_JWK;
+      if (!walletJWK) {
+        throw new Error('ARDRIVE_WALLET_JWK environment variable not set');
       }
 
-      // Use EthereumSigner for ETH private keys with Turbo credits
-      const signer = new EthereumSigner(privateKey);
+      // Parse the JWK from string
+      const jwk = JSON.parse(walletJWK);
+
+      // Use ArweaveSigner for JWK wallets (no native dependencies!)
+      const signer = new ArweaveSigner(jwk);
       
       this.turbo = TurboFactory.authenticated({ signer });
       
