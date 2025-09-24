@@ -70,25 +70,8 @@ async function getAccurateArDriveCost(castInput: string): Promise<{
   breakdown: any;
 }> {
   try {
-    // Import the accurate pricing service (inline to avoid import issues in Netlify)
-    const { AccurateArDrivePricing } = await import('../src/features/evermarks/services/AccurateArDrivePricing');
-    
-    const estimate = await AccurateArDrivePricing.estimateCastBackupCost(castInput);
-    
-    return {
-      totalSizeMB: estimate.totalSizeMB,
-      arDriveCostUSD: estimate.totalCostUSD,
-      shouldChargeExtra: estimate.shouldChargeExtra,
-      breakdown: {
-        mediaFiles: estimate.mediaFiles,
-        baseCosts: estimate.baseCosts,
-        ourProfitUSD: estimate.ourProfitUSD,
-        recommendedFeeUSD: estimate.recommendedFeeUSD,
-      }
-    };
-    
-  } catch (error) {
-    console.error('Failed to get accurate ArDrive cost, falling back to estimates:', error);
+    // Simple estimate with 25MB limit - no dynamic pricing needed
+    console.log('Estimating costs for cast:', castInput);
     
     // Fallback to original estimation method
     const response = await fetch(`/.netlify/functions/farcaster-cast?hash=${encodeURIComponent(castInput)}`);
@@ -119,6 +102,14 @@ async function getAccurateArDriveCost(castInput: string): Promise<{
       arDriveCostUSD,
       shouldChargeExtra,
       breakdown: { fallback: true }
+    };
+  } catch (error) {
+    console.error('Error estimating ArDrive cost:', error);
+    return { 
+      totalSizeMB: 0, 
+      arDriveCostUSD: 0.06, 
+      shouldChargeExtra: false, 
+      breakdown: { error: true } 
     };
   }
 }

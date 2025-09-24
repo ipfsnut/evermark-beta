@@ -332,7 +332,7 @@ export function CreateEvermarkWizard({
           setFormData(prev => ({ 
             ...prev, 
             title: `Cast by ${castMetadata.author}`,
-            description: `"${castMetadata.content?.substring(0, 100)}${castMetadata.content && castMetadata.content.length > 100 ? '...' : ''}"`,
+            description: castMetadata.content || '', // Full cast text for searchability
             content: castMetadata.content || '',
             sourceUrl: url
           }));

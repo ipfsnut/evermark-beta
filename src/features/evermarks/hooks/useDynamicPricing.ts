@@ -79,9 +79,8 @@ export function useDynamicPricing(): DynamicPricingResult {
         costEstimate 
       });
 
-      // Check if we need dynamic pricing
-      const shouldChargeExtra = costEstimate.breakdown?.shouldChargeExtra || 
-                               costEstimate.totalCostUSD > DYNAMIC_PRICING_THRESHOLD;
+      // Check if we need dynamic pricing - simplified with 25MB limit
+      const shouldChargeExtra = costEstimate.totalCostUSD > DYNAMIC_PRICING_THRESHOLD;
 
       if (!shouldChargeExtra) {
         // Standard pricing, proceed normally
@@ -146,7 +145,7 @@ export function useDynamicPricing(): DynamicPricingResult {
 
       return {
         shouldProceed: false,
-        costEstimate: null,
+        costEstimate: undefined,
       };
     }
   }, [updateState]);

@@ -19,6 +19,12 @@ export interface BackupCostEstimate {
   ardriveCreditsNeeded: number;
   canAfford: boolean;
   walletBalance?: number;
+  breakdown?: {
+    shouldChargeExtra?: boolean;
+    recommendedFeeUSD?: number;
+    ourProfitUSD?: number;
+    mediaFiles?: any[];
+  };
 }
 
 export interface SimpleCastBackup extends FarcasterCastData {
