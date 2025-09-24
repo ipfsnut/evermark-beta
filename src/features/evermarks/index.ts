@@ -11,16 +11,31 @@ export type {
   ValidationResult,
   ValidationFieldError, // Fixed: Import from correct module
   UseEvermarksResult,
-  FarcasterCastData
+  FarcasterCastData,
+  // Complete backup types
+  PreservedMedia,
+  EmbedMetadata,
+  ThreadData,
+  ParentCastData,
+  UserProfile,
+  FrameData,
+  CastVerification,
+  CastEdit
 } from './types';
 
 // Services - Export business logic layer
 // EvermarkService not exported due to SDK dependencies
+export { MediaPreservationService } from './services/MediaPreservationService';
+export { ThreadPreservationService } from './services/ThreadPreservationService';
+export { FramePreservationService } from './services/FramePreservationService';
+export { CompleteCastBackupService } from './services/CompleteCastBackupService';
+export type { CompleteCastBackup } from './services/CompleteCastBackupService';
 
 // Hooks - Export state management hooks
 export { useEvermarksState } from './hooks/useEvermarkState';
 export { useEvermarkQueries } from './hooks/useEvermarkQueries';
 export { useEvermarkCreation } from './hooks/useEvermarkCreation';
+export { useCompleteCastBackup } from './hooks/useCompleteCastBackup';
 
 // Components - Export all UI components
 export { EvermarkFeed } from './components/EvermarkFeed';
@@ -46,7 +61,14 @@ export const evermarksConfig = {
     metadataValidation: true,
     farcasterIntegration: true,
     blockchainMinting: true,
-    ipfsStorage: true
+    ipfsStorage: true,
+    // Complete backup features
+    mediaPreservation: true,
+    threadPreservation: true,
+    framePreservation: true,
+    castVerification: true,
+    bulkBackup: true,
+    backupIntegrityCheck: true
   },
   
   // Default configuration
@@ -55,7 +77,7 @@ export const evermarksConfig = {
     sortBy: 'created_at' as const,
     sortOrder: 'desc' as const,
     refreshInterval: 30000, // 30 seconds
-    imageMaxSize: 10 * 1024 * 1024, // 10MB
+    imageMaxSize: 25 * 1024 * 1024, // 25MB
     supportedImageTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
     maxTitleLength: 100,
     maxDescriptionLength: 1000,
@@ -287,6 +309,29 @@ export const evermarksUtils = {
    */
   supportsAutoDetection: (contentType: keyof typeof evermarksConfig.contentTypes): boolean => {
     return ['Cast', 'URL'].includes(contentType);
+  },
+  
+  /**
+   * Check if complete backup is available for content type
+   */
+  supportsCompleteBackup: (contentType: keyof typeof evermarksConfig.contentTypes): boolean => {
+    return contentType === 'Cast' && evermarksConfig.features.mediaPreservation;
+  },
+  
+  /**
+   * Get backup completeness score
+   */
+  getBackupCompleteness: (backup: any): number => {
+    const checks = [
+      backup.backup_metadata?.completeness?.text,
+      backup.backup_metadata?.completeness?.media,
+      backup.backup_metadata?.completeness?.thread,
+      backup.backup_metadata?.completeness?.frames,
+      backup.backup_metadata?.completeness?.profiles
+    ];
+    
+    const completed = checks.filter(Boolean).length;
+    return Math.round((completed / checks.length) * 100);
   }
 };
 

@@ -215,7 +215,7 @@ function getClientIP(event: HandlerEvent): string {
  */
 function validateFileSize(sizeBytes: number, type: string): void {
   const limits = {
-    image: 10 * 1024 * 1024,      // 10MB for images
+    image: 25 * 1024 * 1024,      // 25MB for images
     thumbnail: 1 * 1024 * 1024,   // 1MB for thumbnails
     metadata: 100 * 1024          // 100KB for metadata
   };

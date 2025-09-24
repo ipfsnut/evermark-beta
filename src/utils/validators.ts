@@ -67,11 +67,11 @@ export class Validators {
       };
     }
     
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    const maxSize = 25 * 1024 * 1024; // 25MB
     if (file.size > maxSize) {
       return {
         isValid: false,
-        error: 'Image must be less than 10MB'
+        error: 'Image must be less than 25MB'
       };
     }
     

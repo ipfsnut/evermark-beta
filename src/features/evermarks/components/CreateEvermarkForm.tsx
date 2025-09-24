@@ -481,7 +481,7 @@ export function CreateEvermarkForm({
     const file = event.target.files?.[0];
     if (file) {
       // Validate file type and size
-      const maxSize = 10 * 1024 * 1024; // 10MB
+      const maxSize = 25 * 1024 * 1024; // 25MB
       const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
       
       if (!allowedTypes.includes(file.type)) {
@@ -490,7 +490,7 @@ export function CreateEvermarkForm({
       }
       
       if (file.size > maxSize) {
-        console.error('File too large. Maximum size is 10MB.');
+        console.error('File too large. Maximum size is 25MB.');
         return;
       }
       
@@ -1163,7 +1163,7 @@ export function CreateEvermarkForm({
                           {selectedImage ? selectedImage.name : 'Drag and drop or click to select'}
                         </span>
                         <span className="text-xs text-gray-500">
-                          Max 10MB • image/jpeg, image/png, image/gif, image/webp
+                          Max 25MB • image/jpeg, image/png, image/gif, image/webp
                         </span>
                       </label>
                     </div>

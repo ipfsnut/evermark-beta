@@ -22,6 +22,6 @@ export const NETWORK_CONFIG = {
 // UI Configuration
 export const UI_CONFIG = {
   ITEMS_PER_PAGE: 12,
-  MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
+  MAX_FILE_SIZE: 25 * 1024 * 1024, // 25MB
   SUPPORTED_IMAGE_TYPES: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
 };

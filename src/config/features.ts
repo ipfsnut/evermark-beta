@@ -183,7 +183,7 @@ export const STORAGE_CONFIG = {
   
   // File Upload Limits
   UPLOAD: {
-    maxFileSize: 10 * 1024 * 1024, // 10MB
+    maxFileSize: 25 * 1024 * 1024, // 25MB
     maxMetadataSize: 1024 * 1024, // 1MB
     allowedImageTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
     allowedVideoTypes: ['video/mp4', 'video/webm'],

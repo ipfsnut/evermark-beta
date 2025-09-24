@@ -91,6 +91,8 @@ export interface FarcasterCastData {
     likes: number;
     recasts: number;
     replies: number;
+    likers?: Array<{ fid: number; username: string }>;
+    recasters?: Array<{ fid: number; username: string }>;
   };
   // Enhanced fields for better image generation
   author_pfp?: string;
@@ -99,7 +101,133 @@ export interface FarcasterCastData {
   embeds?: Array<{
     url?: string;
     cast_id?: any;
+    metadata?: EmbedMetadata;
+    preserved_content?: PreservedMedia;
   }>;
+  
+  // Complete backup fields
+  thread?: ThreadData;
+  mentioned_profiles?: UserProfile[];
+  frames?: FrameData[];
+  parent_cast?: ParentCastData;
+  verification?: CastVerification;
+  edit_history?: CastEdit[];
+  preserved_at?: string;
+  backup_version?: string;
+}
+
+// Media preservation types
+export interface PreservedMedia {
+  original_url: string;
+  ardrive_tx?: string;
+  ipfs_hash?: string;
+  content_type?: string;
+  file_size?: number;
+  dimensions?: { width: number; height: number };
+  thumbnail?: {
+    ardrive_tx?: string;
+    ipfs_hash?: string;
+  };
+  preserved_at: string;
+}
+
+export interface EmbedMetadata {
+  type: 'image' | 'video' | 'gif' | 'link' | 'cast' | 'frame';
+  title?: string;
+  description?: string;
+  og_image?: string;
+  domain?: string;
+  favicon?: string;
+}
+
+// Thread and relationship types
+export interface ThreadData {
+  thread_hash: string;
+  root_cast?: {
+    hash: string;
+    author_fid: number;
+    author_username: string;
+    text: string;
+    timestamp: string;
+  };
+  reply_chain?: Array<{
+    hash: string;
+    author_fid: number;
+    author_username: string;
+    text: string;
+    timestamp: string;
+    depth: number;
+  }>;
+  total_replies: number;
+  participants: Array<{
+    fid: number;
+    username: string;
+    reply_count: number;
+  }>;
+}
+
+export interface ParentCastData {
+  hash: string;
+  author_fid: number;
+  author_username: string;
+  text: string;
+  timestamp: string;
+  preserved?: boolean;
+}
+
+// User profile snapshot
+export interface UserProfile {
+  fid: number;
+  username: string;
+  display_name: string;
+  pfp_url?: string;
+  bio?: string;
+  follower_count?: number;
+  following_count?: number;
+  verified_addresses?: string[];
+  power_badge?: boolean;
+  snapshot_at: string;
+}
+
+// Frame preservation
+export interface FrameData {
+  frame_url: string;
+  title?: string;
+  image?: string;
+  preserved_image?: PreservedMedia;
+  buttons?: Array<{
+    index: number;
+    title: string;
+    action_type: 'post' | 'post_redirect' | 'link' | 'mint';
+    target?: string;
+  }>;
+  input_text?: string;
+  state?: string;
+  post_url?: string;
+  frames_version?: string;
+  og_metadata?: Record<string, string>;
+}
+
+// Verification and integrity
+export interface CastVerification {
+  signature?: string;
+  signer_address?: string;
+  blockchain_timestamp?: string;
+  content_hash?: string;
+  merkle_root?: string;
+  attestation?: {
+    protocol: string;
+    transaction_hash: string;
+    timestamp: string;
+  };
+}
+
+// Edit tracking
+export interface CastEdit {
+  version: number;
+  timestamp: string;
+  content: string;
+  edited_fields: string[];
 }
 
 export interface ReadmeBookData {

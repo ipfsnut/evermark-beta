@@ -145,11 +145,11 @@ describe('Validators', () => {
     it('should reject files that are too large', () => {
       const result = Validators.validateImageFile(createMockFile('image/jpeg', 11 * 1024 * 1024)) // 11MB
       expect(result.isValid).toBe(false)
-      expect(result.error).toBe('Image must be less than 10MB')
+      expect(result.error).toBe('Image must be less than 25MB')
     })
 
     it('should accept files at the size limit', () => {
-      const result = Validators.validateImageFile(createMockFile('image/jpeg', 10 * 1024 * 1024)) // exactly 10MB
+      const result = Validators.validateImageFile(createMockFile('image/jpeg', 25 * 1024 * 1024)) // exactly 25MB
       expect(result.isValid).toBe(true)
     })
   })

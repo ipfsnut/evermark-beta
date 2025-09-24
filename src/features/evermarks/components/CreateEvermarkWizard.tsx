@@ -482,15 +482,71 @@ export function CreateEvermarkWizard({
           throw doiError; // Re-throw to be caught by outer try-catch
         }
       }
-      // Generic URL
+      // Generic URL - fetch metadata via server function
       else if (formData.contentType === 'URL') {
-        const domain = new URL(url).hostname.replace('www.', '');
-        setFormData(prev => ({ 
-          ...prev, 
-          title: `Content from ${domain}`,
-          description: `Web content from ${url}`,
-          sourceUrl: url
-        }));
+        console.log('🌐 Starting URL metadata fetch for:', url);
+        
+        try {
+          // Fetch metadata via Netlify function to avoid CORS
+          const response = await fetch(`/.netlify/functions/web-metadata?url=${encodeURIComponent(url)}`);
+          
+          if (response.ok) {
+            const { metadata } = await response.json();
+            console.log('✅ URL metadata found:', metadata);
+            
+            // Build title and description from metadata
+            let title = metadata.title || 'Web Content';
+            if (metadata.author && metadata.author !== metadata.domain) {
+              title = `${title} by ${metadata.author}`;
+            } else if (metadata.publication) {
+              title = `${title} - ${metadata.publication}`;
+            }
+            
+            let description = metadata.description || `Content from ${metadata.domain}`;
+            if (metadata.publishedDate) {
+              description += ` (${new Date(metadata.publishedDate).toLocaleDateString()})`;
+            }
+            
+            setFormData(prev => ({ 
+              ...prev, 
+              title,
+              description,
+              sourceUrl: url
+            }));
+            
+            // Set appropriate tags based on domain/publication
+            const urlTags: string[] = ['article'];
+            if (metadata.publication) {
+              urlTags.push(metadata.publication.toLowerCase().replace(/\s+/g, '-'));
+            }
+            if (metadata.publishedDate) {
+              const year = new Date(metadata.publishedDate).getFullYear();
+              urlTags.push(year.toString());
+            }
+            setTags(urlTags);
+            
+          } else {
+            console.warn('⚠️ URL metadata fetch failed, using fallback');
+            // Fallback to basic domain extraction
+            const domain = new URL(url).hostname.replace('www.', '');
+            setFormData(prev => ({ 
+              ...prev, 
+              title: `Content from ${domain}`,
+              description: `Web content from ${url}`,
+              sourceUrl: url
+            }));
+          }
+        } catch (error) {
+          console.error('❌ URL metadata fetch error:', error);
+          // Fallback to basic domain extraction
+          const domain = new URL(url).hostname.replace('www.', '');
+          setFormData(prev => ({ 
+            ...prev, 
+            title: `Content from ${domain}`,
+            description: `Web content from ${url}`,
+            sourceUrl: url
+          }));
+        }
         
         // Auto-advance to metadata step
         setCompletedSteps(prev => new Set([...prev, 1]));
@@ -570,7 +626,7 @@ export function CreateEvermarkWizard({
   const handleImageSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const maxSize = 10 * 1024 * 1024; // 10MB
+      const maxSize = 25 * 1024 * 1024; // 25MB
       const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
       
       if (!allowedTypes.includes(file.type)) {
@@ -946,7 +1002,7 @@ export function CreateEvermarkWizard({
                       >
                         <ImageIcon className="h-12 w-12 text-gray-400 mb-4" />
                         <span className="text-gray-300 mb-2">Click to upload</span>
-                        <span className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</span>
+                        <span className="text-xs text-gray-500">PNG, JPG, GIF up to 25MB</span>
                       </label>
                     </div>
                   ) : formData.contentType !== 'Cast' && imagePreview ? (

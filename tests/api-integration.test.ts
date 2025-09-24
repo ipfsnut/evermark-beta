@@ -107,7 +107,7 @@ describe('API Integration Scenarios', () => {
         success: false,
         error: 'Failed to upload image to IPFS',
         details: 'Pinata API returned 401: Unauthorized',
-        suggestion: 'Please check your image format and size (max 10MB)'
+        suggestion: 'Please check your image format and size (max 25MB)'
       }
 
       // Workflow should stop here and return error
