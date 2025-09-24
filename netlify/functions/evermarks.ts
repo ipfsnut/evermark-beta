@@ -611,6 +611,12 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
         // PRODUCTION: This endpoint is now called AFTER successful blockchain minting
         // Validate that we have the required blockchain data
         if (!evermarkData.token_id || !evermarkData.tx_hash) {
+          console.error('❌ Missing blockchain data:', {
+            hasTokenId: !!evermarkData.token_id,
+            tokenIdValue: evermarkData.token_id,
+            hasTxHash: !!evermarkData.tx_hash,
+            txHashValue: evermarkData.tx_hash
+          });
           return {
             statusCode: 400,
             headers,

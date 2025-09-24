@@ -1,0 +1,31 @@
+INSERT INTO beta_evermarks (
+  token_id,
+  title,
+  author,
+  owner,
+  description,
+  content_type,
+  source_url,
+  token_uri,
+  created_at,
+  updated_at,
+  verified,
+  metadata_fetched,
+  tx_hash,
+  metadata_json
+) VALUES (
+  37,
+  'An ecological theory of learning transfer in human activity',
+  'Gavan Lintern et al.',
+  '0x3427b4716B90C11F9971e43999a48A47Cf5B571E',
+  'Paper by Gavan Lintern, Peter N. Kugler, Al Motavalli published in Theoretical Issues in Ergonomics Science (2024)',
+  'DOI',
+  'https://doi.org/10.1080/1463922x.2024.2365429',
+  'ar://pTMOmqE5OSkzI5-D3-To0BwdcxNI9GrlmL4fwnq-w4Y',
+  '2025-09-24T05:09:45.442Z',
+  '2025-09-24T05:09:45.442Z',
+  true,
+  true,
+  '0x0463f513636b4ac3bf6a928e973f8608ca704b269af78e1427deb1d574bf52d9',
+  '{"title":"An ecological theory of learning transfer in human activity","authors":["Gavan Lintern","Peter N. Kugler","Al Motavalli"],"primaryAuthor":"Gavan Lintern et al.","journal":"Theoretical Issues in Ergonomics Science","publisher":"Informa UK Limited","publishedDate":"2024-6-13","volume":"26","issue":"1","pages":"12-44","doi":"10.1080/1463922X.2024.2365429","backend":"ardrive","arweaveUrl":"https://arweave.net/GHxj5TPFpTBOCuOShiJNTuHj7ocBFUz5-3XsOoBRJ84","seasonNumber":7,"seasonYear":2025,"seasonWeek":39,"seasonPhase":"voting","image":{"url":"https://arweave.net/GHxj5TPFpTBOCuOShiJNTuHj7ocBFUz5-3XsOoBRJ84","size":91432},"tags":["research","paper","article","2025"],"creator":"0x3427b4716B90C11F9971e43999a48A47Cf5B571E","createdAt":"2025-09-24T05:09:45.442Z"}'
+);
