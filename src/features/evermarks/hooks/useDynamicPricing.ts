@@ -220,7 +220,19 @@ export function formatCostEstimate(estimate: BackupCostEstimate | null) {
     profitUSD: Math.round(ourProfitUSD * 10000) / 10000,
     shouldChargeExtra,
     mediaFiles,
-    breakdown,
+    breakdown: {
+      // Required properties with reasonable defaults
+      baseCost: 0.06, // Base ArDrive cost
+      mediaCost: totalCostUSD - 0.06, // Remaining cost for media
+      threadCost: 0, // No thread cost in current implementation
+      estimatedFileSize: 0, // Will be filled by actual file size
+      // Optional properties
+      shouldChargeExtra,
+      mediaFiles,
+      ourProfitUSD,
+      recommendedFeeUSD,
+      ...breakdown,
+    },
     
     // Formatting helpers
     extraFeeUSD: Math.round((recommendedFeeUSD - STANDARD_FEE_USD) * 10000) / 10000,
