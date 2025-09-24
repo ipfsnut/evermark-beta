@@ -47,11 +47,31 @@ const MARKETPLACE_CONFIG = {
   PLATFORM_FEE_BPS: 100, // 1%
 } as const;
 
+// Simple in-memory cache to prevent rapid successive calls
+let cachedListings: MarketplaceListing[] | null = null;
+let lastFetchTime = 0;
+const CACHE_DURATION = 10000; // 10 seconds
+
+/**
+ * Clear cached listings (call when new listings are created/bought)
+ */
+export function clearListingsCache(): void {
+  cachedListings = null;
+  lastFetchTime = 0;
+}
+
 /**
  * Get all active listings from the marketplace
  */
 export async function getActiveListings(): Promise<MarketplaceListing[]> {
   try {
+    // Return cached results if recent
+    const now = Date.now();
+    if (cachedListings && (now - lastFetchTime) < CACHE_DURATION) {
+      console.log('Returning cached marketplace listings');
+      return cachedListings;
+    }
+    
     console.log('Fetching marketplace listings...');
     
     const marketplaceContract = getMarketplaceContract();
@@ -116,11 +136,16 @@ export async function getActiveListings(): Promise<MarketplaceListing[]> {
     }
     
     console.log(`Returning ${listings.length} active listings`);
+    
+    // Cache the results
+    cachedListings = listings;
+    lastFetchTime = Date.now();
+    
     return listings;
   } catch (error) {
     console.error('Error fetching marketplace listings:', error);
-    // Return empty array instead of throwing to avoid breaking the UI
-    return [];
+    // Return cached results if available, otherwise empty array
+    return cachedListings || [];
   }
 }
 
@@ -264,6 +289,9 @@ export async function createDirectListing(
     
     console.log('Listing created successfully:', result.transactionHash);
     
+    // Clear cache so new listing appears immediately
+    clearListingsCache();
+    
     // Award points for creating a marketplace listing (selling)
     try {
       await PointsService.awardPoints(
@@ -338,6 +366,9 @@ export async function buyDirectListing(
     
     // Execute transaction using contextual transaction system
     const result = await sendTransactionFn(transaction);
+    
+    // Clear cache so listing is removed immediately
+    clearListingsCache();
     
     // Award points for buying an NFT
     try {

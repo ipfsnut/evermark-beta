@@ -30,17 +30,21 @@ export function useMarketplaceState() {
   const [isBuying, setIsBuying] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
 
-  // Query for all active listings
+  // Query for all active listings - always fetch but cache heavily
   const {
     data: listings = [],
     isLoading: isLoadingListings,
     error: listingsError,
     refetch: refetchListings
   } = useQuery({
-    queryKey: ['marketplace-listings', filters],
+    queryKey: ['marketplace-listings'],
     queryFn: getActiveListings,
     staleTime: 30000, // 30 seconds
-    enabled: activeTab === 'browse'
+    gcTime: 60000, // Keep in cache for 1 minute
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: 2
   });
 
   // Query for user's listings
@@ -55,7 +59,7 @@ export function useMarketplaceState() {
     enabled: activeTab === 'my-listings' && !!walletAddress
   });
 
-  // Query for marketplace stats
+  // Query for marketplace stats - heavily cached
   const {
     data: stats,
     isLoading: isLoadingStats
@@ -63,6 +67,10 @@ export function useMarketplaceState() {
     queryKey: ['marketplace-stats'],
     queryFn: getMarketplaceStats,
     staleTime: 60000, // 1 minute
+    gcTime: 120000, // Keep in cache for 2 minutes
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false
   });
 
   // Create a direct listing
