@@ -6,6 +6,8 @@ Simple point rewards for user actions during beta period.
 - **Create evermark**: 10 points
 - **Vote on evermark**: 1 point  
 - **Stake EMARK**: 1 point per 1,000,000 EMARK staked
+- **Buy NFT (marketplace)**: 1 point per purchase
+- **Sell NFT (marketplace)**: 1 point per listing creation
 
 ## Implementation
 - Points stored in `beta_points` table (wallet_address → total_points)
@@ -18,6 +20,8 @@ Points are automatically awarded when:
 1. Evermark creation completes successfully (in `useEvermarkCreation`)
 2. Vote transaction confirms (in `useVotingState`) 
 3. Stake transaction confirms (in `useStakingState`)
+4. NFT purchase completes (in `MarketplaceService` after successful buy transaction)
+5. NFT listing created (in `MarketplaceService` after successful listing transaction)
 
 ## Features
 - Real-time point updates
@@ -49,9 +53,9 @@ CREATE TABLE beta_points (
 CREATE TABLE beta_point_transactions (
   id UUID PRIMARY KEY,
   wallet_address TEXT,
-  action_type TEXT, -- 'create_evermark', 'vote', 'stake'
+  action_type TEXT, -- 'create_evermark', 'vote', 'stake', 'marketplace_buy', 'marketplace_sell'
   points_earned INTEGER,
-  related_id TEXT,  -- evermark_id, vote reference, etc
+  related_id TEXT,  -- evermark_id, vote reference, nft_id, etc
   tx_hash TEXT,     -- blockchain transaction hash
   created_at TIMESTAMP
 );

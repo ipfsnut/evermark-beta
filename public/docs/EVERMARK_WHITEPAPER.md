@@ -287,6 +287,8 @@ interface BetaPoints {
   createEvermark: 10;      // Points per Evermark created
   vote: 1;                 // Points per vote transaction
   stake: 1;                // Points per 1M EMARK staked
+  marketplaceBuy: 1;       // Points per NFT purchase
+  marketplaceSell: 1;      // Points per NFT listing creation
   earlyAdopter: 50;        // Bonus for early participation
 }
 ```

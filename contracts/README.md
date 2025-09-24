@@ -58,7 +58,9 @@ This directory contains the complete Evermark smart contract system for on-chain
 - `setFeeCollector(address)` - Update fee collector address (admin only)
 
 **Key Features:**
-- **Minting Fee:** 0.00007 ETH per NFT
+- **Minting Fee:** 0.00007 ETH per NFT (~$0.30 at current prices)
+- **Content Limits:** Supports up to 25MB media files per evermark
+- **Cast Support:** Full Farcaster cast text preserved in metadata
 - UUPS upgradeable pattern
 - Role-based access control (ADMIN, MINTER, UPGRADER)
 - Referral system (10% fee sharing)

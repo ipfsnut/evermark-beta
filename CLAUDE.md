@@ -199,6 +199,20 @@ VITE_FARCASTER_MINI_APP_ID=
 SEASON_ORACLE_ENABLED=true
 ```
 
+### Content Size Limits & Cast Backup
+
+#### File Size Limits
+- **Maximum file size**: 25MB per file (images, videos, media)
+- **Coverage**: Handles 95%+ of Farcaster content including most videos
+- **Oversized content**: Files > 25MB are skipped with preserved reference links
+- **Economics**: $0.30 fixed fee covers up to 25MB (26x profit margin)
+
+#### Cast Backup Workflow
+1. **Text preservation**: Full cast text saved in description field for searchability
+2. **Visual generation**: Cast rendered as image showing text, author, engagement
+3. **Media handling**: Embedded media up to 25MB preserved, larger files linked
+4. **Thread support**: Parent/child casts preserved with relationships
+
 ### Common Workflows
 
 #### Adding a New Feature

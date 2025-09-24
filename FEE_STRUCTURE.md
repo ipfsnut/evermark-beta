@@ -3,6 +3,20 @@
 ## Overview
 The Evermark Protocol implements a sustainable fee model with clear separation between development funding and community rewards. All fees are transparent and on-chain.
 
+## Content Storage Economics
+
+### File Size Limits
+**Maximum:** 25MB per file  
+**Coverage:** 95%+ of Farcaster content  
+**Fixed Fee:** $0.30 (0.00007 ETH)  
+
+### Cost Analysis
+- **ArDrive Storage:** ~$0.46 per GB
+- **25MB Cost:** ~$0.0115 to ArDrive  
+- **User Pays:** $0.30 fixed fee
+- **Profit Margin:** ~26x on maximum file size
+- **Oversized Files:** >25MB preserved via reference links only
+
 ## Fee Sources
 
 ### 1. NFT Minting Fees (Anti-Spam Development Fee)

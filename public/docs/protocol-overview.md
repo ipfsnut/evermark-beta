@@ -24,6 +24,9 @@ Evermark Protocol v2.0 is a decentralized system for creating permanent, verifia
 ## How It Works
 
 1. **Create**: Submit a DOI, ISBN, URL, Farcaster cast, or Custom Object to create an Evermark
+   - Maximum file size: 25MB per media file
+   - Farcaster casts: Full text preserved for searchability
+   - Large files: Reference links preserved when content exceeds limits
 
 2. **Store**: Metadata is permanently stored on ArDrive (Arweave), reference recorded on-chain, and cached via Supabase for optimal performance with true permanence
 

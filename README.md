@@ -49,7 +49,8 @@ src/
 ## 🎯 Features
 
 ### Core Features
-- **Evermarks**: Create and manage on-chain content preservation
+- **Evermarks**: Create and manage on-chain content preservation (up to 25MB per file)
+- **Cast Backup**: Full Farcaster cast preservation with searchable text and visual preview
 - **Staking**: Lock $EMARK tokens to gain voting power
 - **Voting**: Delegate voting power to quality content
 - **Leaderboard**: Community-driven content rankings
@@ -61,8 +62,10 @@ src/
 
 ### Technical Features
 - **Unified Storage**: ArDrive (Arweave) for permanent preservation, IPFS for fast access
+- **Content Limits**: 25MB file size limit covering 95%+ of Farcaster content
+- **Skip-and-Link**: Oversized media preserved via reference links
 - **Hybrid Caching**: Supabase caching layer for optimal performance
-- **Farcaster Integration**: Native Frame/Mini-app support
+- **Farcaster Integration**: Native Frame/Mini-app support with full cast text preservation
 - **Blockchain**: Thirdweb SDK with Base network (Chain ID: 8453)
 - **Real-time Data**: React Query with 30s stale time
 - **Responsive Design**: Mobile-first with cyber theme

@@ -60,18 +60,29 @@ Evermark Protocol v2.0 is built on modern blockchain infrastructure with ArDrive
 ## Content Support
 
 ### Supported Content Types
-- **Farcaster Casts**: Automatic metadata extraction from cast URLs
+- **Farcaster Casts**: Full text preservation with visual preview generation
+  - Complete cast text stored in description field for searchability
+  - Visual representation generated showing text, author, and engagement
+  - Thread preservation for connected conversations
+  - Media files up to 25MB preserved, larger files linked
 - **Web URLs**: Any online content with custom metadata
 - **Academic Papers**: DOI support for scholarly content
 - **Books**: ISBN support for published works
 
+### Content Size Limits
+- **Maximum file size**: 25MB per media file
+- **Coverage**: Handles 95%+ of Farcaster content
+- **Oversized handling**: Files >25MB preserved via reference links
+- **Economics**: Fixed $0.30 fee covers storage costs with healthy margins
+
 ### Metadata Structure
 All Evermarks store comprehensive metadata including:
-- Title and description
+- Title and description (full text for casts)
 - Author information  
 - Source URL and content type
 - Custom fields and tags
 - Creation timestamp and creator address
+- Preserved media references and sizes
 
 ## User Features
 
