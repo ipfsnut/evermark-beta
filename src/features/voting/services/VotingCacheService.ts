@@ -1,4 +1,4 @@
-import { supabase } from '../../../lib/supabase';
+import { getSupabaseClient } from '../../../lib/supabase';
 
 interface VotingCacheEntry {
   evermark_id: string;
@@ -47,7 +47,7 @@ export class VotingCacheService {
         cycle = currentSeason.cycle_number;
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await getSupabaseClient()
         .from('voting_cache')
         .select('total_votes, voter_count')
         .eq('evermark_id', evermarkId)
@@ -78,7 +78,7 @@ export class VotingCacheService {
     voterCount: number
   ): Promise<void> {
     try {
-      const { error } = await supabase
+      const { error } = await getSupabaseClient()
         .from('voting_cache')
         .upsert({
           evermark_id: evermarkId,
@@ -110,7 +110,7 @@ export class VotingCacheService {
     blockNumber?: bigint
   ): Promise<void> {
     try {
-      const { error } = await supabase
+      const { error } = await getSupabaseClient()
         .from('user_votes_cache')
         .upsert({
           user_address: userAddress.toLowerCase(),
@@ -137,7 +137,7 @@ export class VotingCacheService {
    */
   static async getCachedUserVotes(userAddress: string, cycle?: number): Promise<UserVoteEntry[]> {
     try {
-      let query = supabase
+      let query = getSupabaseClient()
         .from('user_votes_cache')
         .select('*')
         .eq('user_address', userAddress.toLowerCase());
@@ -172,7 +172,7 @@ export class VotingCacheService {
    */
   static async getCurrentSeason(): Promise<VotingSeasonEntry | null> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await getSupabaseClient()
         .from('voting_cycles_cache')
         .select('*')
         .eq('is_active', true)
@@ -221,7 +221,7 @@ export class VotingCacheService {
     activeEvermarksCount?: number
   ): Promise<void> {
     try {
-      const { error } = await supabase
+      const { error } = await getSupabaseClient()
         .from('voting_cycles_cache')
         .upsert({
           cycle_number: cycleNumber,
@@ -258,7 +258,7 @@ export class VotingCacheService {
         cycle = currentSeason.cycle_number;
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await getSupabaseClient()
         .from('voting_cache')
         .select('evermark_id, total_votes, voter_count')
         .in('evermark_id', evermarkIds)
@@ -305,7 +305,7 @@ export class VotingCacheService {
         cycle = currentSeason.cycle_number;
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await getSupabaseClient()
         .from('voting_cache')
         .select('last_updated')
         .eq('evermark_id', evermarkId)
@@ -331,7 +331,7 @@ export class VotingCacheService {
    */
   static async clearCache(evermarkId?: string, cycle?: number): Promise<void> {
     try {
-      let query = supabase.from('voting_cache').delete();
+      let query = getSupabaseClient().from('voting_cache').delete();
 
       if (evermarkId) {
         query = query.eq('evermark_id', evermarkId);
@@ -360,9 +360,9 @@ export class VotingCacheService {
   }> {
     try {
       const [entriesResult, lastUpdatedResult, cyclesResult] = await Promise.all([
-        supabase.from('voting_cache').select('id', { count: 'exact', head: true }),
-        supabase.from('voting_cache').select('last_updated').order('last_updated', { ascending: false }).limit(1).single(),
-        supabase.from('voting_cycles_cache').select('cycle_number', { count: 'exact', head: true }).eq('is_active', true)
+        getSupabaseClient().from('voting_cache').select('id', { count: 'exact', head: true }),
+        getSupabaseClient().from('voting_cache').select('last_updated').order('last_updated', { ascending: false }).limit(1).single(),
+        getSupabaseClient().from('voting_cycles_cache').select('cycle_number', { count: 'exact', head: true }).eq('is_active', true)
       ]);
 
       return {
