@@ -22,6 +22,7 @@ interface EvermarkData {
   description?: string;
   supabase_image_url?: string;
   processed_image_url?: string;
+  ardrive_image_tx?: string; // ArDrive transaction ID for permanent images
   content_type?: string;
   verified: boolean;
   owner?: string;
@@ -40,6 +41,7 @@ async function getEvermarkData(tokenId: string): Promise<EvermarkData | null> {
         author,
         description,
         supabase_image_url,
+        ardrive_image_tx,
         content_type,
         verified,
         owner,
@@ -62,11 +64,15 @@ async function getEvermarkData(tokenId: string): Promise<EvermarkData | null> {
 }
 
 function getEvermarkImageUrl(evermark: EvermarkData, baseUrl: string): string {
+  // Priority: processed > supabase > ardrive > fallback
   if (evermark.processed_image_url) {
     return evermark.processed_image_url;
   }
   if (evermark.supabase_image_url) {
     return evermark.supabase_image_url;
+  }
+  if (evermark.ardrive_image_tx) {
+    return `https://arweave.net/${evermark.ardrive_image_tx}`;
   }
   return `${baseUrl}/og-image.png`;
 }
