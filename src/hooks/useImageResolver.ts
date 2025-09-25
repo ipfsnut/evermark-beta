@@ -51,31 +51,9 @@ export function useImageResolver(
           resolution = await resolveImageUrl(tokenId, ipfsHash, originalUrl);
         }
 
-        // If no image found and it's a Cast, try to auto-generate
-        if (resolution.source === 'fallback' && 
-            contentType === 'Cast' && 
-            autoGenerate && 
-            isMounted) {
-          
-          console.log(`🎨 Auto-generating image for Cast evermark ${tokenId}`);
-          
-          try {
-            const generateResponse = await fetch('/.netlify/functions/generate-cast-image', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ token_id: tokenId })
-            });
-            
-            if (generateResponse.ok) {
-              // Re-resolve after generation
-              resolution = await resolveImageUrl(tokenId, ipfsHash, originalUrl);
-              console.log(`✅ Cast image generated successfully for ${tokenId}`);
-            }
-          } catch (genError) {
-            console.warn('Cast image generation failed:', genError);
-            // Continue with fallback - don't throw error
-          }
-        }
+        // Image generation should happen during evermark creation, not on-demand
+        // If we reach fallback, use the default placeholder image system
+        // Auto-generation is disabled to avoid Sharp dependency issues
 
         if (isMounted) {
           setState({

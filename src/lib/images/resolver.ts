@@ -20,7 +20,7 @@ export async function resolveImageUrl(
     // Get evermark data from database
     const { data: evermark } = await supabase!
       .from('beta_evermarks')
-      .select('token_id, supabase_image_url, ipfs_image_hash, content_type')
+      .select('token_id, supabase_image_url, ipfs_image_hash, ardrive_image_tx, content_type')
       .eq('token_id', tokenId)
       .single();
 
@@ -30,6 +30,7 @@ export async function resolveImageUrl(
         token_id: evermark.token_id,
         supabase_image_url: evermark.supabase_image_url,
         ipfs_image_hash: evermark.ipfs_image_hash,
+        ardrive_image_tx: evermark.ardrive_image_tx,
         content_type: evermark.content_type
       });
 
@@ -40,6 +41,9 @@ export async function resolveImageUrl(
       if (evermark.supabase_image_url && url === evermark.supabase_image_url) {
         source = 'supabase';
         cached = true;
+      } else if (evermark.ardrive_image_tx && url.includes(evermark.ardrive_image_tx)) {
+        source = 'ipfs'; // ArDrive uses Arweave but we'll classify as IPFS for now
+        cached = true; // ArDrive is permanent storage
       } else if (evermark.ipfs_image_hash && url.includes(evermark.ipfs_image_hash)) {
         if (url.includes('gateway.pinata.cloud')) {
           source = 'pinata';

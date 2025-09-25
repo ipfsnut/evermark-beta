@@ -70,13 +70,22 @@ export class StorageService {
     const backend = this.getStorageBackend();
     
     console.log(`📁 Uploading image via ${backend}:`, file.name, `(${file.size} bytes)`);
+    console.log('🔍 Storage backend configuration:', {
+      backend,
+      ardriveEnabled: FEATURES.isArDriveEnabled(),
+      dualStorage: FEATURES.shouldUseDualStorage(),
+      envVar: import.meta.env.VITE_STORAGE_BACKEND
+    });
 
     try {
       if (backend === 'ardrive') {
+        console.log('🚀 Calling uploadToArDrive...');
         return await this.uploadToArDrive(file, 'image');
       } else if (backend === 'dual') {
+        console.log('🚀 Calling uploadDual...');
         return await this.uploadDual(file, 'image');
       } else {
+        console.log('🚀 Calling uploadToIPFS...');
         return await this.uploadToIPFS(file, 'image');
       }
     } catch (error) {
@@ -190,11 +199,15 @@ export class StorageService {
   private async uploadToArDrive(file: File, type: 'image' | 'metadata'): Promise<UnifiedUploadResult> {
     const startTime = Date.now();
     
+    console.log(`🔵 ArDrive upload started for ${type}:`, file.name);
+    
     try {
       // Convert file to base64 for API transport
       const base64 = await this.fileToBase64(file);
+      console.log(`🔵 Converted to base64, length: ${base64.length}`);
       
       // Call ArDrive upload API
+      console.log(`🔵 Calling ArDrive API endpoint...`);
       const response = await fetch('/.netlify/functions/ardrive-upload', {
         method: 'POST',
         headers: {
@@ -212,11 +225,16 @@ export class StorageService {
         })
       });
       
+      console.log(`🔵 ArDrive API response status: ${response.status}`);
+      
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`🔴 ArDrive upload API error:`, errorText);
         throw new Error(`ArDrive upload failed: ${response.statusText}`);
       }
       
       const result = await response.json() as SeasonUploadResult;
+      console.log(`🔵 ArDrive upload result:`, result);
       
       this.recordMetric({
         backend: 'ardrive',

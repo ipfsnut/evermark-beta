@@ -122,8 +122,8 @@ export class EvermarkValidator {
     // Title validation
     if (!meta.title?.trim()) {
       errors.push({ field: 'title', message: 'Title is required' });
-    } else if (meta.title.length > 100) {
-      errors.push({ field: 'title', message: 'Title must be 100 characters or less' });
+    } else if (meta.title.length > 500) {
+      errors.push({ field: 'title', message: 'Title must be 500 characters or less' });
     } else if (meta.title.length < 3) {
       warnings.push({ field: 'title', message: 'Title should be at least 3 characters' });
     }
@@ -131,15 +131,15 @@ export class EvermarkValidator {
     // Description validation
     if (!meta.description?.trim()) {
       warnings.push({ field: 'description', message: 'Description is recommended for better discoverability' });
-    } else if (meta.description.length > 1000) {
-      errors.push({ field: 'description', message: 'Description must be 1000 characters or less' });
+    } else if (meta.description.length > 2000) {
+      errors.push({ field: 'description', message: 'Description must be 2000 characters or less' });
     }
 
     // Author validation
     if (!meta.author?.trim()) {
       errors.push({ field: 'author', message: 'Author is required' });
-    } else if (meta.author.length > 50) {
-      errors.push({ field: 'author', message: 'Author name must be 50 characters or less' });
+    } else if (meta.author.length > 200) {
+      errors.push({ field: 'author', message: 'Author name must be 200 characters or less' });
     }
 
     // URL validation

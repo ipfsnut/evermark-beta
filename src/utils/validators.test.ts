@@ -237,12 +237,12 @@ describe('EvermarkValidator', () => {
     })
 
     it('should validate title length', () => {
-      const metadata = { ...createValidMetadata(), title: 'a'.repeat(101) }
+      const metadata = { ...createValidMetadata(), title: 'a'.repeat(501) }
       const result = EvermarkValidator.validateMetadata(metadata)
       expect(result.isValid).toBe(false)
       expect(result.errors).toContainEqual({
         field: 'title',
-        message: 'Title must be 100 characters or less'
+        message: 'Title must be 500 characters or less'
       })
     })
 
@@ -262,7 +262,7 @@ describe('EvermarkValidator', () => {
       expect(result.isValid).toBe(false)
       expect(result.errors).toContainEqual({
         field: 'description',
-        message: 'Description must be 1000 characters or less'
+        message: 'Description must be 2000 characters or less'
       })
     })
 

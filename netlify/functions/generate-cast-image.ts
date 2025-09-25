@@ -7,7 +7,13 @@ const supabase = createClient(
   process.env.SUPABASE_SECRET_KEY!
 );
 
-import sharp from 'sharp';
+// Import sharp with error handling for serverless environment
+let sharp: any;
+try {
+  sharp = require('sharp');
+} catch (error) {
+  console.warn('Sharp not available in serverless environment, cast image generation disabled');
+}
 
 function escapeXml(unsafe: string): string {
   return unsafe.replace(/[<>&'"]/g, function (c) {
@@ -263,6 +269,18 @@ function getEmbedIndicators(embeds: any[]): string {
 
 export const handler: Handler = async (event, context) => {
   try {
+    // Check if Sharp is available - if not, return error gracefully
+    if (!sharp) {
+      return {
+        statusCode: 503,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          error: 'Cast image generation temporarily unavailable',
+          reason: 'Sharp module not available in serverless environment'
+        })
+      };
+    }
+
     const requestBody = event.body ? JSON.parse(event.body) : {};
     
     // Check if this is a preview request (mock token_id 9999)

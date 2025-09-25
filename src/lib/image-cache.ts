@@ -91,6 +91,7 @@ export function getImageUrl(evermark: {
   token_id: number;
   supabase_image_url?: string;
   ipfs_image_hash?: string;
+  ardrive_image_tx?: string;
   content_type?: string;
 }): string {
   // 1. Try Supabase first
@@ -106,13 +107,19 @@ export function getImageUrl(evermark: {
     return url;
   }
 
-  // 2. Fall back to IPFS via CORS-friendly gateway (not Pinata)
+  // 2. Try ArDrive (Arweave) URLs
+  if (evermark.ardrive_image_tx) {
+    // Use arweave.net - it redirects but browsers should handle it
+    return `https://arweave.net/${evermark.ardrive_image_tx}`;
+  }
+
+  // 3. Fall back to IPFS via CORS-friendly gateway (not Pinata)
   if (evermark.ipfs_image_hash) {
     const pinataUrl = `https://gateway.pinata.cloud/ipfs/${evermark.ipfs_image_hash}`;
     return replaceIPFSGateway(pinataUrl) || `https://ipfs.io/ipfs/${evermark.ipfs_image_hash}`;
   }
 
-  // 3. Last resort: placeholder
+  // 4. Last resort: placeholder
   return '/placeholder-image.jpg';
 }
 

@@ -601,6 +601,137 @@ export function CreateEvermarkForm({
     }
   }, [formData.contentType, formData.sourceUrl, formData.content, castData]);
 
+  // Generate DOI paper cover
+  const generateDOICover = useCallback(async () => {
+    if (formData.contentType !== 'DOI' || !formData.title || !formData.description || !formData.sourceUrl) {
+      return;
+    }
+
+    try {
+      console.log('🎓 Generating DOI cover for paper:', formData.title.substring(0, 50) + '...');
+      
+      // Extract DOI from sourceUrl - handle both raw DOI and DOI URLs
+      let doi = formData.sourceUrl.trim();
+      if (doi.includes('doi.org/')) {
+        doi = doi.split('doi.org/')[1];
+      }
+      
+      // Parse authors from description or use a default
+      const authors = formData.description.split(/[,;]/).map(a => a.trim()).filter(Boolean);
+      
+      const response = await fetch('/.netlify/functions/generate-doi-cover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: formData.title,
+          authors: authors.length > 0 ? authors : ['Unknown Author'],
+          // No journal information available in form context
+          year: new Date().getFullYear().toString(),
+          doi: doi,
+          preview: true
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to generate DOI cover: ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (result.success && result.imageUrl) {
+        setCastImagePreview(result.imageUrl); // Reusing the same state variable
+        console.log('✅ DOI cover generated successfully');
+      } else {
+        throw new Error(result.error || 'Unknown error generating DOI cover');
+      }
+      
+    } catch (error) {
+      console.warn('⚠️ DOI cover generation failed:', error);
+      // Don't show error to user - they can upload manually
+    }
+  }, [formData.contentType, formData.title, formData.description, formData.sourceUrl]);
+
+  // Fetch ISBN book cover
+  const fetchBookCover = useCallback(async () => {
+    if (formData.contentType !== 'ISBN' || !formData.sourceUrl) {
+      return;
+    }
+
+    try {
+      console.log('📚 Fetching book cover for ISBN:', formData.sourceUrl);
+      
+      const response = await fetch('/.netlify/functions/fetch-book-cover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          isbn: formData.sourceUrl.trim(),
+          preview: true
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch book cover: ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (result.success && result.imageUrl) {
+        setCastImagePreview(result.imageUrl); // Reusing the same state variable
+        console.log('✅ Book cover found from', result.source);
+        
+        // Also populate metadata if available
+        if (result.metadata) {
+          if (result.metadata.title && !formData.title) {
+            setFormData(prev => ({ ...prev, title: result.metadata.title }));
+          }
+          if (result.metadata.authors && !formData.description) {
+            setFormData(prev => ({ ...prev, description: result.metadata.authors.join(', ') }));
+          }
+        }
+      } else if (result.fallbackToUpload) {
+        console.log('📖 No book cover found - user can upload manually');
+        // Don't set any preview image, let user upload
+      }
+      
+    } catch (error) {
+      console.warn('⚠️ Book cover fetch failed:', error);
+      // Don't show error to user - they can upload manually
+    }
+  }, [formData.contentType, formData.sourceUrl, formData.title, formData.description]);
+
+  // Auto-generate DOI cover when DOI fields change
+  useEffect(() => {
+    if (formData.contentType === 'DOI' && formData.title && formData.description && formData.sourceUrl) {
+      const timeoutId = setTimeout(() => {
+        generateDOICover();
+      }, 1500); // Slightly longer debounce for DOI
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [formData.contentType, formData.title, formData.description, formData.sourceUrl, generateDOICover]);
+
+  // Auto-fetch book cover when ISBN is entered
+  useEffect(() => {
+    if (formData.contentType === 'ISBN' && formData.sourceUrl.trim()) {
+      const timeoutId = setTimeout(() => {
+        fetchBookCover();
+      }, 1000); // Quick fetch for book covers
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [formData.contentType, formData.sourceUrl, fetchBookCover]);
+
+  // Helper function to convert base64 data URL to File
+  const dataUrlToFile = useCallback((dataUrl: string, filename: string): File => {
+    const arr = dataUrl.split(',');
+    const mime = arr[0].match(/:(.*?);/)![1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, { type: mime });
+  }, []);
+
   // Form submission
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -626,9 +757,22 @@ export function CreateEvermarkForm({
         customFields: []
       };
 
+      // Determine which image to use
+      let imageToUse: File | undefined = selectedImage || undefined;
+      
+      // For Cast content type, use generated cast image preview if available
+      if (formData.contentType === 'Cast' && castImagePreview && !selectedImage) {
+        try {
+          imageToUse = dataUrlToFile(castImagePreview, 'cast-preview.png');
+          console.log('🎨 Using generated cast image preview for evermark creation');
+        } catch (error) {
+          console.warn('⚠️ Failed to convert cast image preview to file:', error);
+        }
+      }
+
       const createInput: CreateEvermarkInput = {
         metadata: evermarkMetadata,
-        image: selectedImage || undefined
+        image: imageToUse
       };
       
       const result = await createEvermark(createInput);
@@ -648,6 +792,8 @@ export function CreateEvermarkForm({
     getAuthor, 
     tags, 
     selectedImage,
+    castImagePreview,
+    dataUrlToFile,
     createEvermark, 
     onSuccess, 
     navigate,
@@ -972,14 +1118,14 @@ export function CreateEvermarkForm({
                         ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-cyan-400 focus:ring-cyan-400" 
                         : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-purple-400 focus:ring-purple-400"
                     )}
-                    maxLength={100}
+                    maxLength={500}
                     required
                   />
                   <div className={cn(
                     "text-xs text-right",
                     isDark ? "text-gray-500" : "text-gray-600"
                   )}>
-                    {formData.title.length}/100
+                    {formData.title.length}/500
                   </div>
                 </div>
 
@@ -1004,7 +1150,7 @@ export function CreateEvermarkForm({
                         : "bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-purple-400 focus:ring-purple-400"
                     )}
                     rows={4}
-                    maxLength={1000}
+                    maxLength={2000}
                     required
                   />
                   <div className={cn(

@@ -176,6 +176,7 @@ export function CreateEvermarkWizard({
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [castData, setCastData] = useState<any>(null);
   const [readmeData, setReadmeData] = useState<any>(null);
+  const [doiData, setDoiData] = useState<any>(null);
   const [castImagePreview, setCastImagePreview] = useState<string | null>(null);
   const [isGeneratingCastImage, setIsGeneratingCastImage] = useState(false);
 
@@ -249,6 +250,102 @@ export function CreateEvermarkWizard({
     }
   }, [formData.contentType, formData.sourceUrl, formData.title, formData.description, formData.content, getAuthor, castData, tags]);
 
+  // Generate DOI paper cover
+  const generateDOICover = useCallback(async () => {
+    if (formData.contentType !== 'DOI' || !formData.title || !formData.description || !formData.sourceUrl) {
+      return;
+    }
+
+    try {
+      console.log('🎓 Generating DOI cover for paper:', formData.title.substring(0, 50) + '...');
+      
+      // Extract DOI from sourceUrl - handle both raw DOI and DOI URLs
+      let doi = formData.sourceUrl.trim();
+      if (doi.includes('doi.org/')) {
+        doi = doi.split('doi.org/')[1];
+      }
+      
+      // Parse authors from description or use a default
+      const authors = formData.description.split(/[,;]/).map(a => a.trim()).filter(Boolean);
+      
+      const response = await fetch('/.netlify/functions/generate-doi-cover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: formData.title,
+          authors: authors.length > 0 ? authors : ['Unknown Author'],
+          journal: doiData?.journal, // Use actual journal from DOI metadata
+          year: doiData?.publishedDate ? new Date(doiData.publishedDate).getFullYear().toString() : undefined,
+          doi: doi,
+          preview: true
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to generate DOI cover: ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (result.success && result.imageUrl) {
+        setCastImagePreview(result.imageUrl); // Reusing the same state variable
+        console.log('✅ DOI cover generated successfully');
+      } else {
+        throw new Error(result.error || 'Unknown error generating DOI cover');
+      }
+      
+    } catch (error) {
+      console.warn('⚠️ DOI cover generation failed:', error);
+      // Don't show error to user - they can upload manually
+    }
+  }, [formData.contentType, formData.title, formData.description, formData.sourceUrl]);
+
+  // Fetch ISBN book cover
+  const fetchBookCover = useCallback(async () => {
+    if (formData.contentType !== 'ISBN' || !formData.sourceUrl) {
+      return;
+    }
+
+    try {
+      console.log('📚 Fetching book cover for ISBN:', formData.sourceUrl);
+      
+      const response = await fetch('/.netlify/functions/fetch-book-cover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          isbn: formData.sourceUrl.trim(),
+          preview: true
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch book cover: ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (result.success && result.imageUrl) {
+        setCastImagePreview(result.imageUrl); // Reusing the same state variable
+        console.log('✅ Book cover found from', result.source);
+        
+        // Also populate metadata if available
+        if (result.metadata) {
+          if (result.metadata.title && !formData.title) {
+            setFormData(prev => ({ ...prev, title: result.metadata.title }));
+          }
+          if (result.metadata.authors && !formData.description) {
+            setFormData(prev => ({ ...prev, description: result.metadata.authors.join(', ') }));
+          }
+        }
+      } else if (result.fallbackToUpload) {
+        console.log('📖 No book cover found - user can upload manually');
+        // Don't set any preview image, let user upload
+      }
+      
+    } catch (error) {
+      console.warn('⚠️ Book cover fetch failed:', error);
+      // Don't show error to user - they can upload manually
+    }
+  }, [formData.contentType, formData.sourceUrl, formData.title, formData.description]);
+
   // Get current content type config
   const currentContentType = CONTENT_TYPES.find(t => t.value === formData.contentType);
 
@@ -274,6 +371,31 @@ export function CreateEvermarkWizard({
       setCastImagePreview(null);
     }
   }, [formData.contentType, formData.sourceUrl, formData.content, castData, generateCastImagePreview]);
+
+  // Auto-generate DOI cover when DOI fields change
+  useEffect(() => {
+    if (formData.contentType === 'DOI' && formData.title && formData.description && formData.sourceUrl) {
+      const timeoutId = setTimeout(() => {
+        generateDOICover();
+      }, 1500); // Slightly longer debounce for DOI
+      
+      return () => clearTimeout(timeoutId);
+    } else if (formData.contentType !== 'Cast') {
+      // Clear cast image preview when switching away from Cast (but not DOI/ISBN since they reuse the state)
+      setCastImagePreview(null);
+    }
+  }, [formData.contentType, formData.title, formData.description, formData.sourceUrl, generateDOICover]);
+
+  // Auto-fetch book cover when ISBN is entered
+  useEffect(() => {
+    if (formData.contentType === 'ISBN' && formData.sourceUrl.trim()) {
+      const timeoutId = setTimeout(() => {
+        fetchBookCover();
+      }, 1000); // Quick fetch for book covers
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [formData.contentType, formData.sourceUrl, fetchBookCover]);
 
   // Auto-fetch metadata when identifier is entered
   const handleAutoFetch = useCallback(async (url: string) => {
@@ -392,6 +514,11 @@ export function CreateEvermarkWizard({
             setCompletedSteps(prev => new Set([...prev, 1]));
             setCurrentStep(2);
             
+            // Generate book cover after a short delay to ensure form data is updated
+            setTimeout(() => {
+              fetchBookCover();
+            }, 500);
+            
             console.log('✅ ISBN processing complete!');
           } else {
             console.log('⚠️ ISBN Service returned null, using fallback');
@@ -424,6 +551,9 @@ export function CreateEvermarkWizard({
           if (paperMetadata) {
             console.log('✅ DOI metadata found, updating form data...');
             
+            // Store the DOI metadata for cover generation
+            setDoiData(paperMetadata);
+            
             const newTitle = DOIService.generateEvermarkTitle(paperMetadata);
             const newDescription = DOIService.generateEvermarkDescription(paperMetadata);
             const generatedTags = DOIService.generateTags(paperMetadata);
@@ -433,7 +563,8 @@ export function CreateEvermarkWizard({
               title: newTitle,
               description: newDescription.substring(0, 100) + '...',
               tags: generatedTags,
-              sourceUrl
+              sourceUrl,
+              journal: paperMetadata.journal
             });
             
             setFormData(prev => {
@@ -455,6 +586,11 @@ export function CreateEvermarkWizard({
             console.log('➡️ Auto-advancing DOI to metadata step');
             setCompletedSteps(prev => new Set([...prev, 1]));
             setCurrentStep(2);
+            
+            // Generate DOI cover after a short delay to ensure form data is updated
+            setTimeout(() => {
+              generateDOICover();
+            }, 500);
             
             console.log('✅ DOI processing complete!');
           } else {
@@ -673,6 +809,19 @@ export function CreateEvermarkWizard({
     }
   }, [formData]);
 
+  // Helper function to convert base64 data URL to File
+  const dataUrlToFile = useCallback((dataUrl: string, filename: string): File => {
+    const arr = dataUrl.split(',');
+    const mime = arr[0].match(/:(.*?);/)![1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, { type: mime });
+  }, []);
+
   // Form submission
   const handleSubmit = useCallback(async () => {
     if (isCreating || !hasWallet) return;
@@ -688,9 +837,23 @@ export function CreateEvermarkWizard({
         customFields: []
       };
 
+      // Determine which image to use
+      let imageToUse: File | undefined = selectedImage || undefined;
+      
+      // For Cast or DOI content types, use generated image preview if available
+      if ((formData.contentType === 'Cast' || formData.contentType === 'DOI') && castImagePreview && !selectedImage) {
+        try {
+          const fileName = formData.contentType === 'Cast' ? 'cast-preview.png' : 'doi-cover.png';
+          imageToUse = dataUrlToFile(castImagePreview, fileName);
+          console.log(`🎨 Using generated ${formData.contentType.toLowerCase()} image preview for evermark creation`);
+        } catch (error) {
+          console.warn(`⚠️ Failed to convert ${formData.contentType.toLowerCase()} image preview to file:`, error);
+        }
+      }
+
       const createInput: CreateEvermarkInput = {
         metadata: evermarkMetadata,
-        image: selectedImage || undefined
+        image: imageToUse
       };
       
       const result = await createEvermark(createInput);
@@ -709,6 +872,8 @@ export function CreateEvermarkWizard({
     getAuthor, 
     tags, 
     selectedImage,
+    castImagePreview,
+    dataUrlToFile,
     createEvermark, 
     onSuccess, 
     navigate
@@ -889,10 +1054,10 @@ export function CreateEvermarkWizard({
                       onChange={(e) => handleFieldChange('title', e.target.value)}
                       placeholder="Enter a descriptive title..."
                       className="w-full px-4 py-3 bg-gray-800 border border-gray-600 text-white rounded-lg focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
-                      maxLength={100}
+                      maxLength={500}
                     />
                     <div className="text-xs text-gray-500 text-right mt-1">
-                      {formData.title.length}/100
+                      {formData.title.length}/500
                     </div>
                   </div>
 
@@ -967,27 +1132,35 @@ export function CreateEvermarkWizard({
                 {/* Right column - Image upload */}
                 <div className="space-y-4">
                   <label className="block text-sm font-medium text-cyan-400 mb-2">
-                    {formData.contentType === 'Cast' ? 'Generated Cast Preview' : 'Cover Image (Optional)'}
+                    {formData.contentType === 'Cast' ? 'Generated Cast Preview' : 
+                     formData.contentType === 'DOI' ? 'Generated Paper Cover' :
+                     formData.contentType === 'ISBN' ? 'Fetched Book Cover' :
+                     'Cover Image (Optional)'}
                   </label>
                   
-                  {/* Show cast image preview for casts */}
-                  {formData.contentType === 'Cast' && castImagePreview && (
+                  {/* Show generated/fetched image preview for Cast, DOI, or ISBN */}
+                  {(formData.contentType === 'Cast' || formData.contentType === 'DOI' || formData.contentType === 'ISBN') && castImagePreview && (
                     <div className="relative">
                       <img
                         src={castImagePreview}
-                        alt="Cast preview"
+                        alt={formData.contentType === 'Cast' ? 'Cast preview' : 
+                             formData.contentType === 'DOI' ? 'Paper cover' : 'Book cover'}
                         className="w-full h-64 object-contain rounded-lg bg-gray-100"
                       />
                       {isGeneratingCastImage && (
                         <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
-                          <span className="text-cyan-400 text-sm">Generating preview...</span>
+                          <span className="text-cyan-400 text-sm">
+                            {formData.contentType === 'Cast' ? 'Generating preview...' :
+                             formData.contentType === 'DOI' ? 'Generating cover...' :
+                             'Fetching cover...'}
+                          </span>
                         </div>
                       )}
                     </div>
                   )}
                   
-                  {/* Show image upload for non-cast types or when no cast image is available */}
-                  {formData.contentType !== 'Cast' && !imagePreview ? (
+                  {/* Show image upload when no image is available (uploaded or generated) */}
+                  {!imagePreview && !castImagePreview ? (
                     <div className="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center h-64 flex flex-col items-center justify-center">
                       <input
                         type="file"
@@ -1026,8 +1199,18 @@ export function CreateEvermarkWizard({
                         <svg className="h-12 w-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
-                        <span className="text-gray-300 mb-2">Cast preview will appear here</span>
-                        <span className="text-xs text-gray-500">Generated automatically from cast content</span>
+                        <span className="text-gray-300 mb-2">
+                          {formData.contentType === 'Cast' ? 'Cast preview will appear here' :
+                           formData.contentType === 'DOI' ? 'Paper cover will appear here' :
+                           formData.contentType === 'ISBN' ? 'Book cover will appear here' :
+                           'Cover image will appear here'}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {formData.contentType === 'Cast' ? 'Generated automatically from cast content' :
+                           formData.contentType === 'DOI' ? 'Generated automatically from paper details' :
+                           formData.contentType === 'ISBN' ? 'Fetched automatically from book databases' :
+                           'Upload an image or let us generate one'}
+                        </span>
                       </div>
                     </div>
                   ) : null}
@@ -1143,19 +1326,28 @@ export function CreateEvermarkWizard({
                   </div>
                 )}
 
-                {/* Cover image - show cast image preview for casts, uploaded image for others */}
-                {(imagePreview || (formData.contentType === 'Cast' && castImagePreview)) && (
+                {/* Cover image - show generated/fetched image preview for Cast/DOI/ISBN, uploaded image for others */}
+                {(imagePreview || (['Cast', 'DOI', 'ISBN'].includes(formData.contentType as string) && castImagePreview)) && (
                   <div className="mb-6">
                     <p className="text-sm text-gray-500 mb-2">
-                      {formData.contentType === 'Cast' && castImagePreview ? 'Generated Cast Preview' : 'Cover Image'}
-                      {formData.contentType === 'Cast' && isGeneratingCastImage && (
-                        <span className="ml-2 text-cyan-400 text-xs">Generating...</span>
+                      {(['Cast', 'DOI', 'ISBN'].includes(formData.contentType as string) && castImagePreview) ? 
+                        (formData.contentType === 'Cast' ? 'Generated Cast Preview' :
+                         formData.contentType === 'DOI' ? 'Generated Paper Cover' :
+                         'Fetched Book Cover') : 'Cover Image'}
+                      {isGeneratingCastImage && (
+                        <span className="ml-2 text-cyan-400 text-xs">
+                          {formData.contentType === 'Cast' ? 'Generating...' :
+                           formData.contentType === 'DOI' ? 'Generating...' :
+                           'Fetching...'}
+                        </span>
                       )}
                     </p>
                     <img
                       src={castImagePreview || imagePreview || ''}
-                      alt={formData.contentType === 'Cast' ? 'Cast preview' : 'Cover'}
-                      className={`w-full rounded-lg ${formData.contentType === 'Cast' && castImagePreview 
+                      alt={formData.contentType === 'Cast' ? 'Cast preview' : 
+                           formData.contentType === 'DOI' ? 'Paper cover' :
+                           formData.contentType === 'ISBN' ? 'Book cover' : 'Cover'}
+                      className={`w-full rounded-lg ${(['Cast', 'DOI', 'ISBN'].includes(formData.contentType as string) && castImagePreview)
                         ? 'h-48 object-contain bg-gray-100' 
                         : 'h-48 object-cover'}`}
                     />

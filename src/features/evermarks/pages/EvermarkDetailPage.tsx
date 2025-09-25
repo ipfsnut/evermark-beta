@@ -359,13 +359,10 @@ export default function EvermarkDetailPage(): React.ReactNode {
             </div>
 
             {/* Featured Image with responsive handling for book covers */}
-            {(evermark.image || evermark.supabaseImageUrl) && (
+            {(evermark.image || evermark.supabaseImageUrl || evermark.ardrive_image_tx) && (
               <div className="relative">
                 <UnifiedEvermarkImage
-                  tokenId={evermark.tokenId}
-                  ipfsHash={evermark.ipfsHash}
-                  originalUrl={evermark.supabaseImageUrl}
-                  contentType={evermark.contentType}
+                  evermark={evermark}
                   variant="hero"
                   alt={evermark.title}
                   className="rounded-lg border border-gray-700"

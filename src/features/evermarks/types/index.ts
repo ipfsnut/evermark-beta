@@ -37,6 +37,10 @@ export interface Evermark {
   imageWidth?: number;         // NEW: Separate width field (from database)
   imageHeight?: number;        // NEW: Separate height field (from database)
   
+  // ArDrive permanent storage fields
+  ardrive_image_tx?: string;   // NEW: ArDrive transaction ID for permanent images
+  ardrive_metadata_tx?: string; // NEW: ArDrive transaction ID for metadata
+  
   // Extended metadata
   extendedMetadata: {
     doi?: string;

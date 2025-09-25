@@ -226,13 +226,8 @@ export class DOIService {
 
   // Generate evermark title from paper metadata
   static generateEvermarkTitle(metadata: PaperMetadata): string {
-    // Truncate title if too long
-    const maxLength = 100;
+    // Use full title - no truncation needed since we increased the limit
     let title = metadata.title;
-    
-    if (title.length > maxLength) {
-      title = title.substring(0, maxLength - 3) + '...';
-    }
     
     return title;
   }
