@@ -182,6 +182,52 @@
   force = false
   conditions = {User-Agent = "*Discord*"}
 
+# Farcaster crawler
+[[redirects]]
+  from = "/evermark/:id"
+  to = "/.netlify/functions/evermark-share?id=:id"
+  status = 200
+  force = false
+  conditions = {User-Agent = "*farcaster*"}
+
+# General social media bots (catch-all)
+[[redirects]]
+  from = "/evermark/:id"
+  to = "/.netlify/functions/evermark-share?id=:id"
+  status = 200
+  force = false
+  conditions = {User-Agent = "*bot*"}
+
+# Additional crawler patterns
+[[redirects]]
+  from = "/evermark/:id"
+  to = "/.netlify/functions/evermark-share?id=:id"
+  status = 200
+  force = false
+  conditions = {User-Agent = "*crawler*"}
+
+[[redirects]]
+  from = "/evermark/:id"
+  to = "/.netlify/functions/evermark-share?id=:id"
+  status = 200
+  force = false
+  conditions = {User-Agent = "*spider*"}
+
+# Preview/unfurl requests
+[[redirects]]
+  from = "/evermark/:id"
+  to = "/.netlify/functions/evermark-share?id=:id"
+  status = 200
+  force = false
+  conditions = {User-Agent = "*preview*"}
+
+[[redirects]]
+  from = "/evermark/:id"
+  to = "/.netlify/functions/evermark-share?id=:id"
+  status = 200
+  force = false
+  conditions = {User-Agent = "*unfurl*"}
+
 # SPA fallback - must be last
 [[redirects]]
   from = "/*"
