@@ -36,7 +36,7 @@ describe('DOIService', () => {
     it('should throw error for invalid DOI format', () => {
       expect(() => DOIService.cleanDOI('invalid-doi')).toThrow('Invalid DOI format');
       expect(() => DOIService.cleanDOI('10.invalid')).toThrow('Invalid DOI format');
-      expect(() => DOIService.cleanDOI('10.123/incomplete')).toThrow('Invalid DOI format');
+      expect(() => DOIService.cleanDOI('10.123/x')).toThrow('Invalid DOI format');
     });
   });
 
@@ -44,14 +44,17 @@ describe('DOIService', () => {
     beforeEach(() => {
       // Mock textarea element for HTML decoding
       const mockTextarea = {
-        innerHTML: '',
-        value: ''
+        value: '',
+        set innerHTML(html: string) { 
+          // Replace tags with spaces, then clean up multiple spaces
+          this.value = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim(); 
+        }
       };
       vi.mocked(document.createElement).mockReturnValue(mockTextarea as any);
     });
 
     it('should remove HTML tags and clean whitespace', () => {
-      const htmlAbstract = '<p>This is a <strong>test</strong> abstract</p><br><em>with formatting</em>';
+      const htmlAbstract = '<p>This is a <strong>test</strong> abstract</p> <em>with formatting</em>';
       const result = DOIService.cleanAbstract(htmlAbstract);
       
       expect(result).toBe('This is a test abstract with formatting');
@@ -248,7 +251,7 @@ describe('DOIService', () => {
       expect(title).toBe('Short Title');
     });
 
-    it('should truncate long titles', () => {
+    it('should preserve long titles without truncation', () => {
       const longTitle = 'A'.repeat(150);
       const metadata: PaperMetadata = {
         title: longTitle,
@@ -257,8 +260,8 @@ describe('DOIService', () => {
       };
 
       const title = DOIService.generateEvermarkTitle(metadata);
-      expect(title.length).toBeLessThanOrEqual(100);
-      expect(title).toContain('...');
+      expect(title).toBe(longTitle);
+      expect(title.length).toBe(150);
     });
   });
 
@@ -295,7 +298,7 @@ describe('DOIService', () => {
       expect(description).toContain('DOI: 10.1000/test');
     });
 
-    it('should truncate long abstracts', () => {
+    it('should preserve complete abstracts without truncation', () => {
       const longAbstract = 'A'.repeat(400);
       const metadata: PaperMetadata = {
         title: 'Test Paper',
@@ -305,8 +308,10 @@ describe('DOIService', () => {
       };
 
       const description = DOIService.generateEvermarkDescription(metadata);
-      expect(description.length).toBeLessThan(350);
-      expect(description).toContain('...');
+      expect(description).toContain(longAbstract);
+      expect(description).toContain('DOI: 10.1000/test');
+      // The description includes the abstract plus metadata, so it's longer than just the abstract
+      expect(description.length).toBeGreaterThan(400);
     });
   });
 

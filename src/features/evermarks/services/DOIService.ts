@@ -34,20 +34,26 @@ export class DOIService {
     // The real validation happens at the API level
     if (!cleaned.match(/^10\./)) {
       console.log('❌ Failed basic 10. check');
-      throw new Error('DOI must start with "10."');
+      throw new Error('Invalid DOI format');
     }
     
     // Check if it has a slash and something after it
     if (!cleaned.includes('/') || cleaned.split('/').length < 2) {
       console.log('❌ Missing slash or suffix');
-      throw new Error('DOI must have format: 10.xxxx/suffix');
+      throw new Error('Invalid DOI format');
     }
     
     // Check if there's actual content after the slash
     const parts = cleaned.split('/');
-    if (parts[1].trim().length === 0) {
+    if (parts.length < 2 || parts[1].trim().length === 0) {
       console.log('❌ Empty suffix after slash');
-      throw new Error('DOI suffix cannot be empty');
+      throw new Error('Invalid DOI format');
+    }
+    
+    // More strict validation - suffix should have substantial content
+    if (parts[1].trim().length < 2) {
+      console.log('❌ Suffix too short');
+      throw new Error('Invalid DOI format');
     }
     
     console.log('✅ DOI validation passed:', cleaned);
@@ -157,10 +163,27 @@ export class DOIService {
     // Remove extra whitespace
     cleaned = cleaned.replace(/\s+/g, ' ').trim();
     
-    // Decode HTML entities
-    const textarea = document.createElement('textarea');
-    textarea.innerHTML = cleaned;
-    cleaned = textarea.value;
+    // Decode HTML entities (works in both browser and Node.js)
+    try {
+      if (typeof document !== 'undefined') {
+        // Browser environment
+        const textarea = document.createElement('textarea');
+        textarea.innerHTML = cleaned;
+        cleaned = textarea.value;
+      } else {
+        // Node.js environment - manual decode of common entities
+        cleaned = cleaned
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&amp;/g, '&')
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'")
+          .replace(/&nbsp;/g, ' ');
+      }
+    } catch (error) {
+      // Fallback if DOM manipulation fails
+      console.warn('HTML entity decoding failed, using raw text');
+    }
     
     return cleaned;
   }
@@ -236,13 +259,9 @@ export class DOIService {
   static generateEvermarkDescription(metadata: PaperMetadata): string {
     let description = '';
 
-    // Add abstract if available
+    // Add abstract if available - use complete abstract (no truncation)
     if (metadata.abstract) {
-      // Limit abstract length
-      const maxLength = 300;
-      description = metadata.abstract.length > maxLength 
-        ? metadata.abstract.substring(0, maxLength) + '...' 
-        : metadata.abstract;
+      description = metadata.abstract;
     } else {
       // Create a basic description
       description = 'Academic paper';
